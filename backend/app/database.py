@@ -21,7 +21,8 @@ VOCAB_ITEM_FIELDS = """
     vocab_items.id, vocab_items.deck_id, decks.name AS deck_name,
     vocab_items.surface, vocab_items.base_form, vocab_items.reading,
     vocab_items.part_of_speech, vocab_items.normalized_form,
-    vocab_items.meaning_ko, vocab_items.context_explanation_ko,
+    vocab_items.meaning_ko, vocab_items.dictionary_gloss,
+    vocab_items.context_explanation_ko,
     vocab_items.example_sentence, vocab_items.status,
     vocab_items.correct_count, vocab_items.wrong_count,
     vocab_items.last_reviewed_at, vocab_items.review_level,
@@ -67,6 +68,7 @@ def init_db() -> None:
                 part_of_speech TEXT NOT NULL,
                 normalized_form TEXT NOT NULL,
                 meaning_ko TEXT NOT NULL DEFAULT '',
+                dictionary_gloss TEXT NOT NULL DEFAULT '',
                 context_explanation_ko TEXT NOT NULL DEFAULT '',
                 example_sentence TEXT NOT NULL DEFAULT '',
                 status TEXT NOT NULL,
@@ -102,6 +104,7 @@ def init_db() -> None:
         ensure_column(connection, "review_level", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "next_review_at", "DATETIME")
         ensure_column(connection, "example_sentence", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(connection, "dictionary_gloss", "TEXT NOT NULL DEFAULT ''")
         ensure_column(
             connection, "context_explanation_ko", "TEXT NOT NULL DEFAULT ''"
         )
@@ -158,6 +161,7 @@ def migrate_vocab_unique_constraint(connection: sqlite3.Connection) -> None:
             part_of_speech TEXT NOT NULL,
             normalized_form TEXT NOT NULL,
             meaning_ko TEXT NOT NULL DEFAULT '',
+            dictionary_gloss TEXT NOT NULL DEFAULT '',
             context_explanation_ko TEXT NOT NULL DEFAULT '',
             example_sentence TEXT NOT NULL DEFAULT '',
             status TEXT NOT NULL,
@@ -179,6 +183,7 @@ def migrate_vocab_unique_constraint(connection: sqlite3.Connection) -> None:
     context_expr = (
         "context_explanation_ko" if "context_explanation_ko" in columns else "''"
     )
+    gloss_expr = "dictionary_gloss" if "dictionary_gloss" in columns else "''"
     example_expr = "example_sentence" if "example_sentence" in columns else "''"
     correct_expr = "correct_count" if "correct_count" in columns else "0"
     wrong_expr = "wrong_count" if "wrong_count" in columns else "0"
@@ -189,14 +194,14 @@ def migrate_vocab_unique_constraint(connection: sqlite3.Connection) -> None:
         f"""
         INSERT INTO vocab_items_new (
             id, deck_id, surface, base_form, reading, part_of_speech,
-            normalized_form, meaning_ko, context_explanation_ko,
+            normalized_form, meaning_ko, dictionary_gloss, context_explanation_ko,
             example_sentence, status, correct_count, wrong_count,
             last_reviewed_at, review_level, next_review_at,
             created_at, updated_at
         )
         SELECT
             id, COALESCE({deck_expr}, ?), surface, base_form, reading,
-            part_of_speech, normalized_form, meaning_ko, {context_expr},
+            part_of_speech, normalized_form, meaning_ko, {gloss_expr}, {context_expr},
             {example_expr}, status, {correct_expr}, {wrong_expr},
             {last_expr}, {level_expr}, {next_expr}, created_at, updated_at
         FROM vocab_items
@@ -573,6 +578,7 @@ def normalize_vocab_create(item: VocabItemCreate) -> dict[str, Any]:
         "part_of_speech": item.part_of_speech.strip(),
         "normalized_form": normalized_form,
         "meaning_ko": item.meaning_ko.strip(),
+        "dictionary_gloss": item.dictionary_gloss.strip(),
         "context_explanation_ko": item.context_explanation_ko.strip(),
         "example_sentence": item.example_sentence.strip(),
         "status": item.status,
@@ -608,11 +614,12 @@ def list_vocab_items(
             "LOWER(COALESCE(vocab_items.base_form, '')) LIKE ? OR "
             "LOWER(COALESCE(vocab_items.reading, '')) LIKE ? OR "
             "LOWER(COALESCE(vocab_items.meaning_ko, '')) LIKE ? OR "
+            "LOWER(COALESCE(vocab_items.dictionary_gloss, '')) LIKE ? OR "
             "LOWER(COALESCE(vocab_items.example_sentence, '')) LIKE ? OR "
             "LOWER(COALESCE(vocab_items.context_explanation_ko, '')) LIKE ?"
             ")"
         )
-        params.extend([term] * 6)
+        params.extend([term] * 7)
 
     where_clause = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
     order_clause = {
@@ -695,10 +702,10 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
             """
             INSERT OR IGNORE INTO vocab_items (
                 deck_id, surface, base_form, reading, part_of_speech,
-                normalized_form, meaning_ko, context_explanation_ko,
+                normalized_form, meaning_ko, dictionary_gloss, context_explanation_ko,
                 example_sentence, status, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 deck_id,
@@ -708,6 +715,7 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
                 normalized["part_of_speech"],
                 normalized["normalized_form"],
                 normalized["meaning_ko"],
+                normalized["dictionary_gloss"],
                 normalized["context_explanation_ko"],
                 normalized["example_sentence"],
                 normalized["status"],

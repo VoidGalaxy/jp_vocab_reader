@@ -75,6 +75,7 @@ function createBlankVocabForm(deckId = ""): VocabFormData {
     reading: "",
     part_of_speech: "",
     meaning_ko: "",
+    dictionary_gloss: "",
     example_sentence: "",
     context_explanation_ko: "",
     status: "unknown",
@@ -111,6 +112,7 @@ function vocabItemToForm(item: VocabItem): VocabFormData {
     reading: item.reading,
     part_of_speech: item.part_of_speech,
     meaning_ko: item.meaning_ko,
+    dictionary_gloss: item.dictionary_gloss,
     example_sentence: item.example_sentence,
     context_explanation_ko: item.context_explanation_ko,
     status: item.status,
@@ -161,6 +163,10 @@ function parseClassificationDraft(value: string | null): ClassificationDraft | n
       }
       return {
         ...token,
+        dictionary_gloss:
+          typeof token.dictionary_gloss === "string"
+            ? token.dictionary_gloss
+            : "",
         is_custom_term:
           typeof token.is_custom_term === "boolean"
             ? token.is_custom_term
@@ -660,6 +666,7 @@ export default function HomePage() {
       reading: form.reading,
       part_of_speech: form.part_of_speech,
       meaning_ko: form.meaning_ko,
+      dictionary_gloss: form.dictionary_gloss,
       context_explanation_ko: form.context_explanation_ko,
       example_sentence: form.example_sentence,
       status: form.status,

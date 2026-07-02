@@ -460,7 +460,14 @@ export function VocabSection({
                     <td>{item.base_form}</td>
                     <td>{item.reading}</td>
                     <td>{item.part_of_speech}</td>
-                    <td>{item.meaning_ko || "-"}</td>
+                    <td>
+                      <div>{item.meaning_ko || "-"}</div>
+                      {item.dictionary_gloss ? (
+                        <div className="gloss-text">
+                          사전 뜻 후보: {item.dictionary_gloss}
+                        </div>
+                      ) : null}
+                    </td>
                     <td>
                       <div className="ai-explanation-cell">
                         {item.context_explanation_ko ? (
@@ -617,6 +624,13 @@ function VocabItemForm({
         <input
           value={form.meaning_ko}
           onChange={(event) => onChange("meaning_ko", event.target.value)}
+        />
+      </label>
+      <label className="inline-field wide-field">
+        사전 뜻 후보
+        <input
+          value={form.dictionary_gloss}
+          onChange={(event) => onChange("dictionary_gloss", event.target.value)}
         />
       </label>
       <label className="inline-field">

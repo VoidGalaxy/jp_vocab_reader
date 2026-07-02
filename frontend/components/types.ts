@@ -7,6 +7,7 @@ export type Token = {
   part_of_speech: string;
   normalized_form: string;
   meaning_ko: string;
+  dictionary_gloss: string;
   example_sentence: string;
   is_custom_term: boolean;
 };
@@ -36,6 +37,7 @@ export type VocabFormData = {
   reading: string;
   part_of_speech: string;
   meaning_ko: string;
+  dictionary_gloss: string;
   example_sentence: string;
   context_explanation_ko: string;
   status: TokenStatus;

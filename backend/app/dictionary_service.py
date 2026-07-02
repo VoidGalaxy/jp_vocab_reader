@@ -1,16 +1,5 @@
 from app.dictionary import get_korean_meaning
-
-
-def lookup_jmdict_meaning(
-    *,
-    surface: str,
-    base_form: str,
-    normalized_form: str,
-    reading: str,
-    deck_id: int | None,
-) -> str:
-    # TODO: Connect a local JMdict-backed dictionary lookup in a later step.
-    return ""
+from app.jmdict_service import lookup_jmdict_gloss
 
 
 def lookup_meaning(
@@ -31,10 +20,20 @@ def lookup_meaning(
         if meaning:
             return meaning
 
-    return lookup_jmdict_meaning(
+    return ""
+
+
+def lookup_dictionary_gloss(
+    *,
+    surface: str,
+    base_form: str,
+    normalized_form: str,
+    reading: str,
+    deck_id: int | None,
+) -> str:
+    return lookup_jmdict_gloss(
         surface=surface,
         base_form=base_form,
         normalized_form=normalized_form,
         reading=reading,
-        deck_id=deck_id,
     )

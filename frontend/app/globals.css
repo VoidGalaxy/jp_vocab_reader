@@ -583,6 +583,13 @@ select {
   color: #94a3b8;
 }
 
+.gloss-text {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .deck-toolbar,
 .deck-create {
   display: grid;

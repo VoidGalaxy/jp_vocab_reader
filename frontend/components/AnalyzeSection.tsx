@@ -219,6 +219,14 @@ export function AnalyzeSection({
                     <dt>한국어 뜻</dt>
                     <dd>{currentToken.meaning_ko || "-"}</dd>
                   </div>
+                  {currentToken.dictionary_gloss ? (
+                    <div>
+                      <dt>사전 뜻 후보</dt>
+                      <dd className="gloss-text">
+                        {currentToken.dictionary_gloss}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div className="classify-example">
                     <dt>예문</dt>
                     <dd>{currentToken.example_sentence || "-"}</dd>
@@ -317,7 +325,14 @@ export function AnalyzeSection({
                         <td>{token.base_form}</td>
                         <td>{token.reading}</td>
                         <td>{token.part_of_speech}</td>
-                        <td>{token.meaning_ko || "-"}</td>
+                        <td>
+                          <div>{token.meaning_ko || "-"}</div>
+                          {token.dictionary_gloss ? (
+                            <div className="gloss-text">
+                              사전 뜻 후보: {token.dictionary_gloss}
+                            </div>
+                          ) : null}
+                        </td>
                         <td>
                           <span className="example-text">
                             {token.example_sentence || "-"}

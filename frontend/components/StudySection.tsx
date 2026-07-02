@@ -99,9 +99,17 @@ export function StudySection({
                   <dd>{currentItem.reading || "-"}</dd>
                 </div>
                 <div>
-                  <dt>뜻</dt>
+                  <dt>한국어 뜻</dt>
                   <dd>{currentItem.meaning_ko || "-"}</dd>
                 </div>
+                {currentItem.dictionary_gloss ? (
+                  <div>
+                    <dt>사전 뜻 후보</dt>
+                    <dd className="gloss-text">
+                      {currentItem.dictionary_gloss}
+                    </dd>
+                  </div>
+                ) : null}
                 <div>
                   <dt>품사</dt>
                   <dd>{currentItem.part_of_speech || "-"}</dd>

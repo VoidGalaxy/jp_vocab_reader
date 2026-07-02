@@ -1,6 +1,6 @@
 from sudachipy import dictionary
 
-from app.dictionary_service import lookup_meaning
+from app.dictionary_service import lookup_dictionary_gloss, lookup_meaning
 
 
 SENTENCE_ENDINGS = {"。", "！", "？", "!", "?"}
@@ -105,6 +105,13 @@ class JapaneseAnalyzer:
                     "part_of_speech": pos_to_korean(part_of_speech),
                     "normalized_form": normalized_form,
                     "meaning_ko": lookup_meaning(
+                        surface=surface,
+                        base_form=base_form,
+                        normalized_form=normalized_form,
+                        reading=reading,
+                        deck_id=deck_id,
+                    ),
+                    "dictionary_gloss": lookup_dictionary_gloss(
                         surface=surface,
                         base_form=base_form,
                         normalized_form=normalized_form,
