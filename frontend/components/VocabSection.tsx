@@ -464,7 +464,7 @@ export function VocabSection({
                       <div>{item.meaning_ko || "-"}</div>
                       {item.dictionary_gloss ? (
                         <div className="gloss-text">
-                          사전 뜻 후보: {item.dictionary_gloss}
+                          영어 gloss: {item.dictionary_gloss}
                         </div>
                       ) : null}
                     </td>
@@ -627,9 +627,10 @@ function VocabItemForm({
         />
       </label>
       <label className="inline-field wide-field">
-        사전 뜻 후보
+        영어 gloss 참고
         <input
           value={form.dictionary_gloss}
+          placeholder="선택 입력"
           onChange={(event) => onChange("dictionary_gloss", event.target.value)}
         />
       </label>

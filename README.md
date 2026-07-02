@@ -56,7 +56,7 @@ curl http://localhost:8000/health
 curl.exe -X POST http://localhost:8000/analyze -H "Content-Type: application/json" -d "{\"text\":\"彼は怠惰であることを自覚していた。\"}"
 ```
 
-분석 결과의 `reading`은 히라가나로 반환되고, `part_of_speech`는 한국어 품사명으로 반환된다. `meaning_ko`는 사전 조회 서비스에서 사용자 정의 용어 뜻, 내장 기본 사전의 `base_form`, `normalized_form`, `surface` 순서로 조회한다. JMdict 기반 영어 gloss는 `meaning_ko`를 덮어쓰지 않고 `dictionary_gloss`로 별도 제공한다. 현재 단계에서는 전체 JMdict 대형 데이터가 아니라 `backend/data/dictionary/jmdict_sample.json` 샘플 JSON 사전만 로컬에서 읽는다. 찾지 못하면 빈 문자열로 반환된다. 단어장은 `backend/vocab.db` SQLite 파일에 저장된다.
+분석 결과의 `reading`은 히라가나로 반환되고, `part_of_speech`는 한국어 품사명으로 반환된다. `meaning_ko`는 사전 조회 서비스에서 사용자 정의 용어 뜻, 내장 기본 사전의 `base_form`, `normalized_form`, `surface` 순서로 조회한다. 이 값이 비어 있으면 JMdict 기반 영어 gloss를 작은 로컬 매핑으로 한국어 뜻 후보로 변환해 채운다. JMdict 기반 영어 gloss 원문은 `meaning_ko`를 덮어쓰지 않고 `dictionary_gloss`로 별도 제공한다. 현재 단계에서는 전체 JMdict 대형 데이터가 아니라 `backend/data/dictionary/jmdict_sample.json` 샘플 JSON 사전만 로컬에서 읽는다. 찾지 못하면 빈 문자열로 반환된다. 단어장은 `backend/vocab.db` SQLite 파일에 저장된다.
 분석 결과에는 단어가 처음 등장한 원문 문장인 `example_sentence`도 포함된다. 예문은 단어장 저장, 학습 카드, CSV 내보내기에 함께 사용된다.
 앱 시작 시 `기본 단어장` 덱이 자동 생성되며, 기존 저장 단어 중 덱이 없는 항목은 기본 단어장에 자동 연결된다.
 
@@ -64,7 +64,9 @@ curl.exe -X POST http://localhost:8000/analyze -H "Content-Type: application/jso
 
 - `backend/app/jmdict_service.py`는 앱 실행 중 샘플 JSON을 한 번 로드해 kanji/kana 인덱스를 만든다.
 - 분석 토큰의 `surface`, `base_form`, `normalized_form`, `reading` 중 매칭되는 값이 있으면 gloss 후보를 `; `로 합쳐 `dictionary_gloss`에 반환한다.
-- 사전 우선순위는 사용자 정의 용어 `meaning_ko`, 내장 한국어 사전 `meaning_ko`, 로컬 JMdict `dictionary_gloss`, 빈 값 순서다.
+- `backend/app/gloss_ko_mapper.py`는 샘플 영어 gloss를 한국어 뜻 후보로 매핑한다. AI 자동 호출이나 외부 API 호출은 하지 않는다.
+- 사전 우선순위는 사용자 정의 용어 `meaning_ko`, 내장 한국어 사전 `meaning_ko`, 로컬 JMdict gloss 기반 한국어 후보, 빈 값 순서다.
+- `dictionary_gloss`는 내부 참고/보조 데이터로 유지하며, 화면에서는 한국어 `meaning_ko`를 우선 보여준다.
 - JMdict/EDRDG 라이선스 표기 TODO: 전체 JMdict 데이터 연동 전에 앱/문서/배포물에 필요한 라이선스 문구와 출처 표기를 추가한다.
 
 ## Frontend MVP 실행
@@ -117,11 +119,11 @@ npm run dev
 ## 단어 직접 추가와 수정
 
 1. `단어장` 탭의 `+ 단어 직접 추가` 버튼을 눌러 접이식 직접 추가 폼을 연다.
-2. 직접 추가 폼에서 단어, 기본형, 읽기, 품사, 한국어 뜻, 사전 뜻 후보, 예문, 상태, 덱을 직접 입력할 수 있다.
+2. 직접 추가 폼에서 단어, 기본형, 읽기, 품사, 한국어 뜻, 영어 gloss 참고, 예문, 상태, 덱을 직접 입력할 수 있다.
 3. 단어 또는 기본형 중 하나만 입력해도 저장할 수 있다. 기본형이 비어 있으면 단어가 기본형으로 저장되고, 상태 기본값은 `모르는 단어`다.
 4. `전체 단어장`을 보고 있을 때 직접 추가 덱 기본값은 `기본 단어장`이며, 특정 덱을 보고 있으면 해당 덱이 기본값이다.
 5. 추가에 성공하면 폼이 비워지고 다시 접힌다. `취소`를 누르면 저장하지 않고 폼을 닫는다.
-6. 저장된 단어 행의 `수정` 버튼을 누르면 단어, 기본형, 읽기, 품사, 한국어 뜻, 사전 뜻 후보, 예문, AI 문맥 설명, 상태, 덱을 수정할 수 있다.
+6. 저장된 단어 행의 `수정` 버튼을 누르면 단어, 기본형, 읽기, 품사, 한국어 뜻, 영어 gloss 참고, 예문, AI 문맥 설명, 상태, 덱을 수정할 수 있다.
 7. 자동 분석 결과가 틀렸거나 작품 고유명사를 직접 등록해야 할 때 직접 추가/수정 기능을 사용한다.
 
 ## 사용자 정의 용어 사전
@@ -135,7 +137,7 @@ npm run dev
 
 ## 단어장 검색과 필터
 
-1. `단어장` 탭 상단에서 단어, 한국어 뜻, 사전 뜻 후보, 읽기, 예문을 검색할 수 있다.
+1. `단어장` 탭 상단에서 단어, 한국어 뜻, 영어 gloss, 읽기, 예문을 검색할 수 있다.
 2. 상태 필터로 `전체`, `완벽히 아는 단어`, `헷갈리는 단어`, `모르는 단어`, `분류되지 않음`을 빠르게 나눠 볼 수 있다.
 3. `복습 대상만 보기`를 켜면 오늘 복습할 항목만 본다.
 4. 정렬은 최근 저장순, 오래된 저장순, 많이 틀린순, 많이 맞힌순, 복습 단계 낮은순, 다음 복습 가까운순을 지원한다.

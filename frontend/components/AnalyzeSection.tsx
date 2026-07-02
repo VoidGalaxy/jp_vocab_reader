@@ -219,18 +219,18 @@ export function AnalyzeSection({
                     <dt>한국어 뜻</dt>
                     <dd>{currentToken.meaning_ko || "-"}</dd>
                   </div>
+                  <div className="classify-example">
+                    <dt>예문</dt>
+                    <dd>{currentToken.example_sentence || "-"}</dd>
+                  </div>
                   {currentToken.dictionary_gloss ? (
-                    <div>
-                      <dt>사전 뜻 후보</dt>
+                    <div className="classify-example">
+                      <dt>영어 gloss</dt>
                       <dd className="gloss-text">
                         {currentToken.dictionary_gloss}
                       </dd>
                     </div>
                   ) : null}
-                  <div className="classify-example">
-                    <dt>예문</dt>
-                    <dd>{currentToken.example_sentence || "-"}</dd>
-                  </div>
                 </dl>
                 <div className="classify-actions">
                   <button
@@ -329,7 +329,7 @@ export function AnalyzeSection({
                           <div>{token.meaning_ko || "-"}</div>
                           {token.dictionary_gloss ? (
                             <div className="gloss-text">
-                              사전 뜻 후보: {token.dictionary_gloss}
+                              영어 gloss: {token.dictionary_gloss}
                             </div>
                           ) : null}
                         </td>

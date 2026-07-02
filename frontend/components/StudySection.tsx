@@ -104,7 +104,7 @@ export function StudySection({
                 </div>
                 {currentItem.dictionary_gloss ? (
                   <div>
-                    <dt>사전 뜻 후보</dt>
+                    <dt>영어 gloss</dt>
                     <dd className="gloss-text">
                       {currentItem.dictionary_gloss}
                     </dd>

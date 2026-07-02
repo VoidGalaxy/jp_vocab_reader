@@ -1,4 +1,5 @@
 from app.dictionary import get_korean_meaning
+from app.gloss_ko_mapper import map_glosses_to_korean
 from app.jmdict_service import lookup_jmdict_gloss
 
 
@@ -20,7 +21,13 @@ def lookup_meaning(
         if meaning:
             return meaning
 
-    return ""
+    dictionary_gloss = lookup_jmdict_gloss(
+        surface=surface,
+        base_form=base_form,
+        normalized_form=normalized_form,
+        reading=reading,
+    )
+    return map_glosses_to_korean(dictionary_gloss)
 
 
 def lookup_dictionary_gloss(
