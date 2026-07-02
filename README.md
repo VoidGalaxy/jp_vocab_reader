@@ -56,14 +56,16 @@ curl http://localhost:8000/health
 curl.exe -X POST http://localhost:8000/analyze -H "Content-Type: application/json" -d "{\"text\":\"彼は怠惰であることを自覚していた。\"}"
 ```
 
-분석 결과의 `reading`은 히라가나로 반환되고, `part_of_speech`는 한국어 품사명으로 반환된다. `meaning_ko`는 사전 조회 서비스에서 사용자 정의 용어 뜻, 내장 기본 사전의 `base_form`, `normalized_form`, `surface` 순서로 조회한다. 이 값이 비어 있으면 JMdict 기반 영어 gloss를 작은 로컬 매핑으로 한국어 뜻 후보로 변환해 채운다. JMdict 기반 영어 gloss 원문은 `meaning_ko`를 덮어쓰지 않고 `dictionary_gloss`로 별도 제공한다. 현재 단계에서는 전체 JMdict 대형 데이터가 아니라 `backend/data/dictionary/jmdict_sample.json` 샘플 JSON 사전만 로컬에서 읽는다. 찾지 못하면 빈 문자열로 반환된다. 단어장은 `backend/vocab.db` SQLite 파일에 저장된다.
+분석 결과의 `reading`은 히라가나로 반환되고, `part_of_speech`는 한국어 품사명으로 반환된다. `meaning_ko`는 사전 조회 서비스에서 사용자 정의 용어 뜻, 내장 기본 사전의 `base_form`, `normalized_form`, `surface` 순서로 조회한다. 이 값이 비어 있으면 JMdict 기반 영어 gloss를 작은 로컬 매핑으로 한국어 뜻 후보로 변환해 채운다. JMdict 기반 영어 gloss 원문은 `meaning_ko`를 덮어쓰지 않고 `dictionary_gloss`로 별도 제공한다. 전체 JMdict JSON을 사용하려면 `backend/data/dictionary/jmdict_full.json` 파일을 직접 넣는다. full 파일이 없거나 파싱할 수 없으면 `backend/data/dictionary/jmdict_sample.json` 샘플 JSON 사전을 사용한다. 찾지 못하면 빈 문자열로 반환된다. 단어장은 `backend/vocab.db` SQLite 파일에 저장된다.
 분석 결과에는 단어가 처음 등장한 원문 문장인 `example_sentence`도 포함된다. 예문은 단어장 저장, 학습 카드, CSV 내보내기에 함께 사용된다.
 분석 후처리에서 일부 복합동사와 `명사 + の + 명사` 표현을 학습 후보로 추가한다. 후보 유형은 `quality_tag`로 구분하며, 사용자 정의 용어는 `custom_term`, 복합동사는 `compound_verb`, 명사구 후보는 `noun_phrase_candidate`, 일반 토큰은 `normal`로 반환된다.
 앱 시작 시 `기본 단어장` 덱이 자동 생성되며, 기존 저장 단어 중 덱이 없는 항목은 기본 단어장에 자동 연결된다.
 
 ## 로컬 JMdict 사전 후보
 
-- `backend/app/jmdict_service.py`는 앱 실행 중 샘플 JSON을 한 번 로드해 kanji/kana 인덱스를 만든다.
+- `backend/app/jmdict_service.py`는 앱 실행 중 로컬 JSON을 한 번 로드해 kanji/kana 인덱스를 만든다.
+- 로딩 우선순위는 `backend/data/dictionary/jmdict_full.json`, `backend/data/dictionary/jmdict_sample.json`, 빈 사전 순서다.
+- `jmdict_full.json`은 저장소에 포함하지 않는다. 사용자가 JMdict/EDRDG 라이선스를 확인한 뒤 직접 배치한다.
 - 분석 토큰의 `surface`, `base_form`, `normalized_form`, `reading` 중 매칭되는 값이 있으면 gloss 후보를 `; `로 합쳐 `dictionary_gloss`에 반환한다.
 - `backend/app/gloss_ko_mapper.py`는 샘플 영어 gloss를 한국어 뜻 후보로 매핑한다. AI 자동 호출이나 외부 API 호출은 하지 않는다.
 - 사전 우선순위는 사용자 정의 용어 `meaning_ko`, 내장 한국어 사전 `meaning_ko`, 로컬 JMdict gloss 기반 한국어 후보, 빈 값 순서다.
