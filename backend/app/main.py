@@ -10,19 +10,25 @@ from app.ai_explainer import (
     generate_context_explanation,
 )
 from app.analyzer import analyzer
+from app.analyzer import find_example_sentence, split_sentences
 from app.database import (
+    create_custom_term,
     create_deck,
     create_vocab_item,
+    delete_custom_term,
     delete_deck,
     delete_vocab_item,
+    get_custom_term,
     get_deck,
     get_vocab_item,
     init_db,
+    list_custom_terms,
     list_decks,
     list_known_vocab_keys,
     list_study_items,
     list_vocab_items,
     record_study_review,
+    update_custom_term,
     update_deck,
     update_context_explanation,
     update_vocab_item,
@@ -30,6 +36,10 @@ from app.database import (
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
+    CustomTermCreate,
+    CustomTermResponse,
+    CustomTermsResponse,
+    CustomTermUpdate,
     DeckCreate,
     DeckDeleteResponse,
     DeckResponse,
@@ -57,6 +67,77 @@ app.add_middleware(
 )
 
 
+def ranges_overlap(
+    first_start: int, first_end: int, second_start: int, second_end: int
+) -> bool:
+    return first_start < second_end and second_start < first_end
+
+
+def find_custom_term_tokens(
+    text: str, custom_terms: list[dict]
+) -> list[dict]:
+    sentences = split_sentences(text)
+    matches: list[dict] = []
+    occupied_ranges: list[tuple[int, int]] = []
+
+    for term in sorted(custom_terms, key=lambda item: len(item["term"]), reverse=True):
+        term_text = term["term"]
+        if not term_text:
+            continue
+        search_start = 0
+        while True:
+            start = text.find(term_text, search_start)
+            if start == -1:
+                break
+            end = start + len(term_text)
+            search_start = start + 1
+            if any(
+                ranges_overlap(start, end, occupied_start, occupied_end)
+                for occupied_start, occupied_end in occupied_ranges
+            ):
+                continue
+            occupied_ranges.append((start, end))
+            matches.append(
+                {
+                    "surface": term_text,
+                    "base_form": term_text,
+                    "reading": term["reading"],
+                    "part_of_speech": term["part_of_speech"],
+                    "normalized_form": term_text,
+                    "meaning_ko": term["meaning_ko"],
+                    "example_sentence": find_example_sentence(sentences, start),
+                    "is_custom_term": True,
+                    "_start": start,
+                    "_end": end,
+                }
+            )
+
+    return sorted(matches, key=lambda item: item["_start"])
+
+
+def merge_custom_terms(text: str, tokens: list[dict], deck_id: int | None) -> list[dict]:
+    custom_tokens = find_custom_term_tokens(text, list_custom_terms(deck_id=deck_id))
+    custom_ranges = [(token["_start"], token["_end"]) for token in custom_tokens]
+    seen_base_forms = {token["base_form"] for token in custom_tokens}
+    merged_tokens = custom_tokens.copy()
+
+    for token in tokens:
+        token_start = token.get("_start", -1)
+        token_end = token.get("_end", -1)
+        if token["base_form"] in seen_base_forms:
+            continue
+        if token_start != -1 and any(
+            ranges_overlap(token_start, token_end, start, end)
+            for start, end in custom_ranges
+        ):
+            continue
+        seen_base_forms.add(token["base_form"])
+        token["is_custom_term"] = False
+        merged_tokens.append(token)
+
+    return sorted(merged_tokens, key=lambda item: item.get("_start", 0))
+
+
 @app.on_event("startup")
 def startup() -> None:
     init_db()
@@ -75,7 +156,9 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     if request.deck_id is not None and not get_deck(request.deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
 
-    tokens = analyzer.analyze(request.text)
+    tokens = merge_custom_terms(
+        request.text, analyzer.analyze(request.text), request.deck_id
+    )
     if not request.include_known:
         known_keys = list_known_vocab_keys(deck_id=request.deck_id)
         tokens = [
@@ -85,6 +168,52 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
         ]
 
     return AnalyzeResponse(tokens=tokens)
+
+
+@app.get("/custom-terms", response_model=CustomTermsResponse)
+def get_custom_terms(
+    deck_id: int | None = Query(default=None),
+) -> CustomTermsResponse:
+    if deck_id is not None and not get_deck(deck_id):
+        raise HTTPException(status_code=404, detail="deck not found")
+    return CustomTermsResponse(items=list_custom_terms(deck_id=deck_id))
+
+
+@app.post("/custom-terms", response_model=CustomTermResponse)
+def post_custom_term(
+    term: CustomTermCreate, response: Response
+) -> CustomTermResponse:
+    if not term.term.strip():
+        raise HTTPException(status_code=400, detail="term must not be blank")
+    if term.deck_id is not None and not get_deck(term.deck_id):
+        raise HTTPException(status_code=404, detail="deck not found")
+
+    saved_term, created = create_custom_term(term)
+    if not created:
+        response.status_code = status.HTTP_200_OK
+    return CustomTermResponse(**saved_term)
+
+
+@app.patch("/custom-terms/{term_id}", response_model=CustomTermResponse)
+def patch_custom_term(
+    term_id: int, term: CustomTermUpdate
+) -> CustomTermResponse:
+    if term.term is not None and not term.term.strip():
+        raise HTTPException(status_code=400, detail="term must not be blank")
+    if term.deck_id is not None and not get_deck(term.deck_id):
+        raise HTTPException(status_code=404, detail="deck not found")
+
+    updated_term = update_custom_term(term_id, term)
+    if not updated_term:
+        raise HTTPException(status_code=404, detail="custom term not found")
+    return CustomTermResponse(**updated_term)
+
+
+@app.delete("/custom-terms/{term_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_custom_term(term_id: int) -> Response:
+    if not delete_custom_term(term_id):
+        raise HTTPException(status_code=404, detail="custom term not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/decks", response_model=DecksResponse)

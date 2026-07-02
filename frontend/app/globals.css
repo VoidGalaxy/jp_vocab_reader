@@ -249,6 +249,22 @@ button:disabled {
   text-align: center;
 }
 
+.term-badge-wrap {
+  text-align: center;
+}
+
+.term-badge {
+  display: inline-block;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 4px 8px;
+  margin: 0 0 6px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .classify-details {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -355,6 +371,10 @@ table {
   width: 100%;
   min-width: 1520px;
   border-collapse: collapse;
+}
+
+.custom-term-table table {
+  min-width: 980px;
 }
 
 th,
@@ -523,6 +543,14 @@ select {
   display: flex;
   justify-content: flex-start;
   margin-bottom: 20px;
+}
+
+.custom-term-section {
+  margin-bottom: 24px;
+}
+
+.compact-heading {
+  margin-bottom: 10px;
 }
 
 .vocab-form-panel {

@@ -11,6 +11,8 @@ import type {
   Token,
   TokenStatus,
   TokenWithStatus,
+  CustomTerm,
+  CustomTermFormData,
   VocabFormData,
   VocabItem,
   VocabSort,
@@ -30,6 +32,10 @@ type StudyItemsResponse = {
 
 type DecksResponse = {
   items: Deck[];
+};
+
+type CustomTermsResponse = {
+  items: CustomTerm[];
 };
 
 type DeckDeleteResponse = {
@@ -73,6 +79,28 @@ function createBlankVocabForm(deckId = ""): VocabFormData {
     context_explanation_ko: "",
     status: "unknown",
     deck_id: deckId,
+  };
+}
+
+function createBlankCustomTermForm(deckId = ""): CustomTermFormData {
+  return {
+    term: "",
+    reading: "",
+    part_of_speech: "명사",
+    meaning_ko: "",
+    description: "",
+    deck_id: deckId,
+  };
+}
+
+function customTermToForm(term: CustomTerm): CustomTermFormData {
+  return {
+    term: term.term,
+    reading: term.reading,
+    part_of_speech: term.part_of_speech,
+    meaning_ko: term.meaning_ko,
+    description: term.description,
+    deck_id: term.deck_id === null ? "" : String(term.deck_id),
   };
 }
 
@@ -133,6 +161,10 @@ function parseClassificationDraft(value: string | null): ClassificationDraft | n
       }
       return {
         ...token,
+        is_custom_term:
+          typeof token.is_custom_term === "boolean"
+            ? token.is_custom_term
+            : false,
         isClassified:
           typeof token.isClassified === "boolean"
             ? token.isClassified
@@ -183,6 +215,16 @@ export default function HomePage() {
     createBlankVocabForm(),
   );
   const [isNewVocabFormOpen, setIsNewVocabFormOpen] = useState(false);
+  const [customTerms, setCustomTerms] = useState<CustomTerm[]>([]);
+  const [newCustomTermForm, setNewCustomTermForm] =
+    useState<CustomTermFormData>(createBlankCustomTermForm());
+  const [editCustomTermForm, setEditCustomTermForm] =
+    useState<CustomTermFormData>(createBlankCustomTermForm());
+  const [isCustomTermFormOpen, setIsCustomTermFormOpen] = useState(false);
+  const [editingCustomTermId, setEditingCustomTermId] = useState<number | null>(
+    null,
+  );
+  const [isSavingCustomTerm, setIsSavingCustomTerm] = useState(false);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [editVocabForm, setEditVocabForm] = useState<VocabFormData>(
     createBlankVocabForm(),
@@ -261,11 +303,16 @@ export default function HomePage() {
       ...currentForm,
       deck_id: defaultVocabFormDeckId,
     }));
+    setNewCustomTermForm((currentForm) => ({
+      ...currentForm,
+      deck_id: selectedVocabDeckId !== "all" ? selectedVocabDeckId : "",
+    }));
   }, [defaultVocabFormDeckId]);
 
   useEffect(() => {
     if (activeTab === "vocab" && hasLoadedVocab) {
       void loadVocabItems();
+      void loadCustomTerms();
     }
   }, [
     activeTab,
@@ -467,6 +514,20 @@ export default function HomePage() {
     }
   }
 
+  async function loadCustomTerms(deckId: string = selectedVocabDeckId) {
+    try {
+      const query = deckId !== "all" ? `?deck_id=${deckId}` : "";
+      const data = await requestJson<CustomTermsResponse>(
+        `/custom-terms${query}`,
+      );
+      setCustomTerms(data.items);
+    } catch (error) {
+      setVocabMessage(
+        getErrorMessage(error, "사용자 정의 용어를 불러오지 못했습니다."),
+      );
+    }
+  }
+
   async function createDeck() {
     if (!newDeckName.trim()) {
       setDeckMessage("덱 이름을 입력해 주세요.");
@@ -528,6 +589,7 @@ export default function HomePage() {
         setSelectedStudyDeckId("all");
       }
       await loadVocabItems("all");
+      await loadCustomTerms("all");
       setDeckMessage(
         `덱과 덱에 포함된 단어 ${data.deleted_vocab_count}개를 삭제했습니다.`,
       );
@@ -558,6 +620,37 @@ export default function HomePage() {
       ...currentForm,
       [field]: value,
     }));
+  }
+
+  function updateNewCustomTermForm<K extends keyof CustomTermFormData>(
+    field: K,
+    value: CustomTermFormData[K],
+  ) {
+    setNewCustomTermForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+  }
+
+  function updateEditCustomTermForm<K extends keyof CustomTermFormData>(
+    field: K,
+    value: CustomTermFormData[K],
+  ) {
+    setEditCustomTermForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+  }
+
+  function buildCustomTermPayload(form: CustomTermFormData) {
+    return {
+      term: form.term,
+      reading: form.reading,
+      part_of_speech: form.part_of_speech,
+      meaning_ko: form.meaning_ko,
+      description: form.description,
+      deck_id: form.deck_id ? Number(form.deck_id) : null,
+    };
   }
 
   function buildVocabPayload(form: VocabFormData) {
@@ -596,6 +689,96 @@ export default function HomePage() {
       setVocabMessage(getErrorMessage(error, "단어 추가에 실패했습니다."));
     } finally {
       setIsAddingVocab(false);
+    }
+  }
+
+  async function addCustomTerm() {
+    if (!newCustomTermForm.term.trim()) {
+      setVocabMessage("사용자 정의 용어를 입력해 주세요.");
+      return;
+    }
+
+    setIsSavingCustomTerm(true);
+    setVocabMessage("");
+
+    try {
+      await requestJson<CustomTerm>("/custom-terms", {
+        method: "POST",
+        body: JSON.stringify(buildCustomTermPayload(newCustomTermForm)),
+      });
+      setNewCustomTermForm(
+        createBlankCustomTermForm(
+          selectedVocabDeckId !== "all" ? selectedVocabDeckId : "",
+        ),
+      );
+      setIsCustomTermFormOpen(false);
+      setVocabMessage("사용자 정의 용어를 저장했습니다.");
+      await loadCustomTerms();
+    } catch (error) {
+      setVocabMessage(
+        getErrorMessage(error, "사용자 정의 용어 추가에 실패했습니다."),
+      );
+    } finally {
+      setIsSavingCustomTerm(false);
+    }
+  }
+
+  function startEditingCustomTerm(term: CustomTerm) {
+    setEditingCustomTermId(term.id);
+    setEditCustomTermForm(customTermToForm(term));
+    setVocabMessage("");
+  }
+
+  function cancelEditingCustomTerm() {
+    setEditingCustomTermId(null);
+    setEditCustomTermForm(createBlankCustomTermForm());
+  }
+
+  async function saveEditedCustomTerm() {
+    if (editingCustomTermId === null) {
+      return;
+    }
+    if (!editCustomTermForm.term.trim()) {
+      setVocabMessage("사용자 정의 용어를 입력해 주세요.");
+      return;
+    }
+
+    setIsSavingCustomTerm(true);
+    setVocabMessage("");
+
+    try {
+      await requestJson<CustomTerm>(`/custom-terms/${editingCustomTermId}`, {
+        method: "PATCH",
+        body: JSON.stringify(buildCustomTermPayload(editCustomTermForm)),
+      });
+      setEditingCustomTermId(null);
+      setVocabMessage("사용자 정의 용어를 수정했습니다.");
+      await loadCustomTerms();
+    } catch (error) {
+      setVocabMessage(
+        getErrorMessage(error, "사용자 정의 용어 수정에 실패했습니다."),
+      );
+    } finally {
+      setIsSavingCustomTerm(false);
+    }
+  }
+
+  async function deleteCustomTerm(termId: number) {
+    setVocabMessage("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/custom-terms/${termId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error(`사용자 정의 용어 삭제에 실패했습니다. (${response.status})`);
+      }
+      setVocabMessage("사용자 정의 용어를 삭제했습니다.");
+      await loadCustomTerms();
+    } catch (error) {
+      setVocabMessage(
+        getErrorMessage(error, "사용자 정의 용어 삭제에 실패했습니다."),
+      );
     }
   }
 
@@ -899,6 +1082,12 @@ export default function HomePage() {
             newVocabForm={newVocabForm}
             editingItemId={editingItemId}
             editVocabForm={editVocabForm}
+            customTerms={customTerms}
+            newCustomTermForm={newCustomTermForm}
+            editCustomTermForm={editCustomTermForm}
+            isCustomTermFormOpen={isCustomTermFormOpen}
+            editingCustomTermId={editingCustomTermId}
+            isSavingCustomTerm={isSavingCustomTerm}
             onSelectedDeckChange={(deckId) => void changeVocabDeck(deckId)}
             onSearchTextChange={setVocabSearch}
             onStatusFilterChange={setVocabStatusFilter}
@@ -911,6 +1100,14 @@ export default function HomePage() {
             onNewVocabFormOpenChange={setIsNewVocabFormOpen}
             onNewVocabFormChange={updateNewVocabForm}
             onAddVocabItem={() => void addVocabItem()}
+            onCustomTermFormOpenChange={setIsCustomTermFormOpen}
+            onNewCustomTermFormChange={updateNewCustomTermForm}
+            onAddCustomTerm={() => void addCustomTerm()}
+            onEditCustomTermFormChange={updateEditCustomTermForm}
+            onStartCustomTermEdit={startEditingCustomTerm}
+            onSaveCustomTermEdit={() => void saveEditedCustomTerm()}
+            onCancelCustomTermEdit={cancelEditingCustomTerm}
+            onDeleteCustomTerm={(termId) => void deleteCustomTerm(termId)}
             onEditVocabFormChange={updateEditVocabForm}
             onStartEdit={startEditingVocabItem}
             onSaveEdit={() => void saveEditedVocabItem()}

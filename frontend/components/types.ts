@@ -8,6 +8,7 @@ export type Token = {
   normalized_form: string;
   meaning_ko: string;
   example_sentence: string;
+  is_custom_term: boolean;
 };
 
 export type TokenWithStatus = Token & {
@@ -57,4 +58,26 @@ export type Deck = {
   description: string;
   created_at: string;
   updated_at: string;
+};
+
+export type CustomTerm = {
+  id: number;
+  term: string;
+  reading: string;
+  part_of_speech: string;
+  meaning_ko: string;
+  description: string;
+  deck_id: number | null;
+  deck_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomTermFormData = {
+  term: string;
+  reading: string;
+  part_of_speech: string;
+  meaning_ko: string;
+  description: string;
+  deck_id: string;
 };

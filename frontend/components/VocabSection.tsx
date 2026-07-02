@@ -4,6 +4,8 @@ import { Fragment } from "react";
 import { formatDateTime, formatNextReview, StatusSelect } from "./shared";
 import type {
   Deck,
+  CustomTerm,
+  CustomTermFormData,
   TokenStatus,
   VocabFormData,
   VocabItem,
@@ -33,6 +35,12 @@ type VocabSectionProps = {
   newVocabForm: VocabFormData;
   editingItemId: number | null;
   editVocabForm: VocabFormData;
+  customTerms: CustomTerm[];
+  newCustomTermForm: CustomTermFormData;
+  editCustomTermForm: CustomTermFormData;
+  isCustomTermFormOpen: boolean;
+  editingCustomTermId: number | null;
+  isSavingCustomTerm: boolean;
   onSelectedDeckChange: (deckId: string) => void;
   onSearchTextChange: (text: string) => void;
   onStatusFilterChange: (status: "all" | TokenStatus) => void;
@@ -45,6 +53,20 @@ type VocabSectionProps = {
   onNewVocabFormOpenChange: (open: boolean) => void;
   onNewVocabFormChange: (field: keyof VocabFormData, value: string) => void;
   onAddVocabItem: () => void;
+  onCustomTermFormOpenChange: (open: boolean) => void;
+  onNewCustomTermFormChange: (
+    field: keyof CustomTermFormData,
+    value: string,
+  ) => void;
+  onAddCustomTerm: () => void;
+  onEditCustomTermFormChange: (
+    field: keyof CustomTermFormData,
+    value: string,
+  ) => void;
+  onStartCustomTermEdit: (term: CustomTerm) => void;
+  onSaveCustomTermEdit: () => void;
+  onCancelCustomTermEdit: () => void;
+  onDeleteCustomTerm: (termId: number) => void;
   onEditVocabFormChange: (field: keyof VocabFormData, value: string) => void;
   onStartEdit: (item: VocabItem) => void;
   onSaveEdit: () => void;
@@ -79,6 +101,12 @@ export function VocabSection({
   newVocabForm,
   editingItemId,
   editVocabForm,
+  customTerms,
+  newCustomTermForm,
+  editCustomTermForm,
+  isCustomTermFormOpen,
+  editingCustomTermId,
+  isSavingCustomTerm,
   onSelectedDeckChange,
   onSearchTextChange,
   onStatusFilterChange,
@@ -91,6 +119,14 @@ export function VocabSection({
   onNewVocabFormOpenChange,
   onNewVocabFormChange,
   onAddVocabItem,
+  onCustomTermFormOpenChange,
+  onNewCustomTermFormChange,
+  onAddCustomTerm,
+  onEditCustomTermFormChange,
+  onStartCustomTermEdit,
+  onSaveCustomTermEdit,
+  onCancelCustomTermEdit,
+  onDeleteCustomTerm,
   onEditVocabFormChange,
   onStartEdit,
   onSaveEdit,
@@ -231,6 +267,137 @@ export function VocabSection({
           </div>
         </div>
       )}
+
+      <div className="custom-term-section">
+        <div className="result-heading compact-heading">
+          <div>
+            <h2>사용자 정의 용어</h2>
+            <span>{customTerms.length}개</span>
+          </div>
+          {!isCustomTermFormOpen ? (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => onCustomTermFormOpenChange(true)}
+            >
+              + 사용자 정의 용어 추가
+            </button>
+          ) : null}
+        </div>
+
+        {isCustomTermFormOpen ? (
+          <div className="vocab-form-panel">
+            <CustomTermForm
+              form={newCustomTermForm}
+              decks={decks}
+              onChange={onNewCustomTermFormChange}
+            />
+            <div className="form-actions">
+              <button
+                type="button"
+                onClick={onAddCustomTerm}
+                disabled={isSavingCustomTerm}
+              >
+                {isSavingCustomTerm ? "추가 중..." : "추가"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => onCustomTermFormOpenChange(false)}
+                disabled={isSavingCustomTerm}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {customTerms.length > 0 ? (
+          <div className="table-wrap custom-term-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>용어</th>
+                  <th>읽기</th>
+                  <th>품사</th>
+                  <th>뜻</th>
+                  <th>덱</th>
+                  <th>설명</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customTerms.map((term) => (
+                  <Fragment key={term.id}>
+                    <tr>
+                      <td>{term.term}</td>
+                      <td>{term.reading || "-"}</td>
+                      <td>{term.part_of_speech || "-"}</td>
+                      <td>{term.meaning_ko || "-"}</td>
+                      <td>{term.deck_name || "공통"}</td>
+                      <td>
+                        <span className="example-text">
+                          {term.description || "-"}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="row-actions">
+                          <button
+                            type="button"
+                            className="secondary-button compact-button"
+                            onClick={() => onStartCustomTermEdit(term)}
+                          >
+                            수정
+                          </button>
+                          <button
+                            type="button"
+                            className="danger-button compact-button"
+                            onClick={() => onDeleteCustomTerm(term.id)}
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {editingCustomTermId === term.id ? (
+                      <tr className="edit-row">
+                        <td colSpan={7}>
+                          <div className="vocab-form-panel inline-edit-form">
+                            <CustomTermForm
+                              form={editCustomTermForm}
+                              decks={decks}
+                              onChange={onEditCustomTermFormChange}
+                            />
+                            <div className="form-actions">
+                              <button
+                                type="button"
+                                onClick={onSaveCustomTermEdit}
+                                disabled={isSavingCustomTerm}
+                              >
+                                {isSavingCustomTerm ? "저장 중..." : "저장"}
+                              </button>
+                              <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={onCancelCustomTermEdit}
+                                disabled={isSavingCustomTerm}
+                              >
+                                취소
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="empty">등록된 사용자 정의 용어가 없습니다.</p>
+        )}
+      </div>
 
       <div className="result-heading">
         <div>
@@ -491,6 +658,69 @@ function VocabItemForm({
           />
         </label>
       ) : null}
+    </div>
+  );
+}
+
+type CustomTermFormProps = {
+  form: CustomTermFormData;
+  decks: Deck[];
+  onChange: (field: keyof CustomTermFormData, value: string) => void;
+};
+
+function CustomTermForm({ form, decks, onChange }: CustomTermFormProps) {
+  return (
+    <div className="vocab-item-form">
+      <label className="inline-field">
+        용어
+        <input
+          value={form.term}
+          onChange={(event) => onChange("term", event.target.value)}
+        />
+      </label>
+      <label className="inline-field">
+        읽기
+        <input
+          value={form.reading}
+          onChange={(event) => onChange("reading", event.target.value)}
+        />
+      </label>
+      <label className="inline-field">
+        품사
+        <input
+          value={form.part_of_speech}
+          onChange={(event) => onChange("part_of_speech", event.target.value)}
+        />
+      </label>
+      <label className="inline-field">
+        한국어 뜻
+        <input
+          value={form.meaning_ko}
+          onChange={(event) => onChange("meaning_ko", event.target.value)}
+        />
+      </label>
+      <label className="inline-field">
+        덱
+        <select
+          value={form.deck_id}
+          onChange={(event) => onChange("deck_id", event.target.value)}
+        >
+          <option value="">공통</option>
+          {decks.map((deck) => (
+            <option key={deck.id} value={String(deck.id)}>
+              {deck.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="inline-field wide-field">
+        설명
+        <textarea
+          className="compact-textarea"
+          value={form.description}
+          onChange={(event) => onChange("description", event.target.value)}
+        />
+      </label>
     </div>
   );
 }

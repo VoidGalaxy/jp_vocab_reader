@@ -21,7 +21,8 @@
   "part_of_speech": "동사",
   "normalized_form": "食べる",
   "meaning_ko": "먹다",
-  "example_sentence": "昨日、新しい本を食べる。"
+  "example_sentence": "昨日、新しい本を食べる。",
+  "is_custom_term": false
 }
 ```
 
@@ -34,6 +35,7 @@
 - `normalized_form`: 정규화형
 - `meaning_ko`: 내장 사전에서 찾은 기본 한국어 뜻. 사전에 없으면 빈 문자열을 반환한다.
 - `example_sentence`: 단어가 처음 등장한 원문 문장. 문장 종료 기호를 포함한다.
+- `is_custom_term`: 사용자 정의 용어 사전에서 매칭된 토큰이면 `true`, 일반 분석 토큰이면 `false`
 
 ### VocabItem
 
@@ -100,6 +102,10 @@
 - 공백만 있는 입력은 거부한다.
 - 서버는 `text` 원문 전체를 DB에 저장하지 않는다.
 - SudachiPy로 형태소 분석을 수행한다.
+- DB에 등록된 사용자 정의 용어를 먼저 원문에서 매칭한다.
+- `deck_id`가 있으면 해당 덱 전용 용어와 공통 용어를 사용하고, 없으면 전체 사용자 정의 용어를 사용한다.
+- 사용자 정의 용어와 일반 토큰이 겹치면 사용자 정의 용어를 우선한다.
+- 사용자 정의 용어가 서로 겹치면 더 긴 용어를 우선한다.
 - `deck_id`가 있으면 해당 덱 안의 `known` 단어만 제외하고, 없으면 전체 단어장 기준으로 제외한다.
 - `include_known`이 `false`여도 `uncertain`과 `unknown` 단어는 숨기지 않는다.
 - `include_known`이 `true`이면 저장된 `known` 단어도 응답에 포함한다.
@@ -126,7 +132,8 @@
       "part_of_speech": "대명사",
       "normalized_form": "彼",
       "meaning_ko": "그, 그 사람",
-      "example_sentence": "彼は怠惰であることを自覚していた。"
+      "example_sentence": "彼は怠惰であることを自覚していた。",
+      "is_custom_term": false
     },
     {
       "surface": "怠惰",
@@ -135,7 +142,8 @@
       "part_of_speech": "명사",
       "normalized_form": "怠惰",
       "meaning_ko": "나태함",
-      "example_sentence": "彼は怠惰であることを自覚していた。"
+      "example_sentence": "彼は怠惰であることを自覚していた。",
+      "is_custom_term": false
     }
   ]
 }
@@ -158,6 +166,88 @@
   "status": "ok"
 }
 ```
+
+## GET /custom-terms
+
+사용자 정의 용어 목록을 조회한다.
+
+### Query Parameters
+
+- `deck_id` optional: 지정하면 해당 덱 전용 용어와 공통 용어(`deck_id: null`)를 함께 반환한다. 생략하면 전체 용어를 반환한다.
+
+### 응답
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "term": "大罪司教",
+      "reading": "たいざいしきょう",
+      "part_of_speech": "명사",
+      "meaning_ko": "대죄주교",
+      "description": "리제로의 마녀교 대죄주교를 가리키는 작품 용어",
+      "deck_id": 1,
+      "deck_name": "리제로",
+      "created_at": "2026-07-02T09:00:00+00:00",
+      "updated_at": "2026-07-02T09:00:00+00:00"
+    }
+  ]
+}
+```
+
+## POST /custom-terms
+
+사용자 정의 용어를 등록한다.
+
+### 요청
+
+```json
+{
+  "term": "大罪司教",
+  "reading": "たいざいしきょう",
+  "part_of_speech": "명사",
+  "meaning_ko": "대죄주교",
+  "description": "리제로의 마녀교 대죄주교를 가리키는 작품 용어",
+  "deck_id": 1
+}
+```
+
+### 처리 규칙
+
+- `term`은 공백일 수 없고 앞뒤 공백을 제거해 저장한다.
+- `part_of_speech`가 비어 있으면 `명사`로 저장한다.
+- `deck_id`가 `null`이면 모든 덱에 적용되는 공통 용어로 저장한다.
+- 같은 `term` + `deck_id` 조합은 중복 생성하지 않고 기존 항목을 반환한다.
+
+### 응답
+
+생성되었거나 이미 존재하던 사용자 정의 용어 객체를 반환한다.
+
+## PATCH /custom-terms/{term_id}
+
+사용자 정의 용어를 수정한다. 모든 필드는 optional이다.
+
+### 응답
+
+수정된 사용자 정의 용어 객체를 반환한다.
+
+### 오류
+
+- `400 Bad Request`: `term`이 비어 있는 경우
+- `404 Not Found`: 용어 또는 덱을 찾을 수 없는 경우
+
+## DELETE /custom-terms/{term_id}
+
+사용자 정의 용어를 삭제한다.
+
+### 응답
+
+- `204 No Content`
+
+### 오류
+
+- `404 Not Found`: 용어를 찾을 수 없는 경우
 
 ## GET /vocab-items
 

@@ -196,6 +196,11 @@ export function AnalyzeSection({
                 <div className="classify-word">
                   {currentToken.surface || currentToken.base_form}
                 </div>
+                {currentToken.is_custom_term ? (
+                  <div className="term-badge-wrap">
+                    <span className="term-badge">사용자 용어</span>
+                  </div>
+                ) : null}
                 <dl className="classify-details">
                   <div>
                     <dt>기본형</dt>
@@ -318,6 +323,9 @@ export function AnalyzeSection({
                           </span>
                         </td>
                         <td>
+                          {token.is_custom_term ? (
+                            <span className="term-badge">사용자 용어</span>
+                          ) : null}
                           <StatusSelect
                             value={token.status}
                             label={`${token.surface} 상태`}

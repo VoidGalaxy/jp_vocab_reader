@@ -19,6 +19,7 @@ class TokenResponse(BaseModel):
     normalized_form: str
     meaning_ko: str
     example_sentence: str
+    is_custom_term: bool = False
 
 
 class AnalyzeResponse(BaseModel):
@@ -111,3 +112,38 @@ class DeckDeleteResponse(BaseModel):
     deleted_deck_id: int
     deleted_vocab_count: int
     message: str
+
+
+class CustomTermCreate(BaseModel):
+    term: str
+    reading: str = ""
+    part_of_speech: str = "명사"
+    meaning_ko: str = ""
+    description: str = ""
+    deck_id: int | None = None
+
+
+class CustomTermUpdate(BaseModel):
+    term: str | None = None
+    reading: str | None = None
+    part_of_speech: str | None = None
+    meaning_ko: str | None = None
+    description: str | None = None
+    deck_id: int | None = None
+
+
+class CustomTermResponse(BaseModel):
+    id: int
+    term: str
+    reading: str
+    part_of_speech: str
+    meaning_ko: str
+    description: str
+    deck_id: int | None
+    deck_name: str | None
+    created_at: str
+    updated_at: str
+
+
+class CustomTermsResponse(BaseModel):
+    items: list[CustomTermResponse]

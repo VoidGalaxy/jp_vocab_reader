@@ -106,6 +106,9 @@ class JapaneseAnalyzer:
                     "example_sentence": find_example_sentence(
                         sentences, token_start
                     ),
+                    "is_custom_term": False,
+                    "_start": token_start,
+                    "_end": token_start + len(surface) if token_start != -1 else -1,
                 }
             )
 
