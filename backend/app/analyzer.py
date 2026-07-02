@@ -1,5 +1,7 @@
 from sudachipy import dictionary
 
+from app.dictionary import get_korean_meaning
+
 
 EXCLUDED_POS = {"助詞", "助動詞", "補助記号", "記号", "空白"}
 POS_LABELS = {
@@ -64,7 +66,7 @@ class JapaneseAnalyzer:
                     "reading": katakana_to_hiragana(morpheme.reading_form()),
                     "part_of_speech": pos_to_korean(part_of_speech),
                     "normalized_form": morpheme.normalized_form(),
-                    "meaning_ko": "",
+                    "meaning_ko": get_korean_meaning(base_form),
                 }
             )
 

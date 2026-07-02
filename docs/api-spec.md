@@ -20,7 +20,7 @@
   "reading": "たべる",
   "part_of_speech": "동사",
   "normalized_form": "食べる",
-  "meaning_ko": ""
+  "meaning_ko": "먹다"
 }
 ```
 
@@ -31,7 +31,7 @@
 - `reading`: 히라가나 읽기
 - `part_of_speech`: 한국어 대표 품사명
 - `normalized_form`: 정규화형
-- `meaning_ko`: 한국어 뜻. MVP에서는 사전 기능이 없으므로 빈 문자열을 반환한다.
+- `meaning_ko`: 내장 사전에서 찾은 기본 한국어 뜻. 사전에 없으면 빈 문자열을 반환한다.
 
 ### VocabItem
 
@@ -79,7 +79,7 @@
 - 반환 순서는 원문에서 처음 등장한 순서를 유지한다.
 - `reading`은 SudachiPy의 가타카나 읽기를 히라가나로 변환해 반환한다.
 - `part_of_speech`는 한국어 품사명으로 반환한다.
-- `meaning_ko`는 MVP에서 빈 문자열로 반환한다.
+- `meaning_ko`는 내장 사전에서 `base_form` 기준으로 조회해 반환한다. 사전에 없으면 빈 문자열을 반환한다.
 
 ### 응답
 
@@ -87,20 +87,20 @@
 {
   "tokens": [
     {
-      "surface": "昨日",
-      "base_form": "昨日",
-      "reading": "きのう",
-      "part_of_speech": "명사",
-      "normalized_form": "昨日",
-      "meaning_ko": ""
+      "surface": "彼",
+      "base_form": "彼",
+      "reading": "かれ",
+      "part_of_speech": "대명사",
+      "normalized_form": "彼",
+      "meaning_ko": "그, 그 사람"
     },
     {
-      "surface": "読んだ",
-      "base_form": "読む",
-      "reading": "よむ",
-      "part_of_speech": "동사",
-      "normalized_form": "読む",
-      "meaning_ko": ""
+      "surface": "怠惰",
+      "base_form": "怠惰",
+      "reading": "たいだ",
+      "part_of_speech": "명사",
+      "normalized_form": "怠惰",
+      "meaning_ko": "나태함"
     }
   ]
 }
