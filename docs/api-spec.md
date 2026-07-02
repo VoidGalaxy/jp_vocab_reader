@@ -263,7 +263,7 @@
 
 ### 오류
 
-- `400 Bad Request`: 필수 필드 누락 또는 잘못된 `knownState`
+- `400 Bad Request`: 필수 필드 누락 또는 잘못된 `status`
 - `409 Conflict`: 중복 처리 정책상 저장할 수 없는 충돌이 발생한 경우
 - `500 Internal Server Error`: DB 저장 오류
 
