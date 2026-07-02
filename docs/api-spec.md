@@ -235,19 +235,13 @@
 
 ## GET /vocab-items/export.csv
 
-MVP 이후 구현 예정인 API다. 현재 `vocab-storage` 단계에서는 구현하지 않는다.
-
 저장된 단어장을 CSV 파일로 내보낸다.
-
-### 쿼리 파라미터
-
-- `knownState`: 선택값. 기본적으로 전체를 내보내며, MVP에서는 `unknown` 필터를 우선 지원한다.
 
 ### 응답 헤더
 
 ```http
 Content-Type: text/csv; charset=utf-8
-Content-Disposition: attachment; filename="vocab-items.csv"
+Content-Disposition: attachment; filename="jp-vocab-items.csv"
 ```
 
 ### CSV 컬럼
@@ -259,8 +253,10 @@ surface,base_form,reading,part_of_speech,meaning_ko,status,created_at
 
 ### 처리 규칙
 
-- CSV는 UTF-8로 생성한다.
-- 한국어와 일본어가 깨지지 않도록 인코딩을 명확히 한다.
+- 저장된 `vocab_items` 전체를 내보낸다.
+- CSV 첫 줄에는 헤더를 포함한다.
+- CSV는 UTF-8 BOM을 포함해 엑셀에서 한글과 일본어가 깨지지 않도록 한다.
+- 저장된 단어가 하나도 없어도 헤더만 있는 CSV를 반환한다.
 - 원문 전체나 긴 문맥은 CSV에 포함하지 않는다.
 
 ### 오류

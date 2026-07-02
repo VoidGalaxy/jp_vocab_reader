@@ -1,3 +1,6 @@
+import csv
+from io import StringIO
+
 from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -52,6 +55,32 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
 @app.get("/vocab-items", response_model=VocabItemsResponse)
 def get_vocab_items() -> VocabItemsResponse:
     return VocabItemsResponse(items=list_vocab_items())
+
+
+@app.get("/vocab-items/export.csv")
+def export_vocab_items_csv() -> Response:
+    output = StringIO()
+    fieldnames = [
+        "surface",
+        "base_form",
+        "reading",
+        "part_of_speech",
+        "meaning_ko",
+        "status",
+        "created_at",
+    ]
+    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(list_vocab_items())
+
+    content = "\ufeff" + output.getvalue()
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="jp-vocab-items.csv"',
+        },
+    )
 
 
 @app.post("/vocab-items", response_model=VocabItemResponse)

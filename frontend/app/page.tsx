@@ -47,6 +47,7 @@ export default function HomePage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingVocab, setIsLoadingVocab] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [message, setMessage] = useState("");
   const [vocabMessage, setVocabMessage] = useState("");
 
@@ -189,6 +190,33 @@ export default function HomePage() {
     }
   }
 
+  async function downloadCsv() {
+    setIsExportingCsv(true);
+    setVocabMessage("CSV 파일을 준비하고 있습니다.");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/vocab-items/export.csv`);
+      if (!response.ok) {
+        throw new Error(`CSV 다운로드에 실패했습니다. (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "jp-vocab-items.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      setVocabMessage("CSV 다운로드를 시작했습니다.");
+    } catch (error) {
+      setVocabMessage(getErrorMessage(error, "CSV 다운로드에 실패했습니다."));
+    } finally {
+      setIsExportingCsv(false);
+    }
+  }
+
   return (
     <main className="page">
       <section className="workspace">
@@ -248,14 +276,24 @@ export default function HomePage() {
               <h2>저장된 단어장</h2>
               <span>{vocabItems.length}개</span>
             </div>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => void loadVocabItems()}
-              disabled={isLoadingVocab}
-            >
-              {isLoadingVocab ? "불러오는 중..." : "새로고침"}
-            </button>
+            <div className="heading-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void downloadCsv()}
+                disabled={isExportingCsv}
+              >
+                {isExportingCsv ? "다운로드 중..." : "CSV 다운로드"}
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void loadVocabItems()}
+                disabled={isLoadingVocab}
+              >
+                {isLoadingVocab ? "불러오는 중..." : "새로고침"}
+              </button>
+            </div>
           </div>
 
           {vocabMessage ? <p className="message">{vocabMessage}</p> : null}
