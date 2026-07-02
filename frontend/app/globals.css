@@ -51,6 +51,28 @@ select {
   font-size: 16px;
 }
 
+.tab-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.tab {
+  min-width: 0;
+  color: #334155;
+  background: #e2e8f0;
+}
+
+.active-tab {
+  color: #ffffff;
+  background: #1f6feb;
+}
+
+.tab-panel {
+  display: block;
+}
+
 .analyze-form {
   display: grid;
   gap: 12px;
@@ -297,6 +319,32 @@ select {
   -webkit-line-clamp: 2;
 }
 
+.info-panel {
+  display: grid;
+  gap: 22px;
+  border: 1px solid #d8e2ec;
+  border-radius: 8px;
+  padding: 24px;
+  background: #ffffff;
+}
+
+.info-panel h2 {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-size: 20px;
+}
+
+.info-panel p,
+.info-panel ul {
+  margin: 0;
+  color: #334155;
+  line-height: 1.7;
+}
+
+.info-panel ul {
+  padding-left: 20px;
+}
+
 @media (max-width: 640px) {
   .page {
     padding: 24px 14px;
@@ -304,6 +352,10 @@ select {
 
   .header h1 {
     font-size: 26px;
+  }
+
+  .tab-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .actions {

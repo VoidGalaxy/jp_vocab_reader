@@ -1,33 +1,17 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-
-type TokenStatus = "unclassified" | "known" | "unknown";
-
-type Token = {
-  surface: string;
-  base_form: string;
-  reading: string;
-  part_of_speech: string;
-  normalized_form: string;
-  meaning_ko: string;
-  example_sentence: string;
-};
-
-type TokenWithStatus = Token & {
-  status: TokenStatus;
-};
-
-type VocabItem = TokenWithStatus & {
-  id: number;
-  correct_count: number;
-  wrong_count: number;
-  last_reviewed_at: string | null;
-  review_level: number;
-  next_review_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
+import { FormEvent, useState } from "react";
+import { AnalyzeSection } from "../components/AnalyzeSection";
+import { InfoSection } from "../components/InfoSection";
+import { StudySection } from "../components/StudySection";
+import { VocabSection } from "../components/VocabSection";
+import type {
+  ReviewResult,
+  Token,
+  TokenStatus,
+  TokenWithStatus,
+  VocabItem,
+} from "../components/types";
 
 type AnalyzeResponse = {
   tokens: Token[];
@@ -41,18 +25,21 @@ type StudyItemsResponse = {
   items: VocabItem[];
 };
 
-type ReviewResult = "correct" | "wrong";
+type TabKey = "analyze" | "vocab" | "study" | "info";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 
-const statusLabels: Record<TokenStatus, string> = {
-  unclassified: "미분류",
-  known: "아는 단어",
-  unknown: "모르는 단어",
-};
+const tabs: Array<{ key: TabKey; label: string }> = [
+  { key: "analyze", label: "분석" },
+  { key: "vocab", label: "단어장" },
+  { key: "study", label: "학습" },
+  { key: "info", label: "정보" },
+];
 
 export default function HomePage() {
+  const [activeTab, setActiveTab] = useState<TabKey>("analyze");
+  const [hasLoadedVocab, setHasLoadedVocab] = useState(false);
   const [text, setText] = useState("");
   const [tokens, setTokens] = useState<TokenWithStatus[]>([]);
   const [vocabItems, setVocabItems] = useState<VocabItem[]>([]);
@@ -72,9 +59,12 @@ export default function HomePage() {
   const [sessionWrongCount, setSessionWrongCount] = useState(0);
   const [hasStartedStudy, setHasStartedStudy] = useState(false);
 
-  useEffect(() => {
-    void loadVocabItems();
-  }, []);
+  async function handleTabChange(tab: TabKey) {
+    setActiveTab(tab);
+    if (tab === "vocab" && !hasLoadedVocab) {
+      await loadVocabItems();
+    }
+  }
 
   async function handleAnalyze(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -151,6 +141,7 @@ export default function HomePage() {
     try {
       const data = await requestJson<VocabItemsResponse>("/vocab-items");
       setVocabItems(data.items);
+      setHasLoadedVocab(true);
     } catch (error) {
       setVocabMessage(
         getErrorMessage(error, "단어장 목록을 불러오지 못했습니다."),
@@ -160,7 +151,7 @@ export default function HomePage() {
     }
   }
 
-  async function updateTokenStatus(index: number, status: TokenStatus) {
+  function updateTokenStatus(index: number, status: TokenStatus) {
     setTokens((currentTokens) =>
       currentTokens.map((token, tokenIndex) =>
         tokenIndex === index ? { ...token, status } : token,
@@ -312,331 +303,69 @@ export default function HomePage() {
           <p>일본어 원문을 붙여넣고 학습할 단어 후보를 확인합니다.</p>
         </header>
 
-        <form className="analyze-form" onSubmit={handleAnalyze}>
-          <label htmlFor="source-text">원문</label>
-          <textarea
-            id="source-text"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="彼は怠惰であることを自覚していた。"
-            rows={8}
+        <nav className="tab-nav" aria-label="주요 기능">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={activeTab === tab.key ? "tab active-tab" : "tab"}
+              onClick={() => void handleTabChange(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        {activeTab === "analyze" ? (
+          <AnalyzeSection
+            text={text}
+            tokens={tokens}
+            isAnalyzing={isAnalyzing}
+            isSaving={isSaving}
+            message={message}
+            onTextChange={setText}
+            onAnalyze={handleAnalyze}
+            onSaveUnknown={() => void saveUnknownTokens()}
+            onStatusChange={updateTokenStatus}
           />
-          <div className="actions">
-            <button type="submit" disabled={isAnalyzing}>
-              {isAnalyzing ? "분석 중..." : "분석하기"}
-            </button>
-          </div>
-        </form>
+        ) : null}
 
-        {message ? <p className="message">{message}</p> : null}
+        {activeTab === "vocab" ? (
+          <VocabSection
+            items={vocabItems}
+            isLoading={isLoadingVocab}
+            isExportingCsv={isExportingCsv}
+            message={vocabMessage}
+            onRefresh={() => void loadVocabItems()}
+            onDownloadCsv={() => void downloadCsv()}
+            onStatusChange={(itemId, status) =>
+              void updateVocabStatus(itemId, status)
+            }
+            onDelete={(itemId) => void deleteVocabItem(itemId)}
+          />
+        ) : null}
 
-        <section className="result-section" aria-live="polite">
-          <div className="result-heading">
-            <div>
-              <h2>분석 결과</h2>
-              <span>{tokens.length}개</span>
-            </div>
-            <button
-              type="button"
-              onClick={saveUnknownTokens}
-              disabled={isSaving || tokens.length === 0}
-            >
-              {isSaving ? "저장 중..." : "모르는 단어 저장"}
-            </button>
-          </div>
+        {activeTab === "study" ? (
+          <StudySection
+            items={studyItems}
+            currentItem={currentStudyItem}
+            currentIndex={currentStudyIndex}
+            isComplete={isStudyComplete}
+            isAnswerVisible={isAnswerVisible}
+            isLoading={isLoadingStudy}
+            isReviewing={isReviewing}
+            message={studyMessage}
+            correctCount={sessionCorrectCount}
+            wrongCount={sessionWrongCount}
+            onStart={() => void startStudy()}
+            onShowAnswer={() => setIsAnswerVisible(true)}
+            onReview={(result) => void submitStudyReview(result)}
+          />
+        ) : null}
 
-          {tokens.length > 0 ? (
-            <TokenTable
-              tokens={tokens}
-              onStatusChange={(index, status) =>
-                void updateTokenStatus(index, status)
-              }
-            />
-          ) : (
-            <p className="empty">분석 결과가 아직 없습니다.</p>
-          )}
-        </section>
-
-        <section className="result-section" aria-live="polite">
-          <div className="result-heading">
-            <div>
-              <h2>학습 모드</h2>
-              <span>
-                {studyItems.length > 0
-                  ? `${Math.min(currentStudyIndex + 1, studyItems.length)} / ${
-                      studyItems.length
-                    }`
-                  : "0 / 0"}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => void startStudy()}
-              disabled={isLoadingStudy}
-            >
-              {isLoadingStudy ? "불러오는 중..." : "학습 시작"}
-            </button>
-          </div>
-
-          {studyMessage ? <p className="message">{studyMessage}</p> : null}
-
-          {currentStudyItem && !isStudyComplete ? (
-            <div className="study-card">
-              <div className="study-progress">
-                {currentStudyIndex + 1} / {studyItems.length}
-              </div>
-              <div className="study-front">
-                {currentStudyItem.surface || currentStudyItem.base_form}
-              </div>
-              {isAnswerVisible ? (
-                <>
-                  <dl className="study-answer">
-                    <div>
-                      <dt>읽기</dt>
-                      <dd>{currentStudyItem.reading || "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>뜻</dt>
-                      <dd>{currentStudyItem.meaning_ko || "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>품사</dt>
-                      <dd>{currentStudyItem.part_of_speech || "-"}</dd>
-                    </div>
-                    <div>
-                      <dt>기본형</dt>
-                      <dd>{currentStudyItem.base_form}</dd>
-                    </div>
-                    <div className="answer-example">
-                      <dt>예문</dt>
-                      <dd>{currentStudyItem.example_sentence || "-"}</dd>
-                    </div>
-                  </dl>
-                  <div className="study-actions">
-                    <button
-                      type="button"
-                      className="success-button"
-                      onClick={() => void submitStudyReview("correct")}
-                      disabled={isReviewing}
-                    >
-                      맞음
-                    </button>
-                    <button
-                      type="button"
-                      className="danger-button"
-                      onClick={() => void submitStudyReview("wrong")}
-                      disabled={isReviewing}
-                    >
-                      틀림
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="study-actions">
-                  <button type="button" onClick={() => setIsAnswerVisible(true)}>
-                    정답 보기
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {isStudyComplete ? (
-            <div className="study-card complete-card">
-              <h3>학습 완료</h3>
-              <p>이번 세션 맞은 개수: {sessionCorrectCount}</p>
-              <p>이번 세션 틀린 개수: {sessionWrongCount}</p>
-              <p>오늘 복습을 완료했습니다.</p>
-            </div>
-          ) : null}
-        </section>
-
-        <section className="result-section" aria-live="polite">
-          <div className="result-heading">
-            <div>
-              <h2>저장된 단어장</h2>
-              <span>{vocabItems.length}개</span>
-            </div>
-            <div className="heading-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => void downloadCsv()}
-                disabled={isExportingCsv}
-              >
-                {isExportingCsv ? "다운로드 중..." : "CSV 다운로드"}
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => void loadVocabItems()}
-                disabled={isLoadingVocab}
-              >
-                {isLoadingVocab ? "불러오는 중..." : "새로고침"}
-              </button>
-            </div>
-          </div>
-
-          {vocabMessage ? <p className="message">{vocabMessage}</p> : null}
-
-          {vocabItems.length > 0 ? (
-            <VocabTable
-              items={vocabItems}
-              onStatusChange={(itemId, status) =>
-                void updateVocabStatus(itemId, status)
-              }
-              onDelete={(itemId) => void deleteVocabItem(itemId)}
-            />
-          ) : (
-            <p className="empty">저장된 단어가 없습니다.</p>
-          )}
-        </section>
+        {activeTab === "info" ? <InfoSection /> : null}
       </section>
     </main>
-  );
-}
-
-function TokenTable({
-  tokens,
-  onStatusChange,
-}: {
-  tokens: TokenWithStatus[];
-  onStatusChange: (index: number, status: TokenStatus) => void;
-}) {
-  return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>단어</th>
-            <th>기본형</th>
-            <th>읽기</th>
-            <th>품사</th>
-            <th>뜻</th>
-            <th>예문</th>
-            <th>상태</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tokens.map((token, index) => (
-            <tr key={`${token.base_form}-${token.reading}-${index}`}>
-              <td>{token.surface}</td>
-              <td>{token.base_form}</td>
-              <td>{token.reading}</td>
-              <td>{token.part_of_speech}</td>
-              <td>{token.meaning_ko || "-"}</td>
-              <td>
-                <span className="example-text">
-                  {token.example_sentence || "-"}
-                </span>
-              </td>
-              <td>
-                <StatusSelect
-                  value={token.status}
-                  label={`${token.surface} 상태`}
-                  onChange={(status) => onStatusChange(index, status)}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function VocabTable({
-  items,
-  onStatusChange,
-  onDelete,
-}: {
-  items: VocabItem[];
-  onStatusChange: (itemId: number, status: TokenStatus) => void;
-  onDelete: (itemId: number) => void;
-}) {
-  return (
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>단어</th>
-            <th>기본형</th>
-            <th>읽기</th>
-            <th>품사</th>
-            <th>뜻</th>
-            <th>예문</th>
-            <th>상태</th>
-            <th>맞음</th>
-            <th>틀림</th>
-            <th>레벨</th>
-            <th>마지막 복습</th>
-            <th>다음 복습</th>
-            <th>삭제</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.id}>
-              <td>{item.surface}</td>
-              <td>{item.base_form}</td>
-              <td>{item.reading}</td>
-              <td>{item.part_of_speech}</td>
-              <td>{item.meaning_ko || "-"}</td>
-              <td>
-                <span className="example-text">
-                  {item.example_sentence || "-"}
-                </span>
-              </td>
-              <td>
-                <StatusSelect
-                  value={item.status}
-                  label={`${item.surface} 저장 상태`}
-                  onChange={(status) => onStatusChange(item.id, status)}
-                />
-              </td>
-              <td>{item.correct_count}</td>
-              <td>{item.wrong_count}</td>
-              <td>{item.review_level}</td>
-              <td>{formatDateTime(item.last_reviewed_at)}</td>
-              <td>{formatNextReview(item.next_review_at)}</td>
-              <td>
-                <button
-                  type="button"
-                  className="danger-button"
-                  onClick={() => onDelete(item.id)}
-                >
-                  삭제
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function StatusSelect({
-  value,
-  label,
-  onChange,
-}: {
-  value: TokenStatus;
-  label: string;
-  onChange: (status: TokenStatus) => void;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value as TokenStatus)}
-      aria-label={label}
-    >
-      {Object.entries(statusLabels).map(([status, labelText]) => (
-        <option key={status} value={status}>
-          {labelText}
-        </option>
-      ))}
-    </select>
   );
 }
 
@@ -661,30 +390,4 @@ async function requestJson<T>(
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Date(value).toLocaleString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatNextReview(value: string | null) {
-  if (!value) {
-    return "다음 복습: 미정";
-  }
-
-  return `다음 복습: ${new Date(value).toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })}`;
 }
