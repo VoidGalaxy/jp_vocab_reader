@@ -7,9 +7,11 @@ type VocabSectionProps = {
   items: VocabItem[];
   isLoading: boolean;
   isExportingCsv: boolean;
+  explainingItemId: number | null;
   message: string;
   onRefresh: () => void;
   onDownloadCsv: () => void;
+  onExplain: (itemId: number) => void;
   onStatusChange: (itemId: number, status: TokenStatus) => void;
   onDelete: (itemId: number) => void;
 };
@@ -18,9 +20,11 @@ export function VocabSection({
   items,
   isLoading,
   isExportingCsv,
+  explainingItemId,
   message,
   onRefresh,
   onDownloadCsv,
+  onExplain,
   onStatusChange,
   onDelete,
 }: VocabSectionProps) {
@@ -63,6 +67,7 @@ export function VocabSection({
                 <th>읽기</th>
                 <th>품사</th>
                 <th>뜻</th>
+                <th>AI 설명</th>
                 <th>예문</th>
                 <th>상태</th>
                 <th>맞음</th>
@@ -81,6 +86,29 @@ export function VocabSection({
                   <td>{item.reading}</td>
                   <td>{item.part_of_speech}</td>
                   <td>{item.meaning_ko || "-"}</td>
+                  <td>
+                    <div className="ai-explanation-cell">
+                      {item.context_explanation_ko ? (
+                        <span className="example-text">
+                          {item.context_explanation_ko}
+                        </span>
+                      ) : (
+                        <span className="muted-text">-</span>
+                      )}
+                      <button
+                        type="button"
+                        className="secondary-button compact-button"
+                        onClick={() => onExplain(item.id)}
+                        disabled={explainingItemId === item.id}
+                      >
+                        {explainingItemId === item.id
+                          ? "생성 중..."
+                          : item.context_explanation_ko
+                            ? "AI 설명 다시 생성"
+                            : "AI 설명 생성"}
+                      </button>
+                    </div>
+                  </td>
                   <td>
                     <span className="example-text">
                       {item.example_sentence || "-"}

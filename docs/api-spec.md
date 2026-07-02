@@ -46,6 +46,7 @@
   "part_of_speech": "동사",
   "normalized_form": "食べる",
   "meaning_ko": "",
+  "context_explanation_ko": "",
   "example_sentence": "",
   "status": "unknown",
   "correct_count": 0,
@@ -153,6 +154,7 @@
       "part_of_speech": "동사",
       "normalized_form": "読む",
       "meaning_ko": "",
+      "context_explanation_ko": "",
       "example_sentence": "私は昨日、新しい本を読んだ。",
       "status": "unknown",
       "correct_count": 0,
@@ -205,6 +207,7 @@
   "part_of_speech": "동사",
   "normalized_form": "読む",
   "meaning_ko": "",
+  "context_explanation_ko": "",
   "example_sentence": "私は昨日、新しい本を読んだ。",
   "status": "unknown",
   "correct_count": 0,
@@ -244,6 +247,29 @@
 - `400 Bad Request`: 잘못된 `status`
 - `404 Not Found`: 항목을 찾을 수 없는 경우
 
+## POST /vocab-items/{item_id}/explain
+
+저장된 단어와 예문을 기반으로 AI 문맥 설명을 생성하고 DB에 저장한다.
+
+### 처리 규칙
+
+- 사용자가 버튼을 누른 단어에 대해서만 호출한다.
+- 서버는 `surface`, `base_form`, `reading`, `part_of_speech`, `meaning_ko`, `example_sentence`를 AI에 전달한다.
+- AI 설명은 한국어 2~4문장으로 생성한다.
+- 설명에는 기본 의미, 예문 속 문맥 의미, 외울 때 참고할 뉘앙스를 포함한다.
+- 생성 결과는 `context_explanation_ko`에 저장한다.
+- `OPENAI_API_KEY`가 없으면 서버는 죽지 않고 JSON 에러를 반환한다.
+
+### 응답
+
+갱신된 `VocabItem` 객체를 반환한다.
+
+### 오류
+
+- `400 Bad Request`: `OPENAI_API_KEY`가 설정되지 않은 경우
+- `404 Not Found`: 항목을 찾을 수 없는 경우
+- `502 Bad Gateway`: AI 호출 실패 또는 빈 응답
+
 ## GET /study-items
 
 자체 학습 모드에서 오늘 복습할 단어 목록을 조회한다.
@@ -271,6 +297,7 @@
       "part_of_speech": "명사",
       "normalized_form": "怠惰",
       "meaning_ko": "나태함",
+      "context_explanation_ko": "怠惰는 게으름이나 나태함을 뜻합니다. 예문에서는 인물이 스스로 그런 성향을 알고 있었다는 문맥입니다. 단순히 쉬는 것이 아니라 해야 할 일을 미루는 부정적인 뉘앙스로 기억하면 좋습니다.",
       "example_sentence": "彼は怠惰であることを自覚していた。",
       "status": "unknown",
       "correct_count": 1,
@@ -351,8 +378,8 @@ Content-Disposition: attachment; filename="jp-vocab-items.csv"
 ### CSV 컬럼
 
 ```csv
-surface,base_form,reading,part_of_speech,meaning_ko,example_sentence,status,review_level,correct_count,wrong_count,next_review_at,created_at
-読んだ,読む,よむ,동사,,私は昨日、新しい本を読んだ。,unknown,0,0,0,,2026-07-02T09:00:00+00:00
+surface,base_form,reading,part_of_speech,meaning_ko,context_explanation_ko,example_sentence,status,review_level,correct_count,wrong_count,next_review_at,created_at
+読んだ,読む,よむ,동사,,,私は昨日、新しい本を読んだ。,unknown,0,0,0,,2026-07-02T09:00:00+00:00
 ```
 
 ### 처리 규칙

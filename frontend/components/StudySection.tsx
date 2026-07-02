@@ -82,6 +82,12 @@ export function StudySection({
                   <dt>예문</dt>
                   <dd>{currentItem.example_sentence || "-"}</dd>
                 </div>
+                {currentItem.context_explanation_ko ? (
+                  <div className="answer-example">
+                    <dt>AI 문맥 설명</dt>
+                    <dd>{currentItem.context_explanation_ko}</dd>
+                  </div>
+                ) : null}
               </dl>
               <div className="study-actions">
                 <button

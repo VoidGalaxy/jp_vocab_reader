@@ -47,6 +47,7 @@ class VocabItemResponse(BaseModel):
     normalized_form: str
     meaning_ko: str
     example_sentence: str
+    context_explanation_ko: str
     status: str
     correct_count: int
     wrong_count: int

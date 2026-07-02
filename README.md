@@ -31,6 +31,13 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+AI 문맥 설명을 사용하려면 `backend/.env`에 OpenAI API 키를 설정한다. `.env` 파일은 커밋하지 않는다.
+
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-5.2
+```
+
 헬스체크:
 
 ```bash
@@ -79,3 +86,10 @@ npm run dev
 7. `틀림`을 선택하면 `review_level`이 0으로 초기화되고 즉시 다시 복습 대상이 된다.
 8. 선택 결과는 `correct_count`, `wrong_count`, `last_reviewed_at`, `next_review_at`에 기록된다.
 9. 모든 카드를 끝내면 이번 세션의 맞은 개수와 틀린 개수, 오늘 복습 완료 메시지를 확인할 수 있다.
+
+## AI 문맥 설명
+
+1. 단어장 탭에서 저장된 단어의 `AI 설명 생성` 버튼을 누른다.
+2. 서버는 저장된 단어, 뜻, 읽기, 품사, 예문을 OpenAI API에 보내 한국어 문맥 설명을 생성한다.
+3. 생성된 설명은 `context_explanation_ko`로 DB에 저장되며, 이후 단어장과 학습 카드에서 다시 볼 수 있다.
+4. 이미 설명이 있는 단어는 `AI 설명 다시 생성` 버튼으로 갱신할 수 있다.

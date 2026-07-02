@@ -16,6 +16,7 @@ export type TokenWithStatus = Token & {
 
 export type VocabItem = TokenWithStatus & {
   id: number;
+  context_explanation_ko: string;
   correct_count: number;
   wrong_count: number;
   last_reviewed_at: string | null;

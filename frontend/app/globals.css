@@ -189,7 +189,7 @@ button:disabled {
 
 table {
   width: 100%;
-  min-width: 1240px;
+  min-width: 1440px;
   border-collapse: collapse;
 }
 
@@ -317,6 +317,22 @@ select {
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.ai-explanation-cell {
+  display: grid;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.compact-button {
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.muted-text {
+  color: #94a3b8;
 }
 
 .info-panel {

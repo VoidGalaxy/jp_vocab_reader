@@ -2,3 +2,5 @@ fastapi>=0.111,<1.0
 uvicorn[standard]>=0.30,<1.0
 SudachiPy>=0.6.8,<1.0
 SudachiDict-core>=20240409
+openai>=2.0,<3.0
+python-dotenv>=1.0,<2.0

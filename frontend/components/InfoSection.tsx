@@ -28,6 +28,7 @@ export function InfoSection() {
           <li>단어장 조회, 상태 변경, 삭제</li>
           <li>CSV 다운로드</li>
           <li>플래시카드 학습 모드와 기본 복습 스케줄</li>
+          <li>저장된 단어별 AI 문맥 설명 생성</li>
         </ul>
       </div>
 
@@ -38,7 +39,7 @@ export function InfoSection() {
           <li>고급 간격 반복 기능</li>
           <li>작품별 단어장 분리</li>
           <li>Anki 전용 내보내기</li>
-          <li>AI 문맥 설명</li>
+          <li>AI 문맥 설명 품질 개선</li>
         </ul>
       </div>
     </section>

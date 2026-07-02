@@ -49,6 +49,7 @@ export default function HomePage() {
   const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isLoadingStudy, setIsLoadingStudy] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [explainingItemId, setExplainingItemId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [vocabMessage, setVocabMessage] = useState("");
   const [studyMessage, setStudyMessage] = useState("");
@@ -229,6 +230,33 @@ export default function HomePage() {
     }
   }
 
+  async function explainVocabItem(itemId: number) {
+    setExplainingItemId(itemId);
+    setVocabMessage("");
+
+    try {
+      const updatedItem = await requestJson<VocabItem>(
+        `/vocab-items/${itemId}/explain`,
+        {
+          method: "POST",
+        },
+      );
+      setVocabItems((currentItems) =>
+        currentItems.map((item) => (item.id === itemId ? updatedItem : item)),
+      );
+      setStudyItems((currentItems) =>
+        currentItems.map((item) => (item.id === itemId ? updatedItem : item)),
+      );
+      setVocabMessage("AI 문맥 설명을 저장했습니다.");
+    } catch (error) {
+      setVocabMessage(
+        getErrorMessage(error, "AI 문맥 설명 생성에 실패했습니다."),
+      );
+    } finally {
+      setExplainingItemId(null);
+    }
+  }
+
   async function startStudy() {
     setIsLoadingStudy(true);
     setStudyMessage("");
@@ -335,9 +363,11 @@ export default function HomePage() {
             items={vocabItems}
             isLoading={isLoadingVocab}
             isExportingCsv={isExportingCsv}
+            explainingItemId={explainingItemId}
             message={vocabMessage}
             onRefresh={() => void loadVocabItems()}
             onDownloadCsv={() => void downloadCsv()}
+            onExplain={(itemId) => void explainVocabItem(itemId)}
             onStatusChange={(itemId, status) =>
               void updateVocabStatus(itemId, status)
             }
@@ -382,7 +412,14 @@ async function requestJson<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`요청에 실패했습니다. (${response.status})`);
+    let detail = "";
+    try {
+      const data = (await response.json()) as { detail?: string };
+      detail = data.detail ? ` ${data.detail}` : "";
+    } catch {
+      detail = "";
+    }
+    throw new Error(`요청에 실패했습니다. (${response.status})${detail}`);
   }
 
   return (await response.json()) as T;

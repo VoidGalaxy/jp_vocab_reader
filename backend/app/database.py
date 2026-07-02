@@ -11,8 +11,9 @@ from app.schemas import VocabItemCreate
 DB_PATH = Path(__file__).resolve().parents[1] / "vocab.db"
 VOCAB_ITEM_FIELDS = """
     id, surface, base_form, reading, part_of_speech, normalized_form,
-    meaning_ko, example_sentence, status, correct_count, wrong_count,
-    last_reviewed_at, review_level, next_review_at, created_at, updated_at
+    meaning_ko, context_explanation_ko, example_sentence, status,
+    correct_count, wrong_count, last_reviewed_at, review_level, next_review_at,
+    created_at, updated_at
 """
 
 
@@ -34,6 +35,7 @@ def init_db() -> None:
                 part_of_speech TEXT NOT NULL,
                 normalized_form TEXT NOT NULL,
                 meaning_ko TEXT NOT NULL DEFAULT '',
+                context_explanation_ko TEXT NOT NULL DEFAULT '',
                 example_sentence TEXT NOT NULL DEFAULT '',
                 status TEXT NOT NULL,
                 correct_count INTEGER NOT NULL DEFAULT 0,
@@ -53,6 +55,9 @@ def init_db() -> None:
         ensure_column(connection, "review_level", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "next_review_at", "DATETIME")
         ensure_column(connection, "example_sentence", "TEXT NOT NULL DEFAULT ''")
+        ensure_column(
+            connection, "context_explanation_ko", "TEXT NOT NULL DEFAULT ''"
+        )
 
 
 def ensure_column(
@@ -180,6 +185,33 @@ def update_vocab_item_status(item_id: int, status: str) -> dict[str, Any] | None
             WHERE id = ?
             """,
             (status, timestamp, item_id),
+        )
+        if cursor.rowcount == 0:
+            return None
+
+        row = connection.execute(
+            f"""
+            SELECT {VOCAB_ITEM_FIELDS}
+            FROM vocab_items
+            WHERE id = ?
+            """,
+            (item_id,),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def update_context_explanation(
+    item_id: int, context_explanation_ko: str
+) -> dict[str, Any] | None:
+    timestamp = now_iso()
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            UPDATE vocab_items
+            SET context_explanation_ko = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (context_explanation_ko, timestamp, item_id),
         )
         if cursor.rowcount == 0:
             return None

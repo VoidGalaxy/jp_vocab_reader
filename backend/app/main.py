@@ -4,14 +4,21 @@ from io import StringIO
 from fastapi import FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.ai_explainer import (
+    AIExplanationError,
+    MissingOpenAIKeyError,
+    generate_context_explanation,
+)
 from app.analyzer import analyzer
 from app.database import (
     create_vocab_item,
     delete_vocab_item,
+    get_vocab_item,
     init_db,
     list_study_items,
     list_vocab_items,
     record_study_review,
+    update_context_explanation,
     update_vocab_item_status,
 )
 from app.schemas import (
@@ -89,6 +96,7 @@ def export_vocab_items_csv() -> Response:
         "reading",
         "part_of_speech",
         "meaning_ko",
+        "context_explanation_ko",
         "example_sentence",
         "status",
         "review_level",
@@ -130,6 +138,25 @@ def patch_vocab_item(item_id: int, item: VocabItemUpdate) -> VocabItemResponse:
         raise HTTPException(status_code=400, detail="invalid status")
 
     updated_item = update_vocab_item_status(item_id, item.status)
+    if not updated_item:
+        raise HTTPException(status_code=404, detail="vocab item not found")
+    return VocabItemResponse(**updated_item)
+
+
+@app.post("/vocab-items/{item_id}/explain", response_model=VocabItemResponse)
+def explain_vocab_item(item_id: int) -> VocabItemResponse:
+    item = get_vocab_item(item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="vocab item not found")
+
+    try:
+        explanation = generate_context_explanation(item)
+    except MissingOpenAIKeyError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except AIExplanationError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    updated_item = update_context_explanation(item_id, explanation)
     if not updated_item:
         raise HTTPException(status_code=404, detail="vocab item not found")
     return VocabItemResponse(**updated_item)
