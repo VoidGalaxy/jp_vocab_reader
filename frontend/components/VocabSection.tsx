@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDateTime, formatNextReview, StatusSelect } from "./shared";
-import type { TokenStatus, VocabItem } from "./types";
+import type { Deck, TokenStatus, VocabItem } from "./types";
 
 type VocabSectionProps = {
   items: VocabItem[];
@@ -9,6 +9,17 @@ type VocabSectionProps = {
   isExportingCsv: boolean;
   explainingItemId: number | null;
   message: string;
+  decks: Deck[];
+  selectedDeckId: string;
+  newDeckName: string;
+  newDeckDescription: string;
+  isCreatingDeck: boolean;
+  deckMessage: string;
+  onSelectedDeckChange: (deckId: string) => void;
+  onNewDeckNameChange: (name: string) => void;
+  onNewDeckDescriptionChange: (description: string) => void;
+  onCreateDeck: () => void;
+  onDeleteDeck: (deckId: number) => void;
   onRefresh: () => void;
   onDownloadCsv: () => void;
   onExplain: (itemId: number) => void;
@@ -22,6 +33,17 @@ export function VocabSection({
   isExportingCsv,
   explainingItemId,
   message,
+  decks,
+  selectedDeckId,
+  newDeckName,
+  newDeckDescription,
+  isCreatingDeck,
+  deckMessage,
+  onSelectedDeckChange,
+  onNewDeckNameChange,
+  onNewDeckDescriptionChange,
+  onCreateDeck,
+  onDeleteDeck,
   onRefresh,
   onDownloadCsv,
   onExplain,
@@ -30,6 +52,50 @@ export function VocabSection({
 }: VocabSectionProps) {
   return (
     <section className="tab-panel" aria-live="polite">
+      <div className="deck-toolbar">
+        <label className="inline-field">
+          보기
+          <select
+            value={selectedDeckId}
+            onChange={(event) => onSelectedDeckChange(event.target.value)}
+          >
+            <option value="all">전체 단어장</option>
+            {decks.map((deck) => (
+              <option key={deck.id} value={String(deck.id)}>
+                {deck.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {selectedDeckId !== "all" ? (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => onDeleteDeck(Number(selectedDeckId))}
+          >
+            덱 삭제
+          </button>
+        ) : null}
+      </div>
+
+      <div className="deck-create">
+        <input
+          value={newDeckName}
+          onChange={(event) => onNewDeckNameChange(event.target.value)}
+          placeholder="덱 이름"
+        />
+        <input
+          value={newDeckDescription}
+          onChange={(event) => onNewDeckDescriptionChange(event.target.value)}
+          placeholder="설명"
+        />
+        <button type="button" onClick={onCreateDeck} disabled={isCreatingDeck}>
+          {isCreatingDeck ? "만드는 중..." : "덱 만들기"}
+        </button>
+      </div>
+
+      {deckMessage ? <p className="message">{deckMessage}</p> : null}
+
       <div className="result-heading">
         <div>
           <h2>저장된 단어장</h2>
@@ -63,6 +129,7 @@ export function VocabSection({
             <thead>
               <tr>
                 <th>단어</th>
+                <th>덱</th>
                 <th>기본형</th>
                 <th>읽기</th>
                 <th>품사</th>
@@ -82,6 +149,7 @@ export function VocabSection({
               {items.map((item) => (
                 <tr key={item.id}>
                   <td>{item.surface}</td>
+                  <td>{item.deck_name}</td>
                   <td>{item.base_form}</td>
                   <td>{item.reading}</td>
                   <td>{item.part_of_speech}</td>

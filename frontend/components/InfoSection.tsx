@@ -25,6 +25,7 @@ export function InfoSection() {
           <li>일본어 원문 형태소 분석</li>
           <li>히라가나 읽기와 한국어 품사 표시</li>
           <li>기본 한국어 뜻과 예문 저장</li>
+          <li>작품/책/챕터별 덱 관리</li>
           <li>단어장 조회, 상태 변경, 삭제</li>
           <li>CSV 다운로드</li>
           <li>플래시카드 학습 모드와 기본 복습 스케줄</li>
@@ -37,7 +38,6 @@ export function InfoSection() {
         <ul>
           <li>사전 데이터 확장</li>
           <li>고급 간격 반복 기능</li>
-          <li>작품별 단어장 분리</li>
           <li>Anki 전용 내보내기</li>
           <li>AI 문맥 설명 품질 개선</li>
         </ul>

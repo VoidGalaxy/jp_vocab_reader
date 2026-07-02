@@ -40,6 +40,8 @@
 ```json
 {
   "id": 1,
+  "deck_id": 1,
+  "deck_name": "기본 단어장",
   "surface": "食べた",
   "base_form": "食べる",
   "reading": "たべる",
@@ -54,6 +56,18 @@
   "last_reviewed_at": null,
   "review_level": 0,
   "next_review_at": null,
+  "created_at": "2026-07-02T09:00:00+00:00",
+  "updated_at": "2026-07-02T09:00:00+00:00"
+}
+```
+
+### Deck
+
+```json
+{
+  "id": 1,
+  "name": "기본 단어장",
+  "description": "기존 단어와 기본 저장 대상",
   "created_at": "2026-07-02T09:00:00+00:00",
   "updated_at": "2026-07-02T09:00:00+00:00"
 }
@@ -141,6 +155,10 @@
 
 저장된 단어장 항목을 조회한다.
 
+### Query Parameters
+
+- `deck_id` optional: 지정하면 해당 덱의 단어만 반환한다. 생략하면 전체 덱 기준으로 반환한다.
+
 ### 응답
 
 ```json
@@ -148,6 +166,8 @@
   "items": [
     {
       "id": 1,
+      "deck_id": 1,
+      "deck_name": "기본 단어장",
       "surface": "読んだ",
       "base_form": "読む",
       "reading": "よむ",
@@ -184,7 +204,8 @@
   "normalized_form": "読む",
   "meaning_ko": "",
   "example_sentence": "私は昨日、新しい本を読んだ。",
-  "status": "unknown"
+  "status": "unknown",
+  "deck_id": 1
 }
 ```
 
@@ -192,7 +213,8 @@
 
 - MVP에서는 주로 `status`가 `unknown`인 항목을 저장 대상으로 사용한다.
 - `status`는 `unknown`, `known`, `unclassified` 중 하나여야 한다.
-- `base_form` + `reading` 기준 중복 저장을 방지한다.
+- `deck_id`를 생략하면 `기본 단어장`에 저장한다.
+- 같은 덱 안에서 `base_form` + `reading` 기준 중복 저장을 방지한다.
 - 이미 존재하는 조합이 들어오면 서버 에러로 처리하지 않고 기존 항목을 반환한다.
 - 원문 전체, 문단 전체, 긴 문맥 문자열은 저장하지 않는다.
 
@@ -201,6 +223,8 @@
 ```json
 {
   "id": 1,
+  "deck_id": 1,
+  "deck_name": "기본 단어장",
   "surface": "読んだ",
   "base_form": "読む",
   "reading": "よむ",
@@ -274,6 +298,10 @@
 
 자체 학습 모드에서 오늘 복습할 단어 목록을 조회한다.
 
+### Query Parameters
+
+- `deck_id` optional: 지정하면 해당 덱의 오늘 복습할 단어만 반환한다. 생략하면 전체 덱 기준으로 반환한다.
+
 ### 처리 규칙
 
 - 학습 대상은 `status`가 `unknown`인 단어다.
@@ -291,6 +319,8 @@
   "items": [
     {
       "id": 1,
+      "deck_id": 1,
+      "deck_name": "기본 단어장",
       "surface": "怠惰",
       "base_form": "怠惰",
       "reading": "たいだ",
@@ -368,6 +398,10 @@
 
 저장된 단어장을 CSV 파일로 내보낸다.
 
+### Query Parameters
+
+- `deck_id` optional: 지정하면 해당 덱만 CSV로 내보낸다. 생략하면 전체 덱 기준으로 내보낸다.
+
 ### 응답 헤더
 
 ```http
@@ -384,7 +418,7 @@ surface,base_form,reading,part_of_speech,meaning_ko,context_explanation_ko,examp
 
 ### 처리 규칙
 
-- 저장된 `vocab_items` 전체를 내보낸다.
+- `deck_id`가 없으면 저장된 `vocab_items` 전체를 내보내고, 있으면 해당 덱의 항목만 내보낸다.
 - CSV 첫 줄에는 헤더를 포함한다.
 - CSV는 UTF-8 BOM을 포함해 엑셀에서 한글과 일본어가 깨지지 않도록 한다.
 - 저장된 단어가 하나도 없어도 헤더만 있는 CSV를 반환한다.
@@ -393,3 +427,85 @@ surface,base_form,reading,part_of_speech,meaning_ko,context_explanation_ko,examp
 ### 오류
 
 - `500 Internal Server Error`: CSV 생성 또는 DB 조회 오류
+
+## GET /decks
+
+덱 목록을 조회한다. 앱 시작 시 `기본 단어장`이 없으면 자동 생성된다.
+
+### 응답
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "name": "기본 단어장",
+      "description": "기존 단어와 기본 저장 대상",
+      "created_at": "2026-07-02T09:00:00+00:00",
+      "updated_at": "2026-07-02T09:00:00+00:00"
+    }
+  ]
+}
+```
+
+## POST /decks
+
+새 덱을 생성한다.
+
+### 요청
+
+```json
+{
+  "name": "리제로",
+  "description": "리제로 원서 단어장"
+}
+```
+
+### 처리 규칙
+
+- `name`은 공백일 수 없다.
+- 같은 이름의 덱이 이미 있으면 새로 만들지 않고 기존 덱을 반환한다.
+
+### 응답
+
+생성되었거나 이미 존재하던 `Deck` 객체를 반환한다.
+
+## PATCH /decks/{deck_id}
+
+덱 이름 또는 설명을 수정한다.
+
+### 요청
+
+```json
+{
+  "name": "리제로 1권",
+  "description": "리제로 1권 단어장"
+}
+```
+
+### 응답
+
+수정된 `Deck` 객체를 반환한다.
+
+### 오류
+
+- `400 Bad Request`: 덱 이름이 비어 있거나 수정할 수 없는 경우
+- `404 Not Found`: 덱을 찾을 수 없는 경우
+
+## DELETE /decks/{deck_id}
+
+덱을 삭제한다.
+
+### 처리 규칙
+
+- `기본 단어장`은 삭제할 수 없다.
+- 덱 삭제 시 해당 덱의 단어는 삭제하지 않고 `기본 단어장`으로 이동한다.
+
+### 응답
+
+- `204 No Content`
+
+### 오류
+
+- `400 Bad Request`: 기본 단어장을 삭제하려는 경우
+- `404 Not Found`: 덱을 찾을 수 없는 경우

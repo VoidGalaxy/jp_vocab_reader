@@ -32,6 +32,7 @@ class VocabItemCreate(BaseModel):
     meaning_ko: str = ""
     example_sentence: str = ""
     status: str = "unknown"
+    deck_id: int | None = None
 
 
 class VocabItemUpdate(BaseModel):
@@ -40,6 +41,8 @@ class VocabItemUpdate(BaseModel):
 
 class VocabItemResponse(BaseModel):
     id: int
+    deck_id: int
+    deck_name: str
     surface: str
     base_form: str
     reading: str
@@ -68,3 +71,25 @@ class StudyItemsResponse(BaseModel):
 
 class StudyReviewRequest(BaseModel):
     result: str
+
+
+class DeckCreate(BaseModel):
+    name: str
+    description: str = ""
+
+
+class DeckUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
+class DeckResponse(BaseModel):
+    id: int
+    name: str
+    description: str
+    created_at: str
+    updated_at: str
+
+
+class DecksResponse(BaseModel):
+    items: list[DeckResponse]

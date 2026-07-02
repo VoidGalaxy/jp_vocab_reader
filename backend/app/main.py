@@ -1,7 +1,7 @@
 import csv
 from io import StringIO
 
-from fastapi import FastAPI, HTTPException, Response, status
+from fastapi import FastAPI, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.ai_explainer import (
@@ -11,19 +11,28 @@ from app.ai_explainer import (
 )
 from app.analyzer import analyzer
 from app.database import (
+    create_deck,
     create_vocab_item,
+    delete_deck,
     delete_vocab_item,
+    get_deck,
     get_vocab_item,
     init_db,
+    list_decks,
     list_study_items,
     list_vocab_items,
     record_study_review,
+    update_deck,
     update_context_explanation,
     update_vocab_item_status,
 )
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
+    DeckCreate,
+    DeckResponse,
+    DecksResponse,
+    DeckUpdate,
     StudyItemsResponse,
     StudyReviewRequest,
     VALID_REVIEW_RESULTS,
@@ -64,14 +73,58 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     return AnalyzeResponse(tokens=analyzer.analyze(request.text))
 
 
+@app.get("/decks", response_model=DecksResponse)
+def get_decks() -> DecksResponse:
+    return DecksResponse(items=list_decks())
+
+
+@app.post("/decks", response_model=DeckResponse)
+def post_deck(deck: DeckCreate, response: Response) -> DeckResponse:
+    if not deck.name.strip():
+        raise HTTPException(status_code=400, detail="deck name must not be blank")
+
+    saved_deck, created = create_deck(deck)
+    if not created:
+        response.status_code = status.HTTP_200_OK
+    return DeckResponse(**saved_deck)
+
+
+@app.patch("/decks/{deck_id}", response_model=DeckResponse)
+def patch_deck(deck_id: int, deck: DeckUpdate) -> DeckResponse:
+    if deck.name is not None and not deck.name.strip():
+        raise HTTPException(status_code=400, detail="deck name must not be blank")
+
+    try:
+        updated_deck = update_deck(deck_id, deck)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="deck update failed") from exc
+    if not updated_deck:
+        raise HTTPException(status_code=404, detail="deck not found")
+    return DeckResponse(**updated_deck)
+
+
+@app.delete("/decks/{deck_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_deck(deck_id: int) -> Response:
+    deleted = delete_deck(deck_id)
+    if deleted is None:
+        raise HTTPException(status_code=400, detail="default deck cannot be deleted")
+    if deleted is False:
+        raise HTTPException(status_code=404, detail="deck not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @app.get("/vocab-items", response_model=VocabItemsResponse)
-def get_vocab_items() -> VocabItemsResponse:
-    return VocabItemsResponse(items=list_vocab_items())
+def get_vocab_items(deck_id: int | None = Query(default=None)) -> VocabItemsResponse:
+    if deck_id is not None and not get_deck(deck_id):
+        raise HTTPException(status_code=404, detail="deck not found")
+    return VocabItemsResponse(items=list_vocab_items(deck_id=deck_id))
 
 
 @app.get("/study-items", response_model=StudyItemsResponse)
-def get_study_items() -> StudyItemsResponse:
-    return StudyItemsResponse(items=list_study_items())
+def get_study_items(deck_id: int | None = Query(default=None)) -> StudyItemsResponse:
+    if deck_id is not None and not get_deck(deck_id):
+        raise HTTPException(status_code=404, detail="deck not found")
+    return StudyItemsResponse(items=list_study_items(deck_id=deck_id))
 
 
 @app.post("/study-items/{item_id}/review", response_model=VocabItemResponse)
@@ -88,7 +141,10 @@ def post_study_review(
 
 
 @app.get("/vocab-items/export.csv")
-def export_vocab_items_csv() -> Response:
+def export_vocab_items_csv(deck_id: int | None = Query(default=None)) -> Response:
+    if deck_id is not None and not get_deck(deck_id):
+        raise HTTPException(status_code=404, detail="deck not found")
+
     output = StringIO()
     fieldnames = [
         "surface",
@@ -107,7 +163,7 @@ def export_vocab_items_csv() -> Response:
     ]
     writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
     writer.writeheader()
-    writer.writerows(list_vocab_items())
+    writer.writerows(list_vocab_items(deck_id=deck_id))
 
     content = "\ufeff" + output.getvalue()
     return Response(

@@ -20,6 +20,7 @@ body {
 
 button,
 textarea,
+input,
 select {
   font: inherit;
 }
@@ -97,9 +98,19 @@ textarea {
 }
 
 textarea:focus,
+input:focus,
 select:focus {
   border-color: #2563eb;
   outline: 3px solid rgba(37, 99, 235, 0.18);
+}
+
+input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #111827;
+  background: #ffffff;
 }
 
 .actions {
@@ -189,7 +200,7 @@ button:disabled {
 
 table {
   width: 100%;
-  min-width: 1440px;
+  min-width: 1520px;
   border-collapse: collapse;
 }
 
@@ -335,6 +346,26 @@ select {
   color: #94a3b8;
 }
 
+.deck-toolbar,
+.deck-create {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.deck-create {
+  grid-template-columns: minmax(160px, 0.8fr) minmax(180px, 1fr) auto;
+}
+
+.inline-field {
+  display: grid;
+  gap: 6px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .info-panel {
   display: grid;
   gap: 22px;
@@ -385,6 +416,11 @@ select {
 
   .heading-actions {
     flex-direction: column;
+  }
+
+  .deck-toolbar,
+  .deck-create {
+    grid-template-columns: 1fr;
   }
 
   .study-card {

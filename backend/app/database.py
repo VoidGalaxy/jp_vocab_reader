@@ -5,15 +5,20 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from app.schemas import VocabItemCreate
+from app.schemas import DeckCreate, DeckUpdate, VocabItemCreate
 
 
 DB_PATH = Path(__file__).resolve().parents[1] / "vocab.db"
+DEFAULT_DECK_NAME = "기본 단어장"
 VOCAB_ITEM_FIELDS = """
-    id, surface, base_form, reading, part_of_speech, normalized_form,
-    meaning_ko, context_explanation_ko, example_sentence, status,
-    correct_count, wrong_count, last_reviewed_at, review_level, next_review_at,
-    created_at, updated_at
+    vocab_items.id, vocab_items.deck_id, decks.name AS deck_name,
+    vocab_items.surface, vocab_items.base_form, vocab_items.reading,
+    vocab_items.part_of_speech, vocab_items.normalized_form,
+    vocab_items.meaning_ko, vocab_items.context_explanation_ko,
+    vocab_items.example_sentence, vocab_items.status,
+    vocab_items.correct_count, vocab_items.wrong_count,
+    vocab_items.last_reviewed_at, vocab_items.review_level,
+    vocab_items.next_review_at, vocab_items.created_at, vocab_items.updated_at
 """
 
 
@@ -27,8 +32,21 @@ def init_db() -> None:
     with get_connection() as connection:
         connection.execute(
             """
+            CREATE TABLE IF NOT EXISTS decks (
+                id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE,
+                description TEXT NOT NULL DEFAULT '',
+                created_at DATETIME NOT NULL,
+                updated_at DATETIME NOT NULL
+            )
+            """
+        )
+        default_deck_id = ensure_default_deck(connection)
+        connection.execute(
+            """
             CREATE TABLE IF NOT EXISTS vocab_items (
                 id INTEGER PRIMARY KEY,
+                deck_id INTEGER,
                 surface TEXT NOT NULL,
                 base_form TEXT NOT NULL,
                 reading TEXT NOT NULL,
@@ -44,11 +62,11 @@ def init_db() -> None:
                 review_level INTEGER NOT NULL DEFAULT 0,
                 next_review_at DATETIME,
                 created_at DATETIME NOT NULL,
-                updated_at DATETIME NOT NULL,
-                UNIQUE(base_form, reading)
+                updated_at DATETIME NOT NULL
             )
             """
         )
+        ensure_column(connection, "deck_id", "INTEGER")
         ensure_column(connection, "correct_count", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "wrong_count", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "last_reviewed_at", "DATETIME")
@@ -58,6 +76,106 @@ def init_db() -> None:
         ensure_column(
             connection, "context_explanation_ko", "TEXT NOT NULL DEFAULT ''"
         )
+        migrate_vocab_unique_constraint(connection)
+        connection.execute(
+            """
+            UPDATE vocab_items
+            SET deck_id = ?
+            WHERE deck_id IS NULL
+               OR deck_id NOT IN (SELECT id FROM decks)
+            """,
+            (default_deck_id,),
+        )
+
+
+def ensure_default_deck(connection: sqlite3.Connection) -> int:
+    timestamp = now_iso()
+    row = connection.execute(
+        "SELECT id FROM decks WHERE name = ?", (DEFAULT_DECK_NAME,)
+    ).fetchone()
+    if row:
+        return int(row["id"])
+
+    cursor = connection.execute(
+        """
+        INSERT INTO decks (name, description, created_at, updated_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (DEFAULT_DECK_NAME, "기존 단어와 기본 저장 대상", timestamp, timestamp),
+    )
+    return int(cursor.lastrowid)
+
+
+def migrate_vocab_unique_constraint(connection: sqlite3.Connection) -> None:
+    row = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'vocab_items'"
+    ).fetchone()
+    create_sql = row["sql"] if row else ""
+    if (
+        "UNIQUE(base_form, reading)" not in create_sql
+        and "UNIQUE(base_form, reading, deck_id)" not in create_sql
+    ):
+        return
+
+    default_deck_id = ensure_default_deck(connection)
+    connection.execute(
+        """
+        CREATE TABLE vocab_items_new (
+            id INTEGER PRIMARY KEY,
+            deck_id INTEGER,
+            surface TEXT NOT NULL,
+            base_form TEXT NOT NULL,
+            reading TEXT NOT NULL,
+            part_of_speech TEXT NOT NULL,
+            normalized_form TEXT NOT NULL,
+            meaning_ko TEXT NOT NULL DEFAULT '',
+            context_explanation_ko TEXT NOT NULL DEFAULT '',
+            example_sentence TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL,
+            correct_count INTEGER NOT NULL DEFAULT 0,
+            wrong_count INTEGER NOT NULL DEFAULT 0,
+            last_reviewed_at DATETIME,
+            review_level INTEGER NOT NULL DEFAULT 0,
+            next_review_at DATETIME,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )
+        """
+    )
+    columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(vocab_items)").fetchall()
+    }
+    deck_expr = "deck_id" if "deck_id" in columns else str(default_deck_id)
+    context_expr = (
+        "context_explanation_ko" if "context_explanation_ko" in columns else "''"
+    )
+    example_expr = "example_sentence" if "example_sentence" in columns else "''"
+    correct_expr = "correct_count" if "correct_count" in columns else "0"
+    wrong_expr = "wrong_count" if "wrong_count" in columns else "0"
+    last_expr = "last_reviewed_at" if "last_reviewed_at" in columns else "NULL"
+    level_expr = "review_level" if "review_level" in columns else "0"
+    next_expr = "next_review_at" if "next_review_at" in columns else "NULL"
+    connection.execute(
+        f"""
+        INSERT INTO vocab_items_new (
+            id, deck_id, surface, base_form, reading, part_of_speech,
+            normalized_form, meaning_ko, context_explanation_ko,
+            example_sentence, status, correct_count, wrong_count,
+            last_reviewed_at, review_level, next_review_at,
+            created_at, updated_at
+        )
+        SELECT
+            id, COALESCE({deck_expr}, ?), surface, base_form, reading,
+            part_of_speech, normalized_form, meaning_ko, {context_expr},
+            {example_expr}, status, {correct_expr}, {wrong_expr},
+            {last_expr}, {level_expr}, {next_expr}, created_at, updated_at
+        FROM vocab_items
+        """,
+        (default_deck_id,),
+    )
+    connection.execute("DROP TABLE vocab_items")
+    connection.execute("ALTER TABLE vocab_items_new RENAME TO vocab_items")
 
 
 def ensure_column(
@@ -93,14 +211,138 @@ def next_review_for_correct(current_level: int, reviewed_at: datetime) -> str:
     return (reviewed_at + delay).isoformat()
 
 
-def list_vocab_items() -> list[dict[str, Any]]:
+def list_decks() -> list[dict[str, Any]]:
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT id, name, description, created_at, updated_at
+            FROM decks
+            ORDER BY id ASC
+            """
+        ).fetchall()
+    return [row_to_dict(row) for row in rows]
+
+
+def get_deck(deck_id: int) -> dict[str, Any] | None:
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT id, name, description, created_at, updated_at
+            FROM decks
+            WHERE id = ?
+            """,
+            (deck_id,),
+        ).fetchone()
+    return row_to_dict(row) if row else None
+
+
+def create_deck(deck: DeckCreate) -> tuple[dict[str, Any], bool]:
+    timestamp = now_iso()
+    name = deck.name.strip()
+    description = deck.description.strip()
+    with get_connection() as connection:
+        existing = connection.execute(
+            """
+            SELECT id, name, description, created_at, updated_at
+            FROM decks
+            WHERE name = ?
+            """,
+            (name,),
+        ).fetchone()
+        if existing:
+            return row_to_dict(existing), False
+        cursor = connection.execute(
+            """
+            INSERT INTO decks (name, description, created_at, updated_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (name, description, timestamp, timestamp),
+        )
+        row = connection.execute(
+            """
+            SELECT id, name, description, created_at, updated_at
+            FROM decks
+            WHERE id = ?
+            """,
+            (cursor.lastrowid,),
+        ).fetchone()
+    return row_to_dict(row), True
+
+
+def update_deck(deck_id: int, deck: DeckUpdate) -> dict[str, Any] | None:
+    existing = get_deck(deck_id)
+    if not existing:
+        return None
+
+    timestamp = now_iso()
+    name = deck.name.strip() if deck.name is not None else existing["name"]
+    description = (
+        deck.description.strip()
+        if deck.description is not None
+        else existing["description"]
+    )
+    with get_connection() as connection:
+        connection.execute(
+            """
+            UPDATE decks
+            SET name = ?, description = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (name, description, timestamp, deck_id),
+        )
+        row = connection.execute(
+            """
+            SELECT id, name, description, created_at, updated_at
+            FROM decks
+            WHERE id = ?
+            """,
+            (deck_id,),
+        ).fetchone()
+    return row_to_dict(row) if row else None
+
+
+def delete_deck(deck_id: int) -> bool | None:
+    with get_connection() as connection:
+        default_deck_id = ensure_default_deck(connection)
+        if deck_id == default_deck_id:
+            return None
+
+        existing = connection.execute(
+            "SELECT id FROM decks WHERE id = ?", (deck_id,)
+        ).fetchone()
+        if not existing:
+            return False
+
+        connection.execute(
+            "UPDATE vocab_items SET deck_id = ? WHERE deck_id = ?",
+            (default_deck_id, deck_id),
+        )
+        connection.execute("DELETE FROM decks WHERE id = ?", (deck_id,))
+    return True
+
+
+def get_default_deck_id() -> int:
+    with get_connection() as connection:
+        return ensure_default_deck(connection)
+
+
+def list_vocab_items(deck_id: int | None = None) -> list[dict[str, Any]]:
+    params: tuple[Any, ...] = ()
+    where_clause = ""
+    if deck_id is not None:
+        where_clause = "WHERE vocab_items.deck_id = ?"
+        params = (deck_id,)
+
     with get_connection() as connection:
         rows = connection.execute(
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
-            ORDER BY created_at DESC, id DESC
-            """
+            LEFT JOIN decks ON decks.id = vocab_items.deck_id
+            {where_clause}
+            ORDER BY vocab_items.created_at DESC, vocab_items.id DESC
+            """,
+            params,
         ).fetchall()
     return [row_to_dict(row) for row in rows]
 
@@ -111,7 +353,8 @@ def get_vocab_item(item_id: int) -> dict[str, Any] | None:
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
-            WHERE id = ?
+            LEFT JOIN decks ON decks.id = vocab_items.deck_id
+            WHERE vocab_items.id = ?
             """,
             (item_id,),
         ).fetchone()
@@ -120,14 +363,20 @@ def get_vocab_item(item_id: int) -> dict[str, Any] | None:
 
 def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
     timestamp = now_iso()
+    deck_id = item.deck_id or get_default_deck_id()
     with get_connection() as connection:
+        if not get_deck(deck_id):
+            deck_id = ensure_default_deck(connection)
         existing = connection.execute(
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
-            WHERE base_form = ? AND reading = ?
+            LEFT JOIN decks ON decks.id = vocab_items.deck_id
+            WHERE vocab_items.base_form = ?
+              AND vocab_items.reading = ?
+              AND vocab_items.deck_id = ?
             """,
-            (item.base_form, item.reading),
+            (item.base_form, item.reading, deck_id),
         ).fetchone()
         if existing:
             return row_to_dict(existing), False
@@ -135,12 +384,14 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
         cursor = connection.execute(
             """
             INSERT OR IGNORE INTO vocab_items (
-                surface, base_form, reading, part_of_speech, normalized_form,
-                meaning_ko, example_sentence, status, created_at, updated_at
+                deck_id, surface, base_form, reading, part_of_speech,
+                normalized_form, meaning_ko, example_sentence, status,
+                created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                deck_id,
                 item.surface,
                 item.base_form,
                 item.reading,
@@ -158,9 +409,12 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
                 f"""
                 SELECT {VOCAB_ITEM_FIELDS}
                 FROM vocab_items
-                WHERE base_form = ? AND reading = ?
+                LEFT JOIN decks ON decks.id = vocab_items.deck_id
+                WHERE vocab_items.base_form = ?
+                  AND vocab_items.reading = ?
+                  AND vocab_items.deck_id = ?
                 """,
-                (item.base_form, item.reading),
+                (item.base_form, item.reading, deck_id),
             ).fetchone()
             return row_to_dict(existing), False
 
@@ -168,7 +422,8 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
-            WHERE id = ?
+            LEFT JOIN decks ON decks.id = vocab_items.deck_id
+            WHERE vocab_items.id = ?
             """,
             (cursor.lastrowid,),
         ).fetchone()
@@ -193,7 +448,8 @@ def update_vocab_item_status(item_id: int, status: str) -> dict[str, Any] | None
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
-            WHERE id = ?
+            LEFT JOIN decks ON decks.id = vocab_items.deck_id
+            WHERE vocab_items.id = ?
             """,
             (item_id,),
         ).fetchone()
@@ -220,7 +476,8 @@ def update_context_explanation(
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
-            WHERE id = ?
+            LEFT JOIN decks ON decks.id = vocab_items.deck_id
+            WHERE vocab_items.id = ?
             """,
             (item_id,),
         ).fetchone()
@@ -233,25 +490,33 @@ def delete_vocab_item(item_id: int) -> bool:
     return cursor.rowcount > 0
 
 
-def list_study_items() -> list[dict[str, Any]]:
+def list_study_items(deck_id: int | None = None) -> list[dict[str, Any]]:
     timestamp = now_iso()
+    params: list[Any] = [timestamp]
+    deck_clause = ""
+    if deck_id is not None:
+        deck_clause = "AND vocab_items.deck_id = ?"
+        params.append(deck_id)
+    params.append(timestamp)
     with get_connection() as connection:
         rows = connection.execute(
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
-            WHERE status = 'unknown'
-              AND (next_review_at IS NULL OR next_review_at <= ?)
+            LEFT JOIN decks ON decks.id = vocab_items.deck_id
+            WHERE vocab_items.status = 'unknown'
+              AND (vocab_items.next_review_at IS NULL OR vocab_items.next_review_at <= ?)
+              {deck_clause}
             ORDER BY
-                CASE WHEN next_review_at IS NOT NULL AND next_review_at <= ? THEN 0 ELSE 1 END ASC,
-                next_review_at ASC,
-                wrong_count DESC,
-                review_level ASC,
-                CASE WHEN last_reviewed_at IS NULL THEN 0 ELSE 1 END ASC,
-                created_at ASC,
-                id ASC
+                CASE WHEN vocab_items.next_review_at IS NOT NULL AND vocab_items.next_review_at <= ? THEN 0 ELSE 1 END ASC,
+                vocab_items.next_review_at ASC,
+                vocab_items.wrong_count DESC,
+                vocab_items.review_level ASC,
+                CASE WHEN vocab_items.last_reviewed_at IS NULL THEN 0 ELSE 1 END ASC,
+                vocab_items.created_at ASC,
+                vocab_items.id ASC
             """,
-            (timestamp, timestamp),
+            tuple(params),
         ).fetchall()
     return [row_to_dict(row) for row in rows]
 
@@ -300,7 +565,8 @@ def record_study_review(item_id: int, result: str) -> dict[str, Any] | None:
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
-            WHERE id = ?
+            LEFT JOIN decks ON decks.id = vocab_items.deck_id
+            WHERE vocab_items.id = ?
             """,
             (item_id,),
         ).fetchone()

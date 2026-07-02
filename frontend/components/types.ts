@@ -16,6 +16,8 @@ export type TokenWithStatus = Token & {
 
 export type VocabItem = TokenWithStatus & {
   id: number;
+  deck_id: number;
+  deck_name: string;
   context_explanation_ko: string;
   correct_count: number;
   wrong_count: number;
@@ -27,3 +29,11 @@ export type VocabItem = TokenWithStatus & {
 };
 
 export type ReviewResult = "correct" | "wrong";
+
+export type Deck = {
+  id: number;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+};

@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { StatusSelect } from "./shared";
-import type { TokenStatus, TokenWithStatus } from "./types";
+import type { Deck, TokenStatus, TokenWithStatus } from "./types";
 
 type AnalyzeSectionProps = {
   text: string;
@@ -10,7 +10,10 @@ type AnalyzeSectionProps = {
   isAnalyzing: boolean;
   isSaving: boolean;
   message: string;
+  decks: Deck[];
+  selectedDeckId: string;
   onTextChange: (text: string) => void;
+  onSelectedDeckChange: (deckId: string) => void;
   onAnalyze: (event: FormEvent<HTMLFormElement>) => void;
   onSaveUnknown: () => void;
   onStatusChange: (index: number, status: TokenStatus) => void;
@@ -22,7 +25,10 @@ export function AnalyzeSection({
   isAnalyzing,
   isSaving,
   message,
+  decks,
+  selectedDeckId,
   onTextChange,
+  onSelectedDeckChange,
   onAnalyze,
   onSaveUnknown,
   onStatusChange,
@@ -53,13 +59,28 @@ export function AnalyzeSection({
             <h2>분석 결과</h2>
             <span>{tokens.length}개</span>
           </div>
-          <button
-            type="button"
-            onClick={onSaveUnknown}
-            disabled={isSaving || tokens.length === 0}
-          >
-            {isSaving ? "저장 중..." : "모르는 단어 저장"}
-          </button>
+          <div className="heading-actions">
+            <label className="inline-field">
+              저장 덱
+              <select
+                value={selectedDeckId}
+                onChange={(event) => onSelectedDeckChange(event.target.value)}
+              >
+                {decks.map((deck) => (
+                  <option key={deck.id} value={String(deck.id)}>
+                    {deck.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={onSaveUnknown}
+              disabled={isSaving || tokens.length === 0 || !selectedDeckId}
+            >
+              {isSaving ? "저장 중..." : "모르는 단어 저장"}
+            </button>
+          </div>
         </div>
 
         {tokens.length > 0 ? (

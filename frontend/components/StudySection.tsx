@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReviewResult, VocabItem } from "./types";
+import type { Deck, ReviewResult, VocabItem } from "./types";
 
 type StudySectionProps = {
   items: VocabItem[];
@@ -13,6 +13,9 @@ type StudySectionProps = {
   message: string;
   correctCount: number;
   wrongCount: number;
+  decks: Deck[];
+  selectedDeckId: string;
+  onSelectedDeckChange: (deckId: string) => void;
   onStart: () => void;
   onShowAnswer: () => void;
   onReview: (result: ReviewResult) => void;
@@ -29,6 +32,9 @@ export function StudySection({
   message,
   correctCount,
   wrongCount,
+  decks,
+  selectedDeckId,
+  onSelectedDeckChange,
   onStart,
   onShowAnswer,
   onReview,
@@ -44,9 +50,25 @@ export function StudySection({
               : "0 / 0"}
           </span>
         </div>
-        <button type="button" onClick={onStart} disabled={isLoading}>
-          {isLoading ? "불러오는 중..." : "학습 시작"}
-        </button>
+        <div className="heading-actions">
+          <label className="inline-field">
+            학습 덱
+            <select
+              value={selectedDeckId}
+              onChange={(event) => onSelectedDeckChange(event.target.value)}
+            >
+              <option value="all">전체 단어장</option>
+              {decks.map((deck) => (
+                <option key={deck.id} value={String(deck.id)}>
+                  {deck.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" onClick={onStart} disabled={isLoading}>
+            {isLoading ? "불러오는 중..." : "학습 시작"}
+          </button>
+        </div>
       </div>
 
       {message ? <p className="message">{message}</p> : null}
