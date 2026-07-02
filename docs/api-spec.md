@@ -16,22 +16,22 @@
 ```json
 {
   "surface": "食べた",
-  "lemma": "食べる",
+  "base_form": "食べる",
   "reading": "タベル",
-  "partOfSpeech": "動詞",
-  "meaningKo": "먹다",
-  "knownState": "unknown"
+  "part_of_speech": "動詞",
+  "normalized_form": "食べる",
+  "meaning_ko": ""
 }
 ```
 
 필드 설명:
 
 - `surface`: 원문에 등장한 표면형
-- `lemma`: 사전형 또는 기본형
-- `reading`: 읽기
-- `partOfSpeech`: 품사
-- `meaningKo`: 한국어 뜻
-- `knownState`: `known`, `unknown`, `unclassified` 중 하나
+- `base_form`: 사전형 또는 기본형. 비어 있으면 `surface`를 사용한다.
+- `reading`: 가타카나 읽기
+- `part_of_speech`: 대표 품사
+- `normalized_form`: 정규화형
+- `meaning_ko`: 한국어 뜻. MVP에서는 사전 기능이 없으므로 빈 문자열을 반환한다.
 
 ### VocabItem
 
@@ -71,30 +71,33 @@
 - 공백만 있는 입력은 거부한다.
 - 서버는 `text` 원문 전체를 DB에 저장하지 않는다.
 - SudachiPy로 형태소 분석을 수행한다.
-- 조사, 조동사, 기호 등 제외 대상 품사는 응답에서 제거한다.
-- 같은 기본형은 한 번만 반환한다.
-- 한국어 뜻을 찾을 수 없으면 `meaningKo`를 빈 문자열 또는 `null`로 반환할 수 있다.
+- 품사가 `助詞`, `助動詞`, `補助記号`인 토큰은 응답에서 제거한다.
+- `surface`가 공백인 토큰은 응답에서 제거한다.
+- `base_form`이 비어 있으면 `surface`를 사용한다.
+- 같은 `base_form`은 한 번만 반환한다.
+- 반환 순서는 원문에서 처음 등장한 순서를 유지한다.
+- `meaning_ko`는 MVP에서 빈 문자열로 반환한다.
 
 ### 응답
 
 ```json
 {
-  "items": [
+  "tokens": [
     {
       "surface": "昨日",
-      "lemma": "昨日",
+      "base_form": "昨日",
       "reading": "キノウ",
-      "partOfSpeech": "名詞",
-      "meaningKo": "어제",
-      "knownState": "unclassified"
+      "part_of_speech": "名詞",
+      "normalized_form": "昨日",
+      "meaning_ko": ""
     },
     {
       "surface": "読んだ",
-      "lemma": "読む",
+      "base_form": "読む",
       "reading": "ヨム",
-      "partOfSpeech": "動詞",
-      "meaningKo": "읽다",
-      "knownState": "unclassified"
+      "part_of_speech": "動詞",
+      "normalized_form": "読む",
+      "meaning_ko": ""
     }
   ]
 }
@@ -105,6 +108,18 @@
 - `400 Bad Request`: 입력이 비어 있거나 너무 짧은 경우
 - `413 Payload Too Large`: 입력 원문이 MVP 제한 길이를 초과한 경우
 - `500 Internal Server Error`: 형태소 분석 또는 서버 내부 오류
+
+## GET /health
+
+서버 상태 확인용 API다.
+
+### 응답
+
+```json
+{
+  "status": "ok"
+}
+```
 
 ## GET /vocab-items
 

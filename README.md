@@ -20,3 +20,25 @@
 - Backend: FastAPI
 - Tokenizer: SudachiPy
 - Database: SQLite
+
+## Backend MVP 실행
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+헬스체크:
+
+```bash
+curl http://localhost:8000/health
+```
+
+분석 API 테스트:
+
+```bash
+curl.exe -X POST http://localhost:8000/analyze -H "Content-Type: application/json" -d "{\"text\":\"彼は怠惰であることを自覚していた。\"}"
+```
