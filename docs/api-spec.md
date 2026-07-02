@@ -81,13 +81,18 @@
 
 ```json
 {
-  "text": "私は昨日、新しい本を読んだ。"
+  "text": "私は昨日、新しい本を読んだ。",
+  "deck_id": 1,
+  "include_known": false
 }
 ```
 
 필드 설명:
 
 - `text`: 사용자가 붙여넣은 일본어 원문
+- `deck_id`: optional. 지정하면 해당 덱에 저장된 아는 단어만 자동 제외 기준으로 사용한다.
+- `include_known`: optional, default `false`. `false`이면 저장된 아는 단어를 분석 결과에서 제외하고, `true`이면 포함한다.
+- `text`만 보내도 기존처럼 정상 동작한다.
 
 ### 처리 규칙
 
@@ -95,6 +100,8 @@
 - 공백만 있는 입력은 거부한다.
 - 서버는 `text` 원문 전체를 DB에 저장하지 않는다.
 - SudachiPy로 형태소 분석을 수행한다.
+- `deck_id`가 있으면 해당 덱 안의 `known` 단어만 제외하고, 없으면 전체 단어장 기준으로 제외한다.
+- `include_known`이 `true`이면 저장된 아는 단어도 응답에 포함한다.
 - 품사가 `助詞`, `助動詞`, `補助記号`인 토큰은 응답에서 제거한다.
 - `surface`가 공백인 토큰은 응답에서 제거한다.
 - `base_form`이 비어 있으면 `surface`를 사용한다.
@@ -158,6 +165,10 @@
 ### Query Parameters
 
 - `deck_id` optional: 지정하면 해당 덱의 단어만 반환한다. 생략하면 전체 덱 기준으로 반환한다.
+- `status` optional: `unknown`, `known`, `unclassified` 중 하나로 필터링한다.
+- `q` optional: `surface`, `base_form`, `reading`, `meaning_ko`, `example_sentence`, `context_explanation_ko`에서 부분 검색한다.
+- `due_only` optional, default `false`: `true`면 `next_review_at`이 비어 있거나 현재 시각 이하인 항목만 반환한다.
+- `sort` optional: `created_desc`, `created_asc`, `wrong_desc`, `correct_desc`, `review_level_asc`, `next_review_asc` 중 하나를 사용한다.
 
 ### 응답
 

@@ -326,12 +326,49 @@ def get_default_deck_id() -> int:
         return ensure_default_deck(connection)
 
 
-def list_vocab_items(deck_id: int | None = None) -> list[dict[str, Any]]:
-    params: tuple[Any, ...] = ()
-    where_clause = ""
+def list_vocab_items(
+    deck_id: int | None = None,
+    status: str | None = None,
+    q: str | None = None,
+    due_only: bool = False,
+    sort: str | None = None,
+) -> list[dict[str, Any]]:
+    params: list[Any] = []
+    where_clauses = []
     if deck_id is not None:
-        where_clause = "WHERE vocab_items.deck_id = ?"
-        params = (deck_id,)
+        where_clauses.append("vocab_items.deck_id = ?")
+        params.append(deck_id)
+    if status is not None:
+        where_clauses.append("vocab_items.status = ?")
+        params.append(status)
+    if due_only:
+        where_clauses.append(
+            "(vocab_items.next_review_at IS NULL OR vocab_items.next_review_at <= ?)"
+        )
+        params.append(now_iso())
+    if q and q.strip():
+        term = f"%{q.strip().lower()}%"
+        where_clauses.append(
+            "("
+            "LOWER(COALESCE(vocab_items.surface, '')) LIKE ? OR "
+            "LOWER(COALESCE(vocab_items.base_form, '')) LIKE ? OR "
+            "LOWER(COALESCE(vocab_items.reading, '')) LIKE ? OR "
+            "LOWER(COALESCE(vocab_items.meaning_ko, '')) LIKE ? OR "
+            "LOWER(COALESCE(vocab_items.example_sentence, '')) LIKE ? OR "
+            "LOWER(COALESCE(vocab_items.context_explanation_ko, '')) LIKE ?"
+            ")"
+        )
+        params.extend([term] * 6)
+
+    where_clause = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    order_clause = {
+        "created_asc": "vocab_items.created_at ASC, vocab_items.id ASC",
+        "wrong_desc": "vocab_items.wrong_count DESC, vocab_items.created_at DESC, vocab_items.id DESC",
+        "correct_desc": "vocab_items.correct_count DESC, vocab_items.created_at DESC, vocab_items.id DESC",
+        "review_level_asc": "vocab_items.review_level ASC, vocab_items.created_at DESC, vocab_items.id DESC",
+        "next_review_asc": "CASE WHEN vocab_items.next_review_at IS NULL THEN 1 ELSE 0 END ASC, vocab_items.next_review_at ASC, vocab_items.created_at DESC, vocab_items.id DESC",
+        "created_desc": "vocab_items.created_at DESC, vocab_items.id DESC",
+    }.get(sort or "", "vocab_items.created_at DESC, vocab_items.id DESC")
 
     with get_connection() as connection:
         rows = connection.execute(
@@ -340,9 +377,9 @@ def list_vocab_items(deck_id: int | None = None) -> list[dict[str, Any]]:
             FROM vocab_items
             LEFT JOIN decks ON decks.id = vocab_items.deck_id
             {where_clause}
-            ORDER BY vocab_items.created_at DESC, vocab_items.id DESC
+            ORDER BY {order_clause}
             """,
-            params,
+            tuple(params),
         ).fetchall()
     return [row_to_dict(row) for row in rows]
 

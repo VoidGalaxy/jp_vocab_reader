@@ -30,6 +30,14 @@ export type VocabItem = TokenWithStatus & {
 
 export type ReviewResult = "correct" | "wrong";
 
+export type VocabSort =
+  | "created_desc"
+  | "created_asc"
+  | "wrong_desc"
+  | "correct_desc"
+  | "review_level_asc"
+  | "next_review_asc";
+
 export type Deck = {
   id: number;
   name: string;

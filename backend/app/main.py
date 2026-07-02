@@ -114,10 +114,35 @@ def remove_deck(deck_id: int) -> Response:
 
 
 @app.get("/vocab-items", response_model=VocabItemsResponse)
-def get_vocab_items(deck_id: int | None = Query(default=None)) -> VocabItemsResponse:
+def get_vocab_items(
+    deck_id: int | None = Query(default=None),
+    status: str | None = Query(default=None),
+    q: str | None = Query(default=None),
+    due_only: bool = Query(default=False),
+    sort: str | None = Query(default=None),
+) -> VocabItemsResponse:
     if deck_id is not None and not get_deck(deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
-    return VocabItemsResponse(items=list_vocab_items(deck_id=deck_id))
+    if status is not None and status not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail="invalid status")
+    if sort is not None and sort not in {
+        "created_desc",
+        "created_asc",
+        "wrong_desc",
+        "correct_desc",
+        "review_level_asc",
+        "next_review_asc",
+    }:
+        raise HTTPException(status_code=400, detail="invalid sort")
+    return VocabItemsResponse(
+        items=list_vocab_items(
+            deck_id=deck_id,
+            status=status,
+            q=q,
+            due_only=due_only,
+            sort=sort,
+        )
+    )
 
 
 @app.get("/study-items", response_model=StudyItemsResponse)

@@ -12,6 +12,7 @@ import type {
   TokenStatus,
   TokenWithStatus,
   VocabItem,
+  VocabSort,
 } from "../components/types";
 
 type AnalyzeResponse = {
@@ -31,6 +32,7 @@ type DecksResponse = {
 };
 
 type TabKey = "analyze" | "vocab" | "study" | "info";
+type VocabStatusFilter = "all" | TokenStatus;
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
@@ -49,6 +51,12 @@ export default function HomePage() {
   const [selectedSaveDeckId, setSelectedSaveDeckId] = useState("");
   const [selectedVocabDeckId, setSelectedVocabDeckId] = useState("all");
   const [selectedStudyDeckId, setSelectedStudyDeckId] = useState("all");
+  const [includeKnown, setIncludeKnown] = useState(false);
+  const [vocabSearch, setVocabSearch] = useState("");
+  const [vocabStatusFilter, setVocabStatusFilter] =
+    useState<VocabStatusFilter>("all");
+  const [vocabDueOnly, setVocabDueOnly] = useState(false);
+  const [vocabSort, setVocabSort] = useState<VocabSort>("created_desc");
   const [newDeckName, setNewDeckName] = useState("");
   const [newDeckDescription, setNewDeckDescription] = useState("");
   const [isCreatingDeck, setIsCreatingDeck] = useState(false);
@@ -77,10 +85,24 @@ export default function HomePage() {
     void loadDecks();
   }, []);
 
+  useEffect(() => {
+    if (activeTab === "vocab" && hasLoadedVocab) {
+      void loadVocabItems();
+    }
+  }, [
+    activeTab,
+    hasLoadedVocab,
+    selectedVocabDeckId,
+    vocabSearch,
+    vocabStatusFilter,
+    vocabDueOnly,
+    vocabSort,
+  ]);
+
   async function handleTabChange(tab: TabKey) {
     setActiveTab(tab);
     if (tab === "vocab" && !hasLoadedVocab) {
-      await loadVocabItems(selectedVocabDeckId);
+      setHasLoadedVocab(true);
     }
   }
 
@@ -120,7 +142,11 @@ export default function HomePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({
+          text,
+          deck_id: selectedSaveDeckId ? Number(selectedSaveDeckId) : null,
+          include_known: includeKnown,
+        }),
       });
 
       if (!response.ok) {
@@ -142,10 +168,12 @@ export default function HomePage() {
     }
   }
 
-  async function saveUnknownTokens() {
-    const unknownTokens = tokens.filter((token) => token.status === "unknown");
-    if (unknownTokens.length === 0) {
-      setMessage("모르는 단어로 선택한 항목이 없습니다.");
+  async function saveSelectedTokens() {
+    const selectedTokens = tokens.filter(
+      (token) => token.status === "unknown" || token.status === "known",
+    );
+    if (selectedTokens.length === 0) {
+      setMessage("저장할 단어를 모르는 단어 또는 아는 단어로 선택해 주세요.");
       return;
     }
 
@@ -154,7 +182,7 @@ export default function HomePage() {
 
     try {
       await Promise.all(
-        unknownTokens.map((token) =>
+        selectedTokens.map((token) =>
           requestJson<VocabItem>("/vocab-items", {
             method: "POST",
             body: JSON.stringify({
@@ -164,8 +192,16 @@ export default function HomePage() {
           }),
         ),
       );
-      setMessage(`${unknownTokens.length}개 단어를 저장했습니다.`);
-      await loadVocabItems(selectedVocabDeckId);
+      const unknownCount = selectedTokens.filter(
+        (token) => token.status === "unknown",
+      ).length;
+      const knownCount = selectedTokens.filter(
+        (token) => token.status === "known",
+      ).length;
+      setMessage(
+        `모르는 단어 ${unknownCount}개, 아는 단어 ${knownCount}개를 저장했습니다.`,
+      );
+      await loadVocabItems();
     } catch (error) {
       setMessage(getErrorMessage(error, "단어 저장 중 오류가 발생했습니다."));
     } finally {
@@ -178,7 +214,24 @@ export default function HomePage() {
     setVocabMessage("");
 
     try {
-      const query = deckId !== "all" ? `?deck_id=${deckId}` : "";
+      const params = new URLSearchParams();
+      if (deckId !== "all") {
+        params.set("deck_id", deckId);
+      }
+      if (vocabStatusFilter !== "all") {
+        params.set("status", vocabStatusFilter);
+      }
+      const trimmedSearch = vocabSearch.trim();
+      if (trimmedSearch) {
+        params.set("q", trimmedSearch);
+      }
+      if (vocabDueOnly) {
+        params.set("due_only", "true");
+      }
+      if (vocabSort) {
+        params.set("sort", vocabSort);
+      }
+      const query = params.toString() ? `?${params.toString()}` : "";
       const data = await requestJson<VocabItemsResponse>(`/vocab-items${query}`);
       setVocabItems(data.items);
       setHasLoadedVocab(true);
@@ -214,7 +267,6 @@ export default function HomePage() {
       setNewDeckName("");
       setNewDeckDescription("");
       setDeckMessage("덱을 저장했습니다.");
-      await loadVocabItems(String(deck.id));
     } catch (error) {
       setDeckMessage(getErrorMessage(error, "덱 생성에 실패했습니다."));
     } finally {
@@ -241,7 +293,6 @@ export default function HomePage() {
         setSelectedStudyDeckId("all");
       }
       setDeckMessage("덱을 삭제하고 단어를 기본 단어장으로 이동했습니다.");
-      await loadVocabItems("all");
     } catch (error) {
       setDeckMessage(getErrorMessage(error, "덱 삭제에 실패했습니다."));
     }
@@ -249,7 +300,6 @@ export default function HomePage() {
 
   async function changeVocabDeck(deckId: string) {
     setSelectedVocabDeckId(deckId);
-    await loadVocabItems(deckId);
   }
 
   function updateTokenStatus(index: number, status: TokenStatus) {
@@ -270,13 +320,11 @@ export default function HomePage() {
     setVocabMessage("");
 
     try {
-      const updatedItem = await requestJson<VocabItem>(`/vocab-items/${itemId}`, {
+      await requestJson<VocabItem>(`/vocab-items/${itemId}`, {
         method: "PATCH",
         body: JSON.stringify({ status }),
       });
-      setVocabItems((currentItems) =>
-        currentItems.map((item) => (item.id === itemId ? updatedItem : item)),
-      );
+      await loadVocabItems();
     } catch (error) {
       setVocabItems(previousItems);
       setVocabMessage(getErrorMessage(error, "상태 변경에 실패했습니다."));
@@ -297,6 +345,7 @@ export default function HomePage() {
       if (!response.ok) {
         throw new Error(`삭제에 실패했습니다. (${response.status})`);
       }
+      await loadVocabItems();
     } catch (error) {
       setVocabItems(previousItems);
       setVocabMessage(getErrorMessage(error, "삭제에 실패했습니다."));
@@ -457,10 +506,12 @@ export default function HomePage() {
             message={message}
             decks={decks}
             selectedDeckId={selectedSaveDeckId}
+            includeKnown={includeKnown}
             onTextChange={setText}
             onSelectedDeckChange={setSelectedSaveDeckId}
+            onIncludeKnownChange={setIncludeKnown}
             onAnalyze={handleAnalyze}
-            onSaveUnknown={() => void saveUnknownTokens()}
+            onSaveSelected={() => void saveSelectedTokens()}
             onStatusChange={updateTokenStatus}
           />
         ) : null}
@@ -474,11 +525,19 @@ export default function HomePage() {
             message={vocabMessage}
             decks={decks}
             selectedDeckId={selectedVocabDeckId}
+            searchText={vocabSearch}
+            statusFilter={vocabStatusFilter}
+            dueOnly={vocabDueOnly}
+            sortValue={vocabSort}
             newDeckName={newDeckName}
             newDeckDescription={newDeckDescription}
             isCreatingDeck={isCreatingDeck}
             deckMessage={deckMessage}
             onSelectedDeckChange={(deckId) => void changeVocabDeck(deckId)}
+            onSearchTextChange={setVocabSearch}
+            onStatusFilterChange={setVocabStatusFilter}
+            onDueOnlyChange={setVocabDueOnly}
+            onSortChange={setVocabSort}
             onNewDeckNameChange={setNewDeckName}
             onNewDeckDescriptionChange={setNewDeckDescription}
             onCreateDeck={() => void createDeck()}

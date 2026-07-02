@@ -12,10 +12,12 @@ type AnalyzeSectionProps = {
   message: string;
   decks: Deck[];
   selectedDeckId: string;
+  includeKnown: boolean;
   onTextChange: (text: string) => void;
   onSelectedDeckChange: (deckId: string) => void;
+  onIncludeKnownChange: (checked: boolean) => void;
   onAnalyze: (event: FormEvent<HTMLFormElement>) => void;
-  onSaveUnknown: () => void;
+  onSaveSelected: () => void;
   onStatusChange: (index: number, status: TokenStatus) => void;
 };
 
@@ -27,10 +29,12 @@ export function AnalyzeSection({
   message,
   decks,
   selectedDeckId,
+  includeKnown,
   onTextChange,
   onSelectedDeckChange,
+  onIncludeKnownChange,
   onAnalyze,
-  onSaveUnknown,
+  onSaveSelected,
   onStatusChange,
 }: AnalyzeSectionProps) {
   return (
@@ -50,6 +54,15 @@ export function AnalyzeSection({
           </button>
         </div>
       </form>
+
+      <label className="checkbox-field analyze-checkbox">
+        <input
+          type="checkbox"
+          checked={includeKnown}
+          onChange={(event) => onIncludeKnownChange(event.target.checked)}
+        />
+        아는 단어도 표시
+      </label>
 
       {message ? <p className="message">{message}</p> : null}
 
@@ -75,10 +88,10 @@ export function AnalyzeSection({
             </label>
             <button
               type="button"
-              onClick={onSaveUnknown}
+              onClick={onSaveSelected}
               disabled={isSaving || tokens.length === 0 || !selectedDeckId}
             >
-              {isSaving ? "저장 중..." : "모르는 단어 저장"}
+              {isSaving ? "저장 중..." : "선택한 단어 저장"}
             </button>
           </div>
         </div>

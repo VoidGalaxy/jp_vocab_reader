@@ -113,6 +113,10 @@ input {
   background: #ffffff;
 }
 
+input[type="checkbox"] {
+  width: auto;
+}
+
 .actions {
   display: flex;
   justify-content: flex-end;
@@ -229,7 +233,8 @@ tr:last-child td {
 }
 
 select {
-  width: 120px;
+  width: 100%;
+  min-width: 120px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 8px 10px;
@@ -358,12 +363,31 @@ select {
   grid-template-columns: minmax(160px, 0.8fr) minmax(180px, 1fr) auto;
 }
 
+.vocab-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(160px, 0.8fr) auto minmax(160px, 0.8fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
 .inline-field {
   display: grid;
   gap: 6px;
   color: #334155;
   font-size: 14px;
   font-weight: 700;
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.analyze-checkbox {
+  margin-bottom: 16px;
 }
 
 .info-panel {
@@ -420,6 +444,10 @@ select {
 
   .deck-toolbar,
   .deck-create {
+    grid-template-columns: 1fr;
+  }
+
+  .vocab-filters {
     grid-template-columns: 1fr;
   }
 

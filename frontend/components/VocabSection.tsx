@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDateTime, formatNextReview, StatusSelect } from "./shared";
-import type { Deck, TokenStatus, VocabItem } from "./types";
+import type { Deck, TokenStatus, VocabItem, VocabSort } from "./types";
 
 type VocabSectionProps = {
   items: VocabItem[];
@@ -11,11 +11,19 @@ type VocabSectionProps = {
   message: string;
   decks: Deck[];
   selectedDeckId: string;
+  searchText: string;
+  statusFilter: "all" | TokenStatus;
+  dueOnly: boolean;
+  sortValue: VocabSort;
   newDeckName: string;
   newDeckDescription: string;
   isCreatingDeck: boolean;
   deckMessage: string;
   onSelectedDeckChange: (deckId: string) => void;
+  onSearchTextChange: (text: string) => void;
+  onStatusFilterChange: (status: "all" | TokenStatus) => void;
+  onDueOnlyChange: (checked: boolean) => void;
+  onSortChange: (sort: VocabSort) => void;
   onNewDeckNameChange: (name: string) => void;
   onNewDeckDescriptionChange: (description: string) => void;
   onCreateDeck: () => void;
@@ -35,11 +43,19 @@ export function VocabSection({
   message,
   decks,
   selectedDeckId,
+  searchText,
+  statusFilter,
+  dueOnly,
+  sortValue,
   newDeckName,
   newDeckDescription,
   isCreatingDeck,
   deckMessage,
   onSelectedDeckChange,
+  onSearchTextChange,
+  onStatusFilterChange,
+  onDueOnlyChange,
+  onSortChange,
   onNewDeckNameChange,
   onNewDeckDescriptionChange,
   onCreateDeck,
@@ -52,13 +68,54 @@ export function VocabSection({
 }: VocabSectionProps) {
   return (
     <section className="tab-panel" aria-live="polite">
+      <div className="vocab-filters">
+        <input
+          value={searchText}
+          onChange={(event) => onSearchTextChange(event.target.value)}
+          placeholder="단어, 뜻, 읽기, 예문 검색"
+        />
+        <label className="inline-field">
+          상태
+          <select
+            value={statusFilter}
+            onChange={(event) =>
+              onStatusFilterChange(event.target.value as "all" | TokenStatus)
+            }
+          >
+            <option value="all">전체</option>
+            <option value="unknown">모르는 단어</option>
+            <option value="known">아는 단어</option>
+            <option value="unclassified">미분류</option>
+          </select>
+        </label>
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={dueOnly}
+            onChange={(event) => onDueOnlyChange(event.target.checked)}
+          />
+          복습 대상만 보기
+        </label>
+        <label className="inline-field">
+          정렬
+          <select
+            value={sortValue}
+            onChange={(event) => onSortChange(event.target.value as VocabSort)}
+          >
+            <option value="created_desc">최근 저장순</option>
+            <option value="created_asc">오래된 저장순</option>
+            <option value="wrong_desc">많이 틀린순</option>
+            <option value="correct_desc">많이 맞힌순</option>
+            <option value="review_level_asc">복습 단계 낮은순</option>
+            <option value="next_review_asc">다음 복습 가까운순</option>
+          </select>
+        </label>
+      </div>
+
       <div className="deck-toolbar">
         <label className="inline-field">
           보기
-          <select
-            value={selectedDeckId}
-            onChange={(event) => onSelectedDeckChange(event.target.value)}
-          >
+          <select value={selectedDeckId} onChange={(event) => onSelectedDeckChange(event.target.value)}>
             <option value="all">전체 단어장</option>
             {decks.map((deck) => (
               <option key={deck.id} value={String(deck.id)}>
@@ -209,7 +266,7 @@ export function VocabSection({
           </table>
         </div>
       ) : (
-        <p className="empty">저장된 단어가 없습니다.</p>
+        <p className="empty">조건에 맞는 단어가 없습니다.</p>
       )}
     </section>
   );
