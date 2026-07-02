@@ -732,6 +732,55 @@ select {
   min-width: 180px;
 }
 
+.management-card .deck-share-panel {
+  grid-template-columns: 1fr;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.management-card .deck-share-actions {
+  justify-content: flex-start;
+}
+
+.vocab-compact-toolbar {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(220px, 1.4fr) minmax(140px, 0.7fr) auto minmax(150px, 0.8fr) auto auto;
+  gap: 10px;
+  align-items: flex-end;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--panel-bg);
+}
+
+.vocab-management-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.management-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.management-card-header h2 {
+  margin: 0 0 4px;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .vocab-filters {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(160px, 0.8fr) auto minmax(160px, 0.8fr);
@@ -920,11 +969,17 @@ select {
   }
 
   .vocab-filters,
+  .vocab-compact-toolbar,
   .analyze-options,
   .info-panel,
   .stats-grid,
   .deck-stat-row {
     grid-template-columns: 1fr;
+  }
+
+  .management-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .classify-card,

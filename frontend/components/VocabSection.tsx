@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { formatDateTime, formatNextReview, StatusSelect } from "./shared";
 import type {
   Deck,
@@ -150,9 +150,23 @@ export function VocabSection({
   onStatusChange,
   onDelete,
 }: VocabSectionProps) {
+  const [isManagementOpen, setIsManagementOpen] = useState(false);
+  const [isCustomTermManagerOpen, setIsCustomTermManagerOpen] = useState(false);
+
   return (
     <section className="tab-panel" aria-live="polite">
-      <div className="vocab-filters">
+      <div className="vocab-compact-toolbar">
+        <label className="inline-field">
+          덱
+          <select value={selectedDeckId} onChange={(event) => onSelectedDeckChange(event.target.value)}>
+            <option value="all">전체 단어장</option>
+            {decks.map((deck) => (
+              <option key={deck.id} value={String(deck.id)}>
+                {deck.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <input
           value={searchText}
           onChange={(event) => onSearchTextChange(event.target.value)}
@@ -195,24 +209,36 @@ export function VocabSection({
             <option value="next_review_asc">다음 복습 가까운순</option>
           </select>
         </label>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
+        >
+          {isNewVocabFormOpen ? "단어 추가 닫기" : "+ 단어 직접 추가"}
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => setIsManagementOpen((open) => !open)}
+          aria-expanded={isManagementOpen}
+        >
+          덱/공유 관리
+        </button>
       </div>
 
-      <div className="deck-toolbar">
-        <label className="inline-field">
-          보기
-          <select value={selectedDeckId} onChange={(event) => onSelectedDeckChange(event.target.value)}>
-            <option value="all">전체 단어장</option>
-            {decks.map((deck) => (
-              <option key={deck.id} value={String(deck.id)}>
-                {deck.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      {isManagementOpen ? (
+        <div className="vocab-management-panel">
+          <section className="management-card">
+            <div className="management-card-header">
+              <h2>덱 관리</h2>
+              <p className="muted-text">새 덱을 만들거나 현재 선택한 덱을 삭제합니다.</p>
+            </div>
+
+      <div className="management-actions">
         {selectedDeckId !== "all" ? (
           <button
             type="button"
-            className="secondary-button"
+            className="danger-button"
             onClick={() => onDeleteDeck(Number(selectedDeckId))}
             disabled={selectedDeckId === defaultDeckId}
             title={
@@ -221,9 +247,11 @@ export function VocabSection({
                 : undefined
             }
           >
-            덱 삭제
+            현재 덱 삭제
           </button>
-        ) : null}
+        ) : (
+          <span className="muted-text">삭제하려면 특정 덱을 선택하세요.</span>
+        )}
       </div>
 
       <div className="deck-create">
@@ -244,13 +272,16 @@ export function VocabSection({
 
       {deckMessage ? <p className="message">{deckMessage}</p> : null}
 
+          </section>
+          <section className="management-card">
+            <div className="management-card-header">
+              <h2>덱 공유</h2>
+              <p className="muted-text">
+                CSV는 엑셀 확인용입니다. 앱 간 공유는 덱 공유 파일을 사용하세요.
+              </p>
+            </div>
+
       <div className="deck-share-panel">
-        <div>
-          <h2>덱 공유</h2>
-          <p className="muted-text">
-            CSV는 엑셀 확인용이고, 덱 공유 파일은 이 앱에서 다시 가져오기 위한 JSON입니다.
-          </p>
-        </div>
         <div className="deck-share-actions">
           <button
             type="button"
@@ -282,19 +313,39 @@ export function VocabSection({
           >
             {isImportingDeckPackage ? "가져오는 중..." : "덱 가져오기"}
           </button>
-        </div>
-      </div>
-
-      {!isNewVocabFormOpen ? (
-        <div className="collapsible-action">
           <button
             type="button"
             className="secondary-button"
-            onClick={() => onNewVocabFormOpenChange(true)}
+            onClick={onDownloadCsv}
+            disabled={isExportingCsv}
           >
-            + 단어 직접 추가
+            {isExportingCsv ? "다운로드 중..." : "CSV 다운로드"}
           </button>
         </div>
+      </div>
+
+          </section>
+          <section className="management-card">
+            <div className="management-card-header">
+              <h2>고급</h2>
+              <p className="muted-text">작품별 사용자 용어와 보조 관리 기능입니다.</p>
+            </div>
+            <div className="management-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setIsCustomTermManagerOpen((open) => !open)}
+                aria-expanded={isCustomTermManagerOpen}
+              >
+                사용자 정의 용어 관리
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {!isNewVocabFormOpen ? (
+        null
       ) : (
         <div className="vocab-form-panel">
           <div className="form-heading">
@@ -322,6 +373,7 @@ export function VocabSection({
         </div>
       )}
 
+      {isManagementOpen && isCustomTermManagerOpen ? (
       <div className="custom-term-section">
         <div className="result-heading compact-heading">
           <div>
@@ -456,20 +508,14 @@ export function VocabSection({
         )}
       </div>
 
+      ) : null}
+
       <div className="result-heading">
         <div>
           <h2>저장된 단어장</h2>
           <span>{items.length}개</span>
         </div>
         <div className="heading-actions">
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={onDownloadCsv}
-            disabled={isExportingCsv}
-          >
-            {isExportingCsv ? "다운로드 중..." : "CSV 다운로드"}
-          </button>
           <button
             type="button"
             className="secondary-button"
