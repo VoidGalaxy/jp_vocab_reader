@@ -45,6 +45,9 @@
   "normalized_form": "食べる",
   "meaning_ko": "",
   "status": "unknown",
+  "correct_count": 0,
+  "wrong_count": 0,
+  "last_reviewed_at": null,
   "created_at": "2026-07-02T09:00:00+00:00",
   "updated_at": "2026-07-02T09:00:00+00:00"
 }
@@ -130,8 +133,6 @@
 
 ### 응답
 
-### 응답
-
 ```json
 {
   "items": [
@@ -144,6 +145,9 @@
       "normalized_form": "読む",
       "meaning_ko": "",
       "status": "unknown",
+      "correct_count": 0,
+      "wrong_count": 0,
+      "last_reviewed_at": null,
       "created_at": "2026-07-02T09:00:00+00:00",
       "updated_at": "2026-07-02T09:00:00+00:00"
     }
@@ -189,6 +193,9 @@
   "normalized_form": "読む",
   "meaning_ko": "",
   "status": "unknown",
+  "correct_count": 0,
+  "wrong_count": 0,
+  "last_reviewed_at": null,
   "created_at": "2026-07-02T09:00:00+00:00",
   "updated_at": "2026-07-02T09:00:00+00:00"
 }
@@ -219,6 +226,77 @@
 ### 오류
 
 - `400 Bad Request`: 잘못된 `status`
+- `404 Not Found`: 항목을 찾을 수 없는 경우
+
+## GET /study-items
+
+자체 학습 모드에서 복습할 단어 목록을 조회한다.
+
+### 처리 규칙
+
+- 기본 학습 대상은 `status`가 `unknown`인 단어다.
+- `wrong_count`가 높은 단어를 우선한다.
+- 아직 복습하지 않아 `last_reviewed_at`이 비어 있는 단어를 우선한다.
+- 복습한 단어 중에서는 오래 전에 복습한 단어를 우선한다.
+- 마지막으로 오래 전에 생성된 단어를 우선한다.
+
+### 응답
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "surface": "怠惰",
+      "base_form": "怠惰",
+      "reading": "たいだ",
+      "part_of_speech": "명사",
+      "normalized_form": "怠惰",
+      "meaning_ko": "나태함",
+      "status": "unknown",
+      "correct_count": 1,
+      "wrong_count": 3,
+      "last_reviewed_at": "2026-07-02T09:30:00+00:00",
+      "created_at": "2026-07-02T09:00:00+00:00",
+      "updated_at": "2026-07-02T09:30:00+00:00"
+    }
+  ]
+}
+```
+
+## POST /study-items/{item_id}/review
+
+학습 카드에서 맞음 또는 틀림 결과를 기록한다.
+
+### 요청
+
+```json
+{
+  "result": "correct"
+}
+```
+
+또는:
+
+```json
+{
+  "result": "wrong"
+}
+```
+
+### 처리 규칙
+
+- `correct`면 `correct_count`를 1 증가시킨다.
+- `wrong`이면 `wrong_count`를 1 증가시킨다.
+- 두 경우 모두 `last_reviewed_at`과 `updated_at`을 현재 시간으로 갱신한다.
+
+### 응답
+
+갱신된 `VocabItem` 객체를 반환한다.
+
+### 오류
+
+- `400 Bad Request`: 잘못된 `result`
 - `404 Not Found`: 항목을 찾을 수 없는 경우
 
 ## DELETE /vocab-items/{item_id}

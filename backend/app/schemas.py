@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 
 
 VALID_STATUSES = {"unknown", "known", "unclassified"}
+VALID_REVIEW_RESULTS = {"correct", "wrong"}
 
 
 class AnalyzeRequest(BaseModel):
@@ -44,9 +45,20 @@ class VocabItemResponse(BaseModel):
     normalized_form: str
     meaning_ko: str
     status: str
+    correct_count: int
+    wrong_count: int
+    last_reviewed_at: str | None
     created_at: str
     updated_at: str
 
 
 class VocabItemsResponse(BaseModel):
     items: list[VocabItemResponse]
+
+
+class StudyItemsResponse(BaseModel):
+    items: list[VocabItemResponse]
+
+
+class StudyReviewRequest(BaseModel):
+    result: str

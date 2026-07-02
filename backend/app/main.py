@@ -9,12 +9,17 @@ from app.database import (
     create_vocab_item,
     delete_vocab_item,
     init_db,
+    list_study_items,
     list_vocab_items,
+    record_study_review,
     update_vocab_item_status,
 )
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
+    StudyItemsResponse,
+    StudyReviewRequest,
+    VALID_REVIEW_RESULTS,
     VALID_STATUSES,
     VocabItemCreate,
     VocabItemResponse,
@@ -55,6 +60,24 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
 @app.get("/vocab-items", response_model=VocabItemsResponse)
 def get_vocab_items() -> VocabItemsResponse:
     return VocabItemsResponse(items=list_vocab_items())
+
+
+@app.get("/study-items", response_model=StudyItemsResponse)
+def get_study_items() -> StudyItemsResponse:
+    return StudyItemsResponse(items=list_study_items())
+
+
+@app.post("/study-items/{item_id}/review", response_model=VocabItemResponse)
+def post_study_review(
+    item_id: int, review: StudyReviewRequest
+) -> VocabItemResponse:
+    if review.result not in VALID_REVIEW_RESULTS:
+        raise HTTPException(status_code=400, detail="invalid review result")
+
+    updated_item = record_study_review(item_id, review.result)
+    if not updated_item:
+        raise HTTPException(status_code=404, detail="vocab item not found")
+    return VocabItemResponse(**updated_item)
 
 
 @app.get("/vocab-items/export.csv")

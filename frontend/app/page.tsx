@@ -19,6 +19,9 @@ type TokenWithStatus = Token & {
 
 type VocabItem = TokenWithStatus & {
   id: number;
+  correct_count: number;
+  wrong_count: number;
+  last_reviewed_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -30,6 +33,12 @@ type AnalyzeResponse = {
 type VocabItemsResponse = {
   items: VocabItem[];
 };
+
+type StudyItemsResponse = {
+  items: VocabItem[];
+};
+
+type ReviewResult = "correct" | "wrong";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
@@ -48,8 +57,17 @@ export default function HomePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingVocab, setIsLoadingVocab] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isLoadingStudy, setIsLoadingStudy] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
   const [message, setMessage] = useState("");
   const [vocabMessage, setVocabMessage] = useState("");
+  const [studyMessage, setStudyMessage] = useState("");
+  const [studyItems, setStudyItems] = useState<VocabItem[]>([]);
+  const [currentStudyIndex, setCurrentStudyIndex] = useState(0);
+  const [isAnswerVisible, setIsAnswerVisible] = useState(false);
+  const [sessionCorrectCount, setSessionCorrectCount] = useState(0);
+  const [sessionWrongCount, setSessionWrongCount] = useState(0);
+  const [hasStartedStudy, setHasStartedStudy] = useState(false);
 
   useEffect(() => {
     void loadVocabItems();
@@ -217,6 +235,72 @@ export default function HomePage() {
     }
   }
 
+  async function startStudy() {
+    setIsLoadingStudy(true);
+    setStudyMessage("");
+    setStudyItems([]);
+    setCurrentStudyIndex(0);
+    setIsAnswerVisible(false);
+    setSessionCorrectCount(0);
+    setSessionWrongCount(0);
+    setHasStartedStudy(false);
+
+    try {
+      const data = await requestJson<StudyItemsResponse>("/study-items");
+      setStudyItems(data.items);
+      setHasStartedStudy(true);
+      if (data.items.length === 0) {
+        setStudyMessage("복습할 모르는 단어가 없습니다.");
+      }
+    } catch (error) {
+      setStudyMessage(
+        getErrorMessage(error, "학습 대상 단어를 불러오지 못했습니다."),
+      );
+    } finally {
+      setIsLoadingStudy(false);
+    }
+  }
+
+  async function submitStudyReview(result: ReviewResult) {
+    const currentItem = studyItems[currentStudyIndex];
+    if (!currentItem) {
+      return;
+    }
+
+    setIsReviewing(true);
+    setStudyMessage("");
+
+    try {
+      const updatedItem = await requestJson<VocabItem>(
+        `/study-items/${currentItem.id}/review`,
+        {
+          method: "POST",
+          body: JSON.stringify({ result }),
+        },
+      );
+      setVocabItems((currentItems) =>
+        currentItems.map((item) =>
+          item.id === updatedItem.id ? updatedItem : item,
+        ),
+      );
+      if (result === "correct") {
+        setSessionCorrectCount((count) => count + 1);
+      } else {
+        setSessionWrongCount((count) => count + 1);
+      }
+      setCurrentStudyIndex((index) => index + 1);
+      setIsAnswerVisible(false);
+    } catch (error) {
+      setStudyMessage(getErrorMessage(error, "복습 결과 저장에 실패했습니다."));
+    } finally {
+      setIsReviewing(false);
+    }
+  }
+
+  const currentStudyItem = studyItems[currentStudyIndex];
+  const isStudyComplete =
+    hasStartedStudy && studyItems.length > 0 && currentStudyIndex >= studyItems.length;
+
   return (
     <main className="page">
       <section className="workspace">
@@ -268,6 +352,95 @@ export default function HomePage() {
           ) : (
             <p className="empty">분석 결과가 아직 없습니다.</p>
           )}
+        </section>
+
+        <section className="result-section" aria-live="polite">
+          <div className="result-heading">
+            <div>
+              <h2>학습 모드</h2>
+              <span>
+                {studyItems.length > 0
+                  ? `${Math.min(currentStudyIndex + 1, studyItems.length)} / ${
+                      studyItems.length
+                    }`
+                  : "0 / 0"}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void startStudy()}
+              disabled={isLoadingStudy}
+            >
+              {isLoadingStudy ? "불러오는 중..." : "학습 시작"}
+            </button>
+          </div>
+
+          {studyMessage ? <p className="message">{studyMessage}</p> : null}
+
+          {currentStudyItem && !isStudyComplete ? (
+            <div className="study-card">
+              <div className="study-progress">
+                {currentStudyIndex + 1} / {studyItems.length}
+              </div>
+              <div className="study-front">
+                {currentStudyItem.surface || currentStudyItem.base_form}
+              </div>
+              {isAnswerVisible ? (
+                <>
+                  <dl className="study-answer">
+                    <div>
+                      <dt>읽기</dt>
+                      <dd>{currentStudyItem.reading || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>뜻</dt>
+                      <dd>{currentStudyItem.meaning_ko || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>품사</dt>
+                      <dd>{currentStudyItem.part_of_speech || "-"}</dd>
+                    </div>
+                    <div>
+                      <dt>기본형</dt>
+                      <dd>{currentStudyItem.base_form}</dd>
+                    </div>
+                  </dl>
+                  <div className="study-actions">
+                    <button
+                      type="button"
+                      className="success-button"
+                      onClick={() => void submitStudyReview("correct")}
+                      disabled={isReviewing}
+                    >
+                      맞음
+                    </button>
+                    <button
+                      type="button"
+                      className="danger-button"
+                      onClick={() => void submitStudyReview("wrong")}
+                      disabled={isReviewing}
+                    >
+                      틀림
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="study-actions">
+                  <button type="button" onClick={() => setIsAnswerVisible(true)}>
+                    정답 보기
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {isStudyComplete ? (
+            <div className="study-card complete-card">
+              <h3>학습 완료</h3>
+              <p>맞은 개수: {sessionCorrectCount}</p>
+              <p>틀린 개수: {sessionWrongCount}</p>
+            </div>
+          ) : null}
         </section>
 
         <section className="result-section" aria-live="polite">
@@ -378,6 +551,9 @@ function VocabTable({
             <th>품사</th>
             <th>뜻</th>
             <th>상태</th>
+            <th>맞음</th>
+            <th>틀림</th>
+            <th>마지막 복습</th>
             <th>삭제</th>
           </tr>
         </thead>
@@ -396,6 +572,9 @@ function VocabTable({
                   onChange={(status) => onStatusChange(item.id, status)}
                 />
               </td>
+              <td>{item.correct_count}</td>
+              <td>{item.wrong_count}</td>
+              <td>{formatDateTime(item.last_reviewed_at)}</td>
               <td>
                 <button
                   type="button"
@@ -458,4 +637,18 @@ async function requestJson<T>(
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Date(value).toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
