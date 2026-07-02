@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { StatusSelect } from "./shared";
+import { StatusSelect, statusLabels } from "./shared";
 import type { Deck, TokenStatus, TokenWithStatus } from "./types";
 
 type AnalyzeSectionProps = {
@@ -13,12 +13,17 @@ type AnalyzeSectionProps = {
   decks: Deck[];
   selectedDeckId: string;
   includeKnown: boolean;
+  currentCardIndex: number;
+  showAllResults: boolean;
   onTextChange: (text: string) => void;
   onSelectedDeckChange: (deckId: string) => void;
   onIncludeKnownChange: (checked: boolean) => void;
   onAnalyze: (event: FormEvent<HTMLFormElement>) => void;
   onSaveSelected: () => void;
   onStatusChange: (index: number, status: TokenStatus) => void;
+  onClassifyCurrent: (status: TokenStatus) => void;
+  onPreviousCard: () => void;
+  onShowAllResultsChange: (checked: boolean) => void;
 };
 
 export function AnalyzeSection({
@@ -30,13 +35,32 @@ export function AnalyzeSection({
   decks,
   selectedDeckId,
   includeKnown,
+  currentCardIndex,
+  showAllResults,
   onTextChange,
   onSelectedDeckChange,
   onIncludeKnownChange,
   onAnalyze,
   onSaveSelected,
   onStatusChange,
+  onClassifyCurrent,
+  onPreviousCard,
+  onShowAllResultsChange,
 }: AnalyzeSectionProps) {
+  const currentToken = tokens[currentCardIndex];
+  const classifiedCount = tokens.filter((token) => token.isClassified).length;
+  const remainingCount = Math.max(tokens.length - classifiedCount, 0);
+  const knownCount = tokens.filter((token) => token.status === "known").length;
+  const uncertainCount = tokens.filter(
+    (token) => token.status === "uncertain",
+  ).length;
+  const unknownCount = tokens.filter((token) => token.status === "unknown").length;
+  const skippedCount = tokens.filter(
+    (token) => token.isClassified && token.status === "unclassified",
+  ).length;
+  const isClassificationComplete =
+    tokens.length > 0 && currentCardIndex >= tokens.length;
+
   return (
     <section className="tab-panel" aria-live="polite">
       <form className="analyze-form" onSubmit={onAnalyze}>
@@ -61,7 +85,7 @@ export function AnalyzeSection({
           checked={includeKnown}
           onChange={(event) => onIncludeKnownChange(event.target.checked)}
         />
-        아는 단어도 표시
+        완벽히 아는 단어도 표시
       </label>
 
       {message ? <p className="message">{message}</p> : null}
@@ -70,7 +94,11 @@ export function AnalyzeSection({
         <div className="result-heading">
           <div>
             <h2>분석 결과</h2>
-            <span>{tokens.length}개</span>
+            <span>
+              {tokens.length > 0
+                ? `${Math.min(currentCardIndex + 1, tokens.length)} / ${tokens.length}`
+                : "0개"}
+            </span>
           </div>
           <div className="heading-actions">
             <label className="inline-field">
@@ -91,50 +119,161 @@ export function AnalyzeSection({
               onClick={onSaveSelected}
               disabled={isSaving || tokens.length === 0 || !selectedDeckId}
             >
-              {isSaving ? "저장 중..." : "선택한 단어 저장"}
+              {isSaving ? "저장 중..." : "분류한 단어 저장"}
             </button>
           </div>
         </div>
 
         {tokens.length > 0 ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>단어</th>
-                  <th>기본형</th>
-                  <th>읽기</th>
-                  <th>품사</th>
-                  <th>뜻</th>
-                  <th>예문</th>
-                  <th>상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tokens.map((token, index) => (
-                  <tr key={`${token.base_form}-${token.reading}-${index}`}>
-                    <td>{token.surface}</td>
-                    <td>{token.base_form}</td>
-                    <td>{token.reading}</td>
-                    <td>{token.part_of_speech}</td>
-                    <td>{token.meaning_ko || "-"}</td>
-                    <td>
-                      <span className="example-text">
-                        {token.example_sentence || "-"}
-                      </span>
-                    </td>
-                    <td>
-                      <StatusSelect
-                        value={token.status}
-                        label={`${token.surface} 상태`}
-                        onChange={(status) => onStatusChange(index, status)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="classification-summary">
+              <span>분류 완료 {classifiedCount}개</span>
+              <span>남은 단어 {remainingCount}개</span>
+              <span>{statusLabels.known} {knownCount}개</span>
+              <span>{statusLabels.uncertain} {uncertainCount}개</span>
+              <span>{statusLabels.unknown} {unknownCount}개</span>
+            </div>
+
+            {!isClassificationComplete && currentToken ? (
+              <div className="classify-card">
+                <div className="classify-progress">
+                  {currentCardIndex + 1} / {tokens.length}
+                </div>
+                <div className="classify-word">
+                  {currentToken.surface || currentToken.base_form}
+                </div>
+                <dl className="classify-details">
+                  <div>
+                    <dt>기본형</dt>
+                    <dd>{currentToken.base_form || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>읽기</dt>
+                    <dd>{currentToken.reading || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>품사</dt>
+                    <dd>{currentToken.part_of_speech || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>한국어 뜻</dt>
+                    <dd>{currentToken.meaning_ko || "-"}</dd>
+                  </div>
+                  <div className="classify-example">
+                    <dt>예문</dt>
+                    <dd>{currentToken.example_sentence || "-"}</dd>
+                  </div>
+                </dl>
+                <div className="classify-actions">
+                  <button
+                    type="button"
+                    className="success-button"
+                    onClick={() => onClassifyCurrent("known")}
+                  >
+                    완벽히 아는 단어
+                  </button>
+                  <button
+                    type="button"
+                    className="warning-button"
+                    onClick={() => onClassifyCurrent("uncertain")}
+                  >
+                    헷갈리는 단어
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() => onClassifyCurrent("unknown")}
+                  >
+                    모르는 단어
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => onClassifyCurrent("unclassified")}
+                  >
+                    건너뛰기
+                  </button>
+                </div>
+                <div className="card-navigation">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={onPreviousCard}
+                    disabled={currentCardIndex === 0}
+                  >
+                    이전
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="classification-complete">
+                <h3>분류 완료</h3>
+                <div className="classification-summary final-summary">
+                  <span>{statusLabels.known} {knownCount}개</span>
+                  <span>{statusLabels.uncertain} {uncertainCount}개</span>
+                  <span>{statusLabels.unknown} {unknownCount}개</span>
+                  <span>건너뛴 단어 {skippedCount}개</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={onSaveSelected}
+                  disabled={isSaving || !selectedDeckId}
+                >
+                  {isSaving ? "저장 중..." : "분류한 단어 저장"}
+                </button>
+              </div>
+            )}
+
+            <label className="checkbox-field show-results-toggle">
+              <input
+                type="checkbox"
+                checked={showAllResults}
+                onChange={(event) => onShowAllResultsChange(event.target.checked)}
+              />
+              전체 결과 보기
+            </label>
+
+            {showAllResults ? (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>단어</th>
+                      <th>기본형</th>
+                      <th>읽기</th>
+                      <th>품사</th>
+                      <th>뜻</th>
+                      <th>예문</th>
+                      <th>상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tokens.map((token, index) => (
+                      <tr key={`${token.base_form}-${token.reading}-${index}`}>
+                        <td>{token.surface}</td>
+                        <td>{token.base_form}</td>
+                        <td>{token.reading}</td>
+                        <td>{token.part_of_speech}</td>
+                        <td>{token.meaning_ko || "-"}</td>
+                        <td>
+                          <span className="example-text">
+                            {token.example_sentence || "-"}
+                          </span>
+                        </td>
+                        <td>
+                          <StatusSelect
+                            value={token.status}
+                            label={`${token.surface} 상태`}
+                            onChange={(status) => onStatusChange(index, status)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </>
         ) : (
           <p className="empty">분석 결과가 아직 없습니다.</p>
         )}

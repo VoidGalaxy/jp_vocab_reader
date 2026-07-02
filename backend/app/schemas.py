@@ -1,12 +1,14 @@
 from pydantic import BaseModel, Field
 
 
-VALID_STATUSES = {"unknown", "known", "unclassified"}
+VALID_STATUSES = {"unknown", "uncertain", "known", "unclassified"}
 VALID_REVIEW_RESULTS = {"correct", "wrong"}
 
 
 class AnalyzeRequest(BaseModel):
     text: str = Field(...)
+    deck_id: int | None = None
+    include_known: bool = False
 
 
 class TokenResponse(BaseModel):

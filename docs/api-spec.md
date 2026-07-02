@@ -91,7 +91,7 @@
 
 - `text`: 사용자가 붙여넣은 일본어 원문
 - `deck_id`: optional. 지정하면 해당 덱에 저장된 아는 단어만 자동 제외 기준으로 사용한다.
-- `include_known`: optional, default `false`. `false`이면 저장된 아는 단어를 분석 결과에서 제외하고, `true`이면 포함한다.
+- `include_known`: optional, default `false`. `false`이면 저장된 `known` 단어를 분석 결과에서 제외하고, `true`이면 포함한다.
 - `text`만 보내도 기존처럼 정상 동작한다.
 
 ### 처리 규칙
@@ -101,7 +101,8 @@
 - 서버는 `text` 원문 전체를 DB에 저장하지 않는다.
 - SudachiPy로 형태소 분석을 수행한다.
 - `deck_id`가 있으면 해당 덱 안의 `known` 단어만 제외하고, 없으면 전체 단어장 기준으로 제외한다.
-- `include_known`이 `true`이면 저장된 아는 단어도 응답에 포함한다.
+- `include_known`이 `false`여도 `uncertain`과 `unknown` 단어는 숨기지 않는다.
+- `include_known`이 `true`이면 저장된 `known` 단어도 응답에 포함한다.
 - 품사가 `助詞`, `助動詞`, `補助記号`인 토큰은 응답에서 제거한다.
 - `surface`가 공백인 토큰은 응답에서 제거한다.
 - `base_form`이 비어 있으면 `surface`를 사용한다.
@@ -165,7 +166,7 @@
 ### Query Parameters
 
 - `deck_id` optional: 지정하면 해당 덱의 단어만 반환한다. 생략하면 전체 덱 기준으로 반환한다.
-- `status` optional: `unknown`, `known`, `unclassified` 중 하나로 필터링한다.
+- `status` optional: `unknown`, `uncertain`, `known`, `unclassified` 중 하나로 필터링한다.
 - `q` optional: `surface`, `base_form`, `reading`, `meaning_ko`, `example_sentence`, `context_explanation_ko`에서 부분 검색한다.
 - `due_only` optional, default `false`: `true`면 `next_review_at`이 비어 있거나 현재 시각 이하인 항목만 반환한다.
 - `sort` optional: `created_desc`, `created_asc`, `wrong_desc`, `correct_desc`, `review_level_asc`, `next_review_asc` 중 하나를 사용한다.
@@ -228,7 +229,7 @@
 - `normalized_form`이 비어 있으면 `base_form`을 `normalized_form`으로 사용한다.
 - `reading`, `part_of_speech`, `meaning_ko`, `example_sentence`, `context_explanation_ko`는 빈 문자열로 저장할 수 있다.
 - `status`가 없으면 `unknown`으로 저장한다.
-- `status`는 `unknown`, `known`, `unclassified` 중 하나여야 한다.
+- `status`는 `unknown`, `uncertain`, `known`, `unclassified` 중 하나여야 한다.
 - `deck_id`를 생략하면 `기본 단어장`에 저장한다.
 - 같은 덱 안에서 `base_form` + `reading` 기준 중복 저장을 방지한다.
 - 이미 존재하는 조합이 들어오면 서버 에러로 처리하지 않고 기존 항목을 반환한다.
@@ -294,7 +295,7 @@
 - 수정 가능한 필드는 `surface`, `base_form`, `reading`, `part_of_speech`, `normalized_form`, `meaning_ko`, `context_explanation_ko`, `example_sentence`, `status`, `deck_id`다.
 - `base_form`이 비어 있으면 `surface`를 `base_form`으로 사용한다.
 - `normalized_form`이 비어 있으면 `base_form`을 `normalized_form`으로 사용한다.
-- `status`가 있으면 `unknown`, `known`, `unclassified` 중 하나여야 한다.
+- `status`가 있으면 `unknown`, `uncertain`, `known`, `unclassified` 중 하나여야 한다.
 - `deck_id`가 없으면 기존 덱을 유지하고, 유효하지 않은 덱이면 `기본 단어장`으로 이동한다.
 - 수정 시 `updated_at`을 현재 시간으로 갱신한다.
 
@@ -340,7 +341,8 @@
 
 ### 처리 규칙
 
-- 학습 대상은 `status`가 `unknown`인 단어다.
+- 학습 대상은 `status`가 `unknown` 또는 `uncertain`인 단어다.
+- `known` 단어는 학습 대상에서 제외한다.
 - `next_review_at`이 `null`이거나 현재 시간보다 이전 또는 같은 단어만 반환한다.
 - `next_review_at`이 지난 단어를 우선한다.
 - `wrong_count`가 높은 단어를 우선한다.

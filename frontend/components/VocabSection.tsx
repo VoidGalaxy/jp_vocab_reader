@@ -27,6 +27,7 @@ type VocabSectionProps = {
   isCreatingDeck: boolean;
   isAddingVocab: boolean;
   isUpdatingVocab: boolean;
+  isNewVocabFormOpen: boolean;
   deckMessage: string;
   newVocabForm: VocabFormData;
   editingItemId: number | null;
@@ -40,6 +41,7 @@ type VocabSectionProps = {
   onNewDeckDescriptionChange: (description: string) => void;
   onCreateDeck: () => void;
   onDeleteDeck: (deckId: number) => void;
+  onNewVocabFormOpenChange: (open: boolean) => void;
   onNewVocabFormChange: (field: keyof VocabFormData, value: string) => void;
   onAddVocabItem: () => void;
   onEditVocabFormChange: (field: keyof VocabFormData, value: string) => void;
@@ -70,6 +72,7 @@ export function VocabSection({
   isCreatingDeck,
   isAddingVocab,
   isUpdatingVocab,
+  isNewVocabFormOpen,
   deckMessage,
   newVocabForm,
   editingItemId,
@@ -83,6 +86,7 @@ export function VocabSection({
   onNewDeckDescriptionChange,
   onCreateDeck,
   onDeleteDeck,
+  onNewVocabFormOpenChange,
   onNewVocabFormChange,
   onAddVocabItem,
   onEditVocabFormChange,
@@ -112,9 +116,10 @@ export function VocabSection({
             }
           >
             <option value="all">전체</option>
+            <option value="known">완벽히 아는 단어</option>
+            <option value="uncertain">헷갈리는 단어</option>
             <option value="unknown">모르는 단어</option>
-            <option value="known">아는 단어</option>
-            <option value="unclassified">미분류</option>
+            <option value="unclassified">분류되지 않음</option>
           </select>
         </label>
         <label className="checkbox-field">
@@ -182,22 +187,42 @@ export function VocabSection({
 
       {deckMessage ? <p className="message">{deckMessage}</p> : null}
 
-      <div className="vocab-form-panel">
-        <div className="form-heading">
-          <h2>단어 직접 추가</h2>
-        </div>
-        <VocabItemForm
-          form={newVocabForm}
-          decks={decks}
-          includeContextExplanation={false}
-          onChange={onNewVocabFormChange}
-        />
-        <div className="form-actions">
-          <button type="button" onClick={onAddVocabItem} disabled={isAddingVocab}>
-            {isAddingVocab ? "추가 중..." : "추가"}
+      {!isNewVocabFormOpen ? (
+        <div className="collapsible-action">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => onNewVocabFormOpenChange(true)}
+          >
+            + 단어 직접 추가
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="vocab-form-panel">
+          <div className="form-heading">
+            <h2>단어 직접 추가</h2>
+          </div>
+          <VocabItemForm
+            form={newVocabForm}
+            decks={decks}
+            includeContextExplanation={false}
+            onChange={onNewVocabFormChange}
+          />
+          <div className="form-actions">
+            <button type="button" onClick={onAddVocabItem} disabled={isAddingVocab}>
+              {isAddingVocab ? "추가 중..." : "추가"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => onNewVocabFormOpenChange(false)}
+              disabled={isAddingVocab}
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="result-heading">
         <div>
@@ -420,8 +445,9 @@ function VocabItemForm({
           onChange={(event) => onChange("status", event.target.value)}
         >
           <option value="unknown">모르는 단어</option>
-          <option value="known">아는 단어</option>
-          <option value="unclassified">미분류</option>
+          <option value="uncertain">헷갈리는 단어</option>
+          <option value="known">완벽히 아는 단어</option>
+          <option value="unclassified">분류되지 않음</option>
         </select>
       </label>
       <label className="inline-field">

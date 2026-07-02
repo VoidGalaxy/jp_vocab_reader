@@ -3,9 +3,10 @@
 import type { TokenStatus } from "./types";
 
 export const statusLabels: Record<TokenStatus, string> = {
-  unclassified: "미분류",
-  known: "아는 단어",
+  known: "완벽히 아는 단어",
+  uncertain: "헷갈리는 단어",
   unknown: "모르는 단어",
+  unclassified: "분류되지 않음",
 };
 
 export function StatusSelect({

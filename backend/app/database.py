@@ -411,6 +411,26 @@ def list_vocab_items(
     return [row_to_dict(row) for row in rows]
 
 
+def list_known_vocab_keys(deck_id: int | None = None) -> set[tuple[str, str]]:
+    params: list[Any] = []
+    deck_clause = ""
+    if deck_id is not None:
+        deck_clause = "AND deck_id = ?"
+        params.append(deck_id)
+
+    with get_connection() as connection:
+        rows = connection.execute(
+            f"""
+            SELECT base_form, reading
+            FROM vocab_items
+            WHERE status = 'known'
+              {deck_clause}
+            """,
+            tuple(params),
+        ).fetchall()
+    return {(row["base_form"], row["reading"]) for row in rows}
+
+
 def get_vocab_item(item_id: int) -> dict[str, Any] | None:
     with get_connection() as connection:
         row = connection.execute(
@@ -593,7 +613,7 @@ def list_study_items(deck_id: int | None = None) -> list[dict[str, Any]]:
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
             LEFT JOIN decks ON decks.id = vocab_items.deck_id
-            WHERE vocab_items.status = 'unknown'
+            WHERE vocab_items.status IN ('unknown', 'uncertain')
               AND (vocab_items.next_review_at IS NULL OR vocab_items.next_review_at <= ?)
               {deck_clause}
             ORDER BY

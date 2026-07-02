@@ -1,4 +1,4 @@
-export type TokenStatus = "unclassified" | "known" | "unknown";
+export type TokenStatus = "unclassified" | "known" | "uncertain" | "unknown";
 
 export type Token = {
   surface: string;
@@ -12,6 +12,7 @@ export type Token = {
 
 export type TokenWithStatus = Token & {
   status: TokenStatus;
+  isClassified?: boolean;
 };
 
 export type VocabItem = TokenWithStatus & {

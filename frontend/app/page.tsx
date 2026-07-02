@@ -81,6 +81,8 @@ export default function HomePage() {
   const [selectedVocabDeckId, setSelectedVocabDeckId] = useState("all");
   const [selectedStudyDeckId, setSelectedStudyDeckId] = useState("all");
   const [includeKnown, setIncludeKnown] = useState(false);
+  const [currentAnalyzeCardIndex, setCurrentAnalyzeCardIndex] = useState(0);
+  const [showAllAnalyzeResults, setShowAllAnalyzeResults] = useState(false);
   const [vocabSearch, setVocabSearch] = useState("");
   const [vocabStatusFilter, setVocabStatusFilter] =
     useState<VocabStatusFilter>("all");
@@ -91,6 +93,7 @@ export default function HomePage() {
   const [newVocabForm, setNewVocabForm] = useState<VocabFormData>(
     createBlankVocabForm(),
   );
+  const [isNewVocabFormOpen, setIsNewVocabFormOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [editVocabForm, setEditVocabForm] = useState<VocabFormData>(
     createBlankVocabForm(),
@@ -184,6 +187,8 @@ export default function HomePage() {
     if (!text.trim()) {
       setMessage("분석할 일본어 원문을 입력해 주세요.");
       setTokens([]);
+      setCurrentAnalyzeCardIndex(0);
+      setShowAllAnalyzeResults(false);
       return;
     }
 
@@ -212,11 +217,16 @@ export default function HomePage() {
         data.tokens.map((token) => ({
           ...token,
           status: "unclassified",
+          isClassified: false,
         })),
       );
+      setCurrentAnalyzeCardIndex(0);
+      setShowAllAnalyzeResults(false);
     } catch (error) {
       setMessage(getErrorMessage(error, "분석 중 알 수 없는 오류가 발생했습니다."));
       setTokens([]);
+      setCurrentAnalyzeCardIndex(0);
+      setShowAllAnalyzeResults(false);
     } finally {
       setIsAnalyzing(false);
     }
@@ -224,10 +234,13 @@ export default function HomePage() {
 
   async function saveSelectedTokens() {
     const selectedTokens = tokens.filter(
-      (token) => token.status === "unknown" || token.status === "known",
+      (token) =>
+        token.status === "unknown" ||
+        token.status === "uncertain" ||
+        token.status === "known",
     );
     if (selectedTokens.length === 0) {
-      setMessage("저장할 단어를 모르는 단어 또는 아는 단어로 선택해 주세요.");
+      setMessage("저장할 단어를 분류해 주세요.");
       return;
     }
 
@@ -249,11 +262,14 @@ export default function HomePage() {
       const unknownCount = selectedTokens.filter(
         (token) => token.status === "unknown",
       ).length;
+      const uncertainCount = selectedTokens.filter(
+        (token) => token.status === "uncertain",
+      ).length;
       const knownCount = selectedTokens.filter(
         (token) => token.status === "known",
       ).length;
       setMessage(
-        `모르는 단어 ${unknownCount}개, 아는 단어 ${knownCount}개를 저장했습니다.`,
+        `완벽히 아는 단어 ${knownCount}개, 헷갈리는 단어 ${uncertainCount}개, 모르는 단어 ${unknownCount}개를 저장했습니다.`,
       );
       await loadVocabItems();
     } catch (error) {
@@ -405,6 +421,7 @@ export default function HomePage() {
         body: JSON.stringify(buildVocabPayload(newVocabForm)),
       });
       setNewVocabForm(createBlankVocabForm(defaultVocabFormDeckId));
+      setIsNewVocabFormOpen(false);
       setVocabMessage("단어를 저장했습니다.");
       await loadVocabItems();
     } catch (error) {
@@ -455,9 +472,24 @@ export default function HomePage() {
   function updateTokenStatus(index: number, status: TokenStatus) {
     setTokens((currentTokens) =>
       currentTokens.map((token, tokenIndex) =>
-        tokenIndex === index ? { ...token, status } : token,
+        tokenIndex === index ? { ...token, status, isClassified: true } : token,
       ),
     );
+  }
+
+  function classifyCurrentToken(status: TokenStatus) {
+    setTokens((currentTokens) =>
+      currentTokens.map((token, tokenIndex) =>
+        tokenIndex === currentAnalyzeCardIndex
+          ? { ...token, status, isClassified: true }
+          : token,
+      ),
+    );
+    setCurrentAnalyzeCardIndex((index) => Math.min(index + 1, tokens.length));
+  }
+
+  function moveToPreviousAnalyzeCard() {
+    setCurrentAnalyzeCardIndex((index) => Math.max(index - 1, 0));
   }
 
   async function updateVocabStatus(itemId: number, status: TokenStatus) {
@@ -657,12 +689,17 @@ export default function HomePage() {
             decks={decks}
             selectedDeckId={selectedSaveDeckId}
             includeKnown={includeKnown}
+            currentCardIndex={currentAnalyzeCardIndex}
+            showAllResults={showAllAnalyzeResults}
             onTextChange={setText}
             onSelectedDeckChange={setSelectedSaveDeckId}
             onIncludeKnownChange={setIncludeKnown}
             onAnalyze={handleAnalyze}
             onSaveSelected={() => void saveSelectedTokens()}
             onStatusChange={updateTokenStatus}
+            onClassifyCurrent={classifyCurrentToken}
+            onPreviousCard={moveToPreviousAnalyzeCard}
+            onShowAllResultsChange={setShowAllAnalyzeResults}
           />
         ) : null}
 
@@ -684,6 +721,7 @@ export default function HomePage() {
             isCreatingDeck={isCreatingDeck}
             isAddingVocab={isAddingVocab}
             isUpdatingVocab={isUpdatingVocab}
+            isNewVocabFormOpen={isNewVocabFormOpen}
             deckMessage={deckMessage}
             newVocabForm={newVocabForm}
             editingItemId={editingItemId}
@@ -697,6 +735,7 @@ export default function HomePage() {
             onNewDeckDescriptionChange={setNewDeckDescription}
             onCreateDeck={() => void createDeck()}
             onDeleteDeck={(deckId) => void deleteDeck(deckId)}
+            onNewVocabFormOpenChange={setIsNewVocabFormOpen}
             onNewVocabFormChange={updateNewVocabForm}
             onAddVocabItem={() => void addVocabItem()}
             onEditVocabFormChange={updateEditVocabForm}

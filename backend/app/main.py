@@ -19,6 +19,7 @@ from app.database import (
     get_vocab_item,
     init_db,
     list_decks,
+    list_known_vocab_keys,
     list_study_items,
     list_vocab_items,
     record_study_review,
@@ -70,7 +71,19 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="text must not be blank")
 
-    return AnalyzeResponse(tokens=analyzer.analyze(request.text))
+    if request.deck_id is not None and not get_deck(request.deck_id):
+        raise HTTPException(status_code=404, detail="deck not found")
+
+    tokens = analyzer.analyze(request.text)
+    if not request.include_known:
+        known_keys = list_known_vocab_keys(deck_id=request.deck_id)
+        tokens = [
+            token
+            for token in tokens
+            if (token["base_form"], token["reading"]) not in known_keys
+        ]
+
+    return AnalyzeResponse(tokens=tokens)
 
 
 @app.get("/decks", response_model=DecksResponse)
