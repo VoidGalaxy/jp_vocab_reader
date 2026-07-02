@@ -3,6 +3,7 @@ from sudachipy import dictionary
 from app.dictionary import get_korean_meaning
 
 
+SENTENCE_ENDINGS = {"。", "！", "？", "!", "?"}
 EXCLUDED_POS = {"助詞", "助動詞", "補助記号", "記号", "空白"}
 POS_LABELS = {
     "名詞": "명사",
@@ -34,6 +35,33 @@ def pos_to_korean(part_of_speech: str) -> str:
     return POS_LABELS.get(part_of_speech, "기타")
 
 
+def split_sentences(text: str) -> list[tuple[int, int, str]]:
+    sentences: list[tuple[int, int, str]] = []
+    start = 0
+
+    for index, char in enumerate(text):
+        if char in SENTENCE_ENDINGS:
+            sentence = text[start : index + 1].strip()
+            if sentence:
+                sentences.append((start, index + 1, sentence))
+            start = index + 1
+
+    trailing = text[start:].strip()
+    if trailing:
+        sentences.append((start, len(text), trailing))
+
+    return sentences
+
+
+def find_example_sentence(
+    sentences: list[tuple[int, int, str]], token_start: int
+) -> str:
+    for start, end, sentence in sentences:
+        if start <= token_start < end:
+            return sentence
+    return ""
+
+
 class JapaneseAnalyzer:
     def __init__(self) -> None:
         self._tokenizer = dictionary.Dictionary().create()
@@ -41,9 +69,17 @@ class JapaneseAnalyzer:
     def analyze(self, text: str) -> list[dict[str, str]]:
         tokens: list[dict[str, str]] = []
         seen_base_forms: set[str] = set()
+        sentences = split_sentences(text)
+        search_start = 0
 
         for morpheme in self._tokenizer.tokenize(text):
             surface = morpheme.surface()
+            token_start = text.find(surface, search_start)
+            if token_start == -1:
+                token_start = text.find(surface)
+            if token_start != -1:
+                search_start = token_start + len(surface)
+
             if not surface.strip():
                 continue
 
@@ -67,6 +103,9 @@ class JapaneseAnalyzer:
                     "part_of_speech": pos_to_korean(part_of_speech),
                     "normalized_form": morpheme.normalized_form(),
                     "meaning_ko": get_korean_meaning(base_form),
+                    "example_sentence": find_example_sentence(
+                        sentences, token_start
+                    ),
                 }
             )
 

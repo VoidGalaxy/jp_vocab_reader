@@ -11,6 +11,7 @@ type Token = {
   part_of_speech: string;
   normalized_form: string;
   meaning_ko: string;
+  example_sentence: string;
 };
 
 type TokenWithStatus = Token & {
@@ -406,6 +407,10 @@ export default function HomePage() {
                       <dt>기본형</dt>
                       <dd>{currentStudyItem.base_form}</dd>
                     </div>
+                    <div className="answer-example">
+                      <dt>예문</dt>
+                      <dd>{currentStudyItem.example_sentence || "-"}</dd>
+                    </div>
                   </dl>
                   <div className="study-actions">
                     <button
@@ -508,6 +513,7 @@ function TokenTable({
             <th>읽기</th>
             <th>품사</th>
             <th>뜻</th>
+            <th>예문</th>
             <th>상태</th>
           </tr>
         </thead>
@@ -519,6 +525,11 @@ function TokenTable({
               <td>{token.reading}</td>
               <td>{token.part_of_speech}</td>
               <td>{token.meaning_ko || "-"}</td>
+              <td>
+                <span className="example-text">
+                  {token.example_sentence || "-"}
+                </span>
+              </td>
               <td>
                 <StatusSelect
                   value={token.status}
@@ -553,6 +564,7 @@ function VocabTable({
             <th>읽기</th>
             <th>품사</th>
             <th>뜻</th>
+            <th>예문</th>
             <th>상태</th>
             <th>맞음</th>
             <th>틀림</th>
@@ -570,6 +582,11 @@ function VocabTable({
               <td>{item.reading}</td>
               <td>{item.part_of_speech}</td>
               <td>{item.meaning_ko || "-"}</td>
+              <td>
+                <span className="example-text">
+                  {item.example_sentence || "-"}
+                </span>
+              </td>
               <td>
                 <StatusSelect
                   value={item.status}

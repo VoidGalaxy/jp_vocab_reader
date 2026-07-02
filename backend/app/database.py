@@ -11,8 +11,8 @@ from app.schemas import VocabItemCreate
 DB_PATH = Path(__file__).resolve().parents[1] / "vocab.db"
 VOCAB_ITEM_FIELDS = """
     id, surface, base_form, reading, part_of_speech, normalized_form,
-    meaning_ko, status, correct_count, wrong_count, last_reviewed_at,
-    review_level, next_review_at, created_at, updated_at
+    meaning_ko, example_sentence, status, correct_count, wrong_count,
+    last_reviewed_at, review_level, next_review_at, created_at, updated_at
 """
 
 
@@ -34,6 +34,7 @@ def init_db() -> None:
                 part_of_speech TEXT NOT NULL,
                 normalized_form TEXT NOT NULL,
                 meaning_ko TEXT NOT NULL DEFAULT '',
+                example_sentence TEXT NOT NULL DEFAULT '',
                 status TEXT NOT NULL,
                 correct_count INTEGER NOT NULL DEFAULT 0,
                 wrong_count INTEGER NOT NULL DEFAULT 0,
@@ -51,6 +52,7 @@ def init_db() -> None:
         ensure_column(connection, "last_reviewed_at", "DATETIME")
         ensure_column(connection, "review_level", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "next_review_at", "DATETIME")
+        ensure_column(connection, "example_sentence", "TEXT NOT NULL DEFAULT ''")
 
 
 def ensure_column(
@@ -129,9 +131,9 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
             """
             INSERT OR IGNORE INTO vocab_items (
                 surface, base_form, reading, part_of_speech, normalized_form,
-                meaning_ko, status, created_at, updated_at
+                meaning_ko, example_sentence, status, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 item.surface,
@@ -140,6 +142,7 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
                 item.part_of_speech,
                 item.normalized_form,
                 item.meaning_ko,
+                item.example_sentence,
                 item.status,
                 timestamp,
                 timestamp,

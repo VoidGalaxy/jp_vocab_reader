@@ -16,6 +16,7 @@ class TokenResponse(BaseModel):
     part_of_speech: str
     normalized_form: str
     meaning_ko: str
+    example_sentence: str
 
 
 class AnalyzeResponse(BaseModel):
@@ -29,6 +30,7 @@ class VocabItemCreate(BaseModel):
     part_of_speech: str
     normalized_form: str
     meaning_ko: str = ""
+    example_sentence: str = ""
     status: str = "unknown"
 
 
@@ -44,6 +46,7 @@ class VocabItemResponse(BaseModel):
     part_of_speech: str
     normalized_form: str
     meaning_ko: str
+    example_sentence: str
     status: str
     correct_count: int
     wrong_count: int

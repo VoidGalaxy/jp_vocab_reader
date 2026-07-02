@@ -20,7 +20,8 @@
   "reading": "たべる",
   "part_of_speech": "동사",
   "normalized_form": "食べる",
-  "meaning_ko": "먹다"
+  "meaning_ko": "먹다",
+  "example_sentence": "昨日、新しい本を食べる。"
 }
 ```
 
@@ -32,6 +33,7 @@
 - `part_of_speech`: 한국어 대표 품사명
 - `normalized_form`: 정규화형
 - `meaning_ko`: 내장 사전에서 찾은 기본 한국어 뜻. 사전에 없으면 빈 문자열을 반환한다.
+- `example_sentence`: 단어가 처음 등장한 원문 문장. 문장 종료 기호를 포함한다.
 
 ### VocabItem
 
@@ -44,6 +46,7 @@
   "part_of_speech": "동사",
   "normalized_form": "食べる",
   "meaning_ko": "",
+  "example_sentence": "",
   "status": "unknown",
   "correct_count": 0,
   "wrong_count": 0,
@@ -85,6 +88,8 @@
 - `reading`은 SudachiPy의 가타카나 읽기를 히라가나로 변환해 반환한다.
 - `part_of_speech`는 한국어 품사명으로 반환한다.
 - `meaning_ko`는 내장 사전에서 `base_form` 기준으로 조회해 반환한다. 사전에 없으면 빈 문자열을 반환한다.
+- `example_sentence`는 원문을 `。`, `！`, `？`, `!`, `?` 기준으로 나눈 뒤, 해당 토큰이 처음 등장한 문장을 반환한다.
+- 문장 종료 기호는 `example_sentence`에 포함한다.
 
 ### 응답
 
@@ -97,7 +102,8 @@
       "reading": "かれ",
       "part_of_speech": "대명사",
       "normalized_form": "彼",
-      "meaning_ko": "그, 그 사람"
+      "meaning_ko": "그, 그 사람",
+      "example_sentence": "彼は怠惰であることを自覚していた。"
     },
     {
       "surface": "怠惰",
@@ -105,7 +111,8 @@
       "reading": "たいだ",
       "part_of_speech": "명사",
       "normalized_form": "怠惰",
-      "meaning_ko": "나태함"
+      "meaning_ko": "나태함",
+      "example_sentence": "彼は怠惰であることを自覚していた。"
     }
   ]
 }
@@ -146,6 +153,7 @@
       "part_of_speech": "동사",
       "normalized_form": "読む",
       "meaning_ko": "",
+      "example_sentence": "私は昨日、新しい本を読んだ。",
       "status": "unknown",
       "correct_count": 0,
       "wrong_count": 0,
@@ -173,6 +181,7 @@
   "part_of_speech": "동사",
   "normalized_form": "読む",
   "meaning_ko": "",
+  "example_sentence": "私は昨日、新しい本を読んだ。",
   "status": "unknown"
 }
 ```
@@ -196,6 +205,7 @@
   "part_of_speech": "동사",
   "normalized_form": "読む",
   "meaning_ko": "",
+  "example_sentence": "私は昨日、新しい本を読んだ。",
   "status": "unknown",
   "correct_count": 0,
   "wrong_count": 0,
@@ -261,6 +271,7 @@
       "part_of_speech": "명사",
       "normalized_form": "怠惰",
       "meaning_ko": "나태함",
+      "example_sentence": "彼は怠惰であることを自覚していた。",
       "status": "unknown",
       "correct_count": 1,
       "wrong_count": 3,
@@ -340,8 +351,8 @@ Content-Disposition: attachment; filename="jp-vocab-items.csv"
 ### CSV 컬럼
 
 ```csv
-surface,base_form,reading,part_of_speech,meaning_ko,status,created_at
-読んだ,読む,よむ,동사,,unknown,2026-07-02T09:00:00+00:00
+surface,base_form,reading,part_of_speech,meaning_ko,example_sentence,status,review_level,correct_count,wrong_count,next_review_at,created_at
+読んだ,読む,よむ,동사,,私は昨日、新しい本を読んだ。,unknown,0,0,0,,2026-07-02T09:00:00+00:00
 ```
 
 ### 처리 규칙

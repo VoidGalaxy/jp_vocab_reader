@@ -89,7 +89,12 @@ def export_vocab_items_csv() -> Response:
         "reading",
         "part_of_speech",
         "meaning_ko",
+        "example_sentence",
         "status",
+        "review_level",
+        "correct_count",
+        "wrong_count",
+        "next_review_at",
         "created_at",
     ]
     writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
