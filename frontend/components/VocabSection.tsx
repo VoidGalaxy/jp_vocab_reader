@@ -395,7 +395,10 @@ export function VocabSection({
             </table>
           </div>
         ) : (
-          <p className="empty">등록된 사용자 정의 용어가 없습니다.</p>
+          <p className="empty">
+            등록된 사용자 정의 용어가 없습니다. 작품 고유명사나 자주 나오는
+            용어를 추가하면 분석 결과에 우선 반영됩니다.
+          </p>
         )}
       </div>
 
@@ -557,7 +560,10 @@ export function VocabSection({
           </table>
         </div>
       ) : (
-        <p className="empty">조건에 맞는 단어가 없습니다.</p>
+        <p className="empty">
+          표시할 단어가 없습니다. 검색어와 필터를 바꾸거나 단어를 직접
+          추가해 보세요.
+        </p>
       )}
     </section>
   );

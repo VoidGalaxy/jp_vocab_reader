@@ -92,21 +92,35 @@ export function AnalyzeSection({
           placeholder="彼は怠惰であることを自覚していた。"
           rows={8}
         />
+        <div className="analyze-options">
+          <label className="inline-field">
+            분석/저장 덱
+            <select
+              value={selectedDeckId}
+              onChange={(event) => onSelectedDeckChange(event.target.value)}
+            >
+              {decks.map((deck) => (
+                <option key={deck.id} value={String(deck.id)}>
+                  {deck.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="checkbox-field analyze-checkbox">
+            <input
+              type="checkbox"
+              checked={includeKnown}
+              onChange={(event) => onIncludeKnownChange(event.target.checked)}
+            />
+            완벽히 아는 단어도 표시
+          </label>
+        </div>
         <div className="actions">
           <button type="submit" disabled={isAnalyzing}>
             {isAnalyzing ? "분석 중..." : "분석하기"}
           </button>
         </div>
       </form>
-
-      <label className="checkbox-field analyze-checkbox">
-        <input
-          type="checkbox"
-          checked={includeKnown}
-          onChange={(event) => onIncludeKnownChange(event.target.checked)}
-        />
-        완벽히 아는 단어도 표시
-      </label>
 
       {message ? <p className="message">{message}</p> : null}
 
@@ -150,19 +164,6 @@ export function AnalyzeSection({
             </span>
           </div>
           <div className="heading-actions">
-            <label className="inline-field">
-              저장 덱
-              <select
-                value={selectedDeckId}
-                onChange={(event) => onSelectedDeckChange(event.target.value)}
-              >
-                {decks.map((deck) => (
-                  <option key={deck.id} value={String(deck.id)}>
-                    {deck.name}
-                  </option>
-                ))}
-              </select>
-            </label>
             <button
               type="button"
               onClick={onSaveSelected}

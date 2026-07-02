@@ -73,6 +73,16 @@ export function StudySection({
 
       {message ? <p className="message">{message}</p> : null}
 
+      {!currentItem && !isComplete ? (
+        <div className="study-card study-ready-card">
+          <h3>오늘 복습할 단어를 불러오세요</h3>
+          <p>
+            덱을 선택한 뒤 학습을 시작하면 모르는 단어와 헷갈리는 단어가
+            카드로 표시됩니다.
+          </p>
+        </div>
+      ) : null}
+
       {currentItem && !isComplete ? (
         <div className="study-card">
           <div className="study-progress">

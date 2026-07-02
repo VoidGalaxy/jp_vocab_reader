@@ -1,6 +1,18 @@
 :root {
   color: #1f2933;
-  background: #f5f7fa;
+  background: #eef2f6;
+  --page-bg: #eef2f6;
+  --panel-bg: #ffffff;
+  --soft-bg: #f8fafc;
+  --border: #d7dee8;
+  --border-strong: #c5cfdd;
+  --text: #111827;
+  --muted: #5f6f83;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --danger: #dc2626;
+  --success: #15803d;
+  --warning: #facc15;
   font-family:
     Arial,
     "Hiragino Sans",
@@ -15,7 +27,9 @@
 
 body {
   margin: 0;
-  background: #f5f7fa;
+  background:
+    linear-gradient(180deg, #f7f9fc 0, var(--page-bg) 260px),
+    var(--page-bg);
 }
 
 button,
@@ -27,16 +41,17 @@ select {
 
 .page {
   min-height: 100vh;
-  padding: 40px 20px;
+  padding: 36px 20px 48px;
 }
 
 .workspace {
-  width: min(1080px, 100%);
+  width: min(1160px, 100%);
   margin: 0 auto;
 }
 
 .header {
-  margin-bottom: 28px;
+  margin-bottom: 22px;
+  padding: 2px 2px 0;
 }
 
 .header h1 {
@@ -55,29 +70,41 @@ select {
 .tab-nav {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 28px;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px;
+  margin-bottom: 24px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
 .tab {
   min-width: 0;
-  color: #334155;
-  background: #e2e8f0;
+  color: #475569;
+  background: transparent;
+  box-shadow: none;
 }
 
 .active-tab {
   color: #ffffff;
-  background: #1f6feb;
+  background: var(--primary);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.22);
 }
 
 .tab-panel {
-  display: block;
+  display: grid;
+  gap: 18px;
 }
 
 .analyze-form {
   display: grid;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  background: var(--panel-bg);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
 }
 
 .analyze-form label {
@@ -89,10 +116,10 @@ textarea {
   width: 100%;
   min-height: 180px;
   resize: vertical;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   padding: 14px;
-  color: #111827;
+  color: var(--text);
   background: #ffffff;
   line-height: 1.6;
 }
@@ -106,10 +133,10 @@ select:focus {
 
 input {
   width: 100%;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   padding: 10px 12px;
-  color: #111827;
+  color: var(--text);
   background: #ffffff;
 }
 
@@ -128,9 +155,18 @@ button {
   border-radius: 8px;
   padding: 11px 18px;
   color: #ffffff;
-  background: #1f6feb;
+  background: var(--primary);
   font-weight: 700;
   cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+button:not(:disabled):hover {
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
 }
 
 button:disabled {
@@ -139,32 +175,33 @@ button:disabled {
 }
 
 .secondary-button {
-  color: #1f2933;
-  background: #e2e8f0;
+  color: #334155;
+  background: #e8eef6;
 }
 
 .danger-button {
   min-width: 72px;
   padding: 8px 12px;
-  background: #dc2626;
+  background: var(--danger);
 }
 
 .success-button {
-  background: #15803d;
+  background: var(--success);
 }
 
 .warning-button {
   color: #111827;
-  background: #facc15;
+  background: var(--warning);
 }
 
 .message {
-  margin: 0 0 20px;
-  border: 1px solid #fecaca;
+  margin: 0;
+  border: 1px solid #bfdbfe;
   border-radius: 8px;
   padding: 12px 14px;
-  color: #991b1b;
-  background: #fff1f2;
+  color: #1e3a8a;
+  background: #eff6ff;
+  font-weight: 700;
 }
 
 .draft-panel {
@@ -175,7 +212,6 @@ button:disabled {
   border: 1px solid #bfdbfe;
   border-radius: 8px;
   padding: 14px;
-  margin-bottom: 18px;
   color: #1e3a8a;
   background: #eff6ff;
 }
@@ -202,7 +238,12 @@ button:disabled {
 }
 
 .result-section {
-  margin-top: 28px;
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .classification-summary {
@@ -227,11 +268,12 @@ button:disabled {
   width: min(720px, 100%);
   display: grid;
   gap: 18px;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 24px;
-  margin: 0 auto 18px;
+  padding: 26px;
+  margin: 0 auto;
   background: #ffffff;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
 }
 
 .classify-progress {
@@ -243,7 +285,7 @@ button:disabled {
 
 .classify-word {
   color: #0f172a;
-  font-size: 42px;
+  font-size: 46px;
   font-weight: 800;
   line-height: 1.2;
   text-align: center;
@@ -273,10 +315,10 @@ button:disabled {
 }
 
 .classify-details div {
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e7edf4;
   border-radius: 8px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--soft-bg);
 }
 
 .classify-details dt {
@@ -299,7 +341,7 @@ button:disabled {
 .classify-actions {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
 .classify-actions button {
@@ -328,7 +370,11 @@ button:disabled {
 }
 
 .show-results-toggle {
-  margin-bottom: 12px;
+  justify-self: start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: #ffffff;
 }
 
 .result-heading {
@@ -336,7 +382,6 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
 }
 
 .result-heading > div {
@@ -347,6 +392,7 @@ button:disabled {
 .heading-actions {
   display: flex;
   gap: 8px;
+  align-items: flex-end;
 }
 
 .result-heading h2 {
@@ -362,9 +408,10 @@ button:disabled {
 
 .table-wrap {
   overflow-x: auto;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
 table {
@@ -380,9 +427,9 @@ table {
 th,
 td {
   border-bottom: 1px solid #e5e7eb;
-  padding: 12px 14px;
+  padding: 11px 12px;
   text-align: left;
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 th {
@@ -394,7 +441,8 @@ th {
 
 td {
   color: #111827;
-  font-size: 15px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 tr:last-child td {
@@ -404,7 +452,7 @@ tr:last-child td {
 select {
   width: 100%;
   min-width: 120px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   padding: 8px 10px;
   color: #111827;
@@ -413,7 +461,7 @@ select {
 
 .empty {
   margin: 0;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed var(--border-strong);
   border-radius: 8px;
   padding: 24px;
   color: #64748b;
@@ -424,10 +472,11 @@ select {
 .study-card {
   display: grid;
   gap: 20px;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 28px;
   background: #ffffff;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
 }
 
 .study-progress {
@@ -456,10 +505,10 @@ select {
 }
 
 .study-answer div {
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e7edf4;
   border-radius: 8px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--soft-bg);
 }
 
 .study-answer dt {
@@ -490,9 +539,22 @@ select {
   text-align: center;
 }
 
+.study-ready-card {
+  justify-items: center;
+  text-align: center;
+}
+
+.study-ready-card h3,
+.study-ready-card p,
 .complete-card h3,
 .complete-card p {
   margin: 0;
+}
+
+.study-ready-card p {
+  max-width: 560px;
+  color: var(--muted);
+  line-height: 1.7;
 }
 
 .example-text {
@@ -502,6 +564,7 @@ select {
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
 }
 
 .ai-explanation-cell {
@@ -525,7 +588,10 @@ select {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto;
   gap: 10px;
-  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--panel-bg);
 }
 
 .deck-create {
@@ -536,17 +602,25 @@ select {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(160px, 0.8fr) auto minmax(160px, 0.8fr);
   gap: 10px;
-  margin-bottom: 16px;
+  align-items: flex-end;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--panel-bg);
 }
 
 .collapsible-action {
   display: flex;
   justify-content: flex-start;
-  margin-bottom: 20px;
 }
 
 .custom-term-section {
-  margin-bottom: 24px;
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .compact-heading {
@@ -556,15 +630,13 @@ select {
 .vocab-form-panel {
   display: grid;
   gap: 14px;
-  border: 1px solid #d8e2ec;
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 18px;
-  margin-bottom: 20px;
   background: #ffffff;
 }
 
 .inline-edit-form {
-  margin-bottom: 0;
   background: #f8fafc;
 }
 
@@ -601,6 +673,7 @@ select {
 
 .row-actions {
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .edit-row td {
@@ -624,16 +697,31 @@ select {
 }
 
 .analyze-checkbox {
-  margin-bottom: 16px;
+  min-height: 40px;
+}
+
+.analyze-options {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: flex-end;
 }
 
 .info-panel {
   display: grid;
-  gap: 22px;
-  border: 1px solid #d8e2ec;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.info-panel > div {
+  border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 24px;
+  padding: 20px;
   background: #ffffff;
+}
+
+.info-panel > div:first-child {
+  grid-column: 1 / -1;
 }
 
 .info-panel h2 {
@@ -664,6 +752,7 @@ select {
 
   .tab-nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 18px;
   }
 
   .actions {
@@ -690,7 +779,9 @@ select {
     grid-template-columns: 1fr;
   }
 
-  .vocab-filters {
+  .vocab-filters,
+  .analyze-options,
+  .info-panel {
     grid-template-columns: 1fr;
   }
 
@@ -701,6 +792,7 @@ select {
 
   .classify-word {
     font-size: 34px;
+    overflow-wrap: anywhere;
   }
 
   .classify-details,
@@ -728,6 +820,7 @@ select {
   .study-front {
     min-height: 100px;
     font-size: 36px;
+    overflow-wrap: anywhere;
   }
 
   .study-answer {
@@ -742,7 +835,11 @@ select {
     width: 100%;
   }
 
-  .danger-button {
-    width: auto;
+  .tab {
+    width: 100%;
+  }
+
+  .show-results-toggle {
+    width: 100%;
   }
 }
