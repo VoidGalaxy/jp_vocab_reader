@@ -24,19 +24,29 @@ class AnalyzeResponse(BaseModel):
 
 
 class VocabItemCreate(BaseModel):
-    surface: str
-    base_form: str
-    reading: str
-    part_of_speech: str
-    normalized_form: str
+    surface: str = ""
+    base_form: str = ""
+    reading: str = ""
+    part_of_speech: str = ""
+    normalized_form: str = ""
     meaning_ko: str = ""
+    context_explanation_ko: str = ""
     example_sentence: str = ""
     status: str = "unknown"
     deck_id: int | None = None
 
 
 class VocabItemUpdate(BaseModel):
-    status: str
+    surface: str | None = None
+    base_form: str | None = None
+    reading: str | None = None
+    part_of_speech: str | None = None
+    normalized_form: str | None = None
+    meaning_ko: str | None = None
+    context_explanation_ko: str | None = None
+    example_sentence: str | None = None
+    status: str | None = None
+    deck_id: int | None = None
 
 
 class VocabItemResponse(BaseModel):

@@ -11,6 +11,7 @@ import type {
   Token,
   TokenStatus,
   TokenWithStatus,
+  VocabFormData,
   VocabItem,
   VocabSort,
 } from "../components/types";
@@ -44,6 +45,34 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "info", label: "정보" },
 ];
 
+function createBlankVocabForm(deckId = ""): VocabFormData {
+  return {
+    surface: "",
+    base_form: "",
+    reading: "",
+    part_of_speech: "",
+    meaning_ko: "",
+    example_sentence: "",
+    context_explanation_ko: "",
+    status: "unknown",
+    deck_id: deckId,
+  };
+}
+
+function vocabItemToForm(item: VocabItem): VocabFormData {
+  return {
+    surface: item.surface,
+    base_form: item.base_form,
+    reading: item.reading,
+    part_of_speech: item.part_of_speech,
+    meaning_ko: item.meaning_ko,
+    example_sentence: item.example_sentence,
+    context_explanation_ko: item.context_explanation_ko,
+    status: item.status,
+    deck_id: String(item.deck_id),
+  };
+}
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabKey>("analyze");
   const [hasLoadedVocab, setHasLoadedVocab] = useState(false);
@@ -59,12 +88,21 @@ export default function HomePage() {
   const [vocabSort, setVocabSort] = useState<VocabSort>("created_desc");
   const [newDeckName, setNewDeckName] = useState("");
   const [newDeckDescription, setNewDeckDescription] = useState("");
+  const [newVocabForm, setNewVocabForm] = useState<VocabFormData>(
+    createBlankVocabForm(),
+  );
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [editVocabForm, setEditVocabForm] = useState<VocabFormData>(
+    createBlankVocabForm(),
+  );
   const [isCreatingDeck, setIsCreatingDeck] = useState(false);
   const [text, setText] = useState("");
   const [tokens, setTokens] = useState<TokenWithStatus[]>([]);
   const [vocabItems, setVocabItems] = useState<VocabItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAddingVocab, setIsAddingVocab] = useState(false);
+  const [isUpdatingVocab, setIsUpdatingVocab] = useState(false);
   const [isLoadingVocab, setIsLoadingVocab] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isLoadingStudy, setIsLoadingStudy] = useState(false);
@@ -84,6 +122,22 @@ export default function HomePage() {
   useEffect(() => {
     void loadDecks();
   }, []);
+
+  const defaultDeck =
+    decks.find((deck) => deck.name === "기본 단어장") ?? decks[0];
+  const defaultVocabFormDeckId =
+    selectedVocabDeckId !== "all"
+      ? selectedVocabDeckId
+      : defaultDeck
+        ? String(defaultDeck.id)
+        : "";
+
+  useEffect(() => {
+    setNewVocabForm((currentForm) => ({
+      ...currentForm,
+      deck_id: defaultVocabFormDeckId,
+    }));
+  }, [defaultVocabFormDeckId]);
 
   useEffect(() => {
     if (activeTab === "vocab" && hasLoadedVocab) {
@@ -300,6 +354,102 @@ export default function HomePage() {
 
   async function changeVocabDeck(deckId: string) {
     setSelectedVocabDeckId(deckId);
+  }
+
+  function updateNewVocabForm<K extends keyof VocabFormData>(
+    field: K,
+    value: VocabFormData[K],
+  ) {
+    setNewVocabForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+  }
+
+  function updateEditVocabForm<K extends keyof VocabFormData>(
+    field: K,
+    value: VocabFormData[K],
+  ) {
+    setEditVocabForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+  }
+
+  function buildVocabPayload(form: VocabFormData) {
+    return {
+      surface: form.surface,
+      base_form: form.base_form,
+      reading: form.reading,
+      part_of_speech: form.part_of_speech,
+      meaning_ko: form.meaning_ko,
+      context_explanation_ko: form.context_explanation_ko,
+      example_sentence: form.example_sentence,
+      status: form.status,
+      deck_id: form.deck_id ? Number(form.deck_id) : null,
+    };
+  }
+
+  async function addVocabItem() {
+    if (!newVocabForm.surface.trim() && !newVocabForm.base_form.trim()) {
+      setVocabMessage("단어 또는 기본형을 입력해 주세요.");
+      return;
+    }
+
+    setIsAddingVocab(true);
+    setVocabMessage("");
+
+    try {
+      await requestJson<VocabItem>("/vocab-items", {
+        method: "POST",
+        body: JSON.stringify(buildVocabPayload(newVocabForm)),
+      });
+      setNewVocabForm(createBlankVocabForm(defaultVocabFormDeckId));
+      setVocabMessage("단어를 저장했습니다.");
+      await loadVocabItems();
+    } catch (error) {
+      setVocabMessage(getErrorMessage(error, "단어 추가에 실패했습니다."));
+    } finally {
+      setIsAddingVocab(false);
+    }
+  }
+
+  function startEditingVocabItem(item: VocabItem) {
+    setEditingItemId(item.id);
+    setEditVocabForm(vocabItemToForm(item));
+    setVocabMessage("");
+  }
+
+  function cancelEditingVocabItem() {
+    setEditingItemId(null);
+    setEditVocabForm(createBlankVocabForm(defaultVocabFormDeckId));
+  }
+
+  async function saveEditedVocabItem() {
+    if (editingItemId === null) {
+      return;
+    }
+    if (!editVocabForm.surface.trim() && !editVocabForm.base_form.trim()) {
+      setVocabMessage("단어 또는 기본형을 입력해 주세요.");
+      return;
+    }
+
+    setIsUpdatingVocab(true);
+    setVocabMessage("");
+
+    try {
+      await requestJson<VocabItem>(`/vocab-items/${editingItemId}`, {
+        method: "PATCH",
+        body: JSON.stringify(buildVocabPayload(editVocabForm)),
+      });
+      setEditingItemId(null);
+      setVocabMessage("단어를 수정했습니다.");
+      await loadVocabItems();
+    } catch (error) {
+      setVocabMessage(getErrorMessage(error, "단어 수정에 실패했습니다."));
+    } finally {
+      setIsUpdatingVocab(false);
+    }
   }
 
   function updateTokenStatus(index: number, status: TokenStatus) {
@@ -532,7 +682,12 @@ export default function HomePage() {
             newDeckName={newDeckName}
             newDeckDescription={newDeckDescription}
             isCreatingDeck={isCreatingDeck}
+            isAddingVocab={isAddingVocab}
+            isUpdatingVocab={isUpdatingVocab}
             deckMessage={deckMessage}
+            newVocabForm={newVocabForm}
+            editingItemId={editingItemId}
+            editVocabForm={editVocabForm}
             onSelectedDeckChange={(deckId) => void changeVocabDeck(deckId)}
             onSearchTextChange={setVocabSearch}
             onStatusFilterChange={setVocabStatusFilter}
@@ -542,6 +697,12 @@ export default function HomePage() {
             onNewDeckDescriptionChange={setNewDeckDescription}
             onCreateDeck={() => void createDeck()}
             onDeleteDeck={(deckId) => void deleteDeck(deckId)}
+            onNewVocabFormChange={updateNewVocabForm}
+            onAddVocabItem={() => void addVocabItem()}
+            onEditVocabFormChange={updateEditVocabForm}
+            onStartEdit={startEditingVocabItem}
+            onSaveEdit={() => void saveEditedVocabItem()}
+            onCancelEdit={cancelEditingVocabItem}
             onRefresh={() => void loadVocabItems(selectedVocabDeckId)}
             onDownloadCsv={() => void downloadCsv()}
             onExplain={(itemId) => void explainVocabItem(itemId)}

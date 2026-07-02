@@ -202,7 +202,7 @@
 
 ## POST /vocab-items
 
-분석 결과에서 사용자가 선택한 단어를 단어장에 저장한다.
+분석 결과에서 사용자가 선택한 단어를 저장하거나, 사용자가 단어장 탭에서 직접 입력한 단어를 저장한다.
 
 ### 요청
 
@@ -214,6 +214,7 @@
   "part_of_speech": "동사",
   "normalized_form": "読む",
   "meaning_ko": "",
+  "context_explanation_ko": "",
   "example_sentence": "私は昨日、新しい本を読んだ。",
   "status": "unknown",
   "deck_id": 1
@@ -222,7 +223,11 @@
 
 ### 처리 규칙
 
-- MVP에서는 주로 `status`가 `unknown`인 항목을 저장 대상으로 사용한다.
+- `surface` 또는 `base_form` 중 하나는 공백이 아니어야 한다.
+- `base_form`이 비어 있으면 `surface`를 `base_form`으로 사용한다.
+- `normalized_form`이 비어 있으면 `base_form`을 `normalized_form`으로 사용한다.
+- `reading`, `part_of_speech`, `meaning_ko`, `example_sentence`, `context_explanation_ko`는 빈 문자열로 저장할 수 있다.
+- `status`가 없으면 `unknown`으로 저장한다.
 - `status`는 `unknown`, `known`, `unclassified` 중 하나여야 한다.
 - `deck_id`를 생략하면 `기본 단어장`에 저장한다.
 - 같은 덱 안에서 `base_form` + `reading` 기준 중복 저장을 방지한다.
@@ -263,15 +268,35 @@
 
 ## PATCH /vocab-items/{item_id}
 
-저장된 단어의 학습 상태를 수정한다.
+저장된 단어의 학습 상태와 단어장 필드를 수정한다.
 
 ### 요청
 
 ```json
 {
-  "status": "known"
+  "surface": "読んだ",
+  "base_form": "読む",
+  "reading": "よむ",
+  "part_of_speech": "동사",
+  "normalized_form": "読む",
+  "meaning_ko": "읽다",
+  "context_explanation_ko": "문맥 설명",
+  "example_sentence": "私は昨日、新しい本を読んだ。",
+  "status": "known",
+  "deck_id": 1
 }
 ```
+
+### 처리 규칙
+
+- 모든 필드는 optional이다.
+- 전달되지 않은 필드는 기존 값을 유지한다.
+- 수정 가능한 필드는 `surface`, `base_form`, `reading`, `part_of_speech`, `normalized_form`, `meaning_ko`, `context_explanation_ko`, `example_sentence`, `status`, `deck_id`다.
+- `base_form`이 비어 있으면 `surface`를 `base_form`으로 사용한다.
+- `normalized_form`이 비어 있으면 `base_form`을 `normalized_form`으로 사용한다.
+- `status`가 있으면 `unknown`, `known`, `unclassified` 중 하나여야 한다.
+- `deck_id`가 없으면 기존 덱을 유지하고, 유효하지 않은 덱이면 `기본 단어장`으로 이동한다.
+- 수정 시 `updated_at`을 현재 시간으로 갱신한다.
 
 ### 응답
 

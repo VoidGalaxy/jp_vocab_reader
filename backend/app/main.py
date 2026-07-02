@@ -24,7 +24,7 @@ from app.database import (
     record_study_review,
     update_deck,
     update_context_explanation,
-    update_vocab_item_status,
+    update_vocab_item,
 )
 from app.schemas import (
     AnalyzeRequest,
@@ -204,6 +204,10 @@ def export_vocab_items_csv(deck_id: int | None = Query(default=None)) -> Respons
 def post_vocab_item(
     item: VocabItemCreate, response: Response
 ) -> VocabItemResponse:
+    if not item.surface.strip() and not item.base_form.strip():
+        raise HTTPException(
+            status_code=400, detail="surface or base_form must not be blank"
+        )
     if item.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="invalid status")
 
@@ -215,10 +219,10 @@ def post_vocab_item(
 
 @app.patch("/vocab-items/{item_id}", response_model=VocabItemResponse)
 def patch_vocab_item(item_id: int, item: VocabItemUpdate) -> VocabItemResponse:
-    if item.status not in VALID_STATUSES:
+    if item.status is not None and item.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="invalid status")
 
-    updated_item = update_vocab_item_status(item_id, item.status)
+    updated_item = update_vocab_item(item_id, item)
     if not updated_item:
         raise HTTPException(status_code=404, detail="vocab item not found")
     return VocabItemResponse(**updated_item)

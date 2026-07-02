@@ -28,6 +28,18 @@ export type VocabItem = TokenWithStatus & {
   updated_at: string;
 };
 
+export type VocabFormData = {
+  surface: string;
+  base_form: string;
+  reading: string;
+  part_of_speech: string;
+  meaning_ko: string;
+  example_sentence: string;
+  context_explanation_ko: string;
+  status: TokenStatus;
+  deck_id: string;
+};
+
 export type ReviewResult = "correct" | "wrong";
 
 export type VocabSort =

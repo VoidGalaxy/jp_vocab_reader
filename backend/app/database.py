@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from app.schemas import DeckCreate, DeckUpdate, VocabItemCreate
+from app.schemas import DeckCreate, DeckUpdate, VocabItemCreate, VocabItemUpdate
 
 
 DB_PATH = Path(__file__).resolve().parents[1] / "vocab.db"
@@ -326,6 +326,33 @@ def get_default_deck_id() -> int:
         return ensure_default_deck(connection)
 
 
+def resolve_deck_id(connection: sqlite3.Connection, deck_id: int | None) -> int:
+    default_deck_id = ensure_default_deck(connection)
+    if deck_id is None:
+        return default_deck_id
+
+    row = connection.execute("SELECT id FROM decks WHERE id = ?", (deck_id,)).fetchone()
+    return int(row["id"]) if row else default_deck_id
+
+
+def normalize_vocab_create(item: VocabItemCreate) -> dict[str, Any]:
+    surface = item.surface.strip()
+    base_form = item.base_form.strip() or surface
+    normalized_form = item.normalized_form.strip() or base_form
+    return {
+        "surface": surface or base_form,
+        "base_form": base_form,
+        "reading": item.reading.strip(),
+        "part_of_speech": item.part_of_speech.strip(),
+        "normalized_form": normalized_form,
+        "meaning_ko": item.meaning_ko.strip(),
+        "context_explanation_ko": item.context_explanation_ko.strip(),
+        "example_sentence": item.example_sentence.strip(),
+        "status": item.status,
+        "deck_id": item.deck_id,
+    }
+
+
 def list_vocab_items(
     deck_id: int | None = None,
     status: str | None = None,
@@ -400,10 +427,9 @@ def get_vocab_item(item_id: int) -> dict[str, Any] | None:
 
 def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
     timestamp = now_iso()
-    deck_id = item.deck_id or get_default_deck_id()
+    normalized = normalize_vocab_create(item)
     with get_connection() as connection:
-        if not get_deck(deck_id):
-            deck_id = ensure_default_deck(connection)
+        deck_id = resolve_deck_id(connection, normalized["deck_id"])
         existing = connection.execute(
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
@@ -413,7 +439,7 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
               AND vocab_items.reading = ?
               AND vocab_items.deck_id = ?
             """,
-            (item.base_form, item.reading, deck_id),
+            (normalized["base_form"], normalized["reading"], deck_id),
         ).fetchone()
         if existing:
             return row_to_dict(existing), False
@@ -422,21 +448,22 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
             """
             INSERT OR IGNORE INTO vocab_items (
                 deck_id, surface, base_form, reading, part_of_speech,
-                normalized_form, meaning_ko, example_sentence, status,
-                created_at, updated_at
+                normalized_form, meaning_ko, context_explanation_ko,
+                example_sentence, status, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 deck_id,
-                item.surface,
-                item.base_form,
-                item.reading,
-                item.part_of_speech,
-                item.normalized_form,
-                item.meaning_ko,
-                item.example_sentence,
-                item.status,
+                normalized["surface"],
+                normalized["base_form"],
+                normalized["reading"],
+                normalized["part_of_speech"],
+                normalized["normalized_form"],
+                normalized["meaning_ko"],
+                normalized["context_explanation_ko"],
+                normalized["example_sentence"],
+                normalized["status"],
                 timestamp,
                 timestamp,
             ),
@@ -451,7 +478,7 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
                   AND vocab_items.reading = ?
                   AND vocab_items.deck_id = ?
                 """,
-                (item.base_form, item.reading, deck_id),
+                (normalized["base_form"], normalized["reading"], deck_id),
             ).fetchone()
             return row_to_dict(existing), False
 
@@ -467,16 +494,41 @@ def create_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
     return row_to_dict(row), True
 
 
-def update_vocab_item_status(item_id: int, status: str) -> dict[str, Any] | None:
+def update_vocab_item(item_id: int, item: VocabItemUpdate) -> dict[str, Any] | None:
+    existing = get_vocab_item(item_id)
+    if not existing:
+        return None
+
     timestamp = now_iso()
+    if hasattr(item, "model_dump"):
+        values = item.model_dump(exclude_unset=True)
+    else:
+        values = item.dict(exclude_unset=True)
+    deck_id = values.pop("deck_id", existing["deck_id"])
+    values = {
+        key: value.strip() if isinstance(value, str) else value
+        for key, value in values.items()
+    }
+
+    surface = values.get("surface", existing["surface"])
+    base_form = values.get("base_form", existing["base_form"])
+    base_form = base_form or surface
+    normalized_form = values.get("normalized_form", existing["normalized_form"])
+    normalized_form = normalized_form or base_form
+
+    values["surface"] = surface or base_form
+    values["base_form"] = base_form
+    values["normalized_form"] = normalized_form
+    values["deck_id"] = deck_id
+    values["updated_at"] = timestamp
+
     with get_connection() as connection:
+        values["deck_id"] = resolve_deck_id(connection, values["deck_id"])
+        columns = ", ".join(f"{column} = ?" for column in values)
+        params = [*values.values(), item_id]
         cursor = connection.execute(
-            """
-            UPDATE vocab_items
-            SET status = ?, updated_at = ?
-            WHERE id = ?
-            """,
-            (status, timestamp, item_id),
+            f"UPDATE vocab_items SET {columns} WHERE id = ?",
+            tuple(params),
         )
         if cursor.rowcount == 0:
             return None

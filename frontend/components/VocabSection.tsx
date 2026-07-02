@@ -1,7 +1,14 @@
 "use client";
 
+import { Fragment } from "react";
 import { formatDateTime, formatNextReview, StatusSelect } from "./shared";
-import type { Deck, TokenStatus, VocabItem, VocabSort } from "./types";
+import type {
+  Deck,
+  TokenStatus,
+  VocabFormData,
+  VocabItem,
+  VocabSort,
+} from "./types";
 
 type VocabSectionProps = {
   items: VocabItem[];
@@ -18,7 +25,12 @@ type VocabSectionProps = {
   newDeckName: string;
   newDeckDescription: string;
   isCreatingDeck: boolean;
+  isAddingVocab: boolean;
+  isUpdatingVocab: boolean;
   deckMessage: string;
+  newVocabForm: VocabFormData;
+  editingItemId: number | null;
+  editVocabForm: VocabFormData;
   onSelectedDeckChange: (deckId: string) => void;
   onSearchTextChange: (text: string) => void;
   onStatusFilterChange: (status: "all" | TokenStatus) => void;
@@ -28,6 +40,12 @@ type VocabSectionProps = {
   onNewDeckDescriptionChange: (description: string) => void;
   onCreateDeck: () => void;
   onDeleteDeck: (deckId: number) => void;
+  onNewVocabFormChange: (field: keyof VocabFormData, value: string) => void;
+  onAddVocabItem: () => void;
+  onEditVocabFormChange: (field: keyof VocabFormData, value: string) => void;
+  onStartEdit: (item: VocabItem) => void;
+  onSaveEdit: () => void;
+  onCancelEdit: () => void;
   onRefresh: () => void;
   onDownloadCsv: () => void;
   onExplain: (itemId: number) => void;
@@ -50,7 +68,12 @@ export function VocabSection({
   newDeckName,
   newDeckDescription,
   isCreatingDeck,
+  isAddingVocab,
+  isUpdatingVocab,
   deckMessage,
+  newVocabForm,
+  editingItemId,
+  editVocabForm,
   onSelectedDeckChange,
   onSearchTextChange,
   onStatusFilterChange,
@@ -60,6 +83,12 @@ export function VocabSection({
   onNewDeckDescriptionChange,
   onCreateDeck,
   onDeleteDeck,
+  onNewVocabFormChange,
+  onAddVocabItem,
+  onEditVocabFormChange,
+  onStartEdit,
+  onSaveEdit,
+  onCancelEdit,
   onRefresh,
   onDownloadCsv,
   onExplain,
@@ -153,6 +182,23 @@ export function VocabSection({
 
       {deckMessage ? <p className="message">{deckMessage}</p> : null}
 
+      <div className="vocab-form-panel">
+        <div className="form-heading">
+          <h2>단어 직접 추가</h2>
+        </div>
+        <VocabItemForm
+          form={newVocabForm}
+          decks={decks}
+          includeContextExplanation={false}
+          onChange={onNewVocabFormChange}
+        />
+        <div className="form-actions">
+          <button type="button" onClick={onAddVocabItem} disabled={isAddingVocab}>
+            {isAddingVocab ? "추가 중..." : "추가"}
+          </button>
+        </div>
+      </div>
+
       <div className="result-heading">
         <div>
           <h2>저장된 단어장</h2>
@@ -199,68 +245,113 @@ export function VocabSection({
                 <th>레벨</th>
                 <th>마지막 복습</th>
                 <th>다음 복습</th>
-                <th>삭제</th>
+                <th>관리</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.surface}</td>
-                  <td>{item.deck_name}</td>
-                  <td>{item.base_form}</td>
-                  <td>{item.reading}</td>
-                  <td>{item.part_of_speech}</td>
-                  <td>{item.meaning_ko || "-"}</td>
-                  <td>
-                    <div className="ai-explanation-cell">
-                      {item.context_explanation_ko ? (
-                        <span className="example-text">
-                          {item.context_explanation_ko}
-                        </span>
-                      ) : (
-                        <span className="muted-text">-</span>
-                      )}
-                      <button
-                        type="button"
-                        className="secondary-button compact-button"
-                        onClick={() => onExplain(item.id)}
-                        disabled={explainingItemId === item.id}
-                      >
-                        {explainingItemId === item.id
-                          ? "생성 중..."
-                          : item.context_explanation_ko
-                            ? "AI 설명 다시 생성"
-                            : "AI 설명 생성"}
-                      </button>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="example-text">
-                      {item.example_sentence || "-"}
-                    </span>
-                  </td>
-                  <td>
-                    <StatusSelect
-                      value={item.status}
-                      label={`${item.surface} 저장 상태`}
-                      onChange={(status) => onStatusChange(item.id, status)}
-                    />
-                  </td>
-                  <td>{item.correct_count}</td>
-                  <td>{item.wrong_count}</td>
-                  <td>{item.review_level}</td>
-                  <td>{formatDateTime(item.last_reviewed_at)}</td>
-                  <td>{formatNextReview(item.next_review_at)}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="danger-button"
-                      onClick={() => onDelete(item.id)}
-                    >
-                      삭제
-                    </button>
-                  </td>
-                </tr>
+                <Fragment key={item.id}>
+                  <tr>
+                    <td>{item.surface}</td>
+                    <td>{item.deck_name}</td>
+                    <td>{item.base_form}</td>
+                    <td>{item.reading}</td>
+                    <td>{item.part_of_speech}</td>
+                    <td>{item.meaning_ko || "-"}</td>
+                    <td>
+                      <div className="ai-explanation-cell">
+                        {item.context_explanation_ko ? (
+                          <span className="example-text">
+                            {item.context_explanation_ko}
+                          </span>
+                        ) : (
+                          <span className="muted-text">-</span>
+                        )}
+                        <button
+                          type="button"
+                          className="secondary-button compact-button"
+                          onClick={() => onExplain(item.id)}
+                          disabled={explainingItemId === item.id}
+                        >
+                          {explainingItemId === item.id
+                            ? "생성 중..."
+                            : item.context_explanation_ko
+                              ? "AI 설명 다시 생성"
+                              : "AI 설명 생성"}
+                        </button>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="example-text">
+                        {item.example_sentence || "-"}
+                      </span>
+                    </td>
+                    <td>
+                      <StatusSelect
+                        value={item.status}
+                        label={`${item.surface} 저장 상태`}
+                        onChange={(status) => onStatusChange(item.id, status)}
+                      />
+                    </td>
+                    <td>{item.correct_count}</td>
+                    <td>{item.wrong_count}</td>
+                    <td>{item.review_level}</td>
+                    <td>{formatDateTime(item.last_reviewed_at)}</td>
+                    <td>{formatNextReview(item.next_review_at)}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button
+                          type="button"
+                          className="secondary-button compact-button"
+                          onClick={() => onStartEdit(item)}
+                        >
+                          수정
+                        </button>
+                        <button
+                          type="button"
+                          className="danger-button compact-button"
+                          onClick={() => onDelete(item.id)}
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {editingItemId === item.id ? (
+                    <tr className="edit-row">
+                      <td colSpan={15}>
+                        <div className="vocab-form-panel inline-edit-form">
+                          <div className="form-heading">
+                            <h2>단어 수정</h2>
+                          </div>
+                          <VocabItemForm
+                            form={editVocabForm}
+                            decks={decks}
+                            includeContextExplanation
+                            onChange={onEditVocabFormChange}
+                          />
+                          <div className="form-actions">
+                            <button
+                              type="button"
+                              onClick={onSaveEdit}
+                              disabled={isUpdatingVocab}
+                            >
+                              {isUpdatingVocab ? "저장 중..." : "저장"}
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={onCancelEdit}
+                              disabled={isUpdatingVocab}
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : null}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -269,5 +360,103 @@ export function VocabSection({
         <p className="empty">조건에 맞는 단어가 없습니다.</p>
       )}
     </section>
+  );
+}
+
+type VocabItemFormProps = {
+  form: VocabFormData;
+  decks: Deck[];
+  includeContextExplanation: boolean;
+  onChange: (field: keyof VocabFormData, value: string) => void;
+};
+
+function VocabItemForm({
+  form,
+  decks,
+  includeContextExplanation,
+  onChange,
+}: VocabItemFormProps) {
+  return (
+    <div className="vocab-item-form">
+      <label className="inline-field">
+        단어
+        <input
+          value={form.surface}
+          onChange={(event) => onChange("surface", event.target.value)}
+        />
+      </label>
+      <label className="inline-field">
+        기본형
+        <input
+          value={form.base_form}
+          onChange={(event) => onChange("base_form", event.target.value)}
+        />
+      </label>
+      <label className="inline-field">
+        읽기
+        <input
+          value={form.reading}
+          onChange={(event) => onChange("reading", event.target.value)}
+        />
+      </label>
+      <label className="inline-field">
+        품사
+        <input
+          value={form.part_of_speech}
+          onChange={(event) => onChange("part_of_speech", event.target.value)}
+        />
+      </label>
+      <label className="inline-field">
+        한국어 뜻
+        <input
+          value={form.meaning_ko}
+          onChange={(event) => onChange("meaning_ko", event.target.value)}
+        />
+      </label>
+      <label className="inline-field">
+        상태
+        <select
+          value={form.status}
+          onChange={(event) => onChange("status", event.target.value)}
+        >
+          <option value="unknown">모르는 단어</option>
+          <option value="known">아는 단어</option>
+          <option value="unclassified">미분류</option>
+        </select>
+      </label>
+      <label className="inline-field">
+        덱
+        <select
+          value={form.deck_id}
+          onChange={(event) => onChange("deck_id", event.target.value)}
+        >
+          {decks.map((deck) => (
+            <option key={deck.id} value={String(deck.id)}>
+              {deck.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="inline-field wide-field">
+        예문
+        <textarea
+          className="compact-textarea"
+          value={form.example_sentence}
+          onChange={(event) => onChange("example_sentence", event.target.value)}
+        />
+      </label>
+      {includeContextExplanation ? (
+        <label className="inline-field wide-field">
+          AI 문맥 설명
+          <textarea
+            className="compact-textarea"
+            value={form.context_explanation_ko}
+            onChange={(event) =>
+              onChange("context_explanation_ko", event.target.value)
+            }
+          />
+        </label>
+      ) : null}
+    </div>
   );
 }

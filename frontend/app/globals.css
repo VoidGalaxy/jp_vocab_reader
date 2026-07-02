@@ -370,6 +370,60 @@ select {
   margin-bottom: 16px;
 }
 
+.vocab-form-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #d8e2ec;
+  border-radius: 8px;
+  padding: 18px;
+  margin-bottom: 20px;
+  background: #ffffff;
+}
+
+.inline-edit-form {
+  margin-bottom: 0;
+  background: #f8fafc;
+}
+
+.form-heading h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.vocab-item-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.wide-field {
+  grid-column: span 2;
+}
+
+.compact-textarea {
+  min-height: 84px;
+  padding: 10px 12px;
+}
+
+.form-actions,
+.row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.form-actions {
+  justify-content: flex-end;
+}
+
+.row-actions {
+  align-items: center;
+}
+
+.edit-row td {
+  background: #f8fafc;
+}
+
 .inline-field {
   display: grid;
   gap: 6px;
@@ -449,6 +503,19 @@ select {
 
   .vocab-filters {
     grid-template-columns: 1fr;
+  }
+
+  .vocab-item-form {
+    grid-template-columns: 1fr;
+  }
+
+  .wide-field {
+    grid-column: auto;
+  }
+
+  .form-actions,
+  .row-actions {
+    flex-direction: column;
   }
 
   .study-card {
