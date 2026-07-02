@@ -524,6 +524,62 @@
 - `400 Bad Request`: 잘못된 `result`
 - `404 Not Found`: 항목을 찾을 수 없는 경우
 
+## GET /stats
+
+저장된 단어장의 학습 통계와 진도를 조회한다.
+
+### Query Parameters
+
+- `deck_id` optional: 지정하면 해당 덱 기준으로 통계를 계산한다. 생략하면 전체 단어장 기준으로 계산하고 `deck_stats`에 덱별 요약을 포함한다.
+
+### 응답
+
+```json
+{
+  "scope": "all",
+  "deck_id": null,
+  "deck_name": null,
+  "total_count": 100,
+  "known_count": 30,
+  "uncertain_count": 25,
+  "unknown_count": 40,
+  "unclassified_count": 5,
+  "due_today_count": 12,
+  "total_correct_count": 80,
+  "total_wrong_count": 35,
+  "average_review_level": 1.8,
+  "learned_rate": 0.3,
+  "deck_stats": [
+    {
+      "deck_id": 1,
+      "deck_name": "리제로",
+      "total_count": 50,
+      "known_count": 15,
+      "uncertain_count": 10,
+      "unknown_count": 23,
+      "unclassified_count": 2,
+      "due_today_count": 6,
+      "learned_rate": 0.3
+    }
+  ],
+  "review_level_counts": [
+    {"review_level": 0, "count": 20},
+    {"review_level": 1, "count": 10}
+  ]
+}
+```
+
+### 처리 규칙
+
+- `due_today_count`는 `status`가 `unknown` 또는 `uncertain`이고, `next_review_at`이 비어 있거나 현재 시각 이하인 단어 수다.
+- `learned_rate`는 `known_count / total_count`이며, `total_count`가 0이면 0이다.
+- `average_review_level`은 저장된 단어의 `review_level` 평균이며, 단어가 없으면 0이다.
+- `total_correct_count`와 `total_wrong_count`는 각각 `correct_count`, `wrong_count` 합계다.
+
+### 오류
+
+- `404 Not Found`: 지정한 덱을 찾을 수 없는 경우
+
 ## DELETE /vocab-items/{item_id}
 
 저장된 단어를 삭제한다.

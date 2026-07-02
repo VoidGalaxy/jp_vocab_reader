@@ -17,6 +17,7 @@ import type {
   VocabFormData,
   VocabItem,
   VocabSort,
+  StudyStats,
 } from "../components/types";
 
 type AnalyzeResponse = {
@@ -30,6 +31,8 @@ type VocabItemsResponse = {
 type StudyItemsResponse = {
   items: VocabItem[];
 };
+
+type StatsResponse = StudyStats;
 
 type DecksResponse = {
   items: Deck[];
@@ -269,12 +272,18 @@ export default function HomePage() {
   const [vocabMessage, setVocabMessage] = useState("");
   const [deckMessage, setDeckMessage] = useState("");
   const [studyMessage, setStudyMessage] = useState("");
+  const [studyStatsMessage, setStudyStatsMessage] = useState("");
+  const [infoStatsMessage, setInfoStatsMessage] = useState("");
   const [studyItems, setStudyItems] = useState<VocabItem[]>([]);
+  const [studyStats, setStudyStats] = useState<StudyStats | null>(null);
+  const [infoStats, setInfoStats] = useState<StudyStats | null>(null);
   const [currentStudyIndex, setCurrentStudyIndex] = useState(0);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
   const [sessionCorrectCount, setSessionCorrectCount] = useState(0);
   const [sessionWrongCount, setSessionWrongCount] = useState(0);
   const [hasStartedStudy, setHasStartedStudy] = useState(false);
+  const [isLoadingStudyStats, setIsLoadingStudyStats] = useState(false);
+  const [isLoadingInfoStats, setIsLoadingInfoStats] = useState(false);
 
   useEffect(() => {
     void loadDecks();
@@ -351,6 +360,12 @@ export default function HomePage() {
     setActiveTab(tab);
     if (tab === "vocab" && !hasLoadedVocab) {
       setHasLoadedVocab(true);
+    }
+    if (tab === "study") {
+      void loadStudyStats(selectedStudyDeckId);
+    }
+    if (tab === "info") {
+      void loadInfoStats();
     }
   }
 
@@ -548,6 +563,39 @@ export default function HomePage() {
       setVocabMessage(
         getErrorMessage(error, "사용자 정의 용어를 불러오지 못했습니다."),
       );
+    }
+  }
+
+  async function loadStudyStats(deckId: string = selectedStudyDeckId) {
+    setIsLoadingStudyStats(true);
+    setStudyStatsMessage("");
+
+    try {
+      const query = deckId !== "all" ? `?deck_id=${deckId}` : "";
+      const data = await requestJson<StatsResponse>(`/stats${query}`);
+      setStudyStats(data);
+    } catch (error) {
+      setStudyStatsMessage(
+        getErrorMessage(error, "학습 통계를 불러오지 못했습니다."),
+      );
+    } finally {
+      setIsLoadingStudyStats(false);
+    }
+  }
+
+  async function loadInfoStats() {
+    setIsLoadingInfoStats(true);
+    setInfoStatsMessage("");
+
+    try {
+      const data = await requestJson<StatsResponse>("/stats");
+      setInfoStats(data);
+    } catch (error) {
+      setInfoStatsMessage(
+        getErrorMessage(error, "전체 학습 통계를 불러오지 못했습니다."),
+      );
+    } finally {
+      setIsLoadingInfoStats(false);
     }
   }
 
@@ -1023,6 +1071,10 @@ export default function HomePage() {
       }
       setCurrentStudyIndex((index) => index + 1);
       setIsAnswerVisible(false);
+      void loadStudyStats(selectedStudyDeckId);
+      if (activeTab === "info") {
+        void loadInfoStats();
+      }
     } catch (error) {
       setStudyMessage(getErrorMessage(error, "복습 결과 저장에 실패했습니다."));
     } finally {
@@ -1157,18 +1209,30 @@ export default function HomePage() {
             isLoading={isLoadingStudy}
             isReviewing={isReviewing}
             message={studyMessage}
+            stats={studyStats}
+            isStatsLoading={isLoadingStudyStats}
+            statsMessage={studyStatsMessage}
             correctCount={sessionCorrectCount}
             wrongCount={sessionWrongCount}
             decks={decks}
             selectedDeckId={selectedStudyDeckId}
-            onSelectedDeckChange={setSelectedStudyDeckId}
+            onSelectedDeckChange={(deckId) => {
+              setSelectedStudyDeckId(deckId);
+              void loadStudyStats(deckId);
+            }}
             onStart={() => void startStudy()}
             onShowAnswer={() => setIsAnswerVisible(true)}
             onReview={(result) => void submitStudyReview(result)}
           />
         ) : null}
 
-        {activeTab === "info" ? <InfoSection /> : null}
+        {activeTab === "info" ? (
+          <InfoSection
+            stats={infoStats}
+            isStatsLoading={isLoadingInfoStats}
+            statsMessage={infoStatsMessage}
+          />
+        ) : null}
       </section>
     </main>
   );

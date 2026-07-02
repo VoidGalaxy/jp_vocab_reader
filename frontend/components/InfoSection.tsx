@@ -1,6 +1,28 @@
-export function InfoSection() {
+import type { StudyStats } from "./types";
+import { StatsPanel } from "./StatsPanel";
+
+type InfoSectionProps = {
+  stats: StudyStats | null;
+  isStatsLoading: boolean;
+  statsMessage: string;
+};
+
+export function InfoSection({
+  stats,
+  isStatsLoading,
+  statsMessage,
+}: InfoSectionProps) {
   return (
-    <section className="tab-panel info-panel">
+    <section className="tab-panel">
+      <StatsPanel
+        title="전체 학습 통계"
+        stats={stats}
+        isLoading={isStatsLoading}
+        message={statsMessage}
+        showDeckStats
+      />
+
+      <div className="info-panel">
       <div>
         <h2>서비스 개요</h2>
         <p>
@@ -38,6 +60,7 @@ export function InfoSection() {
           <li>Anki 전용 내보내기 검토</li>
           <li>AI 문맥 설명 품질 개선</li>
         </ul>
+      </div>
       </div>
     </section>
   );

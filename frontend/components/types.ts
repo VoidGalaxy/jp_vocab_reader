@@ -53,6 +53,41 @@ export type VocabFormData = {
 
 export type ReviewResult = "correct" | "wrong";
 
+export type DeckStats = {
+  deck_id: number;
+  deck_name: string;
+  total_count: number;
+  known_count: number;
+  uncertain_count: number;
+  unknown_count: number;
+  unclassified_count: number;
+  due_today_count: number;
+  learned_rate: number;
+};
+
+export type ReviewLevelCount = {
+  review_level: number;
+  count: number;
+};
+
+export type StudyStats = {
+  scope: "all" | "deck";
+  deck_id: number | null;
+  deck_name: string | null;
+  total_count: number;
+  known_count: number;
+  uncertain_count: number;
+  unknown_count: number;
+  unclassified_count: number;
+  due_today_count: number;
+  total_correct_count: number;
+  total_wrong_count: number;
+  average_review_level: number;
+  learned_rate: number;
+  deck_stats: DeckStats[];
+  review_level_counts: ReviewLevelCount[];
+};
+
 export type VocabSort =
   | "created_desc"
   | "created_asc"

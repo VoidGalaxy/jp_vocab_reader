@@ -595,6 +595,99 @@ select {
   line-height: 1.45;
 }
 
+.stats-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.stat-card {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #e7edf4;
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--soft-bg);
+}
+
+.stat-card span,
+.progress-summary span,
+.deck-stat-row span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.stat-card strong {
+  color: #0f172a;
+  font-size: 24px;
+}
+
+.progress-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.progress-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.progress-bar {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.progress-bar > div {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.deck-stats-list {
+  display: grid;
+  gap: 10px;
+}
+
+.deck-stats-list h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.deck-stat-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #e7edf4;
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--soft-bg);
+}
+
+.deck-stat-row > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.deck-progress {
+  display: grid;
+  gap: 6px;
+}
+
 .deck-toolbar,
 .deck-create {
   display: grid;
@@ -793,7 +886,9 @@ select {
 
   .vocab-filters,
   .analyze-options,
-  .info-panel {
+  .info-panel,
+  .stats-grid,
+  .deck-stat-row {
     grid-template-columns: 1fr;
   }
 

@@ -21,6 +21,7 @@ from app.database import (
     delete_vocab_item,
     get_custom_term,
     get_deck,
+    get_stats,
     get_vocab_item,
     init_db,
     list_custom_terms,
@@ -47,6 +48,7 @@ from app.schemas import (
     DeckResponse,
     DecksResponse,
     DeckUpdate,
+    StatsResponse,
     StudyItemsResponse,
     StudyReviewRequest,
     VALID_REVIEW_RESULTS,
@@ -322,6 +324,13 @@ def get_study_items(deck_id: int | None = Query(default=None)) -> StudyItemsResp
     if deck_id is not None and not get_deck(deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
     return StudyItemsResponse(items=list_study_items(deck_id=deck_id))
+
+
+@app.get("/stats", response_model=StatsResponse)
+def get_learning_stats(deck_id: int | None = Query(default=None)) -> StatsResponse:
+    if deck_id is not None and not get_deck(deck_id):
+        raise HTTPException(status_code=404, detail="deck not found")
+    return StatsResponse(**get_stats(deck_id=deck_id))
 
 
 @app.post("/study-items/{item_id}/review", response_model=VocabItemResponse)

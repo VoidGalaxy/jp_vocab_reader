@@ -94,6 +94,41 @@ class StudyReviewRequest(BaseModel):
     result: str
 
 
+class DeckStatsResponse(BaseModel):
+    deck_id: int
+    deck_name: str
+    total_count: int
+    known_count: int
+    uncertain_count: int
+    unknown_count: int
+    unclassified_count: int
+    due_today_count: int
+    learned_rate: float
+
+
+class ReviewLevelCountResponse(BaseModel):
+    review_level: int
+    count: int
+
+
+class StatsResponse(BaseModel):
+    scope: str
+    deck_id: int | None
+    deck_name: str | None
+    total_count: int
+    known_count: int
+    uncertain_count: int
+    unknown_count: int
+    unclassified_count: int
+    due_today_count: int
+    total_correct_count: int
+    total_wrong_count: int
+    average_review_level: float
+    learned_rate: float
+    deck_stats: list[DeckStatsResponse] = []
+    review_level_counts: list[ReviewLevelCountResponse] = []
+
+
 class DeckCreate(BaseModel):
     name: str
     description: str = ""

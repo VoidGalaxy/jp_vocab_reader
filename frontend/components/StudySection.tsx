@@ -1,6 +1,8 @@
 "use client";
 
 import type { Deck, ReviewResult, VocabItem } from "./types";
+import type { StudyStats } from "./types";
+import { StatsPanel } from "./StatsPanel";
 
 type StudySectionProps = {
   items: VocabItem[];
@@ -11,6 +13,9 @@ type StudySectionProps = {
   isLoading: boolean;
   isReviewing: boolean;
   message: string;
+  stats: StudyStats | null;
+  isStatsLoading: boolean;
+  statsMessage: string;
   correctCount: number;
   wrongCount: number;
   decks: Deck[];
@@ -30,6 +35,9 @@ export function StudySection({
   isLoading,
   isReviewing,
   message,
+  stats,
+  isStatsLoading,
+  statsMessage,
   correctCount,
   wrongCount,
   decks,
@@ -41,6 +49,13 @@ export function StudySection({
 }: StudySectionProps) {
   return (
     <section className="tab-panel" aria-live="polite">
+      <StatsPanel
+        title="학습 현황"
+        stats={stats}
+        isLoading={isStatsLoading}
+        message={statsMessage}
+      />
+
       <div className="result-heading">
         <div>
           <h2>학습 모드</h2>
