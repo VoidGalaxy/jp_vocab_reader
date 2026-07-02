@@ -19,6 +19,7 @@ class TokenResponse(BaseModel):
     normalized_form: str
     meaning_ko: str
     dictionary_gloss: str = ""
+    quality_tag: str = "normal"
     example_sentence: str
     is_custom_term: bool = False
 
@@ -35,6 +36,7 @@ class VocabItemCreate(BaseModel):
     normalized_form: str = ""
     meaning_ko: str = ""
     dictionary_gloss: str = ""
+    quality_tag: str = "normal"
     context_explanation_ko: str = ""
     example_sentence: str = ""
     status: str = "unknown"
@@ -49,6 +51,7 @@ class VocabItemUpdate(BaseModel):
     normalized_form: str | None = None
     meaning_ko: str | None = None
     dictionary_gloss: str | None = None
+    quality_tag: str | None = None
     context_explanation_ko: str | None = None
     example_sentence: str | None = None
     status: str | None = None
@@ -66,6 +69,7 @@ class VocabItemResponse(BaseModel):
     normalized_form: str
     meaning_ko: str
     dictionary_gloss: str
+    quality_tag: str
     example_sentence: str
     context_explanation_ko: str
     status: str

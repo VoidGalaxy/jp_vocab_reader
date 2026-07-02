@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { StatusSelect, statusLabels } from "./shared";
-import type { Deck, TokenStatus, TokenWithStatus } from "./types";
+import type { Deck, QualityTag, TokenStatus, TokenWithStatus } from "./types";
 
 type ClassificationDraftSummary = {
   saved_at: string;
@@ -197,9 +197,9 @@ export function AnalyzeSection({
                 <div className="classify-word">
                   {currentToken.surface || currentToken.base_form}
                 </div>
-                {currentToken.is_custom_term ? (
+                {currentToken.quality_tag !== "normal" ? (
                   <div className="term-badge-wrap">
-                    <span className="term-badge">사용자 용어</span>
+                    <QualityBadge qualityTag={currentToken.quality_tag} />
                   </div>
                 ) : null}
                 <dl className="classify-details">
@@ -321,7 +321,10 @@ export function AnalyzeSection({
                   <tbody>
                     {tokens.map((token, index) => (
                       <tr key={`${token.base_form}-${token.reading}-${index}`}>
-                        <td>{token.surface}</td>
+                        <td>
+                          <div>{token.surface}</div>
+                          <QualityBadge qualityTag={token.quality_tag} />
+                        </td>
                         <td>{token.base_form}</td>
                         <td>{token.reading}</td>
                         <td>{token.part_of_speech}</td>
@@ -339,9 +342,6 @@ export function AnalyzeSection({
                           </span>
                         </td>
                         <td>
-                          {token.is_custom_term ? (
-                            <span className="term-badge">사용자 용어</span>
-                          ) : null}
                           <StatusSelect
                             value={token.status}
                             label={`${token.surface} 상태`}
@@ -361,4 +361,18 @@ export function AnalyzeSection({
       </section>
     </section>
   );
+}
+
+const qualityTagLabels: Record<Exclude<QualityTag, "normal">, string> = {
+  custom_term: "사용자 용어",
+  compound_verb: "복합동사",
+  noun_phrase_candidate: "명사구 후보",
+};
+
+function QualityBadge({ qualityTag }: { qualityTag: QualityTag }) {
+  if (qualityTag === "normal") {
+    return null;
+  }
+
+  return <span className="term-badge">{qualityTagLabels[qualityTag]}</span>;
 }

@@ -67,7 +67,14 @@ class JapaneseAnalyzer:
         self._tokenizer = dictionary.Dictionary().create()
 
     def analyze(self, text: str, deck_id: int | None = None) -> list[dict[str, str]]:
+        tokens, _raw_tokens = self.analyze_with_raw(text, deck_id=deck_id)
+        return tokens
+
+    def analyze_with_raw(
+        self, text: str, deck_id: int | None = None
+    ) -> tuple[list[dict[str, str]], list[dict[str, object]]]:
         tokens: list[dict[str, str]] = []
+        raw_tokens: list[dict[str, object]] = []
         seen_base_forms: set[str] = set()
         sentences = split_sentences(text)
         search_start = 0
@@ -85,12 +92,23 @@ class JapaneseAnalyzer:
 
             pos = morpheme.part_of_speech()
             part_of_speech = pos[0] if pos else ""
+            raw_base_form = morpheme.dictionary_form()
+            if not raw_base_form or raw_base_form == "*":
+                raw_base_form = surface
+            raw_tokens.append(
+                {
+                    "surface": surface,
+                    "base_form": raw_base_form,
+                    "reading": morpheme.reading_form(),
+                    "part_of_speech": part_of_speech,
+                    "start": token_start,
+                    "end": token_start + len(surface) if token_start != -1 else -1,
+                }
+            )
             if part_of_speech in EXCLUDED_POS:
                 continue
 
-            base_form = morpheme.dictionary_form()
-            if not base_form or base_form == "*":
-                base_form = surface
+            base_form = raw_base_form
             if base_form in seen_base_forms:
                 continue
 
@@ -122,12 +140,13 @@ class JapaneseAnalyzer:
                         sentences, token_start
                     ),
                     "is_custom_term": False,
+                    "quality_tag": "normal",
                     "_start": token_start,
                     "_end": token_start + len(surface) if token_start != -1 else -1,
                 }
             )
 
-        return tokens
+        return tokens, raw_tokens
 
 
 analyzer = JapaneseAnalyzer()

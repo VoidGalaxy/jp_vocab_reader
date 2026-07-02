@@ -6,6 +6,7 @@ import type {
   Deck,
   CustomTerm,
   CustomTermFormData,
+  QualityTag,
   TokenStatus,
   VocabFormData,
   VocabItem,
@@ -455,7 +456,10 @@ export function VocabSection({
               {items.map((item) => (
                 <Fragment key={item.id}>
                   <tr>
-                    <td>{item.surface}</td>
+                    <td>
+                      <div>{item.surface}</div>
+                      <QualityBadge qualityTag={item.quality_tag} />
+                    </td>
                     <td>{item.deck_name}</td>
                     <td>{item.base_form}</td>
                     <td>{item.reading}</td>
@@ -574,6 +578,20 @@ export function VocabSection({
       )}
     </section>
   );
+}
+
+const qualityTagLabels: Record<Exclude<QualityTag, "normal">, string> = {
+  custom_term: "사용자 용어",
+  compound_verb: "복합동사",
+  noun_phrase_candidate: "명사구 후보",
+};
+
+function QualityBadge({ qualityTag }: { qualityTag: QualityTag }) {
+  if (qualityTag === "normal") {
+    return null;
+  }
+
+  return <span className="term-badge">{qualityTagLabels[qualityTag]}</span>;
 }
 
 type VocabItemFormProps = {

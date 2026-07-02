@@ -1,4 +1,9 @@
 export type TokenStatus = "unclassified" | "known" | "uncertain" | "unknown";
+export type QualityTag =
+  | "normal"
+  | "custom_term"
+  | "compound_verb"
+  | "noun_phrase_candidate";
 
 export type Token = {
   surface: string;
@@ -8,6 +13,7 @@ export type Token = {
   normalized_form: string;
   meaning_ko: string;
   dictionary_gloss: string;
+  quality_tag: QualityTag;
   example_sentence: string;
   is_custom_term: boolean;
 };
@@ -38,6 +44,7 @@ export type VocabFormData = {
   part_of_speech: string;
   meaning_ko: string;
   dictionary_gloss: string;
+  quality_tag: QualityTag;
   example_sentence: string;
   context_explanation_ko: string;
   status: TokenStatus;

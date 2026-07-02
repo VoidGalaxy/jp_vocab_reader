@@ -9,6 +9,7 @@ from app.ai_explainer import (
     MissingOpenAIKeyError,
     generate_context_explanation,
 )
+from app.analyze_postprocess import improve_analysis_tokens
 from app.analyzer import analyzer
 from app.analyzer import find_example_sentence, split_sentences
 from app.database import (
@@ -116,6 +117,7 @@ def find_custom_term_tokens(
                     "dictionary_gloss": "",
                     "example_sentence": find_example_sentence(sentences, start),
                     "is_custom_term": True,
+                    "quality_tag": "custom_term",
                     "_start": start,
                     "_end": end,
                 }
@@ -144,6 +146,7 @@ def merge_custom_terms(text: str, tokens: list[dict], deck_id: int | None) -> li
             continue
         seen_base_forms.add(token["base_form"])
         token["is_custom_term"] = False
+        token["quality_tag"] = token.get("quality_tag") or "normal"
         merged_tokens.append(token)
 
     return sorted(merged_tokens, key=lambda item: item.get("_start", 0))
@@ -167,10 +170,19 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     if request.deck_id is not None and not get_deck(request.deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
 
+    analysis_tokens, raw_tokens = analyzer.analyze_with_raw(
+        request.text, deck_id=request.deck_id
+    )
     tokens = merge_custom_terms(
         request.text,
-        analyzer.analyze(request.text, deck_id=request.deck_id),
+        analysis_tokens,
         request.deck_id,
+    )
+    tokens = improve_analysis_tokens(
+        text=request.text,
+        raw_tokens=raw_tokens,
+        tokens=tokens,
+        deck_id=request.deck_id,
     )
     if not request.include_known:
         known_keys = list_known_vocab_keys(deck_id=request.deck_id)
@@ -336,6 +348,7 @@ def export_vocab_items_csv(deck_id: int | None = Query(default=None)) -> Respons
         "base_form",
         "reading",
         "part_of_speech",
+        "quality_tag",
         "meaning_ko",
         "dictionary_gloss",
         "context_explanation_ko",

@@ -22,6 +22,7 @@
   "normalized_form": "食べる",
   "meaning_ko": "먹다",
   "dictionary_gloss": "to eat",
+  "quality_tag": "normal",
   "example_sentence": "昨日、新しい本を食べる。",
   "is_custom_term": false
 }
@@ -36,6 +37,7 @@
 - `normalized_form`: 정규화형
 - `meaning_ko`: dictionary service가 사용자 정의 용어 뜻, 내장 한국어 사전, JMdict gloss 기반 로컬 한국어 매핑 순서로 채운 기본 한국어 뜻. 사전에 없으면 빈 문자열을 반환한다.
 - `dictionary_gloss`: 로컬 JMdict JSON 사전에서 찾은 영어 gloss 후보. `meaning_ko`를 덮어쓰지 않으며, 매칭된 gloss를 `; `로 합친 문자열이다.
+- `quality_tag`: 분석 품질 태그. `normal`, `custom_term`, `compound_verb`, `noun_phrase_candidate` 중 하나다.
 - `example_sentence`: 단어가 처음 등장한 원문 문장. 문장 종료 기호를 포함한다.
 - `is_custom_term`: 사용자 정의 용어 사전에서 매칭된 토큰이면 `true`, 일반 분석 토큰이면 `false`
 
@@ -53,6 +55,7 @@
   "normalized_form": "食べる",
   "meaning_ko": "",
   "dictionary_gloss": "to eat",
+  "quality_tag": "normal",
   "context_explanation_ko": "",
   "example_sentence": "",
   "status": "unknown",
@@ -116,12 +119,15 @@
 - `surface`가 공백인 토큰은 응답에서 제거한다.
 - `base_form`이 비어 있으면 `surface`를 사용한다.
 - 같은 `base_form`은 한 번만 반환한다.
+- 후처리에서 지정 복합동사와 일부 `명사 + の + 명사` 명사구 후보를 추가한다.
+- `する`, `ある`, `いる`, `なる`, `こと`, `もの`, 주요 지시어/대명사 같은 기초 단어는 일반 토큰에서 제외한다. 사용자 정의 용어로 매칭된 경우는 제외하지 않는다.
 - 반환 순서는 원문에서 처음 등장한 순서를 유지한다.
 - `reading`은 SudachiPy의 가타카나 읽기를 히라가나로 변환해 반환한다.
 - `part_of_speech`는 한국어 품사명으로 반환한다.
 - `meaning_ko`는 dictionary service를 통해 채운다. 조회 우선순위는 사용자 정의 용어 뜻, 내장 사전의 `base_form`, `normalized_form`, `surface`, JMdict gloss 기반 로컬 한국어 매핑 순서이며, 사전에 없으면 빈 문자열을 반환한다.
 - 일반 Sudachi 토큰의 `dictionary_gloss`는 로컬 JMdict JSON 사전에서 `surface`, `base_form`, `normalized_form`, `reading` 순서로 조회한다.
 - 사용자 정의 용어 토큰의 `dictionary_gloss`는 빈 문자열이다.
+- `quality_tag`는 일반 토큰 `normal`, 사용자 정의 용어 `custom_term`, 복합동사 `compound_verb`, 명사구 후보 `noun_phrase_candidate`로 반환한다.
 - `example_sentence`는 원문을 `。`, `！`, `？`, `!`, `?` 기준으로 나눈 뒤, 해당 토큰이 처음 등장한 문장을 반환한다.
 - 문장 종료 기호는 `example_sentence`에 포함한다.
 
@@ -131,17 +137,6 @@
 {
   "tokens": [
     {
-      "surface": "彼",
-      "base_form": "彼",
-      "reading": "かれ",
-      "part_of_speech": "대명사",
-      "normalized_form": "彼",
-      "meaning_ko": "그, 그 사람",
-      "dictionary_gloss": "",
-      "example_sentence": "彼は怠惰であることを自覚していた。",
-      "is_custom_term": false
-    },
-    {
       "surface": "怠惰",
       "base_form": "怠惰",
       "reading": "たいだ",
@@ -149,6 +144,7 @@
       "normalized_form": "怠惰",
       "meaning_ko": "나태함",
       "dictionary_gloss": "laziness; idleness; sloth",
+      "quality_tag": "normal",
       "example_sentence": "彼は怠惰であることを自覚していた。",
       "is_custom_term": false
     }
@@ -284,6 +280,7 @@
       "normalized_form": "読む",
       "meaning_ko": "",
       "dictionary_gloss": "",
+      "quality_tag": "normal",
       "context_explanation_ko": "",
       "example_sentence": "私は昨日、新しい本を読んだ。",
       "status": "unknown",
@@ -314,6 +311,7 @@
   "normalized_form": "読む",
   "meaning_ko": "",
   "dictionary_gloss": "",
+  "quality_tag": "normal",
   "context_explanation_ko": "",
   "example_sentence": "私は昨日、新しい本を読んだ。",
   "status": "unknown",
@@ -327,6 +325,7 @@
 - `base_form`이 비어 있으면 `surface`를 `base_form`으로 사용한다.
 - `normalized_form`이 비어 있으면 `base_form`을 `normalized_form`으로 사용한다.
 - `reading`, `part_of_speech`, `meaning_ko`, `dictionary_gloss`, `example_sentence`, `context_explanation_ko`는 빈 문자열로 저장할 수 있다.
+- `quality_tag`가 없으면 `normal`로 저장한다.
 - `status`가 없으면 `unknown`으로 저장한다.
 - `status`는 `unknown`, `uncertain`, `known`, `unclassified` 중 하나여야 한다.
 - `deck_id`를 생략하면 `기본 단어장`에 저장한다.
@@ -348,6 +347,7 @@
   "normalized_form": "読む",
   "meaning_ko": "",
   "dictionary_gloss": "",
+  "quality_tag": "normal",
   "context_explanation_ko": "",
   "example_sentence": "私は昨日、新しい本を読んだ。",
   "status": "unknown",
@@ -382,6 +382,7 @@
   "normalized_form": "読む",
   "meaning_ko": "읽다",
   "dictionary_gloss": "to read",
+  "quality_tag": "normal",
   "context_explanation_ko": "문맥 설명",
   "example_sentence": "私は昨日、新しい本を読んだ。",
   "status": "known",
@@ -393,7 +394,7 @@
 
 - 모든 필드는 optional이다.
 - 전달되지 않은 필드는 기존 값을 유지한다.
-- 수정 가능한 필드는 `surface`, `base_form`, `reading`, `part_of_speech`, `normalized_form`, `meaning_ko`, `dictionary_gloss`, `context_explanation_ko`, `example_sentence`, `status`, `deck_id`다.
+- 수정 가능한 필드는 `surface`, `base_form`, `reading`, `part_of_speech`, `normalized_form`, `meaning_ko`, `dictionary_gloss`, `quality_tag`, `context_explanation_ko`, `example_sentence`, `status`, `deck_id`다.
 - `base_form`이 비어 있으면 `surface`를 `base_form`으로 사용한다.
 - `normalized_form`이 비어 있으면 `base_form`을 `normalized_form`으로 사용한다.
 - `status`가 있으면 `unknown`, `uncertain`, `known`, `unclassified` 중 하나여야 한다.
@@ -467,6 +468,7 @@
       "normalized_form": "怠惰",
       "meaning_ko": "나태함",
       "dictionary_gloss": "laziness; idleness; sloth",
+      "quality_tag": "normal",
       "context_explanation_ko": "怠惰는 게으름이나 나태함을 뜻합니다. 예문에서는 인물이 스스로 그런 성향을 알고 있었다는 문맥입니다. 단순히 쉬는 것이 아니라 해야 할 일을 미루는 부정적인 뉘앙스로 기억하면 좋습니다.",
       "example_sentence": "彼は怠惰であることを自覚していた。",
       "status": "unknown",
@@ -552,8 +554,8 @@ Content-Disposition: attachment; filename="jp-vocab-items.csv"
 ### CSV 컬럼
 
 ```csv
-surface,base_form,reading,part_of_speech,meaning_ko,dictionary_gloss,context_explanation_ko,example_sentence,status,review_level,correct_count,wrong_count,next_review_at,created_at
-読んだ,読む,よむ,동사,,to read,,私は昨日、新しい本を読んだ。,unknown,0,0,0,,2026-07-02T09:00:00+00:00
+surface,base_form,reading,part_of_speech,quality_tag,meaning_ko,dictionary_gloss,context_explanation_ko,example_sentence,status,review_level,correct_count,wrong_count,next_review_at,created_at
+読んだ,読む,よむ,동사,normal,,to read,,私は昨日、新しい本を読んだ。,unknown,0,0,0,,2026-07-02T09:00:00+00:00
 ```
 
 ### 처리 규칙

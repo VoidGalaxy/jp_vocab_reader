@@ -8,6 +8,7 @@ import { VocabSection } from "../components/VocabSection";
 import type {
   ReviewResult,
   Deck,
+  QualityTag,
   Token,
   TokenStatus,
   TokenWithStatus,
@@ -76,6 +77,7 @@ function createBlankVocabForm(deckId = ""): VocabFormData {
     part_of_speech: "",
     meaning_ko: "",
     dictionary_gloss: "",
+    quality_tag: "normal",
     example_sentence: "",
     context_explanation_ko: "",
     status: "unknown",
@@ -113,6 +115,7 @@ function vocabItemToForm(item: VocabItem): VocabFormData {
     part_of_speech: item.part_of_speech,
     meaning_ko: item.meaning_ko,
     dictionary_gloss: item.dictionary_gloss,
+    quality_tag: item.quality_tag,
     example_sentence: item.example_sentence,
     context_explanation_ko: item.context_explanation_ko,
     status: item.status,
@@ -126,6 +129,15 @@ function isTokenStatus(value: unknown): value is TokenStatus {
     value === "uncertain" ||
     value === "unknown" ||
     value === "unclassified"
+  );
+}
+
+function isQualityTag(value: unknown): value is QualityTag {
+  return (
+    value === "normal" ||
+    value === "custom_term" ||
+    value === "compound_verb" ||
+    value === "noun_phrase_candidate"
   );
 }
 
@@ -167,6 +179,11 @@ function parseClassificationDraft(value: string | null): ClassificationDraft | n
           typeof token.dictionary_gloss === "string"
             ? token.dictionary_gloss
             : "",
+        quality_tag: isQualityTag(token.quality_tag)
+          ? token.quality_tag
+          : token.is_custom_term
+            ? "custom_term"
+            : "normal",
         is_custom_term:
           typeof token.is_custom_term === "boolean"
             ? token.is_custom_term
@@ -667,6 +684,7 @@ export default function HomePage() {
       part_of_speech: form.part_of_speech,
       meaning_ko: form.meaning_ko,
       dictionary_gloss: form.dictionary_gloss,
+      quality_tag: form.quality_tag,
       context_explanation_ko: form.context_explanation_ko,
       example_sentence: form.example_sentence,
       status: form.status,

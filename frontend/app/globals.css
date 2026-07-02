@@ -307,6 +307,11 @@ button:disabled {
   font-weight: 700;
 }
 
+td .term-badge {
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
 .classify-details {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
