@@ -17,6 +17,8 @@ type VocabSectionProps = {
   items: VocabItem[];
   isLoading: boolean;
   isExportingCsv: boolean;
+  isExportingDeckPackage: boolean;
+  isImportingDeckPackage: boolean;
   explainingItemId: number | null;
   message: string;
   decks: Deck[];
@@ -42,6 +44,7 @@ type VocabSectionProps = {
   isCustomTermFormOpen: boolean;
   editingCustomTermId: number | null;
   isSavingCustomTerm: boolean;
+  deckPackageFileName: string;
   onSelectedDeckChange: (deckId: string) => void;
   onSearchTextChange: (text: string) => void;
   onStatusFilterChange: (status: "all" | TokenStatus) => void;
@@ -74,6 +77,9 @@ type VocabSectionProps = {
   onCancelEdit: () => void;
   onRefresh: () => void;
   onDownloadCsv: () => void;
+  onExportDeckPackage: () => void;
+  onDeckPackageFileChange: (file: File | null) => void;
+  onImportDeckPackage: () => void;
   onExplain: (itemId: number) => void;
   onStatusChange: (itemId: number, status: TokenStatus) => void;
   onDelete: (itemId: number) => void;
@@ -83,6 +89,8 @@ export function VocabSection({
   items,
   isLoading,
   isExportingCsv,
+  isExportingDeckPackage,
+  isImportingDeckPackage,
   explainingItemId,
   message,
   decks,
@@ -108,6 +116,7 @@ export function VocabSection({
   isCustomTermFormOpen,
   editingCustomTermId,
   isSavingCustomTerm,
+  deckPackageFileName,
   onSelectedDeckChange,
   onSearchTextChange,
   onStatusFilterChange,
@@ -134,6 +143,9 @@ export function VocabSection({
   onCancelEdit,
   onRefresh,
   onDownloadCsv,
+  onExportDeckPackage,
+  onDeckPackageFileChange,
+  onImportDeckPackage,
   onExplain,
   onStatusChange,
   onDelete,
@@ -231,6 +243,47 @@ export function VocabSection({
       </div>
 
       {deckMessage ? <p className="message">{deckMessage}</p> : null}
+
+      <div className="deck-share-panel">
+        <div>
+          <h2>덱 공유</h2>
+          <p className="muted-text">
+            CSV는 엑셀 확인용이고, 덱 공유 파일은 이 앱에서 다시 가져오기 위한 JSON입니다.
+          </p>
+        </div>
+        <div className="deck-share-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onExportDeckPackage}
+            disabled={selectedDeckId === "all" || isExportingDeckPackage}
+          >
+            {isExportingDeckPackage
+              ? "내보내는 중..."
+              : "현재 덱 공유 파일로 내보내기"}
+          </button>
+          <label className="inline-field">
+            덱 공유 JSON
+            <input
+              type="file"
+              accept="application/json,.json"
+              onChange={(event) =>
+                onDeckPackageFileChange(event.target.files?.[0] ?? null)
+              }
+            />
+          </label>
+          {deckPackageFileName ? (
+            <span className="muted-text">{deckPackageFileName}</span>
+          ) : null}
+          <button
+            type="button"
+            onClick={onImportDeckPackage}
+            disabled={!deckPackageFileName || isImportingDeckPackage}
+          >
+            {isImportingDeckPackage ? "가져오는 중..." : "덱 가져오기"}
+          </button>
+        </div>
+      </div>
 
       {!isNewVocabFormOpen ? (
         <div className="collapsible-action">

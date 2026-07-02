@@ -703,6 +703,35 @@ select {
   grid-template-columns: minmax(160px, 0.8fr) minmax(180px, 1fr) auto;
 }
 
+.deck-share-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr);
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.deck-share-panel h2 {
+  margin: 0 0 6px;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.deck-share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.deck-share-actions .inline-field {
+  min-width: 180px;
+}
+
 .vocab-filters {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(160px, 0.8fr) auto minmax(160px, 0.8fr);
@@ -880,8 +909,14 @@ select {
   }
 
   .deck-toolbar,
-  .deck-create {
+  .deck-create,
+  .deck-share-panel {
     grid-template-columns: 1fr;
+  }
+
+  .deck-share-actions {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .vocab-filters,

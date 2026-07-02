@@ -13,6 +13,7 @@ from app.analyze_postprocess import improve_analysis_tokens
 from app.analyzer import analyzer
 from app.analyzer import find_example_sentence, split_sentences
 from app.database import (
+    build_deck_package,
     create_custom_term,
     create_deck,
     create_vocab_item,
@@ -23,6 +24,7 @@ from app.database import (
     get_deck,
     get_stats,
     get_vocab_item,
+    import_deck_package,
     init_db,
     list_custom_terms,
     list_decks,
@@ -45,6 +47,8 @@ from app.schemas import (
     CustomTermUpdate,
     DeckCreate,
     DeckDeleteResponse,
+    DeckPackage,
+    DeckPackageImportResponse,
     DeckResponse,
     DecksResponse,
     DeckUpdate,
@@ -285,6 +289,23 @@ def remove_deck(deck_id: int) -> DeckDeleteResponse:
         deleted_vocab_count=deleted["deleted_vocab_count"],
         message="덱과 덱에 포함된 단어를 삭제했습니다.",
     )
+
+
+@app.get("/decks/{deck_id}/export-package", response_model=DeckPackage)
+def export_deck_package(deck_id: int) -> DeckPackage:
+    package = build_deck_package(deck_id=deck_id)
+    if not package:
+        raise HTTPException(status_code=404, detail="deck not found")
+    return DeckPackage(**package)
+
+
+@app.post("/decks/import-package", response_model=DeckPackageImportResponse)
+def post_deck_package_import(package: DeckPackage) -> DeckPackageImportResponse:
+    if package.package_type != "jp_vocab_reader_deck":
+        raise HTTPException(status_code=400, detail="invalid package_type")
+    if package.package_version != 1:
+        raise HTTPException(status_code=400, detail="unsupported package_version")
+    return DeckPackageImportResponse(**import_deck_package(package))
 
 
 @app.get("/vocab-items", response_model=VocabItemsResponse)

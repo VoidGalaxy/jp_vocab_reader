@@ -1,0 +1,19 @@
+﻿{
+    "package_type":  "jp_vocab_reader_deck",
+    "package_version":  1,
+    "exported_at":  "2026-07-02T21:28:42.628814+00:00",
+    "app":  {
+                "name":  "JP Vocab Reader",
+                "format":  "deck_package"
+            },
+    "deck":  {
+                 "name":  "ê¸°ë³¸ ë¨ì´ì¥",
+                 "description":  "ê¸°ì¡´ ë¨ì´ì ê¸°ë³¸ ì ì¥ ëì"
+             },
+    "vocab_items":  [
+
+                    ],
+    "custom_terms":  [
+
+                     ]
+}

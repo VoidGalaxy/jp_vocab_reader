@@ -81,6 +81,88 @@
 }
 ```
 
+## GET /decks/{deck_id}/export-package
+
+선택한 덱을 공유용 JSON 패키지로 반환한다. 기본 단어장도 내보낼 수 있다.
+
+### 응답 예시
+
+```json
+{
+  "package_type": "jp_vocab_reader_deck",
+  "package_version": 1,
+  "exported_at": "2026-07-03T00:00:00+09:00",
+  "app": {
+    "name": "JP Vocab Reader",
+    "format": "deck_package"
+  },
+  "deck": {
+    "name": "리제로 1장",
+    "description": "리제로 1장 단어장"
+  },
+  "vocab_items": [
+    {
+      "surface": "怠惰",
+      "base_form": "怠惰",
+      "reading": "たいだ",
+      "part_of_speech": "명사",
+      "normalized_form": "怠惰",
+      "meaning_ko": "나태함",
+      "dictionary_gloss": "laziness; idleness; sloth",
+      "context_explanation_ko": "",
+      "example_sentence": "彼は怠惰であることを自覚していた。",
+      "quality_tag": "normal"
+    }
+  ],
+  "custom_terms": [
+    {
+      "term": "大罪司教",
+      "reading": "たいざいしきょう",
+      "part_of_speech": "명사",
+      "meaning_ko": "대죄주교",
+      "description": "작품 용어"
+    }
+  ]
+}
+```
+
+### 처리 규칙
+
+- 없는 `deck_id`는 `404 Not Found`를 반환한다.
+- `status`, `correct_count`, `wrong_count`, `review_level`, `next_review_at`, `last_reviewed_at`, `id`, `deck_id`, `created_at`, `updated_at`은 공유 패키지에 포함하지 않는다.
+- `custom_terms`는 해당 덱 전용 용어만 포함하며, 공통 용어(`deck_id: null`)는 현재 단계에서 포함하지 않는다.
+
+## POST /decks/import-package
+
+공유용 JSON 패키지를 받아 새 개인 덱으로 복사한다.
+
+### 요청
+
+`GET /decks/{deck_id}/export-package` 응답과 같은 JSON 구조를 보낸다.
+
+### 응답
+
+```json
+{
+  "deck_id": 10,
+  "deck_name": "리제로 1장 (가져옴)",
+  "imported_vocab_count": 120,
+  "skipped_vocab_count": 5,
+  "imported_custom_term_count": 10,
+  "skipped_custom_term_count": 1,
+  "message": "덱 패키지를 가져왔습니다."
+}
+```
+
+### 처리 규칙
+
+- `package_type`이 `jp_vocab_reader_deck`이 아니면 `400 Bad Request`를 반환한다.
+- 지원하지 않는 `package_version`은 `400 Bad Request`를 반환한다. 현재 지원 버전은 `1`이다.
+- 같은 이름의 덱이 이미 있으면 `덱 이름 (가져옴)`, `덱 이름 (가져옴 2)`처럼 중복되지 않는 이름으로 생성한다.
+- 같은 패키지 안의 단어는 `base_form + reading` 기준으로 중복 제거한다.
+- 같은 패키지 안의 사용자 정의 용어는 `term` 기준으로 중복 제거한다.
+- 가져온 단어의 학습 상태는 `unknown`, 맞음/틀림 횟수와 복습 레벨은 `0`, 복습 날짜는 `null`로 초기화한다.
+
 ## POST /analyze
 
 일본어 원문을 분석해 학습 후보 단어 목록을 반환한다.

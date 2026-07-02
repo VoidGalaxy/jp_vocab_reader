@@ -48,6 +48,16 @@ type DeckDeleteResponse = {
   message: string;
 };
 
+type DeckPackageImportResponse = {
+  deck_id: number;
+  deck_name: string;
+  imported_vocab_count: number;
+  skipped_vocab_count: number;
+  imported_custom_term_count: number;
+  skipped_custom_term_count: number;
+  message: string;
+};
+
 type TabKey = "analyze" | "vocab" | "study" | "info";
 type VocabStatusFilter = "all" | TokenStatus;
 
@@ -265,6 +275,9 @@ export default function HomePage() {
   const [isUpdatingVocab, setIsUpdatingVocab] = useState(false);
   const [isLoadingVocab, setIsLoadingVocab] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isExportingDeckPackage, setIsExportingDeckPackage] = useState(false);
+  const [isImportingDeckPackage, setIsImportingDeckPackage] = useState(false);
+  const [deckPackageFile, setDeckPackageFile] = useState<File | null>(null);
   const [isLoadingStudy, setIsLoadingStudy] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [explainingItemId, setExplainingItemId] = useState<number | null>(null);
@@ -958,6 +971,95 @@ export default function HomePage() {
     }
   }
 
+  function createDeckPackageFilename(deckName: string) {
+    const slug =
+      deckName
+        .trim()
+        .toLowerCase()
+        .replace(/[\\/:*?"<>|]+/g, "_")
+        .replace(/\s+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 48) || "deck";
+    const date = new Date().toISOString().slice(0, 10);
+    return `jp_vocab_deck_${slug}_${date}.json`;
+  }
+
+  async function exportDeckPackage() {
+    if (selectedVocabDeckId === "all") {
+      setVocabMessage("공유 파일로 내보낼 덱을 먼저 선택해 주세요.");
+      return;
+    }
+
+    setIsExportingDeckPackage(true);
+    setVocabMessage("덱 공유 파일을 준비하고 있습니다.");
+
+    try {
+      const packageData = await requestJson<{
+        deck: { name: string };
+      }>(`/decks/${selectedVocabDeckId}/export-package`);
+      const blob = new Blob([JSON.stringify(packageData, null, 2)], {
+        type: "application/json;charset=utf-8",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = createDeckPackageFilename(packageData.deck.name);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      setVocabMessage("덱 공유 파일 다운로드를 시작했습니다.");
+    } catch (error) {
+      setVocabMessage(
+        getErrorMessage(error, "덱 공유 파일 내보내기에 실패했습니다."),
+      );
+    } finally {
+      setIsExportingDeckPackage(false);
+    }
+  }
+
+  async function importDeckPackage() {
+    if (!deckPackageFile) {
+      setVocabMessage("가져올 덱 공유 JSON 파일을 선택해 주세요.");
+      return;
+    }
+
+    setIsImportingDeckPackage(true);
+    setVocabMessage("덱 공유 파일을 가져오고 있습니다.");
+
+    try {
+      let packageData: unknown;
+      try {
+        packageData = JSON.parse(await deckPackageFile.text());
+      } catch {
+        throw new Error("올바른 JSON 파일이 아닙니다.");
+      }
+
+      const result = await requestJson<DeckPackageImportResponse>(
+        "/decks/import-package",
+        {
+          method: "POST",
+          body: JSON.stringify(packageData),
+        },
+      );
+      setDeckPackageFile(null);
+      await loadDecks();
+      setSelectedVocabDeckId(String(result.deck_id));
+      setSelectedSaveDeckId(String(result.deck_id));
+      await loadVocabItems(String(result.deck_id));
+      await loadCustomTerms(String(result.deck_id));
+      setVocabMessage(
+        `${result.deck_name} 덱을 만들고 단어 ${result.imported_vocab_count}개, 사용자 용어 ${result.imported_custom_term_count}개를 가져왔습니다.`,
+      );
+    } catch (error) {
+      setVocabMessage(
+        getErrorMessage(error, "덱 공유 파일 가져오기에 실패했습니다."),
+      );
+    } finally {
+      setIsImportingDeckPackage(false);
+    }
+  }
+
   async function downloadCsv() {
     setIsExportingCsv(true);
     setVocabMessage("CSV 파일을 준비하고 있습니다.");
@@ -1140,6 +1242,8 @@ export default function HomePage() {
             items={vocabItems}
             isLoading={isLoadingVocab}
             isExportingCsv={isExportingCsv}
+            isExportingDeckPackage={isExportingDeckPackage}
+            isImportingDeckPackage={isImportingDeckPackage}
             explainingItemId={explainingItemId}
             message={vocabMessage}
             decks={decks}
@@ -1165,6 +1269,7 @@ export default function HomePage() {
             isCustomTermFormOpen={isCustomTermFormOpen}
             editingCustomTermId={editingCustomTermId}
             isSavingCustomTerm={isSavingCustomTerm}
+            deckPackageFileName={deckPackageFile?.name ?? ""}
             onSelectedDeckChange={(deckId) => void changeVocabDeck(deckId)}
             onSearchTextChange={setVocabSearch}
             onStatusFilterChange={setVocabStatusFilter}
@@ -1191,6 +1296,9 @@ export default function HomePage() {
             onCancelEdit={cancelEditingVocabItem}
             onRefresh={() => void loadVocabItems(selectedVocabDeckId)}
             onDownloadCsv={() => void downloadCsv()}
+            onExportDeckPackage={() => void exportDeckPackage()}
+            onDeckPackageFileChange={setDeckPackageFile}
+            onImportDeckPackage={() => void importDeckPackage()}
             onExplain={(itemId) => void explainVocabItem(itemId)}
             onStatusChange={(itemId, status) =>
               void updateVocabStatus(itemId, status)

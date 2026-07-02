@@ -157,6 +157,57 @@ class DeckDeleteResponse(BaseModel):
     message: str
 
 
+class DeckPackageApp(BaseModel):
+    name: str = "JP Vocab Reader"
+    format: str = "deck_package"
+
+
+class DeckPackageDeck(BaseModel):
+    name: str
+    description: str = ""
+
+
+class DeckPackageVocabItem(BaseModel):
+    surface: str = ""
+    base_form: str = ""
+    reading: str = ""
+    part_of_speech: str = ""
+    normalized_form: str = ""
+    meaning_ko: str = ""
+    dictionary_gloss: str = ""
+    context_explanation_ko: str = ""
+    example_sentence: str = ""
+    quality_tag: str = "normal"
+
+
+class DeckPackageCustomTerm(BaseModel):
+    term: str
+    reading: str = ""
+    part_of_speech: str = "명사"
+    meaning_ko: str = ""
+    description: str = ""
+
+
+class DeckPackage(BaseModel):
+    package_type: str
+    package_version: int
+    exported_at: str | None = None
+    app: DeckPackageApp = Field(default_factory=DeckPackageApp)
+    deck: DeckPackageDeck
+    vocab_items: list[DeckPackageVocabItem] = Field(default_factory=list)
+    custom_terms: list[DeckPackageCustomTerm] = Field(default_factory=list)
+
+
+class DeckPackageImportResponse(BaseModel):
+    deck_id: int
+    deck_name: str
+    imported_vocab_count: int
+    skipped_vocab_count: int
+    imported_custom_term_count: int
+    skipped_custom_term_count: int
+    message: str
+
+
 class CustomTermCreate(BaseModel):
     term: str
     reading: str = ""
