@@ -1,7 +1,35 @@
 from sudachipy import dictionary
 
 
-EXCLUDED_POS = {"助詞", "助動詞", "補助記号"}
+EXCLUDED_POS = {"助詞", "助動詞", "補助記号", "記号", "空白"}
+POS_LABELS = {
+    "名詞": "명사",
+    "動詞": "동사",
+    "形容詞": "형용사",
+    "形状詞": "형용동사",
+    "副詞": "부사",
+    "連体詞": "연체사",
+    "接続詞": "접속사",
+    "感動詞": "감탄사",
+    "接頭辞": "접두사",
+    "接尾辞": "접미사",
+    "代名詞": "대명사",
+    "助詞": "조사",
+    "助動詞": "조동사",
+    "補助記号": "기호",
+    "記号": "기호",
+    "空白": "공백",
+}
+
+
+def katakana_to_hiragana(text: str) -> str:
+    return "".join(
+        chr(ord(char) - 0x60) if "ァ" <= char <= "ン" else char for char in text
+    )
+
+
+def pos_to_korean(part_of_speech: str) -> str:
+    return POS_LABELS.get(part_of_speech, "기타")
 
 
 class JapaneseAnalyzer:
@@ -33,8 +61,8 @@ class JapaneseAnalyzer:
                 {
                     "surface": surface,
                     "base_form": base_form,
-                    "reading": morpheme.reading_form(),
-                    "part_of_speech": part_of_speech,
+                    "reading": katakana_to_hiragana(morpheme.reading_form()),
+                    "part_of_speech": pos_to_korean(part_of_speech),
                     "normalized_form": morpheme.normalized_form(),
                     "meaning_ko": "",
                 }

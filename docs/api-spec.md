@@ -17,8 +17,8 @@
 {
   "surface": "食べた",
   "base_form": "食べる",
-  "reading": "タベル",
-  "part_of_speech": "動詞",
+  "reading": "たべる",
+  "part_of_speech": "동사",
   "normalized_form": "食べる",
   "meaning_ko": ""
 }
@@ -28,8 +28,8 @@
 
 - `surface`: 원문에 등장한 표면형
 - `base_form`: 사전형 또는 기본형. 비어 있으면 `surface`를 사용한다.
-- `reading`: 가타카나 읽기
-- `part_of_speech`: 대표 품사
+- `reading`: 히라가나 읽기
+- `part_of_speech`: 한국어 대표 품사명
 - `normalized_form`: 정규화형
 - `meaning_ko`: 한국어 뜻. MVP에서는 사전 기능이 없으므로 빈 문자열을 반환한다.
 
@@ -39,13 +39,14 @@
 {
   "id": 1,
   "surface": "食べた",
-  "lemma": "食べる",
-  "reading": "タベル",
-  "partOfSpeech": "動詞",
-  "meaningKo": "먹다",
-  "knownState": "unknown",
-  "createdAt": "2026-07-02T09:00:00Z",
-  "updatedAt": "2026-07-02T09:00:00Z"
+  "base_form": "食べる",
+  "reading": "たべる",
+  "part_of_speech": "동사",
+  "normalized_form": "食べる",
+  "meaning_ko": "",
+  "status": "unknown",
+  "created_at": "2026-07-02T09:00:00+00:00",
+  "updated_at": "2026-07-02T09:00:00+00:00"
 }
 ```
 
@@ -76,6 +77,8 @@
 - `base_form`이 비어 있으면 `surface`를 사용한다.
 - 같은 `base_form`은 한 번만 반환한다.
 - 반환 순서는 원문에서 처음 등장한 순서를 유지한다.
+- `reading`은 SudachiPy의 가타카나 읽기를 히라가나로 변환해 반환한다.
+- `part_of_speech`는 한국어 품사명으로 반환한다.
 - `meaning_ko`는 MVP에서 빈 문자열로 반환한다.
 
 ### 응답
@@ -86,16 +89,16 @@
     {
       "surface": "昨日",
       "base_form": "昨日",
-      "reading": "キノウ",
-      "part_of_speech": "名詞",
+      "reading": "きのう",
+      "part_of_speech": "명사",
       "normalized_form": "昨日",
       "meaning_ko": ""
     },
     {
       "surface": "読んだ",
       "base_form": "読む",
-      "reading": "ヨム",
-      "part_of_speech": "動詞",
+      "reading": "よむ",
+      "part_of_speech": "동사",
       "normalized_form": "読む",
       "meaning_ko": ""
     }
@@ -125,11 +128,7 @@
 
 저장된 단어장 항목을 조회한다.
 
-### 쿼리 파라미터
-
-- `knownState`: 선택값. `known`, `unknown`, `unclassified`
-- `limit`: 선택값. 기본값 100
-- `offset`: 선택값. 기본값 0
+### 응답
 
 ### 응답
 
@@ -139,16 +138,16 @@
     {
       "id": 1,
       "surface": "読んだ",
-      "lemma": "読む",
-      "reading": "ヨム",
-      "partOfSpeech": "動詞",
-      "meaningKo": "읽다",
-      "knownState": "unknown",
-      "createdAt": "2026-07-02T09:00:00Z",
-      "updatedAt": "2026-07-02T09:00:00Z"
+      "base_form": "読む",
+      "reading": "よむ",
+      "part_of_speech": "동사",
+      "normalized_form": "読む",
+      "meaning_ko": "",
+      "status": "unknown",
+      "created_at": "2026-07-02T09:00:00+00:00",
+      "updated_at": "2026-07-02T09:00:00+00:00"
     }
-  ],
-  "total": 1
+  ]
 }
 ```
 
@@ -160,43 +159,38 @@
 
 ```json
 {
-  "items": [
-    {
-      "surface": "読んだ",
-      "lemma": "読む",
-      "reading": "ヨム",
-      "partOfSpeech": "動詞",
-      "meaningKo": "읽다",
-      "knownState": "unknown"
-    }
-  ]
+  "surface": "読んだ",
+  "base_form": "読む",
+  "reading": "よむ",
+  "part_of_speech": "동사",
+  "normalized_form": "読む",
+  "meaning_ko": "",
+  "status": "unknown"
 }
 ```
 
 ### 처리 규칙
 
-- MVP에서는 주로 `knownState`가 `unknown`인 항목을 저장 대상으로 사용한다.
-- `lemma` 기준 중복 저장을 방지한다.
-- 이미 존재하는 `lemma`가 들어오면 기존 항목을 유지하거나 최신 값으로 갱신한다.
+- MVP에서는 주로 `status`가 `unknown`인 항목을 저장 대상으로 사용한다.
+- `status`는 `unknown`, `known`, `unclassified` 중 하나여야 한다.
+- `base_form` + `reading` 기준 중복 저장을 방지한다.
+- 이미 존재하는 조합이 들어오면 서버 에러로 처리하지 않고 기존 항목을 반환한다.
 - 원문 전체, 문단 전체, 긴 문맥 문자열은 저장하지 않는다.
 
 ### 응답
 
 ```json
 {
-  "items": [
-    {
-      "id": 1,
-      "surface": "読んだ",
-      "lemma": "読む",
-      "reading": "ヨム",
-      "partOfSpeech": "動詞",
-      "meaningKo": "읽다",
-      "knownState": "unknown",
-      "createdAt": "2026-07-02T09:00:00Z",
-      "updatedAt": "2026-07-02T09:00:00Z"
-    }
-  ]
+  "id": 1,
+  "surface": "読んだ",
+  "base_form": "読む",
+  "reading": "よむ",
+  "part_of_speech": "동사",
+  "normalized_form": "読む",
+  "meaning_ko": "",
+  "status": "unknown",
+  "created_at": "2026-07-02T09:00:00+00:00",
+  "updated_at": "2026-07-02T09:00:00+00:00"
 }
 ```
 
@@ -206,7 +200,42 @@
 - `409 Conflict`: 중복 처리 정책상 저장할 수 없는 충돌이 발생한 경우
 - `500 Internal Server Error`: DB 저장 오류
 
+## PATCH /vocab-items/{item_id}
+
+저장된 단어의 학습 상태를 수정한다.
+
+### 요청
+
+```json
+{
+  "status": "known"
+}
+```
+
+### 응답
+
+수정된 `VocabItem` 객체를 반환한다.
+
+### 오류
+
+- `400 Bad Request`: 잘못된 `status`
+- `404 Not Found`: 항목을 찾을 수 없는 경우
+
+## DELETE /vocab-items/{item_id}
+
+저장된 단어를 삭제한다.
+
+### 응답
+
+- `204 No Content`
+
+### 오류
+
+- `404 Not Found`: 항목을 찾을 수 없는 경우
+
 ## GET /vocab-items/export.csv
+
+MVP 이후 구현 예정인 API다. 현재 `vocab-storage` 단계에서는 구현하지 않는다.
 
 저장된 단어장을 CSV 파일로 내보낸다.
 
@@ -224,8 +253,8 @@ Content-Disposition: attachment; filename="vocab-items.csv"
 ### CSV 컬럼
 
 ```csv
-surface,lemma,reading,partOfSpeech,meaningKo,knownState,createdAt
-読んだ,読む,ヨム,動詞,읽다,unknown,2026-07-02T09:00:00Z
+surface,base_form,reading,part_of_speech,meaning_ko,status,created_at
+読んだ,読む,よむ,동사,,unknown,2026-07-02T09:00:00+00:00
 ```
 
 ### 처리 규칙

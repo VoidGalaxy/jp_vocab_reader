@@ -43,6 +43,8 @@ curl http://localhost:8000/health
 curl.exe -X POST http://localhost:8000/analyze -H "Content-Type: application/json" -d "{\"text\":\"彼は怠惰であることを自覚していた。\"}"
 ```
 
+분석 결과의 `reading`은 히라가나로 반환되고, `part_of_speech`는 한국어 품사명으로 반환된다. 단어장은 `backend/vocab.db` SQLite 파일에 저장된다.
+
 ## Frontend MVP 실행
 
 ```bash
@@ -53,3 +55,11 @@ npm run dev
 ```
 
 기본 API 주소는 `http://127.0.0.1:8000`이다. 다른 백엔드 주소를 사용할 때는 `frontend/.env.local`의 `NEXT_PUBLIC_API_BASE_URL` 값을 수정한다.
+
+## 단어장 저장 기능
+
+1. 백엔드와 프론트엔드를 모두 실행한다.
+2. 프론트 화면에서 일본어 원문을 붙여넣고 `분석하기`를 누른다.
+3. 분석 결과에서 저장할 단어의 상태를 `모르는 단어`로 바꾼다.
+4. `모르는 단어 저장` 버튼을 누르면 선택된 단어가 SQLite 단어장에 저장된다.
+5. `저장된 단어장` 섹션에서 목록을 새로고침하고, 상태를 수정하거나 항목을 삭제할 수 있다.
