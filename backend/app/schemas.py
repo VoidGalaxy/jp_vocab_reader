@@ -105,3 +105,9 @@ class DeckResponse(BaseModel):
 
 class DecksResponse(BaseModel):
     items: list[DeckResponse]
+
+
+class DeckDeleteResponse(BaseModel):
+    deleted_deck_id: int
+    deleted_vocab_count: int
+    message: str

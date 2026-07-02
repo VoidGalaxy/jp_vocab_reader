@@ -537,11 +537,18 @@ surface,base_form,reading,part_of_speech,meaning_ko,context_explanation_ko,examp
 ### 처리 규칙
 
 - `기본 단어장`은 삭제할 수 없다.
-- 덱 삭제 시 해당 덱의 단어는 삭제하지 않고 `기본 단어장`으로 이동한다.
+- 덱 삭제 시 해당 덱의 단어도 함께 삭제한다.
+- 단어 삭제는 반드시 삭제 대상 `deck_id`와 일치하는 항목으로 제한한다.
 
 ### 응답
 
-- `204 No Content`
+```json
+{
+  "deleted_deck_id": 2,
+  "deleted_vocab_count": 15,
+  "message": "덱과 덱에 포함된 단어를 삭제했습니다."
+}
+```
 
 ### 오류
 

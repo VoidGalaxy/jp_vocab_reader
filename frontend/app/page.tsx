@@ -32,11 +32,28 @@ type DecksResponse = {
   items: Deck[];
 };
 
+type DeckDeleteResponse = {
+  deleted_deck_id: number;
+  deleted_vocab_count: number;
+  message: string;
+};
+
 type TabKey = "analyze" | "vocab" | "study" | "info";
 type VocabStatusFilter = "all" | TokenStatus;
 
+type ClassificationDraft = {
+  text: string;
+  deck_id: string;
+  include_known: boolean;
+  tokens: TokenWithStatus[];
+  current_index: number;
+  is_complete: boolean;
+  saved_at: string;
+};
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+const CLASSIFICATION_DRAFT_KEY = "jp-vocab-reader:classification-draft";
 
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "analyze", label: "분석" },
@@ -73,6 +90,74 @@ function vocabItemToForm(item: VocabItem): VocabFormData {
   };
 }
 
+function isTokenStatus(value: unknown): value is TokenStatus {
+  return (
+    value === "known" ||
+    value === "uncertain" ||
+    value === "unknown" ||
+    value === "unclassified"
+  );
+}
+
+function parseClassificationDraft(value: string | null): ClassificationDraft | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as Partial<ClassificationDraft>;
+    if (
+      typeof parsed.text !== "string" ||
+      typeof parsed.deck_id !== "string" ||
+      typeof parsed.include_known !== "boolean" ||
+      !Array.isArray(parsed.tokens) ||
+      typeof parsed.current_index !== "number" ||
+      typeof parsed.is_complete !== "boolean" ||
+      typeof parsed.saved_at !== "string"
+    ) {
+      return null;
+    }
+
+    const tokens = parsed.tokens.map((token) => {
+      if (
+        typeof token.surface !== "string" ||
+        typeof token.base_form !== "string" ||
+        typeof token.reading !== "string" ||
+        typeof token.part_of_speech !== "string" ||
+        typeof token.normalized_form !== "string" ||
+        typeof token.meaning_ko !== "string" ||
+        typeof token.example_sentence !== "string" ||
+        !isTokenStatus(token.status)
+      ) {
+        throw new Error("invalid token");
+      }
+      return {
+        ...token,
+        isClassified:
+          typeof token.isClassified === "boolean"
+            ? token.isClassified
+            : token.status !== "unclassified",
+      };
+    });
+
+    const currentIndex = parsed.is_complete
+      ? tokens.length
+      : Math.max(0, Math.min(parsed.current_index, tokens.length));
+
+    return {
+      text: parsed.text,
+      deck_id: parsed.deck_id,
+      include_known: parsed.include_known,
+      tokens,
+      current_index: currentIndex,
+      is_complete: parsed.is_complete,
+      saved_at: parsed.saved_at,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabKey>("analyze");
   const [hasLoadedVocab, setHasLoadedVocab] = useState(false);
@@ -83,6 +168,10 @@ export default function HomePage() {
   const [includeKnown, setIncludeKnown] = useState(false);
   const [currentAnalyzeCardIndex, setCurrentAnalyzeCardIndex] = useState(0);
   const [showAllAnalyzeResults, setShowAllAnalyzeResults] = useState(false);
+  const [pendingClassificationDraft, setPendingClassificationDraft] =
+    useState<ClassificationDraft | null>(null);
+  const [classificationDraftSavedAt, setClassificationDraftSavedAt] =
+    useState("");
   const [vocabSearch, setVocabSearch] = useState("");
   const [vocabStatusFilter, setVocabStatusFilter] =
     useState<VocabStatusFilter>("all");
@@ -124,7 +213,39 @@ export default function HomePage() {
 
   useEffect(() => {
     void loadDecks();
+    const draft = parseClassificationDraft(
+      window.localStorage.getItem(CLASSIFICATION_DRAFT_KEY),
+    );
+    if (draft) {
+      setPendingClassificationDraft(draft);
+      setClassificationDraftSavedAt(draft.saved_at);
+    } else {
+      window.localStorage.removeItem(CLASSIFICATION_DRAFT_KEY);
+    }
   }, []);
+
+  useEffect(() => {
+    if (tokens.length === 0) {
+      return;
+    }
+
+    const savedAt = new Date().toISOString();
+    const draft: ClassificationDraft = {
+      text,
+      deck_id: selectedSaveDeckId,
+      include_known: includeKnown,
+      tokens,
+      current_index: currentAnalyzeCardIndex,
+      is_complete: currentAnalyzeCardIndex >= tokens.length,
+      saved_at: savedAt,
+    };
+    window.localStorage.setItem(
+      CLASSIFICATION_DRAFT_KEY,
+      JSON.stringify(draft),
+    );
+    setClassificationDraftSavedAt(savedAt);
+    setPendingClassificationDraft(null);
+  }, [text, selectedSaveDeckId, includeKnown, tokens, currentAnalyzeCardIndex]);
 
   const defaultDeck =
     decks.find((deck) => deck.name === "기본 단어장") ?? decks[0];
@@ -163,6 +284,35 @@ export default function HomePage() {
     }
   }
 
+  function clearClassificationDraft() {
+    window.localStorage.removeItem(CLASSIFICATION_DRAFT_KEY);
+    setPendingClassificationDraft(null);
+    setClassificationDraftSavedAt("");
+  }
+
+  function restoreClassificationDraft() {
+    const draft = pendingClassificationDraft;
+    if (!draft) {
+      return;
+    }
+
+    setText(draft.text);
+    setSelectedSaveDeckId(
+      decks.some((deck) => String(deck.id) === draft.deck_id)
+        ? draft.deck_id
+        : defaultDeck
+          ? String(defaultDeck.id)
+          : "",
+    );
+    setIncludeKnown(draft.include_known);
+    setTokens(draft.tokens);
+    setCurrentAnalyzeCardIndex(draft.current_index);
+    setShowAllAnalyzeResults(false);
+    setClassificationDraftSavedAt(draft.saved_at);
+    setPendingClassificationDraft(null);
+    setActiveTab("analyze");
+  }
+
   async function loadDecks() {
     try {
       const data = await requestJson<DecksResponse>("/decks");
@@ -189,6 +339,7 @@ export default function HomePage() {
       setTokens([]);
       setCurrentAnalyzeCardIndex(0);
       setShowAllAnalyzeResults(false);
+      clearClassificationDraft();
       return;
     }
 
@@ -222,6 +373,7 @@ export default function HomePage() {
       );
       setCurrentAnalyzeCardIndex(0);
       setShowAllAnalyzeResults(false);
+      setPendingClassificationDraft(null);
     } catch (error) {
       setMessage(getErrorMessage(error, "분석 중 알 수 없는 오류가 발생했습니다."));
       setTokens([]);
@@ -271,6 +423,7 @@ export default function HomePage() {
       setMessage(
         `완벽히 아는 단어 ${knownCount}개, 헷갈리는 단어 ${uncertainCount}개, 모르는 단어 ${unknownCount}개를 저장했습니다.`,
       );
+      clearClassificationDraft();
       await loadVocabItems();
     } catch (error) {
       setMessage(getErrorMessage(error, "단어 저장 중 오류가 발생했습니다."));
@@ -346,6 +499,17 @@ export default function HomePage() {
 
   async function deleteDeck(deckId: number) {
     setDeckMessage("");
+    if (defaultDeck && deckId === defaultDeck.id) {
+      setDeckMessage("기본 단어장은 삭제할 수 없습니다.");
+      return;
+    }
+    if (
+      !window.confirm(
+        "이 덱을 삭제하면 덱 안의 단어도 모두 삭제됩니다. 계속할까요?",
+      )
+    ) {
+      return;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/decks/${deckId}`, {
@@ -357,12 +521,16 @@ export default function HomePage() {
         };
         throw new Error(data.detail || `덱 삭제에 실패했습니다. (${response.status})`);
       }
+      const data = (await response.json()) as DeckDeleteResponse;
       await loadDecks();
       setSelectedVocabDeckId("all");
       if (selectedStudyDeckId === String(deckId)) {
         setSelectedStudyDeckId("all");
       }
-      setDeckMessage("덱을 삭제하고 단어를 기본 단어장으로 이동했습니다.");
+      await loadVocabItems("all");
+      setDeckMessage(
+        `덱과 덱에 포함된 단어 ${data.deleted_vocab_count}개를 삭제했습니다.`,
+      );
     } catch (error) {
       setDeckMessage(getErrorMessage(error, "덱 삭제에 실패했습니다."));
     }
@@ -691,6 +859,8 @@ export default function HomePage() {
             includeKnown={includeKnown}
             currentCardIndex={currentAnalyzeCardIndex}
             showAllResults={showAllAnalyzeResults}
+            pendingDraft={pendingClassificationDraft}
+            draftSavedAt={classificationDraftSavedAt}
             onTextChange={setText}
             onSelectedDeckChange={setSelectedSaveDeckId}
             onIncludeKnownChange={setIncludeKnown}
@@ -700,6 +870,8 @@ export default function HomePage() {
             onClassifyCurrent={classifyCurrentToken}
             onPreviousCard={moveToPreviousAnalyzeCard}
             onShowAllResultsChange={setShowAllAnalyzeResults}
+            onRestoreDraft={restoreClassificationDraft}
+            onDiscardDraft={clearClassificationDraft}
           />
         ) : null}
 
@@ -712,6 +884,7 @@ export default function HomePage() {
             message={vocabMessage}
             decks={decks}
             selectedDeckId={selectedVocabDeckId}
+            defaultDeckId={defaultDeck ? String(defaultDeck.id) : ""}
             searchText={vocabSearch}
             statusFilter={vocabStatusFilter}
             dueOnly={vocabDueOnly}

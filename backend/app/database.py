@@ -301,7 +301,7 @@ def update_deck(deck_id: int, deck: DeckUpdate) -> dict[str, Any] | None:
     return row_to_dict(row) if row else None
 
 
-def delete_deck(deck_id: int) -> bool | None:
+def delete_deck(deck_id: int) -> dict[str, int] | bool | None:
     with get_connection() as connection:
         default_deck_id = ensure_default_deck(connection)
         if deck_id == default_deck_id:
@@ -313,12 +313,16 @@ def delete_deck(deck_id: int) -> bool | None:
         if not existing:
             return False
 
-        connection.execute(
-            "UPDATE vocab_items SET deck_id = ? WHERE deck_id = ?",
-            (default_deck_id, deck_id),
+        vocab_cursor = connection.execute(
+            "DELETE FROM vocab_items WHERE deck_id = ?",
+            (deck_id,),
         )
-        connection.execute("DELETE FROM decks WHERE id = ?", (deck_id,))
-    return True
+        deck_cursor = connection.execute("DELETE FROM decks WHERE id = ?", (deck_id,))
+    return {
+        "deleted_deck_id": deck_id,
+        "deleted_vocab_count": vocab_cursor.rowcount,
+        "deleted_deck_count": deck_cursor.rowcount,
+    }
 
 
 def get_default_deck_id() -> int:

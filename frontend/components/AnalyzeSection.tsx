@@ -4,6 +4,10 @@ import type { FormEvent } from "react";
 import { StatusSelect, statusLabels } from "./shared";
 import type { Deck, TokenStatus, TokenWithStatus } from "./types";
 
+type ClassificationDraftSummary = {
+  saved_at: string;
+};
+
 type AnalyzeSectionProps = {
   text: string;
   tokens: TokenWithStatus[];
@@ -15,6 +19,8 @@ type AnalyzeSectionProps = {
   includeKnown: boolean;
   currentCardIndex: number;
   showAllResults: boolean;
+  pendingDraft: ClassificationDraftSummary | null;
+  draftSavedAt: string;
   onTextChange: (text: string) => void;
   onSelectedDeckChange: (deckId: string) => void;
   onIncludeKnownChange: (checked: boolean) => void;
@@ -24,6 +30,8 @@ type AnalyzeSectionProps = {
   onClassifyCurrent: (status: TokenStatus) => void;
   onPreviousCard: () => void;
   onShowAllResultsChange: (checked: boolean) => void;
+  onRestoreDraft: () => void;
+  onDiscardDraft: () => void;
 };
 
 export function AnalyzeSection({
@@ -37,6 +45,8 @@ export function AnalyzeSection({
   includeKnown,
   currentCardIndex,
   showAllResults,
+  pendingDraft,
+  draftSavedAt,
   onTextChange,
   onSelectedDeckChange,
   onIncludeKnownChange,
@@ -46,6 +56,8 @@ export function AnalyzeSection({
   onClassifyCurrent,
   onPreviousCard,
   onShowAllResultsChange,
+  onRestoreDraft,
+  onDiscardDraft,
 }: AnalyzeSectionProps) {
   const currentToken = tokens[currentCardIndex];
   const classifiedCount = tokens.filter((token) => token.isClassified).length;
@@ -60,6 +72,14 @@ export function AnalyzeSection({
   ).length;
   const isClassificationComplete =
     tokens.length > 0 && currentCardIndex >= tokens.length;
+  const savedAtText = draftSavedAt
+    ? new Date(draftSavedAt).toLocaleString("ko-KR", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
 
   return (
     <section className="tab-panel" aria-live="polite">
@@ -89,6 +109,35 @@ export function AnalyzeSection({
       </label>
 
       {message ? <p className="message">{message}</p> : null}
+
+      {pendingDraft ? (
+        <div className="draft-panel">
+          <div>
+            <strong>이전에 분류하던 분석 결과가 있습니다.</strong>
+            <span>
+              마지막 저장:{" "}
+              {new Date(pendingDraft.saved_at).toLocaleString("ko-KR", {
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+          <div className="draft-actions">
+            <button type="button" onClick={onRestoreDraft}>
+              이어하기
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onDiscardDraft}
+            >
+              삭제하고 새로 시작
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <section className="result-section">
         <div className="result-heading">
@@ -133,6 +182,11 @@ export function AnalyzeSection({
               <span>{statusLabels.uncertain} {uncertainCount}개</span>
               <span>{statusLabels.unknown} {unknownCount}개</span>
             </div>
+            {savedAtText ? (
+              <p className="draft-status">
+                분류 진행상태 자동 저장 중 · 마지막 저장: {savedAtText}
+              </p>
+            ) : null}
 
             {!isClassificationComplete && currentToken ? (
               <div className="classify-card">
@@ -221,6 +275,9 @@ export function AnalyzeSection({
                 >
                   {isSaving ? "저장 중..." : "분류한 단어 저장"}
                 </button>
+                <p className="muted-text">
+                  분류한 단어 저장 시 임시 저장이 삭제됩니다.
+                </p>
               </div>
             )}
 

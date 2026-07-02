@@ -18,6 +18,7 @@ type VocabSectionProps = {
   message: string;
   decks: Deck[];
   selectedDeckId: string;
+  defaultDeckId: string;
   searchText: string;
   statusFilter: "all" | TokenStatus;
   dueOnly: boolean;
@@ -63,6 +64,7 @@ export function VocabSection({
   message,
   decks,
   selectedDeckId,
+  defaultDeckId,
   searchText,
   statusFilter,
   dueOnly,
@@ -163,6 +165,12 @@ export function VocabSection({
             type="button"
             className="secondary-button"
             onClick={() => onDeleteDeck(Number(selectedDeckId))}
+            disabled={selectedDeckId === defaultDeckId}
+            title={
+              selectedDeckId === defaultDeckId
+                ? "기본 단어장은 삭제할 수 없습니다."
+                : undefined
+            }
           >
             덱 삭제
           </button>

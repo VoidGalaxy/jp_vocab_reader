@@ -167,6 +167,40 @@ button:disabled {
   background: #fff1f2;
 }
 
+.draft-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 18px;
+  color: #1e3a8a;
+  background: #eff6ff;
+}
+
+.draft-panel > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.draft-panel span,
+.draft-status {
+  color: #52606d;
+  font-size: 13px;
+}
+
+.draft-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.draft-status {
+  margin: -4px 0 14px;
+  text-align: center;
+}
+
 .result-section {
   margin-top: 28px;
 }
@@ -614,6 +648,12 @@ select {
   }
 
   .heading-actions {
+    flex-direction: column;
+  }
+
+  .draft-panel,
+  .draft-actions {
+    align-items: stretch;
     flex-direction: column;
   }
 

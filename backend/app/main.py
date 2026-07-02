@@ -31,6 +31,7 @@ from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
     DeckCreate,
+    DeckDeleteResponse,
     DeckResponse,
     DecksResponse,
     DeckUpdate,
@@ -116,14 +117,18 @@ def patch_deck(deck_id: int, deck: DeckUpdate) -> DeckResponse:
     return DeckResponse(**updated_deck)
 
 
-@app.delete("/decks/{deck_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_deck(deck_id: int) -> Response:
+@app.delete("/decks/{deck_id}", response_model=DeckDeleteResponse)
+def remove_deck(deck_id: int) -> DeckDeleteResponse:
     deleted = delete_deck(deck_id)
     if deleted is None:
         raise HTTPException(status_code=400, detail="default deck cannot be deleted")
     if deleted is False:
         raise HTTPException(status_code=404, detail="deck not found")
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return DeckDeleteResponse(
+        deleted_deck_id=deleted["deleted_deck_id"],
+        deleted_vocab_count=deleted["deleted_vocab_count"],
+        message="덱과 덱에 포함된 단어를 삭제했습니다.",
+    )
 
 
 @app.get("/vocab-items", response_model=VocabItemsResponse)
