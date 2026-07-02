@@ -33,6 +33,7 @@ from app.database import (
     update_context_explanation,
     update_vocab_item,
 )
+from app.dictionary_service import lookup_meaning
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -74,7 +75,7 @@ def ranges_overlap(
 
 
 def find_custom_term_tokens(
-    text: str, custom_terms: list[dict]
+    text: str, custom_terms: list[dict], deck_id: int | None
 ) -> list[dict]:
     sentences = split_sentences(text)
     matches: list[dict] = []
@@ -104,7 +105,14 @@ def find_custom_term_tokens(
                     "reading": term["reading"],
                     "part_of_speech": term["part_of_speech"],
                     "normalized_form": term_text,
-                    "meaning_ko": term["meaning_ko"],
+                    "meaning_ko": lookup_meaning(
+                        surface=term_text,
+                        base_form=term_text,
+                        normalized_form=term_text,
+                        reading=term["reading"],
+                        deck_id=deck_id,
+                        custom_meaning_ko=term["meaning_ko"],
+                    ),
                     "example_sentence": find_example_sentence(sentences, start),
                     "is_custom_term": True,
                     "_start": start,
@@ -116,7 +124,9 @@ def find_custom_term_tokens(
 
 
 def merge_custom_terms(text: str, tokens: list[dict], deck_id: int | None) -> list[dict]:
-    custom_tokens = find_custom_term_tokens(text, list_custom_terms(deck_id=deck_id))
+    custom_tokens = find_custom_term_tokens(
+        text, list_custom_terms(deck_id=deck_id), deck_id
+    )
     custom_ranges = [(token["_start"], token["_end"]) for token in custom_tokens]
     seen_base_forms = {token["base_form"] for token in custom_tokens}
     merged_tokens = custom_tokens.copy()
@@ -157,7 +167,9 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
         raise HTTPException(status_code=404, detail="deck not found")
 
     tokens = merge_custom_terms(
-        request.text, analyzer.analyze(request.text), request.deck_id
+        request.text,
+        analyzer.analyze(request.text, deck_id=request.deck_id),
+        request.deck_id,
     )
     if not request.include_known:
         known_keys = list_known_vocab_keys(deck_id=request.deck_id)

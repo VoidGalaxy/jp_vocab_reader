@@ -1,6 +1,6 @@
 from sudachipy import dictionary
 
-from app.dictionary import get_korean_meaning
+from app.dictionary_service import lookup_meaning
 
 
 SENTENCE_ENDINGS = {"。", "！", "？", "!", "?"}
@@ -66,7 +66,7 @@ class JapaneseAnalyzer:
     def __init__(self) -> None:
         self._tokenizer = dictionary.Dictionary().create()
 
-    def analyze(self, text: str) -> list[dict[str, str]]:
+    def analyze(self, text: str, deck_id: int | None = None) -> list[dict[str, str]]:
         tokens: list[dict[str, str]] = []
         seen_base_forms: set[str] = set()
         sentences = split_sentences(text)
@@ -94,15 +94,23 @@ class JapaneseAnalyzer:
             if base_form in seen_base_forms:
                 continue
 
+            reading = katakana_to_hiragana(morpheme.reading_form())
+            normalized_form = morpheme.normalized_form()
             seen_base_forms.add(base_form)
             tokens.append(
                 {
                     "surface": surface,
                     "base_form": base_form,
-                    "reading": katakana_to_hiragana(morpheme.reading_form()),
+                    "reading": reading,
                     "part_of_speech": pos_to_korean(part_of_speech),
-                    "normalized_form": morpheme.normalized_form(),
-                    "meaning_ko": get_korean_meaning(base_form),
+                    "normalized_form": normalized_form,
+                    "meaning_ko": lookup_meaning(
+                        surface=surface,
+                        base_form=base_form,
+                        normalized_form=normalized_form,
+                        reading=reading,
+                        deck_id=deck_id,
+                    ),
                     "example_sentence": find_example_sentence(
                         sentences, token_start
                     ),

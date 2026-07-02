@@ -56,7 +56,7 @@ curl http://localhost:8000/health
 curl.exe -X POST http://localhost:8000/analyze -H "Content-Type: application/json" -d "{\"text\":\"彼は怠惰であることを自覚していた。\"}"
 ```
 
-분석 결과의 `reading`은 히라가나로 반환되고, `part_of_speech`는 한국어 품사명으로 반환된다. `meaning_ko`는 내장 기본 사전에서 `base_form` 기준으로 조회되며, 사전에 없는 단어는 빈 문자열로 반환된다. 단어장은 `backend/vocab.db` SQLite 파일에 저장된다.
+분석 결과의 `reading`은 히라가나로 반환되고, `part_of_speech`는 한국어 품사명으로 반환된다. `meaning_ko`는 사전 조회 서비스에서 사용자 정의 용어 뜻, 내장 기본 사전의 `base_form`, `normalized_form`, `surface` 순서로 조회한다. 아직 대형 JMdict 데이터는 연결하지 않았으며, 찾지 못하면 빈 문자열로 반환된다. 단어장은 `backend/vocab.db` SQLite 파일에 저장된다.
 분석 결과에는 단어가 처음 등장한 원문 문장인 `example_sentence`도 포함된다. 예문은 단어장 저장, 학습 카드, CSV 내보내기에 함께 사용된다.
 앱 시작 시 `기본 단어장` 덱이 자동 생성되며, 기존 저장 단어 중 덱이 없는 항목은 기본 단어장에 자동 연결된다.
 
