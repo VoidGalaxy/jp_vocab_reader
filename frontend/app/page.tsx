@@ -22,6 +22,8 @@ type VocabItem = TokenWithStatus & {
   correct_count: number;
   wrong_count: number;
   last_reviewed_at: string | null;
+  review_level: number;
+  next_review_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -250,7 +252,7 @@ export default function HomePage() {
       setStudyItems(data.items);
       setHasStartedStudy(true);
       if (data.items.length === 0) {
-        setStudyMessage("복습할 모르는 단어가 없습니다.");
+        setStudyMessage("오늘 복습할 단어가 없습니다.");
       }
     } catch (error) {
       setStudyMessage(
@@ -437,8 +439,9 @@ export default function HomePage() {
           {isStudyComplete ? (
             <div className="study-card complete-card">
               <h3>학습 완료</h3>
-              <p>맞은 개수: {sessionCorrectCount}</p>
-              <p>틀린 개수: {sessionWrongCount}</p>
+              <p>이번 세션 맞은 개수: {sessionCorrectCount}</p>
+              <p>이번 세션 틀린 개수: {sessionWrongCount}</p>
+              <p>오늘 복습을 완료했습니다.</p>
             </div>
           ) : null}
         </section>
@@ -553,7 +556,9 @@ function VocabTable({
             <th>상태</th>
             <th>맞음</th>
             <th>틀림</th>
+            <th>레벨</th>
             <th>마지막 복습</th>
+            <th>다음 복습</th>
             <th>삭제</th>
           </tr>
         </thead>
@@ -574,7 +579,9 @@ function VocabTable({
               </td>
               <td>{item.correct_count}</td>
               <td>{item.wrong_count}</td>
+              <td>{item.review_level}</td>
               <td>{formatDateTime(item.last_reviewed_at)}</td>
+              <td>{formatNextReview(item.next_review_at)}</td>
               <td>
                 <button
                   type="button"
@@ -651,4 +658,16 @@ function formatDateTime(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatNextReview(value: string | null) {
+  if (!value) {
+    return "다음 복습: 미정";
+  }
+
+  return `다음 복습: ${new Date(value).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })}`;
 }

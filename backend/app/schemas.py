@@ -48,6 +48,8 @@ class VocabItemResponse(BaseModel):
     correct_count: int
     wrong_count: int
     last_reviewed_at: str | None
+    review_level: int
+    next_review_at: str | None
     created_at: str
     updated_at: str
 

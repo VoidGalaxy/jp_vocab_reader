@@ -48,6 +48,8 @@
   "correct_count": 0,
   "wrong_count": 0,
   "last_reviewed_at": null,
+  "review_level": 0,
+  "next_review_at": null,
   "created_at": "2026-07-02T09:00:00+00:00",
   "updated_at": "2026-07-02T09:00:00+00:00"
 }
@@ -148,6 +150,8 @@
       "correct_count": 0,
       "wrong_count": 0,
       "last_reviewed_at": null,
+      "review_level": 0,
+      "next_review_at": null,
       "created_at": "2026-07-02T09:00:00+00:00",
       "updated_at": "2026-07-02T09:00:00+00:00"
     }
@@ -196,6 +200,8 @@
   "correct_count": 0,
   "wrong_count": 0,
   "last_reviewed_at": null,
+  "review_level": 0,
+  "next_review_at": null,
   "created_at": "2026-07-02T09:00:00+00:00",
   "updated_at": "2026-07-02T09:00:00+00:00"
 }
@@ -230,14 +236,16 @@
 
 ## GET /study-items
 
-자체 학습 모드에서 복습할 단어 목록을 조회한다.
+자체 학습 모드에서 오늘 복습할 단어 목록을 조회한다.
 
 ### 처리 규칙
 
-- 기본 학습 대상은 `status`가 `unknown`인 단어다.
+- 학습 대상은 `status`가 `unknown`인 단어다.
+- `next_review_at`이 `null`이거나 현재 시간보다 이전 또는 같은 단어만 반환한다.
+- `next_review_at`이 지난 단어를 우선한다.
 - `wrong_count`가 높은 단어를 우선한다.
+- `review_level`이 낮은 단어를 우선한다.
 - 아직 복습하지 않아 `last_reviewed_at`이 비어 있는 단어를 우선한다.
-- 복습한 단어 중에서는 오래 전에 복습한 단어를 우선한다.
 - 마지막으로 오래 전에 생성된 단어를 우선한다.
 
 ### 응답
@@ -257,6 +265,8 @@
       "correct_count": 1,
       "wrong_count": 3,
       "last_reviewed_at": "2026-07-02T09:30:00+00:00",
+      "review_level": 0,
+      "next_review_at": "2026-07-02T09:30:00+00:00",
       "created_at": "2026-07-02T09:00:00+00:00",
       "updated_at": "2026-07-02T09:30:00+00:00"
     }
@@ -286,8 +296,13 @@
 
 ### 처리 규칙
 
-- `correct`면 `correct_count`를 1 증가시킨다.
-- `wrong`이면 `wrong_count`를 1 증가시킨다.
+- `correct`면 `correct_count`를 1 증가시키고 `review_level`을 1 증가시킨다. `review_level`은 최대 4로 제한한다.
+- `correct`일 때 현재 `review_level`이 0이면 `next_review_at`을 1일 뒤로 설정한다.
+- `correct`일 때 현재 `review_level`이 1이면 `next_review_at`을 3일 뒤로 설정한다.
+- `correct`일 때 현재 `review_level`이 2이면 `next_review_at`을 7일 뒤로 설정한다.
+- `correct`일 때 현재 `review_level`이 3 이상이면 `next_review_at`을 14일 뒤로 설정한다.
+- `wrong`이면 `wrong_count`를 1 증가시키고 `review_level`을 0으로 초기화한다.
+- `wrong`이면 `next_review_at`을 현재 시간으로 설정한다.
 - 두 경우 모두 `last_reviewed_at`과 `updated_at`을 현재 시간으로 갱신한다.
 
 ### 응답

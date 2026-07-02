@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +12,7 @@ DB_PATH = Path(__file__).resolve().parents[1] / "vocab.db"
 VOCAB_ITEM_FIELDS = """
     id, surface, base_form, reading, part_of_speech, normalized_form,
     meaning_ko, status, correct_count, wrong_count, last_reviewed_at,
-    created_at, updated_at
+    review_level, next_review_at, created_at, updated_at
 """
 
 
@@ -38,6 +38,8 @@ def init_db() -> None:
                 correct_count INTEGER NOT NULL DEFAULT 0,
                 wrong_count INTEGER NOT NULL DEFAULT 0,
                 last_reviewed_at DATETIME,
+                review_level INTEGER NOT NULL DEFAULT 0,
+                next_review_at DATETIME,
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL,
                 UNIQUE(base_form, reading)
@@ -47,6 +49,8 @@ def init_db() -> None:
         ensure_column(connection, "correct_count", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "wrong_count", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "last_reviewed_at", "DATETIME")
+        ensure_column(connection, "review_level", "INTEGER NOT NULL DEFAULT 0")
+        ensure_column(connection, "next_review_at", "DATETIME")
 
 
 def ensure_column(
@@ -68,6 +72,18 @@ def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def next_review_for_correct(current_level: int, reviewed_at: datetime) -> str:
+    if current_level <= 0:
+        delay = timedelta(days=1)
+    elif current_level == 1:
+        delay = timedelta(days=3)
+    elif current_level == 2:
+        delay = timedelta(days=7)
+    else:
+        delay = timedelta(days=14)
+    return (reviewed_at + delay).isoformat()
 
 
 def list_vocab_items() -> list[dict[str, Any]]:
@@ -183,39 +199,67 @@ def delete_vocab_item(item_id: int) -> bool:
 
 
 def list_study_items() -> list[dict[str, Any]]:
+    timestamp = now_iso()
     with get_connection() as connection:
         rows = connection.execute(
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
             WHERE status = 'unknown'
+              AND (next_review_at IS NULL OR next_review_at <= ?)
             ORDER BY
+                CASE WHEN next_review_at IS NOT NULL AND next_review_at <= ? THEN 0 ELSE 1 END ASC,
+                next_review_at ASC,
                 wrong_count DESC,
+                review_level ASC,
                 CASE WHEN last_reviewed_at IS NULL THEN 0 ELSE 1 END ASC,
-                last_reviewed_at ASC,
                 created_at ASC,
                 id ASC
-            """
+            """,
+            (timestamp, timestamp),
         ).fetchall()
     return [row_to_dict(row) for row in rows]
 
 
 def record_study_review(item_id: int, result: str) -> dict[str, Any] | None:
-    timestamp = now_iso()
-    count_column = "correct_count" if result == "correct" else "wrong_count"
+    reviewed_at = datetime.now(timezone.utc)
+    timestamp = reviewed_at.isoformat()
     with get_connection() as connection:
-        cursor = connection.execute(
-            f"""
-            UPDATE vocab_items
-            SET {count_column} = {count_column} + 1,
-                last_reviewed_at = ?,
-                updated_at = ?
-            WHERE id = ?
-            """,
-            (timestamp, timestamp, item_id),
-        )
-        if cursor.rowcount == 0:
+        existing = connection.execute(
+            "SELECT review_level FROM vocab_items WHERE id = ?", (item_id,)
+        ).fetchone()
+        if not existing:
             return None
+
+        current_level = int(existing["review_level"])
+        if result == "correct":
+            next_level = min(current_level + 1, 4)
+            next_review_at = next_review_for_correct(current_level, reviewed_at)
+            connection.execute(
+                """
+                UPDATE vocab_items
+                SET correct_count = correct_count + 1,
+                    review_level = ?,
+                    next_review_at = ?,
+                    last_reviewed_at = ?,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (next_level, next_review_at, timestamp, timestamp, item_id),
+            )
+        else:
+            connection.execute(
+                """
+                UPDATE vocab_items
+                SET wrong_count = wrong_count + 1,
+                    review_level = 0,
+                    next_review_at = ?,
+                    last_reviewed_at = ?,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (timestamp, timestamp, timestamp, item_id),
+            )
 
         row = connection.execute(
             f"""
