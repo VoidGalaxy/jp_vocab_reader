@@ -12,6 +12,23 @@ class UserResponse(BaseModel):
     auth_provider: str
 
 
+class AuthRegisterRequest(BaseModel):
+    email: str
+    password: str
+    display_name: str = ""
+
+
+class AuthLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AuthTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
 class AnalyzeRequest(BaseModel):
     text: str = Field(...)
     deck_id: int | None = None

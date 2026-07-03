@@ -1,7 +1,7 @@
 import csv
 from io import StringIO
 
-from fastapi import FastAPI, HTTPException, Query, Response, status
+from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.ai_explainer import (
@@ -12,7 +12,12 @@ from app.ai_explainer import (
 from app.analyze_postprocess import improve_analysis_tokens
 from app.analyzer import analyzer
 from app.analyzer import find_example_sentence, split_sentences
-from app.auth import get_current_user_dev
+from app.auth import (
+    create_access_token,
+    get_current_user_optional_or_dev,
+    hash_password,
+    verify_password,
+)
 from app.database import init_db
 from app.repositories.custom_term_repository import (
     create_custom_term,
@@ -33,6 +38,12 @@ from app.repositories.deck_repository import (
     update_deck,
 )
 from app.repositories.stats_repository import build_stats
+from app.repositories.user_repository import (
+    create_user,
+    email_exists,
+    get_user_by_email,
+    normalize_email,
+)
 from app.repositories.vocab_repository import (
     create_or_update_vocab_item,
     delete_vocab_item,
@@ -48,6 +59,9 @@ from app.dictionary_service import lookup_meaning
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
+    AuthLoginRequest,
+    AuthRegisterRequest,
+    AuthTokenResponse,
     CustomTermCreate,
     CustomTermResponse,
     CustomTermsResponse,
@@ -178,18 +192,57 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def build_auth_response(user: dict) -> AuthTokenResponse:
+    return AuthTokenResponse(
+        access_token=create_access_token(user),
+        token_type="bearer",
+        user=UserResponse(**user),
+    )
+
+
+def current_user_id(request: Request) -> int:
+    return int(get_current_user_optional_or_dev(request)["id"])
+
+
+@app.post("/auth/register", response_model=AuthTokenResponse)
+def register_user(request: AuthRegisterRequest) -> AuthTokenResponse:
+    email = normalize_email(request.email)
+    if not email:
+        raise HTTPException(status_code=400, detail="email must not be blank")
+    if email_exists(email):
+        raise HTTPException(status_code=400, detail="email already exists")
+    if len(request.password) < 8:
+        raise HTTPException(
+            status_code=400, detail="password must be at least 8 characters"
+        )
+
+    display_name = request.display_name.strip() or email.split("@")[0]
+    user = create_user(
+        email=email,
+        display_name=display_name,
+        password_hash=hash_password(request.password),
+    )
+    return build_auth_response(user)
+
+
+@app.post("/auth/login", response_model=AuthTokenResponse)
+def login_user(request: AuthLoginRequest) -> AuthTokenResponse:
+    user = get_user_by_email(request.email)
+    if not user or user["auth_provider"] == "dev":
+        raise HTTPException(status_code=401, detail="invalid email or password")
+    if not verify_password(request.password, user.get("password_hash")):
+        raise HTTPException(status_code=401, detail="invalid email or password")
+    return build_auth_response(user)
+
+
 @app.get("/me", response_model=UserResponse)
-def get_me() -> UserResponse:
-    return UserResponse(**get_current_user_dev())
-
-
-def current_user_id() -> int:
-    return int(get_current_user_dev()["id"])
+def get_me(request: Request) -> UserResponse:
+    return UserResponse(**get_current_user_optional_or_dev(request))
 
 
 @app.post("/analyze", response_model=AnalyzeResponse)
-def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
-    user_id = current_user_id()
+def analyze(request: AnalyzeRequest, http_request: Request) -> AnalyzeResponse:
+    user_id = current_user_id(http_request)
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="text must not be blank")
 
@@ -224,9 +277,10 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
 
 @app.get("/custom-terms", response_model=CustomTermsResponse)
 def get_custom_terms(
+    http_request: Request,
     deck_id: int | None = Query(default=None),
 ) -> CustomTermsResponse:
-    user_id = current_user_id()
+    user_id = current_user_id(http_request)
     if deck_id is not None and not get_deck_by_id(user_id, deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
     return CustomTermsResponse(items=list_custom_terms(user_id, deck_id=deck_id))
@@ -234,9 +288,9 @@ def get_custom_terms(
 
 @app.post("/custom-terms", response_model=CustomTermResponse)
 def post_custom_term(
-    term: CustomTermCreate, response: Response
+    term: CustomTermCreate, response: Response, http_request: Request
 ) -> CustomTermResponse:
-    user_id = current_user_id()
+    user_id = current_user_id(http_request)
     if not term.term.strip():
         raise HTTPException(status_code=400, detail="term must not be blank")
     if term.deck_id is not None and not get_deck_by_id(user_id, term.deck_id):
@@ -250,9 +304,9 @@ def post_custom_term(
 
 @app.patch("/custom-terms/{term_id}", response_model=CustomTermResponse)
 def patch_custom_term(
-    term_id: int, term: CustomTermUpdate
+    term_id: int, term: CustomTermUpdate, http_request: Request
 ) -> CustomTermResponse:
-    user_id = current_user_id()
+    user_id = current_user_id(http_request)
     if term.term is not None and not term.term.strip():
         raise HTTPException(status_code=400, detail="term must not be blank")
     if term.deck_id is not None and not get_deck_by_id(user_id, term.deck_id):
@@ -265,21 +319,23 @@ def patch_custom_term(
 
 
 @app.delete("/custom-terms/{term_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_custom_term(term_id: int) -> Response:
-    user_id = current_user_id()
+def remove_custom_term(term_id: int, http_request: Request) -> Response:
+    user_id = current_user_id(http_request)
     if not delete_custom_term(user_id, term_id):
         raise HTTPException(status_code=404, detail="custom term not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/decks", response_model=DecksResponse)
-def get_decks() -> DecksResponse:
-    return DecksResponse(items=list_decks(current_user_id()))
+def get_decks(http_request: Request) -> DecksResponse:
+    return DecksResponse(items=list_decks(current_user_id(http_request)))
 
 
 @app.post("/decks", response_model=DeckResponse)
-def post_deck(deck: DeckCreate, response: Response) -> DeckResponse:
-    user_id = current_user_id()
+def post_deck(
+    deck: DeckCreate, response: Response, http_request: Request
+) -> DeckResponse:
+    user_id = current_user_id(http_request)
     if not deck.name.strip():
         raise HTTPException(status_code=400, detail="deck name must not be blank")
 
@@ -290,8 +346,8 @@ def post_deck(deck: DeckCreate, response: Response) -> DeckResponse:
 
 
 @app.patch("/decks/{deck_id}", response_model=DeckResponse)
-def patch_deck(deck_id: int, deck: DeckUpdate) -> DeckResponse:
-    user_id = current_user_id()
+def patch_deck(deck_id: int, deck: DeckUpdate, http_request: Request) -> DeckResponse:
+    user_id = current_user_id(http_request)
     if deck.name is not None and not deck.name.strip():
         raise HTTPException(status_code=400, detail="deck name must not be blank")
 
@@ -305,8 +361,8 @@ def patch_deck(deck_id: int, deck: DeckUpdate) -> DeckResponse:
 
 
 @app.delete("/decks/{deck_id}", response_model=DeckDeleteResponse)
-def remove_deck(deck_id: int) -> DeckDeleteResponse:
-    deleted = delete_deck_with_items(current_user_id(), deck_id)
+def remove_deck(deck_id: int, http_request: Request) -> DeckDeleteResponse:
+    deleted = delete_deck_with_items(current_user_id(http_request), deck_id)
     if deleted is None:
         raise HTTPException(status_code=400, detail="default deck cannot be deleted")
     if deleted is False:
@@ -319,31 +375,36 @@ def remove_deck(deck_id: int) -> DeckDeleteResponse:
 
 
 @app.get("/decks/{deck_id}/export-package", response_model=DeckPackage)
-def export_deck_package(deck_id: int) -> DeckPackage:
-    package = export_deck_package_data(current_user_id(), deck_id=deck_id)
+def export_deck_package(deck_id: int, http_request: Request) -> DeckPackage:
+    package = export_deck_package_data(current_user_id(http_request), deck_id=deck_id)
     if not package:
         raise HTTPException(status_code=404, detail="deck not found")
     return DeckPackage(**package)
 
 
 @app.post("/decks/import-package", response_model=DeckPackageImportResponse)
-def post_deck_package_import(package: DeckPackage) -> DeckPackageImportResponse:
+def post_deck_package_import(
+    package: DeckPackage, http_request: Request
+) -> DeckPackageImportResponse:
     if package.package_type != "jp_vocab_reader_deck":
         raise HTTPException(status_code=400, detail="invalid package_type")
     if package.package_version != 1:
         raise HTTPException(status_code=400, detail="unsupported package_version")
-    return DeckPackageImportResponse(**import_deck_package(current_user_id(), package))
+    return DeckPackageImportResponse(
+        **import_deck_package(current_user_id(http_request), package)
+    )
 
 
 @app.get("/vocab-items", response_model=VocabItemsResponse)
 def get_vocab_items(
+    http_request: Request,
     deck_id: int | None = Query(default=None),
     status: str | None = Query(default=None),
     q: str | None = Query(default=None),
     due_only: bool = Query(default=False),
     sort: str | None = Query(default=None),
 ) -> VocabItemsResponse:
-    user_id = current_user_id()
+    user_id = current_user_id(http_request)
     if deck_id is not None and not get_deck_by_id(user_id, deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
     if status is not None and status not in VALID_STATUSES:
@@ -370,16 +431,20 @@ def get_vocab_items(
 
 
 @app.get("/study-items", response_model=StudyItemsResponse)
-def get_study_items(deck_id: int | None = Query(default=None)) -> StudyItemsResponse:
-    user_id = current_user_id()
+def get_study_items(
+    http_request: Request, deck_id: int | None = Query(default=None)
+) -> StudyItemsResponse:
+    user_id = current_user_id(http_request)
     if deck_id is not None and not get_deck_by_id(user_id, deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
     return StudyItemsResponse(items=list_study_items(user_id, deck_id=deck_id))
 
 
 @app.get("/stats", response_model=StatsResponse)
-def get_learning_stats(deck_id: int | None = Query(default=None)) -> StatsResponse:
-    user_id = current_user_id()
+def get_learning_stats(
+    http_request: Request, deck_id: int | None = Query(default=None)
+) -> StatsResponse:
+    user_id = current_user_id(http_request)
     if deck_id is not None and not get_deck_by_id(user_id, deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
     return StatsResponse(**build_stats(user_id, deck_id=deck_id))
@@ -387,20 +452,22 @@ def get_learning_stats(deck_id: int | None = Query(default=None)) -> StatsRespon
 
 @app.post("/study-items/{item_id}/review", response_model=VocabItemResponse)
 def post_study_review(
-    item_id: int, review: StudyReviewRequest
+    item_id: int, review: StudyReviewRequest, http_request: Request
 ) -> VocabItemResponse:
     if review.result not in VALID_REVIEW_RESULTS:
         raise HTTPException(status_code=400, detail="invalid review result")
 
-    updated_item = record_review(current_user_id(), item_id, review.result)
+    updated_item = record_review(current_user_id(http_request), item_id, review.result)
     if not updated_item:
         raise HTTPException(status_code=404, detail="vocab item not found")
     return VocabItemResponse(**updated_item)
 
 
 @app.get("/vocab-items/export.csv")
-def export_vocab_items_csv(deck_id: int | None = Query(default=None)) -> Response:
-    user_id = current_user_id()
+def export_vocab_items_csv(
+    http_request: Request, deck_id: int | None = Query(default=None)
+) -> Response:
+    user_id = current_user_id(http_request)
     if deck_id is not None and not get_deck_by_id(user_id, deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
 
@@ -438,9 +505,9 @@ def export_vocab_items_csv(deck_id: int | None = Query(default=None)) -> Respons
 
 @app.post("/vocab-items", response_model=VocabItemResponse)
 def post_vocab_item(
-    item: VocabItemCreate, response: Response
+    item: VocabItemCreate, response: Response, http_request: Request
 ) -> VocabItemResponse:
-    user_id = current_user_id()
+    user_id = current_user_id(http_request)
     if not item.surface.strip() and not item.base_form.strip():
         raise HTTPException(
             status_code=400, detail="surface or base_form must not be blank"
@@ -455,8 +522,10 @@ def post_vocab_item(
 
 
 @app.patch("/vocab-items/{item_id}", response_model=VocabItemResponse)
-def patch_vocab_item(item_id: int, item: VocabItemUpdate) -> VocabItemResponse:
-    user_id = current_user_id()
+def patch_vocab_item(
+    item_id: int, item: VocabItemUpdate, http_request: Request
+) -> VocabItemResponse:
+    user_id = current_user_id(http_request)
     if item.status is not None and item.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="invalid status")
 
@@ -467,8 +536,8 @@ def patch_vocab_item(item_id: int, item: VocabItemUpdate) -> VocabItemResponse:
 
 
 @app.post("/vocab-items/{item_id}/explain", response_model=VocabItemResponse)
-def explain_vocab_item(item_id: int) -> VocabItemResponse:
-    user_id = current_user_id()
+def explain_vocab_item(item_id: int, http_request: Request) -> VocabItemResponse:
+    user_id = current_user_id(http_request)
     item = get_vocab_item(user_id, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="vocab item not found")
@@ -487,7 +556,7 @@ def explain_vocab_item(item_id: int) -> VocabItemResponse:
 
 
 @app.delete("/vocab-items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def remove_vocab_item(item_id: int) -> Response:
-    if not delete_vocab_item(current_user_id(), item_id):
+def remove_vocab_item(item_id: int, http_request: Request) -> Response:
+    if not delete_vocab_item(current_user_id(http_request), item_id):
         raise HTTPException(status_code=404, detail="vocab item not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

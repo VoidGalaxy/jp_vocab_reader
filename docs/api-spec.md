@@ -5,8 +5,9 @@
 - API 서버는 FastAPI로 구현한다.
 - 요청과 응답의 기본 형식은 JSON이다.
 - CSV 내보내기 API만 `text/csv` 응답을 사용한다.
-- 현재 단계에서는 실제 로그인/JWT 인증을 적용하지 않는다. `/me`는 개발용 기본 사용자를 반환하는 auth foundation API다.
-- `/decks`, `/vocab-items`, `/custom-terms`, `/study-items`, `/stats`, 덱 패키지 API는 현재 개발용 사용자 `dev@example.local`의 데이터만 대상으로 동작한다.
+- `POST /auth/register`, `POST /auth/login`은 JWT access token을 발급한다.
+- `Authorization: Bearer <token>`이 있으면 해당 토큰 사용자 기준으로 동작하고, 토큰이 없으면 개발용 사용자 `dev@example.local`로 fallback한다.
+- `/decks`, `/vocab-items`, `/custom-terms`, `/study-items`, `/stats`, 덱 패키지 API는 현재 사용자 데이터만 대상으로 동작한다.
 - 사용자가 붙여넣은 원문 전체는 DB에 저장하지 않는다.
 - `/analyze` 요청의 원문은 형태소 분석과 응답 생성을 위해서만 사용하고, 처리 후 폐기한다.
 
@@ -20,6 +21,21 @@
   "email": "dev@example.local",
   "display_name": "개발 사용자",
   "auth_provider": "dev"
+}
+```
+
+### AuthToken
+
+```json
+{
+  "access_token": "...",
+  "token_type": "bearer",
+  "user": {
+    "id": 2,
+    "email": "test@example.com",
+    "display_name": "테스트 사용자",
+    "auth_provider": "local"
+  }
 }
 ```
 
@@ -264,9 +280,54 @@
 }
 ```
 
+## POST /auth/register
+
+새 사용자를 생성하고 JWT access token을 반환한다. 비밀번호는 해시로 저장하며 평문으로 저장하지 않는다.
+
+### 요청
+
+```json
+{
+  "email": "test@example.com",
+  "password": "password123",
+  "display_name": "테스트 사용자"
+}
+```
+
+### 응답
+
+`AuthToken` 객체를 반환한다. 회원가입 시 해당 사용자용 `기본 단어장`도 자동 생성한다.
+
+### 오류
+
+- `400 Bad Request`: 이메일이 비어 있거나 이미 존재하는 경우
+- `400 Bad Request`: 비밀번호가 8자 미만인 경우
+
+## POST /auth/login
+
+이메일과 비밀번호로 로그인하고 JWT access token을 반환한다.
+
+### 요청
+
+```json
+{
+  "email": "test@example.com",
+  "password": "password123"
+}
+```
+
+### 응답
+
+`AuthToken` 객체를 반환한다.
+
+### 오류
+
+- `401 Unauthorized`: 이메일이 없거나 비밀번호가 틀린 경우
+- `401 Unauthorized`: 개발용 `dev` 계정으로 비밀번호 로그인을 시도한 경우
+
 ## GET /me
 
-현재 사용자 정보를 반환한다. 현재 단계에서는 실제 로그인/JWT가 없으며, 항상 개발용 기본 사용자를 반환한다.
+현재 사용자 정보를 반환한다. `Authorization: Bearer <token>`이 있으면 토큰 사용자를 반환하고, 토큰이 없으면 개발용 기본 사용자를 반환한다.
 
 ### 응답
 
@@ -283,8 +344,9 @@
 
 - 앱 시작 시 `users` 테이블이 없으면 생성한다.
 - 개발용 기본 사용자가 없으면 `dev@example.local` 계정을 자동 생성한다.
+- 잘못된 토큰은 `401 Unauthorized`를 반환한다.
 - `password_hash`는 응답에 포함하지 않는다.
-- 기존 덱, 단어장, 사용자 정의 용어 API는 아직 로그인 사용자 기준으로 필터링하지 않는다.
+- 기존 프론트엔드는 토큰 없이 dev user 데이터로 계속 동작한다.
 
 ## GET /custom-terms
 

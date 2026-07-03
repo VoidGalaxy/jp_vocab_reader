@@ -19,8 +19,8 @@
 
 여러 사용자가 각자의 덱, 단어장, 사용자 정의 용어, 학습 기록을 분리해 쓰고 공개 덱을 공유/가져오기 할 수 있도록 서비스형 구조 전환을 계획한다. 자세한 DB/API/권한 전환 방향은 [docs/service-architecture.md](docs/service-architecture.md)를 참고한다.
 백엔드 DB 접근 로직은 `backend/app/repositories`의 기능별 repository로 1차 분리했다.
-개발용 사용자 기반으로 `users` 테이블과 `GET /me` API를 추가했지만, 실제 로그인/회원가입은 아직 구현하지 않았다.
-현재 개인 덱, 단어장, 사용자 정의 용어는 개발용 현재 사용자 `dev@example.local`의 `user_id` 기준으로 조회/수정된다.
+백엔드는 회원가입/로그인 API와 JWT access token을 지원한다. 개발 모드에서는 토큰이 없는 요청이 기존처럼 `dev@example.local` 사용자로 fallback한다.
+토큰을 보내면 해당 사용자 기준으로 개인 덱, 단어장, 사용자 정의 용어를 조회/수정한다.
 
 일본어 원서/웹소설 학습자를 위한 자동 단어장 생성 웹서비스입니다.
 

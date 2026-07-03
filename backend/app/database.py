@@ -56,7 +56,7 @@ def init_db() -> None:
             """
             CREATE TABLE IF NOT EXISTS decks (
                 id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
                 description TEXT NOT NULL DEFAULT '',
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL
@@ -119,6 +119,7 @@ def init_db() -> None:
         )
         ensure_user_scope_columns(connection)
         migrate_existing_data_to_dev_user(connection, dev_user_id)
+        migrate_deck_unique_constraint(connection)
         migrate_vocab_unique_constraint(connection)
         connection.execute(
             """
@@ -268,6 +269,43 @@ def migrate_vocab_unique_constraint(connection: sqlite3.Connection) -> None:
     )
     connection.execute("DROP TABLE vocab_items")
     connection.execute("ALTER TABLE vocab_items_new RENAME TO vocab_items")
+
+
+def migrate_deck_unique_constraint(connection: sqlite3.Connection) -> None:
+    row = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'decks'"
+    ).fetchone()
+    create_sql = row["sql"] if row else ""
+    if "UNIQUE" not in create_sql.upper():
+        return
+
+    columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(decks)").fetchall()
+    }
+    user_expr = "user_id" if "user_id" in columns else "NULL"
+    connection.execute(
+        """
+        CREATE TABLE decks_new (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        f"""
+        INSERT INTO decks_new (
+            id, user_id, name, description, created_at, updated_at
+        )
+        SELECT id, {user_expr}, name, description, created_at, updated_at
+        FROM decks
+        """
+    )
+    connection.execute("DROP TABLE decks")
+    connection.execute("ALTER TABLE decks_new RENAME TO decks")
 
 
 def ensure_column(

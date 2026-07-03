@@ -18,8 +18,10 @@
 - 완료: DB access layer 정리. SQLite 쿼리를 기능별 repository 계층으로 분리했다.
 - 완료: auth foundation. `users` 테이블, 개발용 기본 사용자, `GET /me`를 추가했다.
 - 완료: user-scoped-data. `decks`, `vocab_items`, `custom_terms`를 `user_id` 기준으로 마이그레이션하고 repository 필터를 적용했다.
+- 완료: auth-api. 회원가입/로그인 API, JWT access token, 토큰 사용자 처리와 dev user fallback을 추가했다.
+- TODO: 프론트엔드 로그인/회원가입 UI
+- TODO: 운영용 `JWT_SECRET_KEY` 설정과 토큰 보안 정책 정리
 - TODO: PostgreSQL 전환 검토
-- TODO: 로그인/회원가입
 - TODO: 공개 덱 마켓
 
 ## 원칙
