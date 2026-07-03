@@ -12,6 +12,15 @@
 - TODO: 사용자 계정 기반 공유 덱 소유권/권한 관리를 추가한다.
 - TODO: 공개 덱 마켓, 검색, 다운로드 수, 버전 관리를 추가한다.
 
+## 서비스형 구조 전환
+
+- 완료: 서비스형 구조 설계 완료. 자세한 내용은 [service-architecture.md](service-architecture.md)를 참고한다.
+- TODO: DB 접근 계층 정리
+- TODO: PostgreSQL 전환 검토
+- TODO: 로그인/회원가입
+- TODO: 사용자별 데이터 분리
+- TODO: 공개 덱 마켓
+
 ## 원칙
 
 - 첫 MVP는 작고 안정적으로 만든다.
