@@ -58,6 +58,19 @@ type DeckPackageImportResponse = {
   message: string;
 };
 
+type CurrentUser = {
+  id: number;
+  email: string;
+  display_name: string;
+  auth_provider: string;
+};
+
+type AuthResponse = {
+  access_token: string;
+  token_type: "bearer";
+  user: CurrentUser;
+};
+
 type TabKey = "analyze" | "vocab" | "study" | "info";
 type VocabStatusFilter = "all" | TokenStatus;
 
@@ -74,6 +87,7 @@ type ClassificationDraft = {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 const CLASSIFICATION_DRAFT_KEY = "jp-vocab-reader:classification-draft";
+const ACCESS_TOKEN_KEY = "jp-vocab-reader:access-token";
 
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "analyze", label: "분석" },
@@ -297,8 +311,17 @@ export default function HomePage() {
   const [hasStartedStudy, setHasStartedStudy] = useState(false);
   const [isLoadingStudyStats, setIsLoadingStudyStats] = useState(false);
   const [isLoadingInfoStats, setIsLoadingInfoStats] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [isLoadingCurrentUser, setIsLoadingCurrentUser] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authDisplayName, setAuthDisplayName] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
+  const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
 
   useEffect(() => {
+    void loadCurrentUser();
     void loadDecks();
     const draft = parseClassificationDraft(
       window.localStorage.getItem(CLASSIFICATION_DRAFT_KEY),
@@ -382,6 +405,99 @@ export default function HomePage() {
     }
   }
 
+  async function refreshUserScopedData() {
+    setSelectedVocabDeckId("all");
+    setSelectedStudyDeckId("all");
+    await loadDecks();
+    await loadVocabItems("all");
+    await loadCustomTerms("all");
+    await loadStudyStats("all");
+    await loadInfoStats();
+    setStudyItems([]);
+    setCurrentStudyIndex(0);
+    setHasStartedStudy(false);
+    setIsAnswerVisible(false);
+    setSessionCorrectCount(0);
+    setSessionWrongCount(0);
+  }
+
+  async function loadCurrentUser() {
+    setIsLoadingCurrentUser(true);
+    try {
+      const user = await requestJson<CurrentUser>("/me");
+      setCurrentUser(user);
+    } catch (error) {
+      setCurrentUser(null);
+      setAuthMessage(getErrorMessage(error, "현재 사용자 정보를 불러오지 못했습니다."));
+    } finally {
+      setIsLoadingCurrentUser(false);
+    }
+  }
+
+  async function handleAuthSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const email = authEmail.trim();
+    const password = authPassword;
+    if (!email || !password) {
+      setAuthMessage("이메일과 비밀번호를 입력해 주세요.");
+      return;
+    }
+    if (authMode === "register" && password.length < 8) {
+      setAuthMessage("회원가입 비밀번호는 8자 이상이어야 합니다.");
+      return;
+    }
+
+    setIsSubmittingAuth(true);
+    setAuthMessage("");
+    try {
+      const response = await requestJson<AuthResponse>(
+        authMode === "login" ? "/auth/login" : "/auth/register",
+        {
+          method: "POST",
+          body: JSON.stringify(
+            authMode === "login"
+              ? { email, password }
+              : {
+                  email,
+                  password,
+                  display_name: authDisplayName.trim(),
+                },
+          ),
+        },
+        { includeAuth: false },
+      );
+      setAccessToken(response.access_token);
+      setCurrentUser(response.user);
+      setAuthPassword("");
+      setAuthMessage(
+        authMode === "login"
+          ? "로그인했습니다."
+          : "회원가입이 완료되었습니다.",
+      );
+      await refreshUserScopedData();
+    } catch (error) {
+      const errorMessage = getErrorMessage(
+        error,
+        "이메일 또는 비밀번호가 올바르지 않습니다.",
+      );
+      setAuthMessage(
+        errorMessage.includes("(401)")
+          ? "이메일 또는 비밀번호가 올바르지 않습니다."
+          : errorMessage,
+      );
+    } finally {
+      setIsSubmittingAuth(false);
+    }
+  }
+
+  async function handleLogout() {
+    clearAccessToken();
+    setAuthPassword("");
+    setAuthMessage("로그아웃했습니다. 개발 모드 데이터로 전환합니다.");
+    await loadCurrentUser();
+    await refreshUserScopedData();
+  }
+
   function clearClassificationDraft() {
     window.localStorage.removeItem(CLASSIFICATION_DRAFT_KEY);
     setPendingClassificationDraft(null);
@@ -445,7 +561,7 @@ export default function HomePage() {
     setMessage("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/analyze`, {
+      const response = await apiFetch("/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -657,7 +773,7 @@ export default function HomePage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/decks/${deckId}`, {
+      const response = await apiFetch(`/decks/${deckId}`, {
         method: "DELETE",
       });
       if (!response.ok) {
@@ -853,7 +969,7 @@ export default function HomePage() {
     setVocabMessage("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/custom-terms/${termId}`, {
+      const response = await apiFetch(`/custom-terms/${termId}`, {
         method: "DELETE",
       });
       if (!response.ok) {
@@ -958,7 +1074,7 @@ export default function HomePage() {
     setVocabMessage("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/vocab-items/${itemId}`, {
+      const response = await apiFetch(`/vocab-items/${itemId}`, {
         method: "DELETE",
       });
       if (!response.ok) {
@@ -1067,7 +1183,7 @@ export default function HomePage() {
     try {
       const query =
         selectedVocabDeckId !== "all" ? `?deck_id=${selectedVocabDeckId}` : "";
-      const response = await fetch(`${API_BASE_URL}/vocab-items/export.csv${query}`);
+      const response = await apiFetch(`/vocab-items/export.csv${query}`);
       if (!response.ok) {
         throw new Error(`CSV 다운로드에 실패했습니다. (${response.status})`);
       }
@@ -1195,6 +1311,23 @@ export default function HomePage() {
           <h1>일본어 단어 분석</h1>
           <p>일본어 원문을 붙여넣고 학습할 단어 후보를 확인합니다.</p>
         </header>
+
+        <AccountPanel
+          user={currentUser}
+          authMode={authMode}
+          email={authEmail}
+          password={authPassword}
+          displayName={authDisplayName}
+          message={authMessage}
+          isLoadingUser={isLoadingCurrentUser}
+          isSubmitting={isSubmittingAuth}
+          onAuthModeChange={setAuthMode}
+          onEmailChange={setAuthEmail}
+          onPasswordChange={setAuthPassword}
+          onDisplayNameChange={setAuthDisplayName}
+          onSubmit={handleAuthSubmit}
+          onLogout={() => void handleLogout()}
+        />
 
         <nav className="tab-nav" aria-label="주요 기능">
           {tabs.map((tab) => (
@@ -1346,17 +1479,131 @@ export default function HomePage() {
   );
 }
 
+type AccountPanelProps = {
+  user: CurrentUser | null;
+  authMode: "login" | "register";
+  email: string;
+  password: string;
+  displayName: string;
+  message: string;
+  isLoadingUser: boolean;
+  isSubmitting: boolean;
+  onAuthModeChange: (mode: "login" | "register") => void;
+  onEmailChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  onDisplayNameChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onLogout: () => void;
+};
+
+function AccountPanel({
+  user,
+  authMode,
+  email,
+  password,
+  displayName,
+  message,
+  isLoadingUser,
+  isSubmitting,
+  onAuthModeChange,
+  onEmailChange,
+  onPasswordChange,
+  onDisplayNameChange,
+  onSubmit,
+  onLogout,
+}: AccountPanelProps) {
+  const isDevUser = !user || user.auth_provider === "dev";
+
+  return (
+    <section className="account-panel" aria-label="계정">
+      <div className="account-summary">
+        <div>
+          <strong>{isDevUser ? "로그인하지 않은 개발 모드" : user.display_name}</strong>
+          <span>
+            {isLoadingUser
+              ? "사용자 확인 중"
+              : user
+                ? `${user.email} · ${user.auth_provider}`
+                : "사용자 정보를 불러오지 못했습니다."}
+          </span>
+        </div>
+        {!isDevUser ? (
+          <button type="button" className="secondary-button" onClick={onLogout}>
+            로그아웃
+          </button>
+        ) : null}
+      </div>
+
+      {isDevUser ? (
+        <form className="account-form" onSubmit={onSubmit}>
+          <div className="account-mode">
+            <button
+              type="button"
+              className={authMode === "login" ? "mode-button active-mode" : "mode-button"}
+              onClick={() => onAuthModeChange("login")}
+            >
+              로그인
+            </button>
+            <button
+              type="button"
+              className={
+                authMode === "register" ? "mode-button active-mode" : "mode-button"
+              }
+              onClick={() => onAuthModeChange("register")}
+            >
+              회원가입
+            </button>
+          </div>
+          <label>
+            이메일
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => onEmailChange(event.target.value)}
+              placeholder="test@example.com"
+            />
+          </label>
+          <label>
+            비밀번호
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => onPasswordChange(event.target.value)}
+              placeholder="8자 이상"
+            />
+          </label>
+          {authMode === "register" ? (
+            <label>
+              표시 이름
+              <input
+                type="text"
+                value={displayName}
+                onChange={(event) => onDisplayNameChange(event.target.value)}
+                placeholder="비우면 이메일 앞부분"
+              />
+            </label>
+          ) : null}
+          <button type="submit" className="primary-button" disabled={isSubmitting}>
+            {isSubmitting
+              ? "처리 중"
+              : authMode === "login"
+                ? "로그인"
+                : "회원가입"}
+          </button>
+        </form>
+      ) : null}
+
+      {message ? <p className="account-message">{message}</p> : null}
+    </section>
+  );
+}
+
 async function requestJson<T>(
   path: string,
   init: RequestInit = {},
+  options: { includeAuth?: boolean } = {},
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
-  });
+  const response = await apiFetch(path, init, options);
 
   if (!response.ok) {
     let detail = "";
@@ -1370,6 +1617,41 @@ async function requestJson<T>(
   }
 
   return (await response.json()) as T;
+}
+
+function apiFetch(
+  path: string,
+  init: RequestInit = {},
+  options: { includeAuth?: boolean } = {},
+) {
+  const includeAuth = options.includeAuth ?? true;
+  const token = includeAuth ? getAccessToken() : "";
+  const headers = new Headers(init.headers);
+  if (!headers.has("Content-Type") && init.body) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  return fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers,
+  });
+}
+
+function getAccessToken() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY) ?? "";
+}
+
+function setAccessToken(token: string) {
+  window.localStorage.setItem(ACCESS_TOKEN_KEY, token);
+}
+
+function clearAccessToken() {
+  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
 function getErrorMessage(error: unknown, fallback: string) {

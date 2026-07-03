@@ -19,7 +19,7 @@
 - 완료: auth foundation. `users` 테이블, 개발용 기본 사용자, `GET /me`를 추가했다.
 - 완료: user-scoped-data. `decks`, `vocab_items`, `custom_terms`를 `user_id` 기준으로 마이그레이션하고 repository 필터를 적용했다.
 - 완료: auth-api. 회원가입/로그인 API, JWT access token, 토큰 사용자 처리와 dev user fallback을 추가했다.
-- TODO: 프론트엔드 로그인/회원가입 UI
+- 완료: auth-ui. 프론트엔드 로그인/회원가입/로그아웃 UI와 access token 저장/전송을 추가했다.
 - TODO: 운영용 `JWT_SECRET_KEY` 설정과 토큰 보안 정책 정리
 - TODO: PostgreSQL 전환 검토
 - TODO: 공개 덱 마켓

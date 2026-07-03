@@ -21,6 +21,7 @@
 백엔드 DB 접근 로직은 `backend/app/repositories`의 기능별 repository로 1차 분리했다.
 백엔드는 회원가입/로그인 API와 JWT access token을 지원한다. 개발 모드에서는 토큰이 없는 요청이 기존처럼 `dev@example.local` 사용자로 fallback한다.
 토큰을 보내면 해당 사용자 기준으로 개인 덱, 단어장, 사용자 정의 용어를 조회/수정한다.
+프론트엔드는 상단 계정 영역에서 로그인/회원가입/로그아웃을 제공하고, 로그인 성공 시 access token만 `localStorage`에 저장해 이후 API 요청에 사용한다.
 
 일본어 원서/웹소설 학습자를 위한 자동 단어장 생성 웹서비스입니다.
 
