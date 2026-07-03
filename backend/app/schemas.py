@@ -5,6 +5,13 @@ VALID_STATUSES = {"unknown", "uncertain", "known", "unclassified"}
 VALID_REVIEW_RESULTS = {"correct", "wrong"}
 
 
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    display_name: str
+    auth_provider: str
+
+
 class AnalyzeRequest(BaseModel):
     text: str = Field(...)
     deck_id: int | None = None

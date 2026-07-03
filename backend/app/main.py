@@ -12,6 +12,7 @@ from app.ai_explainer import (
 from app.analyze_postprocess import improve_analysis_tokens
 from app.analyzer import analyzer
 from app.analyzer import find_example_sentence, split_sentences
+from app.auth import get_current_user_dev
 from app.database import init_db
 from app.repositories.custom_term_repository import (
     create_custom_term,
@@ -63,6 +64,7 @@ from app.schemas import (
     StudyReviewRequest,
     VALID_REVIEW_RESULTS,
     VALID_STATUSES,
+    UserResponse,
     VocabItemCreate,
     VocabItemResponse,
     VocabItemsResponse,
@@ -172,6 +174,11 @@ def startup() -> None:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/me", response_model=UserResponse)
+def get_me() -> UserResponse:
+    return UserResponse(**get_current_user_dev())
 
 
 @app.post("/analyze", response_model=AnalyzeResponse)

@@ -5,11 +5,22 @@
 - API 서버는 FastAPI로 구현한다.
 - 요청과 응답의 기본 형식은 JSON이다.
 - CSV 내보내기 API만 `text/csv` 응답을 사용한다.
-- MVP에서는 인증을 적용하지 않는다.
+- 현재 단계에서는 실제 로그인/JWT 인증을 적용하지 않는다. `/me`는 개발용 기본 사용자를 반환하는 auth foundation API다.
 - 사용자가 붙여넣은 원문 전체는 DB에 저장하지 않는다.
 - `/analyze` 요청의 원문은 형태소 분석과 응답 생성을 위해서만 사용하고, 처리 후 폐기한다.
 
 ## 데이터 모델 초안
+
+### User
+
+```json
+{
+  "id": 1,
+  "email": "dev@example.local",
+  "display_name": "개발 사용자",
+  "auth_provider": "dev"
+}
+```
 
 ### AnalyzedToken
 
@@ -251,6 +262,28 @@
   "status": "ok"
 }
 ```
+
+## GET /me
+
+현재 사용자 정보를 반환한다. 현재 단계에서는 실제 로그인/JWT가 없으며, 항상 개발용 기본 사용자를 반환한다.
+
+### 응답
+
+```json
+{
+  "id": 1,
+  "email": "dev@example.local",
+  "display_name": "개발 사용자",
+  "auth_provider": "dev"
+}
+```
+
+### 처리 규칙
+
+- 앱 시작 시 `users` 테이블이 없으면 생성한다.
+- 개발용 기본 사용자가 없으면 `dev@example.local` 계정을 자동 생성한다.
+- `password_hash`는 응답에 포함하지 않는다.
+- 기존 덱, 단어장, 사용자 정의 용어 API는 아직 로그인 사용자 기준으로 필터링하지 않는다.
 
 ## GET /custom-terms
 

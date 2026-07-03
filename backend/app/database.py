@@ -18,6 +18,9 @@ from app.schemas import (
 
 DB_PATH = Path(__file__).resolve().parents[1] / "vocab.db"
 DEFAULT_DECK_NAME = "기본 단어장"
+DEV_USER_EMAIL = "dev@example.local"
+DEV_USER_DISPLAY_NAME = "개발 사용자"
+DEV_USER_AUTH_PROVIDER = "dev"
 VOCAB_ITEM_FIELDS = """
     vocab_items.id, vocab_items.deck_id, decks.name AS deck_name,
     vocab_items.surface, vocab_items.base_form, vocab_items.reading,
@@ -47,6 +50,8 @@ def get_connection() -> sqlite3.Connection:
 
 def init_db() -> None:
     with get_connection() as connection:
+        ensure_users_table(connection)
+        ensure_dev_user(connection)
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS decks (
@@ -122,6 +127,49 @@ def init_db() -> None:
             """,
             (default_deck_id,),
         )
+
+
+def ensure_users_table(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE,
+            display_name TEXT,
+            password_hash TEXT,
+            auth_provider TEXT NOT NULL DEFAULT 'local',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
+def ensure_dev_user(connection: sqlite3.Connection) -> int:
+    ensure_users_table(connection)
+    timestamp = now_iso()
+    row = connection.execute(
+        "SELECT id FROM users WHERE email = ?", (DEV_USER_EMAIL,)
+    ).fetchone()
+    if row:
+        return int(row["id"])
+
+    cursor = connection.execute(
+        """
+        INSERT INTO users (
+            email, display_name, password_hash, auth_provider, created_at, updated_at
+        )
+        VALUES (?, ?, NULL, ?, ?, ?)
+        """,
+        (
+            DEV_USER_EMAIL,
+            DEV_USER_DISPLAY_NAME,
+            DEV_USER_AUTH_PROVIDER,
+            timestamp,
+            timestamp,
+        ),
+    )
+    return int(cursor.lastrowid)
 
 
 def ensure_default_deck(connection: sqlite3.Connection) -> int:
