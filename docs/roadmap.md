@@ -15,7 +15,7 @@
 ## 서비스형 구조 전환
 
 - 완료: 서비스형 구조 설계 완료. 자세한 내용은 [service-architecture.md](service-architecture.md)를 참고한다.
-- TODO: DB 접근 계층 정리
+- 완료: DB access layer 정리. SQLite 쿼리를 기능별 repository 계층으로 분리했다.
 - TODO: PostgreSQL 전환 검토
 - TODO: 로그인/회원가입
 - TODO: 사용자별 데이터 분리

@@ -12,28 +12,34 @@ from app.ai_explainer import (
 from app.analyze_postprocess import improve_analysis_tokens
 from app.analyzer import analyzer
 from app.analyzer import find_example_sentence, split_sentences
-from app.database import (
-    build_deck_package,
+from app.database import init_db
+from app.repositories.custom_term_repository import (
     create_custom_term,
-    create_deck,
-    create_vocab_item,
     delete_custom_term,
-    delete_deck,
-    delete_vocab_item,
     get_custom_term,
-    get_deck,
-    get_stats,
-    get_vocab_item,
-    import_deck_package,
-    init_db,
     list_custom_terms,
+    update_custom_term,
+)
+from app.repositories.deck_package_repository import (
+    export_deck_package as export_deck_package_data,
+    import_deck_package,
+)
+from app.repositories.deck_repository import (
+    create_deck,
+    delete_deck_with_items,
+    get_deck,
     list_decks,
+    update_deck,
+)
+from app.repositories.stats_repository import build_stats
+from app.repositories.vocab_repository import (
+    create_or_update_vocab_item,
+    delete_vocab_item,
+    get_vocab_item,
     list_known_vocab_keys,
     list_study_items,
     list_vocab_items,
     record_study_review,
-    update_custom_term,
-    update_deck,
     update_context_explanation,
     update_vocab_item,
 )
@@ -279,7 +285,7 @@ def patch_deck(deck_id: int, deck: DeckUpdate) -> DeckResponse:
 
 @app.delete("/decks/{deck_id}", response_model=DeckDeleteResponse)
 def remove_deck(deck_id: int) -> DeckDeleteResponse:
-    deleted = delete_deck(deck_id)
+    deleted = delete_deck_with_items(deck_id)
     if deleted is None:
         raise HTTPException(status_code=400, detail="default deck cannot be deleted")
     if deleted is False:
@@ -293,7 +299,7 @@ def remove_deck(deck_id: int) -> DeckDeleteResponse:
 
 @app.get("/decks/{deck_id}/export-package", response_model=DeckPackage)
 def export_deck_package(deck_id: int) -> DeckPackage:
-    package = build_deck_package(deck_id=deck_id)
+    package = export_deck_package_data(deck_id=deck_id)
     if not package:
         raise HTTPException(status_code=404, detail="deck not found")
     return DeckPackage(**package)
@@ -351,7 +357,7 @@ def get_study_items(deck_id: int | None = Query(default=None)) -> StudyItemsResp
 def get_learning_stats(deck_id: int | None = Query(default=None)) -> StatsResponse:
     if deck_id is not None and not get_deck(deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
-    return StatsResponse(**get_stats(deck_id=deck_id))
+    return StatsResponse(**build_stats(deck_id=deck_id))
 
 
 @app.post("/study-items/{item_id}/review", response_model=VocabItemResponse)
@@ -415,7 +421,7 @@ def post_vocab_item(
     if item.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="invalid status")
 
-    saved_item, created = create_vocab_item(item)
+    saved_item, created = create_or_update_vocab_item(item)
     if not created:
         response.status_code = status.HTTP_200_OK
     return VocabItemResponse(**saved_item)

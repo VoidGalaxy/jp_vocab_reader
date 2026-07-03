@@ -18,6 +18,7 @@
 ## 향후 서비스형 구조 계획
 
 여러 사용자가 각자의 덱, 단어장, 사용자 정의 용어, 학습 기록을 분리해 쓰고 공개 덱을 공유/가져오기 할 수 있도록 서비스형 구조 전환을 계획한다. 자세한 DB/API/권한 전환 방향은 [docs/service-architecture.md](docs/service-architecture.md)를 참고한다.
+백엔드 DB 접근 로직은 `backend/app/repositories`의 기능별 repository로 1차 분리했다.
 
 일본어 원서/웹소설 학습자를 위한 자동 단어장 생성 웹서비스입니다.
 

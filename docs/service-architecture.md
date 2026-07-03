@@ -295,13 +295,16 @@ AI 문맥 설명, 분석 요청, 공개 마켓 사용량 등을 추적하는 운
 - Alembic을 쓰면 `users`, `user_id`, 공유 덱 테이블 추가 같은 스키마 변경을 버전 관리할 수 있다.
 - 기존 코드가 raw sqlite 쿼리 중심이라면 전환 난이도는 중간 이상이다.
 - raw sqlite 코드가 넓게 퍼져 있다면 모든 쿼리에 `user_id` 조건을 추가해야 하고, placeholder 문법, 트랜잭션 처리, row 변환 방식도 정리해야 한다.
-- 전환 전에 DB 접근 계층을 분리해 API 핸들러가 직접 sqlite 쿼리를 알지 않도록 만드는 것이 좋다.
+- DB 접근 계층 1차 정리는 완료했다. `backend/app/repositories` 아래에 덱, 단어장, 사용자 정의 용어, 통계, 덱 패키지 repository를 두고 endpoint는 요청 검증과 repository 호출 중심으로 유지한다.
+- 현재 repository는 기존 SQLite 연결과 raw SQL을 그대로 사용한다.
+- 이번 단계에서는 SQLAlchemy, PostgreSQL, `user_id`, 인증을 도입하지 않았다.
+- 다음 단계에서는 repository 함수에 남긴 TODO를 기준으로 `user_id` 필터링과 소유권 검사를 추가한다.
 
 ## I. 단계별 구현 로드맵
 
 1. 서비스 아키텍처 문서화
 2. 사용자 모델 추가 준비
-3. DB 접근 계층 정리
+3. DB 접근 계층 정리 완료
 4. PostgreSQL/SQLAlchemy 전환 또는 최소한 DB adapter 분리
 5. 로그인/회원가입
 6. `user_id` 기반 데이터 분리
