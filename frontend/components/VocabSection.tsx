@@ -164,6 +164,7 @@ export function VocabSection({
 }: VocabSectionProps) {
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [isCustomTermManagerOpen, setIsCustomTermManagerOpen] = useState(false);
+  const [isBackupToolsOpen, setIsBackupToolsOpen] = useState(false);
 
   return (
     <section className="tab-panel" aria-live="polite">
@@ -294,6 +295,9 @@ export function VocabSection({
             </div>
 
       <div className="deck-share-panel">
+        <p className="muted-text">
+          등록하면 다른 사용자가 공유 탭에서 이 덱을 보고 자기 단어장으로 가져올 수 있습니다. 학습 기록은 공유되지 않습니다.
+        </p>
         <div className="publish-deck-form">
           <label className="inline-field">
             공유 제목
@@ -322,6 +326,20 @@ export function VocabSection({
             {isPublishingDeck ? "등록 중..." : "현재 덱을 공유 덱으로 등록"}
           </button>
         </div>
+        <div className="advanced-backup-panel">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setIsBackupToolsOpen((open) => !open)}
+            aria-expanded={isBackupToolsOpen}
+          >
+            고급 백업/파일 내보내기
+          </button>
+          {isBackupToolsOpen ? (
+            <div className="backup-tools">
+              <p className="muted-text">
+                일반적인 덱 공유는 공유 탭을 사용하세요. CSV/JSON 파일은 백업이나 수동 이동이 필요할 때만 사용하는 고급 기능입니다.
+              </p>
         <div className="deck-share-actions">
           <button
             type="button"
@@ -361,6 +379,9 @@ export function VocabSection({
           >
             {isExportingCsv ? "다운로드 중..." : "CSV 다운로드"}
           </button>
+        </div>
+            </div>
+          ) : null}
         </div>
       </div>
 

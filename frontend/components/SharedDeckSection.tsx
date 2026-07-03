@@ -8,10 +8,13 @@ type SharedDeckSectionProps = {
   isLoading: boolean;
   isLoadingDetail: boolean;
   importingDeckId: number | null;
+  importedDeckId: number | null;
   message: string;
   onRefresh: () => void;
   onSelectDeck: (deckId: number) => void;
+  onCloseDetail: () => void;
   onImportDeck: (deckId: number) => void;
+  onGoToVocab: () => void;
 };
 
 export function SharedDeckSection({
@@ -21,10 +24,13 @@ export function SharedDeckSection({
   isLoading,
   isLoadingDetail,
   importingDeckId,
+  importedDeckId,
   message,
   onRefresh,
   onSelectDeck,
+  onCloseDetail,
   onImportDeck,
+  onGoToVocab,
 }: SharedDeckSectionProps) {
   return (
     <section className="tab-panel shared-deck-section" aria-live="polite">
@@ -45,71 +51,95 @@ export function SharedDeckSection({
         </div>
       </div>
 
-      {message ? <p className="message">{message}</p> : null}
+      {message ? (
+        <div className="shared-deck-message">
+          <p className="message">{message}</p>
+          <button
+            type="button"
+            className="secondary-button compact-button"
+            onClick={onGoToVocab}
+          >
+            단어장 탭으로 이동
+          </button>
+        </div>
+      ) : null}
 
       {decks.length > 0 ? (
         <div className="shared-deck-grid">
-          {decks.map((deck) => (
-            <article
-              key={deck.id}
-              className={
-                selectedDeckId === deck.id
-                  ? "shared-deck-card selected-shared-deck-card"
-                  : "shared-deck-card"
-              }
-            >
-              <div>
-                <h3>{deck.title}</h3>
-                <p className="muted-text">
-                  {deck.description || "설명이 없습니다."}
-                </p>
-              </div>
-              <dl className="shared-deck-meta">
+          {decks.map((deck) => {
+            const isSelected = selectedDeckId === deck.id;
+            const isImporting = importingDeckId === deck.id;
+            const isImported = importedDeckId === deck.id;
+            return (
+              <article
+                key={deck.id}
+                className={
+                  isSelected
+                    ? "shared-deck-card selected-shared-deck-card"
+                    : "shared-deck-card"
+                }
+              >
                 <div>
-                  <dt>작성자</dt>
-                  <dd>{deck.owner_display_name || "-"}</dd>
+                  <h3>{deck.title}</h3>
+                  <p className="muted-text">
+                    {deck.description || "설명이 없습니다."}
+                  </p>
                 </div>
-                <div>
-                  <dt>단어</dt>
-                  <dd>{deck.vocab_count}</dd>
+                <dl className="shared-deck-meta">
+                  <div>
+                    <dt>작성자</dt>
+                    <dd>{deck.owner_display_name || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>단어</dt>
+                    <dd>{deck.vocab_count}</dd>
+                  </div>
+                  <div>
+                    <dt>용어</dt>
+                    <dd>{deck.custom_term_count}</dd>
+                  </div>
+                  <div>
+                    <dt>가져오기</dt>
+                    <dd>{deck.import_count}</dd>
+                  </div>
+                  <div>
+                    <dt>등록일</dt>
+                    <dd>{formatDateTime(deck.created_at)}</dd>
+                  </div>
+                  <div>
+                    <dt>상태</dt>
+                    <dd>{isImported ? "가져오기 완료" : isSelected ? "상세 표시 중" : "공개"}</dd>
+                  </div>
+                </dl>
+                <div className="row-actions">
+                  <button
+                    type="button"
+                    className="secondary-button compact-button"
+                    onClick={() => onSelectDeck(deck.id)}
+                    disabled={isLoadingDetail && isSelected}
+                  >
+                    {isLoadingDetail && isSelected
+                      ? "불러오는 중..."
+                      : isSelected
+                        ? "상세 닫기"
+                        : "상세 보기"}
+                  </button>
+                  <button
+                    type="button"
+                    className="compact-button"
+                    onClick={() => onImportDeck(deck.id)}
+                    disabled={isImporting}
+                  >
+                    {isImporting
+                      ? "가져오는 중..."
+                      : isImported
+                        ? "가져오기 완료"
+                        : "내 덱으로 가져오기"}
+                  </button>
                 </div>
-                <div>
-                  <dt>용어</dt>
-                  <dd>{deck.custom_term_count}</dd>
-                </div>
-                <div>
-                  <dt>가져오기</dt>
-                  <dd>{deck.import_count}</dd>
-                </div>
-                <div>
-                  <dt>등록일</dt>
-                  <dd>{formatDateTime(deck.created_at)}</dd>
-                </div>
-              </dl>
-              <div className="row-actions">
-                <button
-                  type="button"
-                  className="secondary-button compact-button"
-                  onClick={() => onSelectDeck(deck.id)}
-                  disabled={isLoadingDetail && selectedDeckId === deck.id}
-                >
-                  {isLoadingDetail && selectedDeckId === deck.id
-                    ? "불러오는 중..."
-                    : "상세 보기"}
-                </button>
-                <button
-                  type="button"
-                  className="compact-button"
-                  onClick={() => onImportDeck(deck.id)}
-                  disabled={importingDeckId === deck.id}
-                >
-                  {importingDeckId === deck.id
-                    ? "가져오는 중..."
-                    : "내 덱으로 가져오기"}
-                </button>
-              </div>
-            </article>
-          ))}
+              </article>
+            );
+          })}
         </div>
       ) : (
         <p className="empty">
@@ -128,15 +158,26 @@ export function SharedDeckSection({
                 {selectedDeck.custom_term_count}개
               </span>
             </div>
-            <button
-              type="button"
-              onClick={() => onImportDeck(selectedDeck.id)}
-              disabled={importingDeckId === selectedDeck.id}
-            >
-              {importingDeckId === selectedDeck.id
-                ? "가져오는 중..."
-                : "내 덱으로 가져오기"}
-            </button>
+            <div className="heading-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={onCloseDetail}
+              >
+                닫기
+              </button>
+              <button
+                type="button"
+                onClick={() => onImportDeck(selectedDeck.id)}
+                disabled={importingDeckId === selectedDeck.id}
+              >
+                {importingDeckId === selectedDeck.id
+                  ? "가져오는 중..."
+                  : importedDeckId === selectedDeck.id
+                    ? "가져오기 완료"
+                    : "내 덱으로 가져오기"}
+              </button>
+            </div>
           </div>
           <p className="muted-text">
             {selectedDeck.description || "설명이 없습니다."}
@@ -176,6 +217,16 @@ export function SharedDeckSection({
                 <p className="empty">공유된 사용자 정의 용어가 없습니다.</p>
               )}
             </div>
+          </div>
+
+          <div className="form-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onCloseDetail}
+            >
+              닫기
+            </button>
           </div>
         </section>
       ) : null}

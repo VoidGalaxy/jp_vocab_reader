@@ -352,6 +352,9 @@ export default function HomePage() {
   const [importingSharedDeckId, setImportingSharedDeckId] = useState<number | null>(
     null,
   );
+  const [importedSharedDeckId, setImportedSharedDeckId] = useState<number | null>(
+    null,
+  );
   const [publishTitle, setPublishTitle] = useState("");
   const [publishDescription, setPublishDescription] = useState("");
   const [isPublishingDeck, setIsPublishingDeck] = useState(false);
@@ -792,6 +795,10 @@ export default function HomePage() {
   }
 
   async function loadSharedDeckDetail(sharedDeckId: number) {
+    if (selectedSharedDeckId === sharedDeckId && selectedSharedDeck) {
+      closeSharedDeckDetail();
+      return;
+    }
     setSelectedSharedDeckId(sharedDeckId);
     setIsLoadingSharedDeckDetail(true);
     setSharedDeckMessage("");
@@ -808,6 +815,19 @@ export default function HomePage() {
     } finally {
       setIsLoadingSharedDeckDetail(false);
     }
+  }
+
+  function closeSharedDeckDetail() {
+    setSelectedSharedDeckId(null);
+    setSelectedSharedDeck(null);
+    setIsLoadingSharedDeckDetail(false);
+  }
+
+  function goToVocabTab() {
+    setActiveTab("vocab");
+    setHasLoadedVocab(true);
+    void loadVocabItems(selectedVocabDeckId);
+    void loadCustomTerms(selectedVocabDeckId);
   }
 
   async function publishCurrentDeck() {
@@ -845,6 +865,7 @@ export default function HomePage() {
 
   async function importSharedDeckToMyDeck(sharedDeckId: number) {
     setImportingSharedDeckId(sharedDeckId);
+    setImportedSharedDeckId(null);
     setSharedDeckMessage("");
 
     try {
@@ -855,13 +876,14 @@ export default function HomePage() {
       setSharedDeckMessage(
         `${result.deck_name} 덱을 가져왔습니다. 단어 ${result.imported_vocab_count}개, 용어 ${result.imported_custom_term_count}개를 복사했습니다.`,
       );
+      setSharedDeckMessage(
+        `내 단어장으로 가져왔습니다. 단어장 탭에서 확인할 수 있습니다. 단어 ${result.imported_vocab_count}개, 용어 ${result.imported_custom_term_count}개를 복사했습니다.`,
+      );
+      setImportedSharedDeckId(sharedDeckId);
       await loadDecks();
       await loadVocabItems(selectedVocabDeckId);
       await loadCustomTerms(selectedVocabDeckId);
       await loadSharedDecks();
-      if (selectedSharedDeckId === sharedDeckId) {
-        await loadSharedDeckDetail(sharedDeckId);
-      }
     } catch (error) {
       setSharedDeckMessage(
         getErrorMessage(error, "공유 덱을 가져오지 못했습니다."),
@@ -1597,10 +1619,13 @@ export default function HomePage() {
             isLoading={isLoadingSharedDecks}
             isLoadingDetail={isLoadingSharedDeckDetail}
             importingDeckId={importingSharedDeckId}
+            importedDeckId={importedSharedDeckId}
             message={sharedDeckMessage}
             onRefresh={() => void loadSharedDecks()}
             onSelectDeck={(deckId) => void loadSharedDeckDetail(deckId)}
+            onCloseDetail={closeSharedDeckDetail}
             onImportDeck={(deckId) => void importSharedDeckToMyDeck(deckId)}
+            onGoToVocab={goToVocabTab}
           />
         ) : null}
 
