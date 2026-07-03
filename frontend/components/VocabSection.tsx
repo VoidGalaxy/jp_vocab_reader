@@ -19,6 +19,7 @@ type VocabSectionProps = {
   isExportingCsv: boolean;
   isExportingDeckPackage: boolean;
   isImportingDeckPackage: boolean;
+  isPublishingDeck: boolean;
   explainingItemId: number | null;
   message: string;
   decks: Deck[];
@@ -45,6 +46,8 @@ type VocabSectionProps = {
   editingCustomTermId: number | null;
   isSavingCustomTerm: boolean;
   deckPackageFileName: string;
+  publishTitle: string;
+  publishDescription: string;
   onSelectedDeckChange: (deckId: string) => void;
   onSearchTextChange: (text: string) => void;
   onStatusFilterChange: (status: "all" | TokenStatus) => void;
@@ -80,6 +83,9 @@ type VocabSectionProps = {
   onExportDeckPackage: () => void;
   onDeckPackageFileChange: (file: File | null) => void;
   onImportDeckPackage: () => void;
+  onPublishTitleChange: (title: string) => void;
+  onPublishDescriptionChange: (description: string) => void;
+  onPublishDeck: () => void;
   onExplain: (itemId: number) => void;
   onStatusChange: (itemId: number, status: TokenStatus) => void;
   onDelete: (itemId: number) => void;
@@ -91,6 +97,7 @@ export function VocabSection({
   isExportingCsv,
   isExportingDeckPackage,
   isImportingDeckPackage,
+  isPublishingDeck,
   explainingItemId,
   message,
   decks,
@@ -117,6 +124,8 @@ export function VocabSection({
   editingCustomTermId,
   isSavingCustomTerm,
   deckPackageFileName,
+  publishTitle,
+  publishDescription,
   onSelectedDeckChange,
   onSearchTextChange,
   onStatusFilterChange,
@@ -146,6 +155,9 @@ export function VocabSection({
   onExportDeckPackage,
   onDeckPackageFileChange,
   onImportDeckPackage,
+  onPublishTitleChange,
+  onPublishDescriptionChange,
+  onPublishDeck,
   onExplain,
   onStatusChange,
   onDelete,
@@ -282,6 +294,34 @@ export function VocabSection({
             </div>
 
       <div className="deck-share-panel">
+        <div className="publish-deck-form">
+          <label className="inline-field">
+            공유 제목
+            <input
+              value={publishTitle}
+              onChange={(event) => onPublishTitleChange(event.target.value)}
+              placeholder="비워두면 현재 덱 이름 사용"
+            />
+          </label>
+          <label className="inline-field wide-field">
+            공유 설명
+            <textarea
+              className="compact-textarea"
+              value={publishDescription}
+              onChange={(event) =>
+                onPublishDescriptionChange(event.target.value)
+              }
+              placeholder="덱에 포함된 작품 범위나 학습 목적"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={onPublishDeck}
+            disabled={selectedDeckId === "all" || isPublishingDeck}
+          >
+            {isPublishingDeck ? "등록 중..." : "현재 덱을 공유 덱으로 등록"}
+          </button>
+        </div>
         <div className="deck-share-actions">
           <button
             type="button"

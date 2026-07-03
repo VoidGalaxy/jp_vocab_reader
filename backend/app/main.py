@@ -37,6 +37,12 @@ from app.repositories.deck_repository import (
     list_decks,
     update_deck,
 )
+from app.repositories.shared_deck_repository import (
+    get_shared_deck as get_shared_deck_data,
+    import_shared_deck,
+    list_shared_decks,
+    publish_deck,
+)
 from app.repositories.stats_repository import build_stats
 from app.repositories.user_repository import (
     create_user,
@@ -70,9 +76,14 @@ from app.schemas import (
     DeckDeleteResponse,
     DeckPackage,
     DeckPackageImportResponse,
+    DeckPublishRequest,
+    DeckPublishResponse,
     DeckResponse,
     DecksResponse,
     DeckUpdate,
+    SharedDeckDetailResponse,
+    SharedDeckImportResponse,
+    SharedDeckSummaryResponse,
     StatsResponse,
     StudyItemsResponse,
     StudyReviewRequest,
@@ -374,6 +385,21 @@ def remove_deck(deck_id: int, http_request: Request) -> DeckDeleteResponse:
     )
 
 
+@app.post("/decks/{deck_id}/publish", response_model=DeckPublishResponse)
+def post_deck_publish(
+    deck_id: int, request: DeckPublishRequest, http_request: Request
+) -> DeckPublishResponse:
+    published = publish_deck(
+        current_user_id(http_request),
+        deck_id=deck_id,
+        title=request.title,
+        description=request.description,
+    )
+    if not published:
+        raise HTTPException(status_code=404, detail="deck not found")
+    return DeckPublishResponse(**published)
+
+
 @app.get("/decks/{deck_id}/export-package", response_model=DeckPackage)
 def export_deck_package(deck_id: int, http_request: Request) -> DeckPackage:
     package = export_deck_package_data(current_user_id(http_request), deck_id=deck_id)
@@ -393,6 +419,31 @@ def post_deck_package_import(
     return DeckPackageImportResponse(
         **import_deck_package(current_user_id(http_request), package)
     )
+
+
+@app.get("/shared-decks", response_model=list[SharedDeckSummaryResponse])
+def get_shared_decks() -> list[SharedDeckSummaryResponse]:
+    return [SharedDeckSummaryResponse(**deck) for deck in list_shared_decks()]
+
+
+@app.get("/shared-decks/{shared_deck_id}", response_model=SharedDeckDetailResponse)
+def get_shared_deck(shared_deck_id: int) -> SharedDeckDetailResponse:
+    shared_deck = get_shared_deck_data(shared_deck_id)
+    if not shared_deck:
+        raise HTTPException(status_code=404, detail="shared deck not found")
+    return SharedDeckDetailResponse(**shared_deck)
+
+
+@app.post(
+    "/shared-decks/{shared_deck_id}/import", response_model=SharedDeckImportResponse
+)
+def post_shared_deck_import(
+    shared_deck_id: int, http_request: Request
+) -> SharedDeckImportResponse:
+    imported = import_shared_deck(current_user_id(http_request), shared_deck_id)
+    if not imported:
+        raise HTTPException(status_code=404, detail="shared deck not found")
+    return SharedDeckImportResponse(**imported)
 
 
 @app.get("/vocab-items", response_model=VocabItemsResponse)

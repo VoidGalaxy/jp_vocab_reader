@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { AnalyzeSection } from "../components/AnalyzeSection";
 import { InfoSection } from "../components/InfoSection";
+import { SharedDeckSection } from "../components/SharedDeckSection";
 import { StudySection } from "../components/StudySection";
 import { VocabSection } from "../components/VocabSection";
 import type {
@@ -18,6 +19,8 @@ import type {
   VocabItem,
   VocabSort,
   StudyStats,
+  SharedDeckDetail,
+  SharedDeckSummary,
 } from "../components/types";
 
 type AnalyzeResponse = {
@@ -58,6 +61,22 @@ type DeckPackageImportResponse = {
   message: string;
 };
 
+type DeckPublishResponse = {
+  shared_deck_id: number;
+  title: string;
+  vocab_count: number;
+  custom_term_count: number;
+  message: string;
+};
+
+type SharedDeckImportResponse = {
+  deck_id: number;
+  deck_name: string;
+  imported_vocab_count: number;
+  imported_custom_term_count: number;
+  message: string;
+};
+
 type CurrentUser = {
   id: number;
   email: string;
@@ -71,7 +90,7 @@ type AuthResponse = {
   user: CurrentUser;
 };
 
-type TabKey = "analyze" | "vocab" | "study" | "info";
+type TabKey = "analyze" | "vocab" | "study" | "shared" | "info";
 type VocabStatusFilter = "all" | TokenStatus;
 
 type ClassificationDraft = {
@@ -93,6 +112,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "analyze", label: "분석" },
   { key: "vocab", label: "단어장" },
   { key: "study", label: "학습" },
+  { key: "shared", label: "공유" },
   { key: "info", label: "정보" },
 ];
 
@@ -319,6 +339,22 @@ export default function HomePage() {
   const [authDisplayName, setAuthDisplayName] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [isSubmittingAuth, setIsSubmittingAuth] = useState(false);
+  const [sharedDecks, setSharedDecks] = useState<SharedDeckSummary[]>([]);
+  const [selectedSharedDeck, setSelectedSharedDeck] =
+    useState<SharedDeckDetail | null>(null);
+  const [selectedSharedDeckId, setSelectedSharedDeckId] = useState<number | null>(
+    null,
+  );
+  const [isLoadingSharedDecks, setIsLoadingSharedDecks] = useState(false);
+  const [isLoadingSharedDeckDetail, setIsLoadingSharedDeckDetail] =
+    useState(false);
+  const [sharedDeckMessage, setSharedDeckMessage] = useState("");
+  const [importingSharedDeckId, setImportingSharedDeckId] = useState<number | null>(
+    null,
+  );
+  const [publishTitle, setPublishTitle] = useState("");
+  const [publishDescription, setPublishDescription] = useState("");
+  const [isPublishingDeck, setIsPublishingDeck] = useState(false);
 
   useEffect(() => {
     void loadCurrentUser();
@@ -400,6 +436,9 @@ export default function HomePage() {
     if (tab === "study") {
       void loadStudyStats(selectedStudyDeckId);
     }
+    if (tab === "shared") {
+      void loadSharedDecks();
+    }
     if (tab === "info") {
       void loadInfoStats();
     }
@@ -413,6 +452,7 @@ export default function HomePage() {
     await loadCustomTerms("all");
     await loadStudyStats("all");
     await loadInfoStats();
+    await loadSharedDecks();
     setStudyItems([]);
     setCurrentStudyIndex(0);
     setHasStartedStudy(false);
@@ -725,6 +765,109 @@ export default function HomePage() {
       );
     } finally {
       setIsLoadingInfoStats(false);
+    }
+  }
+
+  async function loadSharedDecks() {
+    setIsLoadingSharedDecks(true);
+    setSharedDeckMessage("");
+
+    try {
+      const data = await requestJson<SharedDeckSummary[]>("/shared-decks");
+      setSharedDecks(data);
+      if (
+        selectedSharedDeckId !== null &&
+        !data.some((deck) => deck.id === selectedSharedDeckId)
+      ) {
+        setSelectedSharedDeckId(null);
+        setSelectedSharedDeck(null);
+      }
+    } catch (error) {
+      setSharedDeckMessage(
+        getErrorMessage(error, "공유 덱 목록을 불러오지 못했습니다."),
+      );
+    } finally {
+      setIsLoadingSharedDecks(false);
+    }
+  }
+
+  async function loadSharedDeckDetail(sharedDeckId: number) {
+    setSelectedSharedDeckId(sharedDeckId);
+    setIsLoadingSharedDeckDetail(true);
+    setSharedDeckMessage("");
+
+    try {
+      const data = await requestJson<SharedDeckDetail>(
+        `/shared-decks/${sharedDeckId}`,
+      );
+      setSelectedSharedDeck(data);
+    } catch (error) {
+      setSharedDeckMessage(
+        getErrorMessage(error, "공유 덱 상세 정보를 불러오지 못했습니다."),
+      );
+    } finally {
+      setIsLoadingSharedDeckDetail(false);
+    }
+  }
+
+  async function publishCurrentDeck() {
+    if (selectedVocabDeckId === "all") {
+      setDeckMessage("공유할 덱을 먼저 선택해 주세요.");
+      return;
+    }
+
+    setIsPublishingDeck(true);
+    setDeckMessage("");
+
+    try {
+      const result = await requestJson<DeckPublishResponse>(
+        `/decks/${selectedVocabDeckId}/publish`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            title: publishTitle,
+            description: publishDescription,
+          }),
+        },
+      );
+      setPublishTitle("");
+      setPublishDescription("");
+      setDeckMessage(
+        `${result.title} 덱을 공유 덱으로 등록했습니다. 단어 ${result.vocab_count}개, 용어 ${result.custom_term_count}개를 복사했습니다.`,
+      );
+      await loadSharedDecks();
+    } catch (error) {
+      setDeckMessage(getErrorMessage(error, "공유 덱 등록에 실패했습니다."));
+    } finally {
+      setIsPublishingDeck(false);
+    }
+  }
+
+  async function importSharedDeckToMyDeck(sharedDeckId: number) {
+    setImportingSharedDeckId(sharedDeckId);
+    setSharedDeckMessage("");
+
+    try {
+      const result = await requestJson<SharedDeckImportResponse>(
+        `/shared-decks/${sharedDeckId}/import`,
+        { method: "POST" },
+      );
+      setSharedDeckMessage(
+        `${result.deck_name} 덱을 가져왔습니다. 단어 ${result.imported_vocab_count}개, 용어 ${result.imported_custom_term_count}개를 복사했습니다.`,
+      );
+      await loadDecks();
+      await loadVocabItems(selectedVocabDeckId);
+      await loadCustomTerms(selectedVocabDeckId);
+      await loadSharedDecks();
+      if (selectedSharedDeckId === sharedDeckId) {
+        await loadSharedDeckDetail(sharedDeckId);
+      }
+    } catch (error) {
+      setSharedDeckMessage(
+        getErrorMessage(error, "공유 덱을 가져오지 못했습니다."),
+      );
+    } finally {
+      setImportingSharedDeckId(null);
     }
   }
 
@@ -1377,6 +1520,7 @@ export default function HomePage() {
             isExportingCsv={isExportingCsv}
             isExportingDeckPackage={isExportingDeckPackage}
             isImportingDeckPackage={isImportingDeckPackage}
+            isPublishingDeck={isPublishingDeck}
             explainingItemId={explainingItemId}
             message={vocabMessage}
             decks={decks}
@@ -1403,6 +1547,8 @@ export default function HomePage() {
             editingCustomTermId={editingCustomTermId}
             isSavingCustomTerm={isSavingCustomTerm}
             deckPackageFileName={deckPackageFile?.name ?? ""}
+            publishTitle={publishTitle}
+            publishDescription={publishDescription}
             onSelectedDeckChange={(deckId) => void changeVocabDeck(deckId)}
             onSearchTextChange={setVocabSearch}
             onStatusFilterChange={setVocabStatusFilter}
@@ -1432,11 +1578,29 @@ export default function HomePage() {
             onExportDeckPackage={() => void exportDeckPackage()}
             onDeckPackageFileChange={setDeckPackageFile}
             onImportDeckPackage={() => void importDeckPackage()}
+            onPublishTitleChange={setPublishTitle}
+            onPublishDescriptionChange={setPublishDescription}
+            onPublishDeck={() => void publishCurrentDeck()}
             onExplain={(itemId) => void explainVocabItem(itemId)}
             onStatusChange={(itemId, status) =>
               void updateVocabStatus(itemId, status)
             }
             onDelete={(itemId) => void deleteVocabItem(itemId)}
+          />
+        ) : null}
+
+        {activeTab === "shared" ? (
+          <SharedDeckSection
+            decks={sharedDecks}
+            selectedDeck={selectedSharedDeck}
+            selectedDeckId={selectedSharedDeckId}
+            isLoading={isLoadingSharedDecks}
+            isLoadingDetail={isLoadingSharedDeckDetail}
+            importingDeckId={importingSharedDeckId}
+            message={sharedDeckMessage}
+            onRefresh={() => void loadSharedDecks()}
+            onSelectDeck={(deckId) => void loadSharedDeckDetail(deckId)}
+            onImportDeck={(deckId) => void importSharedDeckToMyDeck(deckId)}
           />
         ) : null}
 

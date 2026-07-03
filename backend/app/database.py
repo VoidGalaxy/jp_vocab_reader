@@ -105,6 +105,7 @@ def init_db() -> None:
             )
             """
         )
+        ensure_shared_deck_tables(connection)
         ensure_column(connection, "deck_id", "INTEGER")
         ensure_column(connection, "correct_count", "INTEGER NOT NULL DEFAULT 0")
         ensure_column(connection, "wrong_count", "INTEGER NOT NULL DEFAULT 0")
@@ -143,6 +144,70 @@ def ensure_users_table(connection: sqlite3.Connection) -> None:
             auth_provider TEXT NOT NULL DEFAULT 'local',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
+def ensure_shared_deck_tables(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shared_decks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            owner_user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            source_deck_id INTEGER,
+            visibility TEXT NOT NULL DEFAULT 'public',
+            vocab_count INTEGER NOT NULL DEFAULT 0,
+            custom_term_count INTEGER NOT NULL DEFAULT 0,
+            import_count INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shared_deck_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shared_deck_id INTEGER NOT NULL,
+            surface TEXT,
+            base_form TEXT,
+            reading TEXT,
+            part_of_speech TEXT,
+            normalized_form TEXT,
+            meaning_ko TEXT,
+            dictionary_gloss TEXT,
+            context_explanation_ko TEXT,
+            example_sentence TEXT,
+            quality_tag TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shared_deck_terms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shared_deck_id INTEGER NOT NULL,
+            term TEXT NOT NULL,
+            reading TEXT,
+            part_of_speech TEXT,
+            meaning_ko TEXT,
+            description TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shared_deck_imports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shared_deck_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            imported_deck_id INTEGER NOT NULL,
+            imported_at TEXT NOT NULL
         )
         """
     )

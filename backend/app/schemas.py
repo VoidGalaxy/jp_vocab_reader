@@ -181,6 +181,69 @@ class DeckDeleteResponse(BaseModel):
     message: str
 
 
+class DeckPublishRequest(BaseModel):
+    title: str = ""
+    description: str = ""
+
+
+class DeckPublishResponse(BaseModel):
+    shared_deck_id: int
+    title: str
+    vocab_count: int
+    custom_term_count: int
+    message: str
+
+
+class SharedDeckSummaryResponse(BaseModel):
+    id: int
+    title: str
+    description: str | None = None
+    owner_display_name: str | None = None
+    vocab_count: int
+    custom_term_count: int
+    import_count: int
+    created_at: str
+
+
+class SharedDeckItemResponse(BaseModel):
+    id: int
+    surface: str | None = None
+    base_form: str | None = None
+    reading: str | None = None
+    part_of_speech: str | None = None
+    normalized_form: str | None = None
+    meaning_ko: str | None = None
+    dictionary_gloss: str | None = None
+    context_explanation_ko: str | None = None
+    example_sentence: str | None = None
+    quality_tag: str | None = None
+    created_at: str
+
+
+class SharedDeckTermResponse(BaseModel):
+    id: int
+    term: str
+    reading: str | None = None
+    part_of_speech: str | None = None
+    meaning_ko: str | None = None
+    description: str | None = None
+    created_at: str
+
+
+class SharedDeckDetailResponse(SharedDeckSummaryResponse):
+    updated_at: str
+    items: list[SharedDeckItemResponse] = []
+    custom_terms: list[SharedDeckTermResponse] = []
+
+
+class SharedDeckImportResponse(BaseModel):
+    deck_id: int
+    deck_name: str
+    imported_vocab_count: int
+    imported_custom_term_count: int
+    message: str
+
+
 class DeckPackageApp(BaseModel):
     name: str = "JP Vocab Reader"
     format: str = "deck_package"

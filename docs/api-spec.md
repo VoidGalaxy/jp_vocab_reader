@@ -892,3 +892,77 @@ surface,base_form,reading,part_of_speech,quality_tag,meaning_ko,dictionary_gloss
 
 - `400 Bad Request`: 기본 단어장을 삭제하려는 경우
 - `404 Not Found`: 덱을 찾을 수 없는 경우
+
+## Shared Deck Market Foundation
+
+공개 공유 덱 API는 기존 인증 방식을 그대로 사용한다. `Authorization: Bearer <token>`이 있으면 토큰 사용자 기준으로 동작하고, 토큰이 없으면 개발용 기본 사용자 `dev@example.local` 기준으로 동작한다.
+
+공유 덱에는 개인 학습 기록을 포함하지 않는다. `status`, `correct_count`, `wrong_count`, `review_level`, `next_review_at`, `last_reviewed_at`, 개인 `user_id`, 개인 `deck_id`는 공유 테이블에 복사하지 않는다. 원문 전체도 공유 덱에 저장하지 않는다.
+
+### POST /decks/{deck_id}/publish
+
+현재 사용자의 개인 덱을 공개 공유 덱으로 등록한다. 같은 개인 덱을 여러 번 등록하면 현재 단계에서는 새 공유 덱을 매번 만든다.
+
+요청:
+
+```json
+{
+  "title": "리제로 1장 단어장",
+  "description": "리제로 1장 주요 단어와 용어"
+}
+```
+
+응답:
+
+```json
+{
+  "shared_deck_id": 1,
+  "title": "리제로 1장 단어장",
+  "vocab_count": 120,
+  "custom_term_count": 10,
+  "message": "공유 덱으로 등록했습니다."
+}
+```
+
+### GET /shared-decks
+
+`visibility = public`인 공유 덱 목록을 반환한다.
+
+응답:
+
+```json
+[
+  {
+    "id": 1,
+    "title": "리제로 1장 단어장",
+    "description": "리제로 1장 주요 단어와 용어",
+    "owner_display_name": "테스트 사용자",
+    "vocab_count": 120,
+    "custom_term_count": 10,
+    "import_count": 3,
+    "created_at": "2026-07-03T00:00:00+00:00"
+  }
+]
+```
+
+### GET /shared-decks/{shared_deck_id}
+
+공유 덱 메타데이터, 공유 단어 전체, 공유 사용자 정의 용어 전체를 반환한다. 운영 규모에서는 pagination이 필요하다.
+
+### POST /shared-decks/{shared_deck_id}/import
+
+공유 덱을 현재 사용자의 개인 덱으로 복사한다. 가져온 단어의 학습 상태는 초기화된다.
+
+응답:
+
+```json
+{
+  "deck_id": 10,
+  "deck_name": "리제로 1장 단어장 (가져옴)",
+  "imported_vocab_count": 120,
+  "imported_custom_term_count": 10,
+  "message": "공유 덱을 내 단어장으로 가져왔습니다."
+}
+```
+
+TODO: 공유 덱 검색, 좋아요/평점, 신고/검수, 페이지네이션, 버전 업데이트 정책, 저작권/원문 저장 제한 정책.

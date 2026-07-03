@@ -125,3 +125,45 @@ export type CustomTermFormData = {
   description: string;
   deck_id: string;
 };
+
+export type SharedDeckSummary = {
+  id: number;
+  title: string;
+  description: string | null;
+  owner_display_name: string | null;
+  vocab_count: number;
+  custom_term_count: number;
+  import_count: number;
+  created_at: string;
+};
+
+export type SharedDeckItem = {
+  id: number;
+  surface: string | null;
+  base_form: string | null;
+  reading: string | null;
+  part_of_speech: string | null;
+  normalized_form: string | null;
+  meaning_ko: string | null;
+  dictionary_gloss: string | null;
+  context_explanation_ko: string | null;
+  example_sentence: string | null;
+  quality_tag: string | null;
+  created_at: string;
+};
+
+export type SharedDeckTerm = {
+  id: number;
+  term: string;
+  reading: string | null;
+  part_of_speech: string | null;
+  meaning_ko: string | null;
+  description: string | null;
+  created_at: string;
+};
+
+export type SharedDeckDetail = SharedDeckSummary & {
+  updated_at: string;
+  items: SharedDeckItem[];
+  custom_terms: SharedDeckTerm[];
+};
