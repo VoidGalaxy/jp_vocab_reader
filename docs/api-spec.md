@@ -6,6 +6,7 @@
 - 요청과 응답의 기본 형식은 JSON이다.
 - CSV 내보내기 API만 `text/csv` 응답을 사용한다.
 - 현재 단계에서는 실제 로그인/JWT 인증을 적용하지 않는다. `/me`는 개발용 기본 사용자를 반환하는 auth foundation API다.
+- `/decks`, `/vocab-items`, `/custom-terms`, `/study-items`, `/stats`, 덱 패키지 API는 현재 개발용 사용자 `dev@example.local`의 데이터만 대상으로 동작한다.
 - 사용자가 붙여넣은 원문 전체는 DB에 저장하지 않는다.
 - `/analyze` 요청의 원문은 형태소 분석과 응답 생성을 위해서만 사용하고, 처리 후 폐기한다.
 

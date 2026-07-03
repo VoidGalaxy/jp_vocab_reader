@@ -20,11 +20,7 @@ def normalize_custom_term_data(
     for key, value in raw_values.items():
         values[key] = value.strip() if isinstance(value, str) else value
 
-    if existing:
-        merged = {**existing, **values}
-    else:
-        merged = values
-
+    merged = {**existing, **values} if existing else values
     merged["term"] = merged.get("term", "").strip()
     merged["reading"] = merged.get("reading", "").strip()
     merged["part_of_speech"] = merged.get("part_of_speech", "").strip() or "명사"
@@ -36,11 +32,12 @@ def normalize_custom_term_data(
 
 def get_existing_custom_term(
     connection: sqlite3.Connection,
+    user_id: int,
     term: str,
     deck_id: int | None,
     exclude_id: int | None = None,
 ) -> sqlite3.Row | None:
-    params: list[Any] = [term]
+    params: list[Any] = [user_id, term]
     deck_clause = "custom_terms.deck_id IS NULL"
     if deck_id is not None:
         deck_clause = "custom_terms.deck_id = ?"
@@ -55,7 +52,8 @@ def get_existing_custom_term(
         SELECT {CUSTOM_TERM_FIELDS}
         FROM custom_terms
         LEFT JOIN decks ON decks.id = custom_terms.deck_id
-        WHERE custom_terms.term = ?
+        WHERE custom_terms.user_id = ?
+          AND custom_terms.term = ?
           AND {deck_clause}
           {exclude_clause}
         """,
@@ -63,12 +61,11 @@ def get_existing_custom_term(
     ).fetchone()
 
 
-def list_custom_terms(deck_id: int | None = None) -> list[dict[str, Any]]:
-    # TODO: Add user_id filtering when authentication is introduced.
-    params: list[Any] = []
-    where_clause = ""
+def list_custom_terms(user_id: int, deck_id: int | None = None) -> list[dict[str, Any]]:
+    params: list[Any] = [user_id]
+    where_clause = "WHERE custom_terms.user_id = ?"
     if deck_id is not None:
-        where_clause = "WHERE custom_terms.deck_id = ? OR custom_terms.deck_id IS NULL"
+        where_clause += " AND (custom_terms.deck_id = ? OR custom_terms.deck_id IS NULL)"
         params.append(deck_id)
 
     with get_connection() as connection:
@@ -85,8 +82,7 @@ def list_custom_terms(deck_id: int | None = None) -> list[dict[str, Any]]:
     return [row_to_dict(row) for row in rows]
 
 
-def get_custom_term(term_id: int) -> dict[str, Any] | None:
-    # TODO: Add user_id filtering when authentication is introduced.
+def get_custom_term(user_id: int, term_id: int) -> dict[str, Any] | None:
     with get_connection() as connection:
         row = connection.execute(
             f"""
@@ -94,26 +90,39 @@ def get_custom_term(term_id: int) -> dict[str, Any] | None:
             FROM custom_terms
             LEFT JOIN decks ON decks.id = custom_terms.deck_id
             WHERE custom_terms.id = ?
+              AND custom_terms.user_id = ?
             """,
-            (term_id,),
+            (term_id, user_id),
         ).fetchone()
     return row_to_dict(row) if row else None
 
 
-def create_custom_term(term: CustomTermCreate) -> tuple[dict[str, Any], bool]:
-    # TODO: Add user_id ownership when authentication is introduced.
+def resolve_term_deck_id(
+    connection: sqlite3.Connection, user_id: int, deck_id: int | None
+) -> int | None:
+    if deck_id is None:
+        return None
+    deck = connection.execute(
+        """
+        SELECT id
+        FROM decks
+        WHERE id = ?
+          AND user_id = ?
+        """,
+        (deck_id, user_id),
+    ).fetchone()
+    return deck_id if deck else None
+
+
+def create_custom_term(
+    user_id: int, term: CustomTermCreate
+) -> tuple[dict[str, Any], bool]:
     timestamp = now_iso()
     normalized = normalize_custom_term_data(term)
     with get_connection() as connection:
-        deck_id = normalized["deck_id"]
-        if deck_id is not None:
-            deck = connection.execute(
-                "SELECT id FROM decks WHERE id = ?", (deck_id,)
-            ).fetchone()
-            if not deck:
-                deck_id = None
+        deck_id = resolve_term_deck_id(connection, user_id, normalized["deck_id"])
         existing = get_existing_custom_term(
-            connection, normalized["term"], deck_id
+            connection, user_id, normalized["term"], deck_id
         )
         if existing:
             return row_to_dict(existing), False
@@ -121,12 +130,13 @@ def create_custom_term(term: CustomTermCreate) -> tuple[dict[str, Any], bool]:
         cursor = connection.execute(
             """
             INSERT INTO custom_terms (
-                term, reading, part_of_speech, meaning_ko, description,
+                user_id, term, reading, part_of_speech, meaning_ko, description,
                 deck_id, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                user_id,
                 normalized["term"],
                 normalized["reading"],
                 normalized["part_of_speech"],
@@ -143,32 +153,26 @@ def create_custom_term(term: CustomTermCreate) -> tuple[dict[str, Any], bool]:
             FROM custom_terms
             LEFT JOIN decks ON decks.id = custom_terms.deck_id
             WHERE custom_terms.id = ?
+              AND custom_terms.user_id = ?
             """,
-            (cursor.lastrowid,),
+            (cursor.lastrowid, user_id),
         ).fetchone()
     return row_to_dict(row), True
 
 
 def update_custom_term(
-    term_id: int, term: CustomTermUpdate
+    user_id: int, term_id: int, term: CustomTermUpdate
 ) -> dict[str, Any] | None:
-    # TODO: Add user_id ownership checks when authentication is introduced.
-    existing = get_custom_term(term_id)
+    existing = get_custom_term(user_id, term_id)
     if not existing:
         return None
 
     timestamp = now_iso()
     normalized = normalize_custom_term_data(term, existing)
     with get_connection() as connection:
-        deck_id = normalized["deck_id"]
-        if deck_id is not None:
-            deck = connection.execute(
-                "SELECT id FROM decks WHERE id = ?", (deck_id,)
-            ).fetchone()
-            if not deck:
-                deck_id = None
+        deck_id = resolve_term_deck_id(connection, user_id, normalized["deck_id"])
         duplicate = get_existing_custom_term(
-            connection, normalized["term"], deck_id, exclude_id=term_id
+            connection, user_id, normalized["term"], deck_id, exclude_id=term_id
         )
         if duplicate:
             return row_to_dict(duplicate)
@@ -179,6 +183,7 @@ def update_custom_term(
             SET term = ?, reading = ?, part_of_speech = ?, meaning_ko = ?,
                 description = ?, deck_id = ?, updated_at = ?
             WHERE id = ?
+              AND user_id = ?
             """,
             (
                 normalized["term"],
@@ -189,6 +194,7 @@ def update_custom_term(
                 deck_id,
                 timestamp,
                 term_id,
+                user_id,
             ),
         )
         row = connection.execute(
@@ -197,14 +203,21 @@ def update_custom_term(
             FROM custom_terms
             LEFT JOIN decks ON decks.id = custom_terms.deck_id
             WHERE custom_terms.id = ?
+              AND custom_terms.user_id = ?
             """,
-            (term_id,),
+            (term_id, user_id),
         ).fetchone()
     return row_to_dict(row) if row else None
 
 
-def delete_custom_term(term_id: int) -> bool:
-    # TODO: Add user_id ownership checks when authentication is introduced.
+def delete_custom_term(user_id: int, term_id: int) -> bool:
     with get_connection() as connection:
-        cursor = connection.execute("DELETE FROM custom_terms WHERE id = ?", (term_id,))
+        cursor = connection.execute(
+            """
+            DELETE FROM custom_terms
+            WHERE id = ?
+              AND user_id = ?
+            """,
+            (term_id, user_id),
+        )
     return cursor.rowcount > 0

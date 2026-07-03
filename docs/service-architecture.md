@@ -1,25 +1,22 @@
 # 서비스형 구조 전환 설계
 
-이 문서는 현재 로컬 SQLite 기반 `jp-vocab-reader`를 여러 사용자가 함께 쓰는 웹서비스로 확장하기 위한 설계 초안이다. 현재는 실제 로그인/JWT 없이 개발용 기본 사용자 기반만 준비했고, PostgreSQL과 다중 사용자 구조로 전환하기 전에 필요한 방향을 정리한다.
+이 문서는 현재 로컬 SQLite 기반 `jp-vocab-reader`를 여러 사용자가 함께 쓰는 웹서비스로 확장하기 위한 설계 초안이다. 현재는 실제 로그인/JWT 없이 개발용 기본 사용자를 현재 사용자로 사용하며, 개인 데이터는 `user_id` 기준으로 분리된다.
 
 ## A. 현재 구조 요약
 
 - 현재 앱은 SQLite 기반 로컬 앱 구조다.
 - 주요 영속 데이터는 `decks`, `vocab_items`, `custom_terms` 중심으로 관리된다.
 - 분석 카드 분류 진행상태는 브라우저 `localStorage` draft로 임시 저장된다.
-- 현재 데이터 모델은 단일 사용자 기준이다.
-- `users` 테이블과 개발용 기본 사용자는 준비되어 있지만, 기존 개인 데이터 테이블에는 아직 `user_id`를 붙이지 않았다.
-- 덱, 단어장, 사용자 정의 용어, 학습 기록이 한 사용자만 쓰는 전제로 저장된다.
+- 현재 API는 개발용 기본 사용자 `dev@example.local`을 현재 사용자로 사용한다.
+- `decks`, `vocab_items`, `custom_terms`에는 `user_id` 컬럼이 있으며 기존 데이터는 개발용 기본 사용자 소유로 마이그레이션한다.
+- 덱, 단어장, 사용자 정의 용어, 학습 기록은 repository 계층에서 현재 사용자 `user_id` 조건으로 조회/수정/삭제한다.
 - 현재 덱 공유 JSON export/import는 로컬 파일을 통해 덱을 복사하는 방식이다.
 
 ## B. 서비스형 전환 목표
 
 - `users` 테이블을 추가해 계정 단위 소유권을 만든다.
 - auth foundation 단계에서 `users` 테이블과 개발용 기본 사용자 생성을 완료했다.
-- 사용자별 개인 덱을 분리한다.
-- 사용자별 `vocab_items`를 분리한다.
-- 사용자별 `custom_terms`를 분리한다.
-- 사용자별 학습 기록을 분리한다.
+- user-scoped-data 단계에서 사용자별 개인 덱, `vocab_items`, `custom_terms`, 학습 기록 조회/수정 범위 분리를 완료했다.
 - 공유 덱 패키지와 공개 덱 마켓 구조를 분리한다.
 - 추후 서비스 배포 전 PostgreSQL 전환을 권장한다.
 - Anki처럼 사용자가 자신의 덱을 공유하고, 다른 사용자가 공개 덱을 가져와 개인 덱으로 복사할 수 있게 한다.
@@ -279,7 +276,8 @@ AI 문맥 설명, 분석 요청, 공개 마켓 사용량 등을 추적하는 운
 - `GET /me`는 현재 개발용 기본 사용자를 반환한다.
 - `backend/app/auth.py`의 `get_current_user_dev`는 실제 인증으로 교체될 자리다.
 - 아직 실제 로그인, 회원가입, JWT, 세션, 비밀번호 검증은 구현하지 않았다.
-- 아직 `decks`, `vocab_items`, `custom_terms`에 `user_id`를 추가하지 않았다.
+- `decks`, `vocab_items`, `custom_terms`에 `user_id`를 추가했고, 기존 데이터는 개발용 기본 사용자 소유로 마이그레이션한다.
+- 모든 주요 repository 함수는 현재 사용자 `user_id`를 받아 해당 사용자 데이터만 조회/수정/삭제한다.
 - 회원가입/로그인 기능을 도입한다.
 - 인증 방식은 JWT 또는 서버 세션 방식을 후보로 둔다.
 - JWT 방식은 stateless API와 배포가 단순하지만 토큰 폐기, refresh token, XSS 대응 정책이 필요하다.
@@ -304,8 +302,8 @@ AI 문맥 설명, 분석 요청, 공개 마켓 사용량 등을 추적하는 운
 - raw sqlite 코드가 넓게 퍼져 있다면 모든 쿼리에 `user_id` 조건을 추가해야 하고, placeholder 문법, 트랜잭션 처리, row 변환 방식도 정리해야 한다.
 - DB 접근 계층 1차 정리는 완료했다. `backend/app/repositories` 아래에 덱, 단어장, 사용자 정의 용어, 통계, 덱 패키지 repository를 두고 endpoint는 요청 검증과 repository 호출 중심으로 유지한다.
 - 현재 repository는 기존 SQLite 연결과 raw SQL을 그대로 사용한다.
-- 이번 단계에서는 SQLAlchemy, PostgreSQL, `user_id`, 인증을 도입하지 않았다.
-- 다음 단계에서는 repository 함수에 남긴 TODO를 기준으로 `user_id` 필터링과 소유권 검사를 추가한다.
+- 이번 단계에서는 SQLAlchemy, PostgreSQL, 실제 인증을 도입하지 않았다.
+- `user_id` 필터링과 소유권 검사는 repository 계층에 적용했다.
 
 ## I. 단계별 구현 로드맵
 
@@ -314,8 +312,8 @@ AI 문맥 설명, 분석 요청, 공개 마켓 사용량 등을 추적하는 운
 3. DB 접근 계층 정리 완료
 4. PostgreSQL/SQLAlchemy 전환 또는 최소한 DB adapter 분리
 5. auth foundation 완료
-6. 로그인/회원가입
-7. `user_id` 기반 데이터 분리
+6. `user_id` 기반 데이터 분리 완료
+7. 로그인/회원가입
 8. `shared_decks` 공개 마켓
 9. 배포
 10. 사용량 제한/AI 과금 정책

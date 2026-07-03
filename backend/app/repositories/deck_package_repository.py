@@ -8,12 +8,14 @@ from app.schemas import DeckPackage
 
 
 def get_unique_imported_deck_name(
-    connection: sqlite3.Connection, original_name: str
+    connection: sqlite3.Connection, user_id: int, original_name: str
 ) -> str:
     base_name = original_name.strip() or "가져온 덱"
     existing_names = {
         row["name"]
-        for row in connection.execute("SELECT name FROM decks").fetchall()
+        for row in connection.execute(
+            "SELECT name FROM decks WHERE user_id = ?", (user_id,)
+        ).fetchall()
     }
     if base_name not in existing_names:
         return base_name
@@ -31,17 +33,17 @@ def get_unique_imported_deck_name(
 
 
 def export_deck_package(
-    deck_id: int, include_common_terms: bool = False
+    user_id: int, deck_id: int, include_common_terms: bool = False
 ) -> dict[str, Any] | None:
-    # TODO: Add user_id ownership checks when authentication is introduced.
     with get_connection() as connection:
         deck = connection.execute(
             """
             SELECT id, name, description
             FROM decks
             WHERE id = ?
+              AND user_id = ?
             """,
-            (deck_id,),
+            (deck_id, user_id),
         ).fetchone()
         if not deck:
             return None
@@ -53,15 +55,19 @@ def export_deck_package(
                    example_sentence, quality_tag
             FROM vocab_items
             WHERE deck_id = ?
+              AND user_id = ?
             ORDER BY created_at ASC, id ASC
             """,
-            (deck_id,),
+            (deck_id, user_id),
         ).fetchall()
 
-        term_params: tuple[Any, ...] = (deck_id,)
-        term_clause = "custom_terms.deck_id = ?"
+        term_params: tuple[Any, ...] = (user_id, deck_id)
+        term_clause = "custom_terms.user_id = ? AND custom_terms.deck_id = ?"
         if include_common_terms:
-            term_clause = "(custom_terms.deck_id = ? OR custom_terms.deck_id IS NULL)"
+            term_clause = (
+                "custom_terms.user_id = ? "
+                "AND (custom_terms.deck_id = ? OR custom_terms.deck_id IS NULL)"
+            )
 
         term_rows = connection.execute(
             f"""
@@ -96,8 +102,7 @@ def dump_model(model: Any) -> dict[str, Any]:
     return model.dict()
 
 
-def import_deck_package(package: DeckPackage) -> dict[str, Any]:
-    # TODO: Attach imported decks to user_id when authentication is introduced.
+def import_deck_package(user_id: int, package: DeckPackage) -> dict[str, Any]:
     timestamp = now_iso()
     deck_payload = dump_model(package.deck)
     vocab_payloads = [dump_model(item) for item in package.vocab_items]
@@ -112,15 +117,15 @@ def import_deck_package(package: DeckPackage) -> dict[str, Any]:
 
     with get_connection() as connection:
         deck_name = get_unique_imported_deck_name(
-            connection, str(deck_payload.get("name") or "")
+            connection, user_id, str(deck_payload.get("name") or "")
         )
         deck_description = str(deck_payload.get("description") or "").strip()
         cursor = connection.execute(
             """
-            INSERT INTO decks (name, description, created_at, updated_at)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO decks (user_id, name, description, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (deck_name, deck_description, timestamp, timestamp),
+            (user_id, deck_name, deck_description, timestamp, timestamp),
         )
         deck_id = int(cursor.lastrowid)
 
@@ -148,15 +153,16 @@ def import_deck_package(package: DeckPackage) -> dict[str, Any]:
             connection.execute(
                 """
                 INSERT INTO vocab_items (
-                    deck_id, surface, base_form, reading, part_of_speech,
+                    user_id, deck_id, surface, base_form, reading, part_of_speech,
                     normalized_form, meaning_ko, dictionary_gloss, quality_tag,
                     context_explanation_ko, example_sentence, status,
                     correct_count, wrong_count, last_reviewed_at, review_level,
                     next_review_at, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unknown', 0, 0, NULL, 0, NULL, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'unknown', 0, 0, NULL, 0, NULL, ?, ?)
                 """,
                 (
+                    user_id,
                     deck_id,
                     surface or base_form,
                     base_form,
@@ -191,12 +197,13 @@ def import_deck_package(package: DeckPackage) -> dict[str, Any]:
             connection.execute(
                 """
                 INSERT INTO custom_terms (
-                    term, reading, part_of_speech, meaning_ko, description,
+                    user_id, term, reading, part_of_speech, meaning_ko, description,
                     deck_id, created_at, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
+                    user_id,
                     term,
                     str(values.get("reading") or "").strip(),
                     str(values.get("part_of_speech") or "").strip() or "명사",

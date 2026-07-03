@@ -5,13 +5,12 @@ from typing import Any
 from app.database import get_connection, now_iso, row_to_dict
 
 
-def build_stats(deck_id: int | None = None) -> dict[str, Any]:
-    # TODO: Add user_id filtering when authentication is introduced.
+def build_stats(user_id: int, deck_id: int | None = None) -> dict[str, Any]:
     timestamp = now_iso()
-    params: list[Any] = [timestamp]
-    where_clause = ""
+    params: list[Any] = [timestamp, user_id]
+    where_clause = "WHERE vocab_items.user_id = ?"
     if deck_id is not None:
-        where_clause = "WHERE vocab_items.deck_id = ?"
+        where_clause += " AND vocab_items.deck_id = ?"
         params.append(deck_id)
 
     with get_connection() as connection:
@@ -54,7 +53,13 @@ def build_stats(deck_id: int | None = None) -> dict[str, Any]:
         deck_stats: list[dict[str, Any]] = []
         if deck_id is not None:
             deck_row = connection.execute(
-                "SELECT id, name FROM decks WHERE id = ?", (deck_id,)
+                """
+                SELECT id, name
+                FROM decks
+                WHERE id = ?
+                  AND user_id = ?
+                """,
+                (deck_id, user_id),
             ).fetchone()
         else:
             deck_rows = connection.execute(
@@ -75,11 +80,14 @@ def build_stats(deck_id: int | None = None) -> dict[str, Any]:
                         END
                     ) AS due_today_count
                 FROM decks
-                LEFT JOIN vocab_items ON vocab_items.deck_id = decks.id
+                LEFT JOIN vocab_items
+                  ON vocab_items.deck_id = decks.id
+                 AND vocab_items.user_id = decks.user_id
+                WHERE decks.user_id = ?
                 GROUP BY decks.id, decks.name
                 ORDER BY decks.id ASC
                 """,
-                (timestamp,),
+                (timestamp, user_id),
             ).fetchall()
             deck_stats = [build_deck_stats(row_to_dict(row)) for row in deck_rows]
 

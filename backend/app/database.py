@@ -51,7 +51,7 @@ def get_connection() -> sqlite3.Connection:
 def init_db() -> None:
     with get_connection() as connection:
         ensure_users_table(connection)
-        ensure_dev_user(connection)
+        dev_user_id = ensure_dev_user(connection)
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS decks (
@@ -117,6 +117,8 @@ def init_db() -> None:
         ensure_column(
             connection, "context_explanation_ko", "TEXT NOT NULL DEFAULT ''"
         )
+        ensure_user_scope_columns(connection)
+        migrate_existing_data_to_dev_user(connection, dev_user_id)
         migrate_vocab_unique_constraint(connection)
         connection.execute(
             """
@@ -206,6 +208,7 @@ def migrate_vocab_unique_constraint(connection: sqlite3.Connection) -> None:
         """
         CREATE TABLE vocab_items_new (
             id INTEGER PRIMARY KEY,
+            user_id INTEGER,
             deck_id INTEGER,
             surface TEXT NOT NULL,
             base_form TEXT NOT NULL,
@@ -233,6 +236,7 @@ def migrate_vocab_unique_constraint(connection: sqlite3.Connection) -> None:
         for row in connection.execute("PRAGMA table_info(vocab_items)").fetchall()
     }
     deck_expr = "deck_id" if "deck_id" in columns else str(default_deck_id)
+    user_expr = "user_id" if "user_id" in columns else "NULL"
     context_expr = (
         "context_explanation_ko" if "context_explanation_ko" in columns else "''"
     )
@@ -247,14 +251,14 @@ def migrate_vocab_unique_constraint(connection: sqlite3.Connection) -> None:
     connection.execute(
         f"""
         INSERT INTO vocab_items_new (
-            id, deck_id, surface, base_form, reading, part_of_speech,
+            id, user_id, deck_id, surface, base_form, reading, part_of_speech,
             normalized_form, meaning_ko, dictionary_gloss, quality_tag, context_explanation_ko,
             example_sentence, status, correct_count, wrong_count,
             last_reviewed_at, review_level, next_review_at,
             created_at, updated_at
         )
         SELECT
-            id, COALESCE({deck_expr}, ?), surface, base_form, reading,
+            id, {user_expr}, COALESCE({deck_expr}, ?), surface, base_form, reading,
             part_of_speech, normalized_form, meaning_ko, {gloss_expr}, {quality_expr}, {context_expr},
             {example_expr}, status, {correct_expr}, {wrong_expr},
             {last_expr}, {level_expr}, {next_expr}, created_at, updated_at
@@ -269,13 +273,42 @@ def migrate_vocab_unique_constraint(connection: sqlite3.Connection) -> None:
 def ensure_column(
     connection: sqlite3.Connection, column_name: str, column_definition: str
 ) -> None:
+    ensure_table_column(connection, "vocab_items", column_name, column_definition)
+
+
+def ensure_table_column(
+    connection: sqlite3.Connection,
+    table_name: str,
+    column_name: str,
+    column_definition: str,
+) -> None:
     columns = {
         row["name"]
-        for row in connection.execute("PRAGMA table_info(vocab_items)").fetchall()
+        for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()
     }
     if column_name not in columns:
         connection.execute(
-            f"ALTER TABLE vocab_items ADD COLUMN {column_name} {column_definition}"
+            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
+        )
+
+
+def ensure_user_scope_columns(connection: sqlite3.Connection) -> None:
+    ensure_table_column(connection, "decks", "user_id", "INTEGER")
+    ensure_table_column(connection, "vocab_items", "user_id", "INTEGER")
+    ensure_table_column(connection, "custom_terms", "user_id", "INTEGER")
+
+
+def migrate_existing_data_to_dev_user(
+    connection: sqlite3.Connection, dev_user_id: int
+) -> None:
+    for table_name in ("decks", "vocab_items", "custom_terms"):
+        connection.execute(
+            f"""
+            UPDATE {table_name}
+            SET user_id = ?
+            WHERE user_id IS NULL
+            """,
+            (dev_user_id,),
         )
 
 

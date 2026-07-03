@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.database import (
+    DEFAULT_DECK_NAME,
     VOCAB_ITEM_FIELDS,
-    ensure_default_deck,
     get_connection,
     next_review_for_correct,
     now_iso,
@@ -14,12 +14,50 @@ from app.database import (
 from app.schemas import VocabItemCreate, VocabItemUpdate
 
 
-def resolve_deck_id(connection, deck_id: int | None) -> int:
-    default_deck_id = ensure_default_deck(connection)
+def get_or_create_default_deck_id(connection, user_id: int) -> int:
+    timestamp = now_iso()
+    row = connection.execute(
+        """
+        SELECT id
+        FROM decks
+        WHERE user_id = ?
+          AND name = ?
+        """,
+        (user_id, DEFAULT_DECK_NAME),
+    ).fetchone()
+    if row:
+        return int(row["id"])
+
+    cursor = connection.execute(
+        """
+        INSERT INTO decks (user_id, name, description, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (
+            user_id,
+            DEFAULT_DECK_NAME,
+            "기존 단어와 기본 저장 대상",
+            timestamp,
+            timestamp,
+        ),
+    )
+    return int(cursor.lastrowid)
+
+
+def resolve_deck_id(connection, user_id: int, deck_id: int | None) -> int:
+    default_deck_id = get_or_create_default_deck_id(connection, user_id)
     if deck_id is None:
         return default_deck_id
 
-    row = connection.execute("SELECT id FROM decks WHERE id = ?", (deck_id,)).fetchone()
+    row = connection.execute(
+        """
+        SELECT id
+        FROM decks
+        WHERE id = ?
+          AND user_id = ?
+        """,
+        (deck_id, user_id),
+    ).fetchone()
     return int(row["id"]) if row else default_deck_id
 
 
@@ -44,15 +82,15 @@ def normalize_vocab_create(item: VocabItemCreate) -> dict[str, Any]:
 
 
 def list_vocab_items(
+    user_id: int,
     deck_id: int | None = None,
     status: str | None = None,
     q: str | None = None,
     due_only: bool = False,
     sort: str | None = None,
 ) -> list[dict[str, Any]]:
-    # TODO: Add user_id filtering when authentication is introduced.
-    params: list[Any] = []
-    where_clauses = []
+    params: list[Any] = [user_id]
+    where_clauses = ["vocab_items.user_id = ?"]
     if deck_id is not None:
         where_clauses.append("vocab_items.deck_id = ?")
         params.append(deck_id)
@@ -80,7 +118,7 @@ def list_vocab_items(
         )
         params.extend([term] * 8)
 
-    where_clause = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    where_clause = f"WHERE {' AND '.join(where_clauses)}"
     order_clause = {
         "created_asc": "vocab_items.created_at ASC, vocab_items.id ASC",
         "wrong_desc": "vocab_items.wrong_count DESC, vocab_items.created_at DESC, vocab_items.id DESC",
@@ -104,9 +142,8 @@ def list_vocab_items(
     return [row_to_dict(row) for row in rows]
 
 
-def list_known_vocab_keys(deck_id: int | None = None) -> set[tuple[str, str]]:
-    # TODO: Add user_id filtering when authentication is introduced.
-    params: list[Any] = []
+def list_known_vocab_keys(user_id: int, deck_id: int | None = None) -> set[tuple[str, str]]:
+    params: list[Any] = [user_id]
     deck_clause = ""
     if deck_id is not None:
         deck_clause = "AND deck_id = ?"
@@ -117,7 +154,8 @@ def list_known_vocab_keys(deck_id: int | None = None) -> set[tuple[str, str]]:
             f"""
             SELECT base_form, reading
             FROM vocab_items
-            WHERE status = 'known'
+            WHERE user_id = ?
+              AND status = 'known'
               {deck_clause}
             """,
             tuple(params),
@@ -125,8 +163,7 @@ def list_known_vocab_keys(deck_id: int | None = None) -> set[tuple[str, str]]:
     return {(row["base_form"], row["reading"]) for row in rows}
 
 
-def get_vocab_item(item_id: int) -> dict[str, Any] | None:
-    # TODO: Add user_id filtering when authentication is introduced.
+def get_vocab_item(user_id: int, item_id: int) -> dict[str, Any] | None:
     with get_connection() as connection:
         row = connection.execute(
             f"""
@@ -134,28 +171,31 @@ def get_vocab_item(item_id: int) -> dict[str, Any] | None:
             FROM vocab_items
             LEFT JOIN decks ON decks.id = vocab_items.deck_id
             WHERE vocab_items.id = ?
+              AND vocab_items.user_id = ?
             """,
-            (item_id,),
+            (item_id, user_id),
         ).fetchone()
     return row_to_dict(row) if row else None
 
 
-def create_or_update_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], bool]:
-    # TODO: Add user_id ownership when authentication is introduced.
+def create_or_update_vocab_item(
+    user_id: int, item: VocabItemCreate
+) -> tuple[dict[str, Any], bool]:
     timestamp = now_iso()
     normalized = normalize_vocab_create(item)
     with get_connection() as connection:
-        deck_id = resolve_deck_id(connection, normalized["deck_id"])
+        deck_id = resolve_deck_id(connection, user_id, normalized["deck_id"])
         existing = connection.execute(
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
             LEFT JOIN decks ON decks.id = vocab_items.deck_id
-            WHERE vocab_items.base_form = ?
+            WHERE vocab_items.user_id = ?
+              AND vocab_items.base_form = ?
               AND vocab_items.reading = ?
               AND vocab_items.deck_id = ?
             """,
-            (normalized["base_form"], normalized["reading"], deck_id),
+            (user_id, normalized["base_form"], normalized["reading"], deck_id),
         ).fetchone()
         if existing:
             return row_to_dict(existing), False
@@ -163,13 +203,14 @@ def create_or_update_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], 
         cursor = connection.execute(
             """
             INSERT OR IGNORE INTO vocab_items (
-                deck_id, surface, base_form, reading, part_of_speech,
+                user_id, deck_id, surface, base_form, reading, part_of_speech,
                 normalized_form, meaning_ko, dictionary_gloss, quality_tag, context_explanation_ko,
                 example_sentence, status, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
+                user_id,
                 deck_id,
                 normalized["surface"],
                 normalized["base_form"],
@@ -192,11 +233,12 @@ def create_or_update_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], 
                 SELECT {VOCAB_ITEM_FIELDS}
                 FROM vocab_items
                 LEFT JOIN decks ON decks.id = vocab_items.deck_id
-                WHERE vocab_items.base_form = ?
+                WHERE vocab_items.user_id = ?
+                  AND vocab_items.base_form = ?
                   AND vocab_items.reading = ?
                   AND vocab_items.deck_id = ?
                 """,
-                (normalized["base_form"], normalized["reading"], deck_id),
+                (user_id, normalized["base_form"], normalized["reading"], deck_id),
             ).fetchone()
             return row_to_dict(existing), False
 
@@ -206,15 +248,17 @@ def create_or_update_vocab_item(item: VocabItemCreate) -> tuple[dict[str, Any], 
             FROM vocab_items
             LEFT JOIN decks ON decks.id = vocab_items.deck_id
             WHERE vocab_items.id = ?
+              AND vocab_items.user_id = ?
             """,
-            (cursor.lastrowid,),
+            (cursor.lastrowid, user_id),
         ).fetchone()
     return row_to_dict(row), True
 
 
-def update_vocab_item(item_id: int, item: VocabItemUpdate) -> dict[str, Any] | None:
-    # TODO: Add user_id ownership checks when authentication is introduced.
-    existing = get_vocab_item(item_id)
+def update_vocab_item(
+    user_id: int, item_id: int, item: VocabItemUpdate
+) -> dict[str, Any] | None:
+    existing = get_vocab_item(user_id, item_id)
     if not existing:
         return None
 
@@ -242,11 +286,16 @@ def update_vocab_item(item_id: int, item: VocabItemUpdate) -> dict[str, Any] | N
     values["updated_at"] = timestamp
 
     with get_connection() as connection:
-        values["deck_id"] = resolve_deck_id(connection, values["deck_id"])
+        values["deck_id"] = resolve_deck_id(connection, user_id, values["deck_id"])
         columns = ", ".join(f"{column} = ?" for column in values)
-        params = [*values.values(), item_id]
+        params = [*values.values(), item_id, user_id]
         cursor = connection.execute(
-            f"UPDATE vocab_items SET {columns} WHERE id = ?",
+            f"""
+            UPDATE vocab_items
+            SET {columns}
+            WHERE id = ?
+              AND user_id = ?
+            """,
             tuple(params),
         )
         if cursor.rowcount == 0:
@@ -258,16 +307,16 @@ def update_vocab_item(item_id: int, item: VocabItemUpdate) -> dict[str, Any] | N
             FROM vocab_items
             LEFT JOIN decks ON decks.id = vocab_items.deck_id
             WHERE vocab_items.id = ?
+              AND vocab_items.user_id = ?
             """,
-            (item_id,),
+            (item_id, user_id),
         ).fetchone()
     return row_to_dict(row)
 
 
 def update_context_explanation(
-    item_id: int, context_explanation_ko: str
+    user_id: int, item_id: int, context_explanation_ko: str
 ) -> dict[str, Any] | None:
-    # TODO: Add user_id ownership checks when authentication is introduced.
     timestamp = now_iso()
     with get_connection() as connection:
         cursor = connection.execute(
@@ -275,8 +324,9 @@ def update_context_explanation(
             UPDATE vocab_items
             SET context_explanation_ko = ?, updated_at = ?
             WHERE id = ?
+              AND user_id = ?
             """,
-            (context_explanation_ko, timestamp, item_id),
+            (context_explanation_ko, timestamp, item_id, user_id),
         )
         if cursor.rowcount == 0:
             return None
@@ -287,23 +337,29 @@ def update_context_explanation(
             FROM vocab_items
             LEFT JOIN decks ON decks.id = vocab_items.deck_id
             WHERE vocab_items.id = ?
+              AND vocab_items.user_id = ?
             """,
-            (item_id,),
+            (item_id, user_id),
         ).fetchone()
     return row_to_dict(row)
 
 
-def delete_vocab_item(item_id: int) -> bool:
-    # TODO: Add user_id ownership checks when authentication is introduced.
+def delete_vocab_item(user_id: int, item_id: int) -> bool:
     with get_connection() as connection:
-        cursor = connection.execute("DELETE FROM vocab_items WHERE id = ?", (item_id,))
+        cursor = connection.execute(
+            """
+            DELETE FROM vocab_items
+            WHERE id = ?
+              AND user_id = ?
+            """,
+            (item_id, user_id),
+        )
     return cursor.rowcount > 0
 
 
-def list_study_items(deck_id: int | None = None) -> list[dict[str, Any]]:
-    # TODO: Add user_id filtering when authentication is introduced.
+def list_study_items(user_id: int, deck_id: int | None = None) -> list[dict[str, Any]]:
     timestamp = now_iso()
-    params: list[Any] = [timestamp]
+    params: list[Any] = [user_id, timestamp]
     deck_clause = ""
     if deck_id is not None:
         deck_clause = "AND vocab_items.deck_id = ?"
@@ -315,7 +371,8 @@ def list_study_items(deck_id: int | None = None) -> list[dict[str, Any]]:
             SELECT {VOCAB_ITEM_FIELDS}
             FROM vocab_items
             LEFT JOIN decks ON decks.id = vocab_items.deck_id
-            WHERE vocab_items.status IN ('unknown', 'uncertain')
+            WHERE vocab_items.user_id = ?
+              AND vocab_items.status IN ('unknown', 'uncertain')
               AND (vocab_items.next_review_at IS NULL OR vocab_items.next_review_at <= ?)
               {deck_clause}
             ORDER BY
@@ -332,13 +389,18 @@ def list_study_items(deck_id: int | None = None) -> list[dict[str, Any]]:
     return [row_to_dict(row) for row in rows]
 
 
-def record_study_review(item_id: int, result: str) -> dict[str, Any] | None:
-    # TODO: Add user_id ownership checks when authentication is introduced.
+def record_review(user_id: int, item_id: int, result: str) -> dict[str, Any] | None:
     reviewed_at = datetime.now(timezone.utc)
     timestamp = reviewed_at.isoformat()
     with get_connection() as connection:
         existing = connection.execute(
-            "SELECT review_level FROM vocab_items WHERE id = ?", (item_id,)
+            """
+            SELECT review_level
+            FROM vocab_items
+            WHERE id = ?
+              AND user_id = ?
+            """,
+            (item_id, user_id),
         ).fetchone()
         if not existing:
             return None
@@ -356,8 +418,9 @@ def record_study_review(item_id: int, result: str) -> dict[str, Any] | None:
                     last_reviewed_at = ?,
                     updated_at = ?
                 WHERE id = ?
+                  AND user_id = ?
                 """,
-                (next_level, next_review_at, timestamp, timestamp, item_id),
+                (next_level, next_review_at, timestamp, timestamp, item_id, user_id),
             )
         else:
             connection.execute(
@@ -369,8 +432,9 @@ def record_study_review(item_id: int, result: str) -> dict[str, Any] | None:
                     last_reviewed_at = ?,
                     updated_at = ?
                 WHERE id = ?
+                  AND user_id = ?
                 """,
-                (timestamp, timestamp, timestamp, item_id),
+                (timestamp, timestamp, timestamp, item_id, user_id),
             )
 
         row = connection.execute(
@@ -379,7 +443,8 @@ def record_study_review(item_id: int, result: str) -> dict[str, Any] | None:
             FROM vocab_items
             LEFT JOIN decks ON decks.id = vocab_items.deck_id
             WHERE vocab_items.id = ?
+              AND vocab_items.user_id = ?
             """,
-            (item_id,),
+            (item_id, user_id),
         ).fetchone()
     return row_to_dict(row)
