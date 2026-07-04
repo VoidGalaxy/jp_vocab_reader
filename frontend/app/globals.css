@@ -25,6 +25,10 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background:
@@ -37,6 +41,26 @@ textarea,
 input,
 select {
   font: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+p,
+span,
+strong,
+dd,
+td,
+th,
+h1,
+h2,
+h3,
+button {
+  overflow-wrap: anywhere;
 }
 
 .page {
@@ -201,6 +225,7 @@ textarea {
   color: var(--text);
   background: #ffffff;
   line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 textarea:focus,
@@ -217,6 +242,11 @@ input {
   padding: 10px 12px;
   color: var(--text);
   background: #ffffff;
+}
+
+input,
+select {
+  min-height: 42px;
 }
 
 input[type="checkbox"] {
@@ -492,6 +522,7 @@ td .term-badge {
 
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #ffffff;
@@ -1206,25 +1237,79 @@ select {
 
 @media (max-width: 640px) {
   .page {
-    padding: 24px 14px;
+    padding: 18px 12px 32px;
+  }
+
+  .workspace {
+    width: 100%;
+  }
+
+  .header {
+    margin-bottom: 14px;
   }
 
   .header h1 {
-    font-size: 26px;
+    font-size: 24px;
+  }
+
+  .header p {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .tab-panel {
+    gap: 14px;
   }
 
   .tab-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-bottom: 18px;
+    display: flex;
+    gap: 6px;
+    margin: 0 -12px 16px;
+    padding: 6px 12px;
+    overflow-x: auto;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+    box-shadow: none;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    min-width: 76px;
+    width: auto;
+    min-height: 44px;
+    padding: 10px 14px;
   }
 
   .account-summary {
-    align-items: stretch;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .account-summary > div {
+    flex: 1 1 180px;
+  }
+
+  .account-summary strong {
+    font-size: 15px;
+  }
+
+  .account-summary span {
+    font-size: 12px;
   }
 
   .account-form {
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .account-panel {
+    gap: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
   }
 
   .account-mode {
@@ -1239,13 +1324,38 @@ select {
     justify-content: stretch;
   }
 
+  .analyze-form,
+  .result-section,
+  .study-control-panel,
+  .study-card,
+  .shared-deck-card,
+  .shared-deck-detail,
+  .vocab-form-panel,
+  .management-card,
+  .custom-term-section {
+    padding: 14px;
+  }
+
+  textarea {
+    min-height: 220px;
+    padding: 12px;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  .compact-textarea {
+    min-height: 96px;
+  }
+
   .result-heading {
     align-items: stretch;
     flex-direction: column;
+    gap: 10px;
   }
 
   .heading-actions {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .draft-panel,
@@ -1278,13 +1388,40 @@ select {
     flex-direction: column;
   }
 
+  .shared-deck-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
   .shared-detail-columns,
   .shared-deck-meta {
     grid-template-columns: 1fr;
   }
 
+  .shared-deck-meta {
+    gap: 6px;
+  }
+
+  .shared-deck-meta div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border: 1px solid #e7edf4;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: var(--soft-bg);
+  }
+
+  .shared-deck-meta dd {
+    text-align: right;
+  }
+
   .shared-preview-row {
     grid-template-columns: 1fr;
+    gap: 3px;
+    border: 1px solid #e7edf4;
+    border-radius: 8px;
+    padding: 10px;
   }
 
   .vocab-filters,
@@ -1296,6 +1433,12 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .vocab-compact-toolbar,
+  .vocab-filters {
+    gap: 8px;
+    padding: 10px;
+  }
+
   .management-actions {
     align-items: stretch;
     flex-direction: column;
@@ -1303,17 +1446,33 @@ select {
 
   .classify-card,
   .classification-complete {
-    padding: 18px;
+    gap: 14px;
+    padding: 16px;
   }
 
   .classify-word {
-    font-size: 34px;
+    font-size: 38px;
+    line-break: anywhere;
     overflow-wrap: anywhere;
   }
 
   .classify-details,
   .classify-actions {
     grid-template-columns: 1fr;
+  }
+
+  .classify-details div,
+  .study-answer div {
+    padding: 10px;
+  }
+
+  .classification-summary {
+    gap: 6px;
+  }
+
+  .classification-summary span {
+    flex: 1 1 calc(50% - 6px);
+    text-align: center;
   }
 
   .vocab-item-form {
@@ -1327,20 +1486,34 @@ select {
   .form-actions,
   .row-actions {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .study-card {
-    padding: 20px;
+    gap: 16px;
+    min-height: 0;
   }
 
   .study-mode-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .study-mode-button {
+    min-height: 76px;
+    padding: 12px 10px;
+  }
+
   .study-front {
-    min-height: 100px;
-    font-size: 36px;
+    min-height: 150px;
+    font-size: 42px;
+    line-break: anywhere;
     overflow-wrap: anywhere;
+  }
+
+  .study-card-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .study-answer {
@@ -1349,17 +1522,72 @@ select {
 
   .study-actions {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .study-complete-stats {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .table-wrap {
+    margin: 0 -2px;
+  }
+
+  table {
+    min-width: 920px;
+  }
+
+  .custom-term-table table {
+    min-width: 760px;
+  }
+
+  th,
+  td {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  td:first-child,
+  th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #ffffff;
+    box-shadow: 1px 0 0 #e5e7eb;
+  }
+
+  th:first-child {
+    background: #eef2f7;
+  }
+
+  .example-text {
+    max-width: 220px;
+    -webkit-line-clamp: 3;
   }
 
   button {
     width: 100%;
+    min-height: 44px;
+    padding: 11px 14px;
   }
 
-  .tab {
-    width: 100%;
+  .compact-button,
+  .danger-button {
+    min-width: 0;
+    min-height: 42px;
   }
 
   .show-results-toggle {
     width: 100%;
+    justify-content: center;
+  }
+
+  .message,
+  .empty,
+  .draft-panel {
+    padding: 12px;
+    line-height: 1.55;
   }
 }
