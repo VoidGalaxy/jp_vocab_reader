@@ -75,14 +75,23 @@ copy .env.example .env
 uvicorn app.main:app --reload
 ```
 
+Production backend start command, run from `backend`:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Before deployment, set environment variables from `backend/.env.example` in the hosting platform. Do not commit real `.env` files. See [docs/production-deployment.md](docs/production-deployment.md) for production setup details.
+
 AI 보조 기능을 실험하려면 `backend/.env`에 OpenAI API 키를 설정한다. 현재 사용자 UI에서는 개별 단어 AI 설명 기능을 노출하지 않는다. `.env` 파일은 커밋하지 않는다.
 
 ```env
-DATABASE_URL=sqlite:///./vocab.db
-JWT_SECRET_KEY=change-this-in-production
+DATABASE_URL=
+JWT_SECRET_KEY=change-me-in-production
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=10080
 OPENAI_API_KEY=your_openai_api_key_here
-CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+OPENAI_MODEL=gpt-5.2
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,https://your-frontend-domain.example
 ```
 
 DB는 기본적으로 `backend/vocab.db` SQLite 파일을 사용한다. 다른 SQLite 파일을 사용하려면 `backend/.env` 또는 실행 환경에 `DATABASE_URL`을 설정한다.
@@ -91,7 +100,7 @@ DB는 기본적으로 `backend/vocab.db` SQLite 파일을 사용한다. 다른 S
 DATABASE_URL=sqlite:///./vocab.db
 ```
 
-현재 런타임에서 실제 지원하는 DB는 SQLite뿐이다. `postgresql://...` 형식의 `DATABASE_URL`은 이후 마이그레이션 단계를 위한 예약 형식이며, 지금 설정하면 명확한 미지원 오류를 반환한다. PostgreSQL 전환 계획은 [docs/postgres-migration-plan.md](docs/postgres-migration-plan.md)를 참고한다. 배포 전 환경변수, CORS, 빌드, smoke test 점검은 [docs/deployment-checklist.md](docs/deployment-checklist.md)를 참고한다.
+현재 런타임에서 실제 지원하는 DB는 SQLite뿐이다. `postgresql://...` 형식의 `DATABASE_URL`은 이후 마이그레이션 단계를 위한 예약 형식이며, 지금 설정하면 명확한 미지원 오류를 반환한다. PostgreSQL 전환 계획은 [docs/postgres-migration-plan.md](docs/postgres-migration-plan.md)를 참고한다. 배포 전 환경변수, CORS, 빌드, smoke test 점검은 [docs/deployment-checklist.md](docs/deployment-checklist.md)를 참고한다. 실제 호스팅 플랫폼에 올릴 때의 실행 명령과 설정 순서는 [docs/production-deployment.md](docs/production-deployment.md)를 참고한다.
 
 헬스체크:
 
@@ -137,6 +146,16 @@ npm run dev
 ```
 
 기본 API 주소는 `http://127.0.0.1:8000`이다. 다른 백엔드 주소를 사용할 때는 `frontend/.env.local`의 `NEXT_PUBLIC_API_BASE_URL` 값을 수정한다.
+
+Production frontend build:
+
+```bash
+cd frontend
+npm run build
+npm run start
+```
+
+Set `NEXT_PUBLIC_API_BASE_URL` to the deployed backend URL before building or deploying the frontend.
 
 프론트엔드는 `분석`, `단어장`, `공유`, `학습`, `정보` 탭으로 구성된다. 탭을 이동해도 현재 분석 결과와 학습 상태는 화면 안에서 유지된다.
 

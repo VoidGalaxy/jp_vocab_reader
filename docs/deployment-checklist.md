@@ -1,6 +1,6 @@
 # Deployment Checklist
 
-This project is still in the pre-deployment stage. Do not connect production services or switch databases during this check.
+This project is still in the pre-deployment stage. Do not connect production services or switch databases during this check. For platform-oriented production setup, see [production-deployment.md](production-deployment.md).
 
 ## 1. Local Run
 
@@ -55,6 +55,7 @@ Do not commit `.env`, `.env.local`, `backend/.env`, or `frontend/.env.local`.
 - Confirm `DATABASE_URL` points to a SQLite path that the backend process can read and write.
 - Run `python -m compileall app` from `backend`.
 - Start locally with `uvicorn app.main:app --reload` and confirm startup initializes the SQLite schema without deleting data.
+- Production start command from `backend`: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 - Confirm `GET /health` returns `status: ok`.
 
 ## 4. Frontend Pre-Deployment Checks

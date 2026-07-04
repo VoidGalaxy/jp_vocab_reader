@@ -56,6 +56,13 @@
 - 완료: `backend/.env.example`, README, `docs/deployment-checklist.md`의 환경변수와 smoke test 흐름을 현재 SQLite/FastAPI/Next.js 구조 기준으로 정리했다.
 - 완료: 배포 전 backend compile, `/health` smoke, frontend build 점검 흐름을 확인했다.
 
+## Production Deployment Setup
+
+- 완료: backend production start command를 `uvicorn app.main:app --host 0.0.0.0 --port $PORT`로 정리하고 `backend/Procfile`에 추가했다.
+- 완료: `docs/production-deployment.md`에 frontend/backend 배포 절차, 환경변수, CORS, SQLite 주의점, smoke test, troubleshooting 순서를 정리했다.
+- 완료: README에 로컬 실행과 production 실행을 구분하고 production deployment 문서 링크를 추가했다.
+- 다음 TODO: 실제 배포, PostgreSQL 실제 전환, 운영용 DB 백업, AI 사용량 제한, 공유 덱 신고/관리 기능.
+
 ## Per-word AI UX Removal
 
 - 완료: per-word AI explanation UX removed/hidden. 단어장과 학습 화면에서 개별 단어 AI 설명 생성/표시 UI를 숨겼다.
