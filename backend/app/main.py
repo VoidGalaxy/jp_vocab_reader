@@ -18,7 +18,7 @@ from app.auth import (
     hash_password,
     verify_password,
 )
-from app.database import init_db
+from app.database import get_database_engine, init_db
 from app.repositories.custom_term_repository import (
     create_custom_term,
     delete_custom_term,
@@ -204,7 +204,7 @@ def health() -> dict[str, str]:
     return {
         "status": "ok",
         "app": APP_NAME,
-        "database": "sqlite",
+        "database": get_database_engine(),
         "auth": "enabled",
     }
 

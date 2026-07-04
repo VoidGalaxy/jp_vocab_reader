@@ -33,7 +33,7 @@ Default local URLs:
 
 Backend:
 
-- `DATABASE_URL`: Optional for local development. Empty value uses `backend/vocab.db`. Current runtime support is SQLite only. Example: `sqlite:///./vocab.db`.
+- `DATABASE_URL`: Optional for local development. Empty value uses `backend/vocab.db`. Use `sqlite:///./vocab.db` for an explicit SQLite path or `postgresql://user:password@host:5432/dbname` for PostgreSQL after installing backend requirements.
 - `JWT_SECRET_KEY`: Required for production. Never use the development fallback outside local work.
 - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`: Optional. Defaults to `10080`.
 - `OPENAI_API_KEY`: Optional. Keep it secret. The current main UI does not expose per-word AI explanation.
@@ -52,7 +52,7 @@ Do not commit `.env`, `.env.local`, `backend/.env`, or `frontend/.env.local`.
 - Confirm `backend/requirements.txt` is installed in the target Python environment.
 - Confirm `JWT_SECRET_KEY` is set to a strong production-only value.
 - Confirm CORS origins include the deployed frontend origin only.
-- Confirm `DATABASE_URL` points to a SQLite path that the backend process can read and write.
+- Confirm `DATABASE_URL` is empty for SQLite fallback, points to a writable SQLite path, or points to the intended PostgreSQL database.
 - Run `python -m compileall app` from `backend`.
 - Start locally with `uvicorn app.main:app --reload` and confirm startup initializes the SQLite schema without deleting data.
 - Production start command from `backend`: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
@@ -92,15 +92,13 @@ The app currently uses SQLite through `sqlite3`.
 
 ## 8. PostgreSQL TODO
 
-Do not set `DATABASE_URL=postgresql://...` yet. PostgreSQL support is intentionally not active.
+PostgreSQL connection support exists behind `DATABASE_URL`, but data migration and external managed database validation are still follow-up work.
 
 Before switching:
 
-- Introduce SQLAlchemy models while preserving current behavior.
-- Keep SQLite passing through the new DB layer first.
-- Add Alembic migrations after model behavior is stable.
 - Plan existing SQLite data migration.
 - Re-check repository queries that depend on SQLite syntax, row behavior, `?` placeholders, and datetime string comparisons.
+- Test against the target managed PostgreSQL service before production traffic.
 
 ## 9. OpenAI API Key
 

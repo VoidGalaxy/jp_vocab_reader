@@ -37,10 +37,17 @@
 
 - 완료: `DATABASE_URL` 기반 DB 설정을 추가했다. 값이 없으면 기존 `backend/vocab.db` SQLite 파일을 사용한다.
 - 완료: `sqlite:///...` 형식으로 SQLite 파일 경로를 지정할 수 있게 했다.
-- 완료: `postgresql://...` URL은 아직 미지원임을 명확한 설정 오류로 처리하고, PostgreSQL 실제 도입은 이후 단계로 남겼다.
+- 완료: 초기 단계에서는 `postgresql://...` URL을 명확한 미지원 오류로 처리했다. 이후 postgres-migration-foundation 단계에서 psycopg 기반 연결 분기를 추가했다.
 - 완료: SQLite 연결에 `row_factory`, timeout, `PRAGMA foreign_keys = ON`을 일관되게 적용했다.
 - 완료: startup schema 보강 흐름을 `initialize_database`, `ensure_schema`, `ensure_auth_schema`, `ensure_core_schema`, `ensure_user_scoped_columns`, `ensure_shared_deck_schema` 중심으로 정리했다.
 - 완료: [postgres-migration-plan.md](postgres-migration-plan.md)에 PostgreSQL 전환 이유, 작업 목록, 데이터 마이그레이션 전략, 위험 요소, 추천 순서를 정리했다.
+
+## Postgres Migration Foundation
+
+- 완료: `DATABASE_URL`이 비어 있으면 SQLite를 유지하고, `postgresql://` 또는 `postgres://`이면 psycopg 기반 PostgreSQL 연결을 사용하도록 분기했다.
+- 완료: repository의 `?` placeholder와 `cursor.lastrowid` 사용을 보존하기 위한 최소 query adapter를 추가했다.
+- 완료: PostgreSQL용 핵심 테이블 생성 로직을 추가하고, dev user/default deck bootstrap이 PostgreSQL에서도 동작하도록 정리했다.
+- 완료: [postgres-migration.md](postgres-migration.md)에 SQLite fallback, DATABASE_URL 설정, API 확인 목록, 다음 단계 데이터 마이그레이션 범위를 문서화했다.
 
 ## Deployment Readiness
 

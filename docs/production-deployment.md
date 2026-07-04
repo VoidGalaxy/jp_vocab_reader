@@ -144,7 +144,7 @@ Before switching to PostgreSQL:
 - Re-check SQLite-specific SQL, `?` placeholders, `sqlite3.Row`, datetime string comparisons, and startup-time schema changes.
 - Add database backups and restore testing.
 
-Do not set `DATABASE_URL=postgresql://...` in this stage.
+PostgreSQL connection support exists behind `DATABASE_URL`, but do not move production traffic before data migration and managed database smoke tests are complete.
 
 ## 10. Smoke Test After Deployment
 

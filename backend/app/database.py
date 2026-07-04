@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -16,9 +17,17 @@ from app.schemas import (
 )
 from app.settings import DEFAULT_SQLITE_DB_PATH, get_database_url
 
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+except ImportError:  # pragma: no cover - optional until PostgreSQL is configured.
+    psycopg = None
+    dict_row = None
+
 
 DB_PATH = DEFAULT_SQLITE_DB_PATH
 SQLITE_URL_PREFIX = "sqlite:///"
+POSTGRES_URL_PREFIXES = ("postgresql://", "postgres://")
 SQLITE_CONNECTION_TIMEOUT_SECONDS = 10
 DEFAULT_DECK_NAME = "기본 단어장"
 DEV_USER_EMAIL = "dev@example.local"
@@ -53,6 +62,111 @@ class AppSQLiteConnection(sqlite3.Connection):
             self.close()
 
 
+class AppPostgresCursor:
+    def __init__(self, cursor: Any):
+        self._cursor = cursor
+        self._lastrowid: int | None = None
+        self._lastrowid_loaded = False
+
+    @property
+    def rowcount(self) -> int:
+        return int(self._cursor.rowcount)
+
+    @property
+    def lastrowid(self) -> int | None:
+        if self._lastrowid_loaded:
+            return self._lastrowid
+        self._lastrowid_loaded = True
+        try:
+            row = self._cursor.fetchone()
+        except Exception:
+            row = None
+        if row and "id" in row:
+            self._lastrowid = int(row["id"])
+        return self._lastrowid
+
+    def fetchone(self) -> Any:
+        return self._cursor.fetchone()
+
+    def fetchall(self) -> list[Any]:
+        return self._cursor.fetchall()
+
+
+class AppPostgresConnection:
+    is_postgres = True
+
+    def __init__(self, raw_connection: Any):
+        self._connection = raw_connection
+
+    def __enter__(self) -> "AppPostgresConnection":
+        self._connection.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> bool:
+        try:
+            return bool(self._connection.__exit__(exc_type, exc_value, traceback))
+        finally:
+            self._connection.close()
+
+    def close(self) -> None:
+        self._connection.close()
+
+    def execute(self, query: str, params: tuple[Any, ...] | list[Any] = ()) -> AppPostgresCursor:
+        adapted_query = adapt_query(query, is_postgres=True)
+        cursor = self._connection.execute(adapted_query, tuple(params))
+        return AppPostgresCursor(cursor)
+
+
+def is_postgres_connection(connection: Any) -> bool:
+    return bool(getattr(connection, "is_postgres", False))
+
+
+def get_database_engine() -> str:
+    database_url = get_database_url()
+    if database_url.startswith(POSTGRES_URL_PREFIXES):
+        return "postgresql"
+    return "sqlite"
+
+
+def adapt_query(query: str, is_postgres: bool = False) -> str:
+    if not is_postgres:
+        return query
+    adapted = query.replace("INSERT OR IGNORE INTO", "INSERT INTO")
+    adapted = adapted.replace("?", "%s")
+    normalized_original = _strip_leading_sql_comments(query)
+    if normalized_original.upper().startswith("INSERT OR IGNORE INTO"):
+        adapted = f"{adapted.rstrip()} ON CONFLICT DO NOTHING"
+    if _is_insert_with_id(adapted) and " RETURNING " not in adapted.upper():
+        adapted = f"{adapted.rstrip()} RETURNING id"
+    return adapted
+
+
+def _strip_leading_sql_comments(query: str) -> str:
+    lines = query.lstrip().splitlines()
+    while lines and lines[0].lstrip().startswith("--"):
+        lines.pop(0)
+    return "\n".join(lines).lstrip()
+
+
+def _is_insert_with_id(query: str) -> bool:
+    stripped = _strip_leading_sql_comments(query)
+    if not stripped.upper().startswith("INSERT INTO"):
+        return False
+    match = re.match(r"INSERT\s+INTO\s+([a-zA-Z_][a-zA-Z0-9_]*)", stripped, re.I)
+    if not match:
+        return False
+    return match.group(1) in {
+        "users",
+        "decks",
+        "vocab_items",
+        "custom_terms",
+        "shared_decks",
+        "shared_deck_items",
+        "shared_deck_terms",
+        "shared_deck_imports",
+    }
+
+
 def get_sqlite_database_path() -> str:
     database_url = get_database_url()
     if not database_url:
@@ -64,21 +178,24 @@ def get_sqlite_database_path() -> str:
         if raw_path == ":memory:":
             return raw_path
         return str(Path(raw_path).expanduser())
-    if database_url.startswith(("postgresql://", "postgres://")):
-        # TODO: PostgreSQL support will be added in a later migration step.
-        raise NotImplementedError(
-            "DATABASE_URL uses PostgreSQL, but this app currently supports "
-            "SQLite only. PostgreSQL support will be added in a later "
-            "migration step."
-        )
+    if database_url.startswith(POSTGRES_URL_PREFIXES):
+        raise ValueError("PostgreSQL DATABASE_URL cannot be used as a SQLite path.")
     raise ValueError(
         "Unsupported DATABASE_URL. Use sqlite:///./vocab.db or leave it unset."
     )
 
 
-def get_connection() -> sqlite3.Connection:
-    # TODO(postgres): Replace this sqlite3 connection factory with a DB adapter
-    # boundary; repositories currently depend on sqlite3.Row and ? placeholders.
+def get_connection() -> sqlite3.Connection | AppPostgresConnection:
+    database_url = get_database_url()
+    if database_url.startswith(POSTGRES_URL_PREFIXES):
+        if psycopg is None or dict_row is None:
+            raise RuntimeError(
+                "PostgreSQL DATABASE_URL is set, but psycopg is not installed. "
+                "Install backend requirements first."
+            )
+        raw_connection = psycopg.connect(database_url, row_factory=dict_row)
+        return AppPostgresConnection(raw_connection)
+
     connection = sqlite3.connect(
         get_sqlite_database_path(),
         timeout=SQLITE_CONNECTION_TIMEOUT_SECONDS,
@@ -100,6 +217,13 @@ def initialize_database() -> None:
 
 
 def ensure_schema(connection: sqlite3.Connection) -> None:
+    if is_postgres_connection(connection):
+        create_postgres_tables(connection)
+        dev_user_id = seed_dev_user(connection)
+        backfill_existing_data_to_dev_user(connection, dev_user_id)
+        ensure_default_decks_for_users(connection)
+        return
+
     create_core_tables(connection)
     create_shared_deck_tables(connection)
     apply_sqlite_migrations(connection)
@@ -299,6 +423,155 @@ def create_shared_deck_tables(connection: sqlite3.Connection) -> None:
             imported_deck_id INTEGER NOT NULL,
             imported_at TEXT NOT NULL
         )
+        """
+    )
+
+
+def create_postgres_tables(connection: AppPostgresConnection) -> None:
+    # TODO(postgres): created_at/updated_at/next_review_at are kept as ISO TEXT
+    # for compatibility. Move to TIMESTAMPTZ in a later migration.
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            email TEXT UNIQUE,
+            display_name TEXT,
+            password_hash TEXT,
+            auth_provider TEXT NOT NULL DEFAULT 'local',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS decks (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(user_id, name)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS vocab_items (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            deck_id INTEGER REFERENCES decks(id) ON DELETE CASCADE,
+            surface TEXT NOT NULL,
+            base_form TEXT NOT NULL,
+            reading TEXT NOT NULL,
+            part_of_speech TEXT NOT NULL,
+            normalized_form TEXT NOT NULL,
+            meaning_ko TEXT NOT NULL DEFAULT '',
+            dictionary_gloss TEXT NOT NULL DEFAULT '',
+            quality_tag TEXT NOT NULL DEFAULT 'normal',
+            context_explanation_ko TEXT NOT NULL DEFAULT '',
+            example_sentence TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL,
+            correct_count INTEGER NOT NULL DEFAULT 0,
+            wrong_count INTEGER NOT NULL DEFAULT 0,
+            last_reviewed_at TEXT,
+            review_level INTEGER NOT NULL DEFAULT 0,
+            next_review_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(user_id, deck_id, base_form, reading)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS custom_terms (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            term TEXT NOT NULL,
+            reading TEXT NOT NULL DEFAULT '',
+            part_of_speech TEXT NOT NULL DEFAULT '명사',
+            meaning_ko TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            deck_id INTEGER REFERENCES decks(id) ON DELETE CASCADE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(user_id, deck_id, term)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shared_decks (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            description TEXT,
+            source_deck_id INTEGER,
+            visibility TEXT NOT NULL DEFAULT 'public',
+            vocab_count INTEGER NOT NULL DEFAULT 0,
+            custom_term_count INTEGER NOT NULL DEFAULT 0,
+            import_count INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shared_deck_items (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            shared_deck_id INTEGER NOT NULL REFERENCES shared_decks(id) ON DELETE CASCADE,
+            surface TEXT,
+            base_form TEXT,
+            reading TEXT,
+            part_of_speech TEXT,
+            normalized_form TEXT,
+            meaning_ko TEXT,
+            dictionary_gloss TEXT,
+            context_explanation_ko TEXT,
+            example_sentence TEXT,
+            quality_tag TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shared_deck_terms (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            shared_deck_id INTEGER NOT NULL REFERENCES shared_decks(id) ON DELETE CASCADE,
+            term TEXT NOT NULL,
+            reading TEXT,
+            part_of_speech TEXT,
+            meaning_ko TEXT,
+            description TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shared_deck_imports (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            shared_deck_id INTEGER NOT NULL REFERENCES shared_decks(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            imported_deck_id INTEGER NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+            imported_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_vocab_items_user_deck
+        ON vocab_items(user_id, deck_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_shared_decks_visibility
+        ON shared_decks(visibility, created_at)
         """
     )
 

@@ -100,7 +100,9 @@ DB는 기본적으로 `backend/vocab.db` SQLite 파일을 사용한다. 다른 S
 DATABASE_URL=sqlite:///./vocab.db
 ```
 
-현재 런타임에서 실제 지원하는 DB는 SQLite뿐이다. `postgresql://...` 형식의 `DATABASE_URL`은 이후 마이그레이션 단계를 위한 예약 형식이며, 지금 설정하면 명확한 미지원 오류를 반환한다. PostgreSQL 전환 계획은 [docs/postgres-migration-plan.md](docs/postgres-migration-plan.md)를 참고한다. 배포 전 환경변수, CORS, 빌드, smoke test 점검은 [docs/deployment-checklist.md](docs/deployment-checklist.md)를 참고한다. 실제 호스팅 플랫폼에 올릴 때의 실행 명령과 설정 순서는 [docs/production-deployment.md](docs/production-deployment.md)를 참고한다.
+기본 개발 DB는 SQLite이며, `DATABASE_URL`이 비어 있으면 기존 `backend/vocab.db`를 계속 사용한다. PostgreSQL 전환 계획은 [docs/postgres-migration-plan.md](docs/postgres-migration-plan.md)를 참고한다. 배포 전 환경변수, CORS, 빌드, smoke test 점검은 [docs/deployment-checklist.md](docs/deployment-checklist.md)를 참고한다. 실제 호스팅 플랫폼에 올릴 때의 실행 명령과 설정 순서는 [docs/production-deployment.md](docs/production-deployment.md)를 참고한다.
+
+PostgreSQL migration foundation is now available behind `DATABASE_URL`. Leave `DATABASE_URL` empty to keep the existing SQLite development DB, or set a `postgresql://...` URL for a PostgreSQL database after installing backend requirements. SQLite data migration is a separate follow-up step. See [docs/postgres-migration.md](docs/postgres-migration.md).
 
 헬스체크:
 
