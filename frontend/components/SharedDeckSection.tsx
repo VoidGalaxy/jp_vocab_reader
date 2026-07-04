@@ -108,7 +108,13 @@ export function SharedDeckSection({
                   </div>
                   <div>
                     <dt>상태</dt>
-                    <dd>{isImported ? "가져오기 완료" : isSelected ? "상세 표시 중" : "공개"}</dd>
+                    <dd>
+                      {isImported
+                        ? "가져오기 완료"
+                        : isSelected
+                          ? "상세 표시 중"
+                          : "공개"}
+                    </dd>
                   </div>
                 </dl>
                 <div className="row-actions">
@@ -143,8 +149,8 @@ export function SharedDeckSection({
         </div>
       ) : (
         <p className="empty">
-          공개 공유 덱이 없습니다. 단어장 탭에서 현재 덱을 공유 덱으로 등록할 수
-          있습니다.
+          공개 공유 덱이 없습니다. 단어장 탭에서 현재 덱을 공유 덱으로
+          등록할 수 있습니다.
         </p>
       )}
 

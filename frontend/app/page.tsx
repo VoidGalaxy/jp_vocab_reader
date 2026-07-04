@@ -872,7 +872,7 @@ export default function HomePage() {
       setPublishTitle("");
       setPublishDescription("");
       setDeckMessage(
-        `${result.title} 덱을 공유 덱으로 등록했습니다. 단어 ${result.vocab_count}개, 용어 ${result.custom_term_count}개를 복사했습니다.`,
+        `${result.title} 덱을 공유 덱으로 등록했습니다. 단어 수 ${result.vocab_count}개, 용어 수 ${result.custom_term_count}개를 복사했습니다.`,
       );
       await loadSharedDecks();
     } catch (error) {
@@ -893,7 +893,7 @@ export default function HomePage() {
         { method: "POST" },
       );
       setSharedDeckMessage(
-        `내 단어장으로 가져왔습니다. 단어장 탭에서 확인할 수 있습니다. 단어 ${result.imported_vocab_count}개, 용어 ${result.imported_custom_term_count}개를 복사했습니다.`,
+        `내 단어장으로 가져왔습니다. 단어장 탭에서 확인할 수 있습니다. 단어 수 ${result.imported_vocab_count}개, 용어 수 ${result.imported_custom_term_count}개를 복사했습니다.`,
       );
       setImportedSharedDeckId(sharedDeckId);
       const importedDeckId = String(result.deck_id);
