@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from app.database import (
@@ -9,6 +8,7 @@ from app.database import (
     get_connection,
     next_review_for_correct,
     now_iso,
+    now_utc,
     row_to_dict,
 )
 from app.schemas import VocabItemCreate, VocabItemUpdate
@@ -98,12 +98,15 @@ def list_vocab_items(
         where_clauses.append("vocab_items.status = ?")
         params.append(status)
     if due_only:
+        # TODO(postgres): ISO datetime string comparison works in SQLite here;
+        # revisit with TIMESTAMPTZ and explicit timezone semantics.
         where_clauses.append(
             "(vocab_items.next_review_at IS NULL OR vocab_items.next_review_at <= ?)"
         )
         params.append(now_iso())
     if q and q.strip():
         term = f"%{q.strip().lower()}%"
+        # TODO(postgres): Revisit LIKE/LOWER behavior for collation and indexing.
         where_clauses.append(
             "("
             "LOWER(COALESCE(vocab_items.surface, '')) LIKE ? OR "
@@ -202,6 +205,7 @@ def create_or_update_vocab_item(
 
         cursor = connection.execute(
             """
+            -- TODO(postgres): INSERT OR IGNORE is SQLite-specific.
             INSERT OR IGNORE INTO vocab_items (
                 user_id, deck_id, surface, base_form, reading, part_of_speech,
                 normalized_form, meaning_ko, dictionary_gloss, quality_tag, context_explanation_ko,
@@ -390,7 +394,7 @@ def list_study_items(user_id: int, deck_id: int | None = None) -> list[dict[str,
 
 
 def record_review(user_id: int, item_id: int, result: str) -> dict[str, Any] | None:
-    reviewed_at = datetime.now(timezone.utc)
+    reviewed_at = now_utc()
     timestamp = reviewed_at.isoformat()
     with get_connection() as connection:
         existing = connection.execute(

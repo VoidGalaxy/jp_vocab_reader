@@ -234,3 +234,7 @@ npm run dev
 - 가져온 덱의 단어 학습 상태는 `unknown`, 정답/오답/복습 단계는 0, 다음 복습일은 비어 있는 상태로 시작합니다.
 - 일반 사용자의 덱 공유는 공유 탭의 서버형 직접 공유를 사용합니다.
 - CSV/JSON 파일 내보내기와 가져오기는 백업이나 수동 이동이 필요한 고급 사용자용 기능이며, 단어장 관리의 고급 백업/파일 내보내기 섹션에서 사용할 수 있습니다.
+
+## Development Database
+
+The backend currently uses SQLite for local development and runtime storage. PostgreSQL is not connected in this step; migration preparation notes are in [docs/postgres-readiness.md](docs/postgres-readiness.md).
