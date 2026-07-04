@@ -91,15 +91,15 @@ export function SharedDeckSection({
                     <dd>{deck.owner_display_name || "-"}</dd>
                   </div>
                   <div>
-                    <dt>단어</dt>
+                    <dt>단어 수</dt>
                     <dd>{deck.vocab_count}</dd>
                   </div>
                   <div>
-                    <dt>용어</dt>
+                    <dt>용어 수</dt>
                     <dd>{deck.custom_term_count}</dd>
                   </div>
                   <div>
-                    <dt>가져오기</dt>
+                    <dt>공유된 횟수</dt>
                     <dd>{deck.import_count}</dd>
                   </div>
                   <div>
@@ -154,8 +154,9 @@ export function SharedDeckSection({
             <div>
               <h2>{selectedDeck.title}</h2>
               <span>
-                단어 {selectedDeck.vocab_count}개 · 용어{" "}
-                {selectedDeck.custom_term_count}개
+                단어 수 {selectedDeck.vocab_count}개 · 용어 수{" "}
+                {selectedDeck.custom_term_count}개 · 공유된 횟수{" "}
+                {selectedDeck.import_count}회
               </span>
             </div>
             <div className="heading-actions">

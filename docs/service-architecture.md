@@ -271,11 +271,12 @@ AI 문맥 설명, 분석 요청, 공개 마켓 사용량 등을 추적하는 운
 - `PATCH /shared-decks/{id}`: 작성자 또는 관리자만 공유 덱 메타데이터를 수정한다.
 - `DELETE /shared-decks/{id}`: 작성자 또는 관리자만 공유 덱을 비공개 처리하거나 삭제한다.
 
-### 분석/AI API
+### 분석/Optional AI API
 
 - `POST /analyze`: 로그인 사용자의 사용자 정의 용어와 덱 컨텍스트를 기준으로 분석한다.
-- `POST /vocab-items/{id}/context-explanation`: 로그인 사용자가 소유한 단어에 대해서만 AI 문맥 설명을 생성한다.
-- AI 요청은 `ai_usage_logs` 또는 `usage_logs`에 기록한다.
+- `POST /vocab-items/{id}/explain`: Deprecated. per-word AI explanation is hidden from UI.
+- AI는 핵심 단어장 기능이 아니라 optional assistant feature로 둔다. 향후 문장 단위 해석, 문단 독해 보조, 헷갈린 단어 기반 추천, 덱 품질 점검을 우선 검토한다.
+- AI 요청을 다시 사용자 기능으로 노출할 경우 `ai_usage_logs` 또는 `usage_logs`에 기록하고 사용량 제한을 둔다.
 
 ## G. 인증/권한 계획
 
@@ -336,7 +337,7 @@ AI 문맥 설명, 분석 요청, 공개 마켓 사용량 등을 추적하는 운
 - `user_id` 도입 시 모든 개인 데이터 쿼리를 수정해야 한다.
 - 일부 쿼리에 `user_id` 조건이 빠지면 사용자 간 데이터 노출 사고가 날 수 있다.
 - 공유 덱과 개인 학습 기록을 혼동하면 다른 사용자의 학습 상태가 공유되거나 초기화 정책이 깨질 수 있다.
-- AI 문맥 설명은 비용 관리가 필요하다.
+- AI 보조 기능은 비용 관리가 필요하다.
 - AI 사용량 제한, 실패 처리, 재시도 정책이 없으면 운영 비용이 예측하기 어렵다.
 - 저작권/원문 저장 정책을 명확히 유지해야 한다.
 - 원문 전체 저장을 피하고, 공유 덱에는 저작권 문제가 될 수 있는 긴 원문 발췌를 제한해야 한다.
@@ -348,7 +349,7 @@ AI 문맥 설명, 분석 요청, 공개 마켓 사용량 등을 추적하는 운
 
 - 앱 시작 시 `shared_decks`, `shared_deck_items`, `shared_deck_terms`, `shared_deck_imports` 테이블을 생성한다.
 - `POST /decks/{deck_id}/publish`는 현재 사용자의 개인 덱을 공개 공유 덱으로 복사한다.
-- 공유 덱에는 단어, 뜻, 읽기, 품사, 예문, AI 문맥 설명, 품질 태그, 해당 덱 전용 사용자 정의 용어를 포함한다.
+- 공유 덱에는 단어, 뜻, 읽기, 품사, 예문, 품질 태그, 해당 덱 전용 사용자 정의 용어를 포함한다.
 - 공유 덱에는 개인 학습 기록과 원문 전체를 포함하지 않는다.
 - `GET /shared-decks`와 `GET /shared-decks/{shared_deck_id}`는 공개 공유 덱 목록과 상세를 제공한다.
 - `POST /shared-decks/{shared_deck_id}/import`는 공유 덱을 현재 사용자의 개인 덱으로 복사하고 학습 상태를 초기화한다.

@@ -597,6 +597,8 @@
 
 ## POST /vocab-items/{item_id}/explain
 
+Deprecated: per-word AI explanation is hidden from UI.
+
 저장된 단어와 예문을 기반으로 AI 문맥 설명을 생성하고 DB에 저장한다.
 
 ### 처리 규칙

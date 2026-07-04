@@ -48,7 +48,7 @@ export function InfoSection({
           <li>카드 기반 단어 분류와 분류 진행상태 임시 저장</li>
           <li>덱별 단어장, 검색/필터/정렬, 직접 추가/수정</li>
           <li>모르는 단어와 헷갈리는 단어 중심의 플래시카드 복습</li>
-          <li>CSV 다운로드와 저장된 단어별 AI 문맥 설명 생성</li>
+          <li>CSV/JSON 백업과 공개 공유 덱 가져오기</li>
         </ul>
       </div>
 
@@ -58,7 +58,7 @@ export function InfoSection({
           <li>사전 데이터 확장</li>
           <li>고급 간격 반복과 학습 통계</li>
           <li>Anki 전용 내보내기 검토</li>
-          <li>AI 문맥 설명 품질 개선</li>
+          <li>문장/문단 단위 독해 보조 기능 검토</li>
         </ul>
       </div>
       </div>

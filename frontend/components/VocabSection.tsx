@@ -20,7 +20,6 @@ type VocabSectionProps = {
   isExportingDeckPackage: boolean;
   isImportingDeckPackage: boolean;
   isPublishingDeck: boolean;
-  explainingItemId: number | null;
   message: string;
   decks: Deck[];
   selectedDeckId: string;
@@ -86,7 +85,6 @@ type VocabSectionProps = {
   onPublishTitleChange: (title: string) => void;
   onPublishDescriptionChange: (description: string) => void;
   onPublishDeck: () => void;
-  onExplain: (itemId: number) => void;
   onStatusChange: (itemId: number, status: TokenStatus) => void;
   onDelete: (itemId: number) => void;
 };
@@ -98,7 +96,6 @@ export function VocabSection({
   isExportingDeckPackage,
   isImportingDeckPackage,
   isPublishingDeck,
-  explainingItemId,
   message,
   decks,
   selectedDeckId,
@@ -158,7 +155,6 @@ export function VocabSection({
   onPublishTitleChange,
   onPublishDescriptionChange,
   onPublishDeck,
-  onExplain,
   onStatusChange,
   onDelete,
 }: VocabSectionProps) {
@@ -415,7 +411,6 @@ export function VocabSection({
           <VocabItemForm
             form={newVocabForm}
             decks={decks}
-            includeContextExplanation={false}
             onChange={onNewVocabFormChange}
           />
           <div className="form-actions">
@@ -601,7 +596,6 @@ export function VocabSection({
                 <th>읽기</th>
                 <th>품사</th>
                 <th>뜻</th>
-                <th>AI 설명</th>
                 <th>예문</th>
                 <th>상태</th>
                 <th>맞음</th>
@@ -631,29 +625,6 @@ export function VocabSection({
                           영어 gloss: {item.dictionary_gloss}
                         </div>
                       ) : null}
-                    </td>
-                    <td>
-                      <div className="ai-explanation-cell">
-                        {item.context_explanation_ko ? (
-                          <span className="example-text">
-                            {item.context_explanation_ko}
-                          </span>
-                        ) : (
-                          <span className="muted-text">-</span>
-                        )}
-                        <button
-                          type="button"
-                          className="secondary-button compact-button"
-                          onClick={() => onExplain(item.id)}
-                          disabled={explainingItemId === item.id}
-                        >
-                          {explainingItemId === item.id
-                            ? "생성 중..."
-                            : item.context_explanation_ko
-                              ? "AI 설명 다시 생성"
-                              : "AI 설명 생성"}
-                        </button>
-                      </div>
                     </td>
                     <td>
                       <span className="example-text">
@@ -693,7 +664,7 @@ export function VocabSection({
                   </tr>
                   {editingItemId === item.id ? (
                     <tr className="edit-row">
-                      <td colSpan={15}>
+                      <td colSpan={14}>
                         <div className="vocab-form-panel inline-edit-form">
                           <div className="form-heading">
                             <h2>단어 수정</h2>
@@ -701,7 +672,6 @@ export function VocabSection({
                           <VocabItemForm
                             form={editVocabForm}
                             decks={decks}
-                            includeContextExplanation
                             onChange={onEditVocabFormChange}
                           />
                           <div className="form-actions">
@@ -757,14 +727,12 @@ function QualityBadge({ qualityTag }: { qualityTag: QualityTag }) {
 type VocabItemFormProps = {
   form: VocabFormData;
   decks: Deck[];
-  includeContextExplanation: boolean;
   onChange: (field: keyof VocabFormData, value: string) => void;
 };
 
 function VocabItemForm({
   form,
   decks,
-  includeContextExplanation,
   onChange,
 }: VocabItemFormProps) {
   return (
@@ -845,18 +813,6 @@ function VocabItemForm({
           onChange={(event) => onChange("example_sentence", event.target.value)}
         />
       </label>
-      {includeContextExplanation ? (
-        <label className="inline-field wide-field">
-          AI 문맥 설명
-          <textarea
-            className="compact-textarea"
-            value={form.context_explanation_ko}
-            onChange={(event) =>
-              onChange("context_explanation_ko", event.target.value)
-            }
-          />
-        </label>
-      ) : null}
     </div>
   );
 }

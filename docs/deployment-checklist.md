@@ -36,7 +36,7 @@ Backend:
 - `DATABASE_URL`: Optional in local development. Defaults to the existing SQLite DB. Example: `sqlite:///./vocab.db`.
 - `JWT_SECRET_KEY`: Required in production. Do not use the development fallback in production.
 - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`: Optional. Defaults to `10080` minutes, or 7 days.
-- `OPENAI_API_KEY`: Required only for AI context explanations. Without it, the API returns a clear error for AI explanation requests.
+- `OPENAI_API_KEY`: Optional. The current UI does not expose per-word AI explanation; future assistant features may use it.
 - `CORS_ALLOW_ORIGINS`: Comma-separated frontend origins. Example: `http://localhost:3000,http://127.0.0.1:3000`.
 
 Frontend:
@@ -48,11 +48,11 @@ Frontend:
 - Set `JWT_SECRET_KEY` to a strong production-only secret.
 - Add the real frontend domain to `CORS_ALLOW_ORIGINS`.
 - Set `NEXT_PUBLIC_API_BASE_URL` to the real backend API URL.
-- Decide whether `OPENAI_API_KEY` should be enabled for the deployment.
+- Decide whether optional AI assistant features need `OPENAI_API_KEY`.
 - Confirm `DATABASE_URL`. SQLite is still the only runtime-supported database in this stage.
 - Run backend validation: `python -m compileall app`.
 - Run frontend validation: `npm run build`.
-- Smoke test `/health`, `/me`, login/register, analysis, vocab save, shared deck list/detail/import, and AI explanation behavior.
+- Smoke test `/health`, `/me`, login/register, analysis, vocab save, and shared deck list/detail/import.
 
 ## 4. Security Notes
 

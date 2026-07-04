@@ -314,7 +314,6 @@ export default function HomePage() {
   const [deckPackageFile, setDeckPackageFile] = useState<File | null>(null);
   const [isLoadingStudy, setIsLoadingStudy] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
-  const [explainingItemId, setExplainingItemId] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [vocabMessage, setVocabMessage] = useState("");
   const [deckMessage, setDeckMessage] = useState("");
@@ -698,6 +697,9 @@ export default function HomePage() {
         `완벽히 아는 단어 ${knownCount}개, 헷갈리는 단어 ${uncertainCount}개, 모르는 단어 ${unknownCount}개를 저장했습니다.`,
       );
       clearClassificationDraft();
+      setTokens([]);
+      setCurrentAnalyzeCardIndex(0);
+      setShowAllAnalyzeResults(false);
       await loadVocabItems();
     } catch (error) {
       setMessage(getErrorMessage(error, "단어 저장 중 오류가 발생했습니다."));
@@ -1387,33 +1389,6 @@ export default function HomePage() {
     }
   }
 
-  async function explainVocabItem(itemId: number) {
-    setExplainingItemId(itemId);
-    setVocabMessage("");
-
-    try {
-      const updatedItem = await requestJson<VocabItem>(
-        `/vocab-items/${itemId}/explain`,
-        {
-          method: "POST",
-        },
-      );
-      setVocabItems((currentItems) =>
-        currentItems.map((item) => (item.id === itemId ? updatedItem : item)),
-      );
-      setStudyItems((currentItems) =>
-        currentItems.map((item) => (item.id === itemId ? updatedItem : item)),
-      );
-      setVocabMessage("AI 문맥 설명을 저장했습니다.");
-    } catch (error) {
-      setVocabMessage(
-        getErrorMessage(error, "AI 문맥 설명 생성에 실패했습니다."),
-      );
-    } finally {
-      setExplainingItemId(null);
-    }
-  }
-
   async function startStudy() {
     setIsLoadingStudy(true);
     setStudyMessage("");
@@ -1560,7 +1535,6 @@ export default function HomePage() {
             isExportingDeckPackage={isExportingDeckPackage}
             isImportingDeckPackage={isImportingDeckPackage}
             isPublishingDeck={isPublishingDeck}
-            explainingItemId={explainingItemId}
             message={vocabMessage}
             decks={decks}
             selectedDeckId={selectedVocabDeckId}
@@ -1620,7 +1594,6 @@ export default function HomePage() {
             onPublishTitleChange={setPublishTitle}
             onPublishDescriptionChange={setPublishDescription}
             onPublishDeck={() => void publishCurrentDeck()}
-            onExplain={(itemId) => void explainVocabItem(itemId)}
             onStatusChange={(itemId, status) =>
               void updateVocabStatus(itemId, status)
             }

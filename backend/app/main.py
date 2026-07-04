@@ -598,6 +598,7 @@ def patch_vocab_item(
 
 @app.post("/vocab-items/{item_id}/explain", response_model=VocabItemResponse)
 def explain_vocab_item(item_id: int, http_request: Request) -> VocabItemResponse:
+    # Deprecated: per-word AI explanation is hidden from UI.
     user_id = current_user_id(http_request)
     item = get_vocab_item(user_id, item_id)
     if not item:

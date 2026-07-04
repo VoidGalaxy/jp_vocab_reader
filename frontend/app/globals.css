@@ -651,12 +651,6 @@ select {
   overflow-wrap: anywhere;
 }
 
-.ai-explanation-cell {
-  display: grid;
-  gap: 8px;
-  min-width: 220px;
-}
-
 .compact-button {
   min-width: 0;
   padding: 8px 10px;
