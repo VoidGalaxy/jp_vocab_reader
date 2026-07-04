@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -16,7 +17,10 @@ from app.schemas import (
 )
 
 
-DB_PATH = Path(__file__).resolve().parents[1] / "vocab.db"
+DEFAULT_SQLITE_DB_PATH = Path(__file__).resolve().parents[1] / "vocab.db"
+DB_PATH = DEFAULT_SQLITE_DB_PATH
+SQLITE_URL_PREFIX = "sqlite:///"
+SQLITE_CONNECTION_TIMEOUT_SECONDS = 10
 DEFAULT_DECK_NAME = "기본 단어장"
 DEV_USER_EMAIL = "dev@example.local"
 DEV_USER_DISPLAY_NAME = "개발 사용자"
@@ -42,95 +46,157 @@ CUSTOM_TERM_FIELDS = """
 """
 
 
+class AppSQLiteConnection(sqlite3.Connection):
+    def __exit__(self, exc_type, exc_value, traceback) -> bool:
+        try:
+            return super().__exit__(exc_type, exc_value, traceback)
+        finally:
+            self.close()
+
+
+def get_database_url() -> str:
+    return os.getenv("DATABASE_URL", "").strip()
+
+
+def get_sqlite_database_path() -> str:
+    database_url = get_database_url()
+    if not database_url:
+        return str(DEFAULT_SQLITE_DB_PATH)
+    if database_url.startswith(SQLITE_URL_PREFIX):
+        raw_path = database_url.removeprefix(SQLITE_URL_PREFIX)
+        if not raw_path:
+            return str(DEFAULT_SQLITE_DB_PATH)
+        if raw_path == ":memory:":
+            return raw_path
+        return str(Path(raw_path).expanduser())
+    if database_url.startswith(("postgresql://", "postgres://")):
+        # TODO: PostgreSQL support will be added in a later migration step.
+        raise NotImplementedError(
+            "DATABASE_URL uses PostgreSQL, but this app currently supports "
+            "SQLite only. PostgreSQL support will be added in a later "
+            "migration step."
+        )
+    raise ValueError(
+        "Unsupported DATABASE_URL. Use sqlite:///./vocab.db or leave it unset."
+    )
+
+
 def get_connection() -> sqlite3.Connection:
-    connection = sqlite3.connect(DB_PATH)
+    connection = sqlite3.connect(
+        get_sqlite_database_path(),
+        timeout=SQLITE_CONNECTION_TIMEOUT_SECONDS,
+        factory=AppSQLiteConnection,
+    )
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 
 def init_db() -> None:
+    initialize_database()
+
+
+def initialize_database() -> None:
     with get_connection() as connection:
-        ensure_users_table(connection)
-        dev_user_id = ensure_dev_user(connection)
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS decks (
-                id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL,
-                description TEXT NOT NULL DEFAULT '',
-                created_at DATETIME NOT NULL,
-                updated_at DATETIME NOT NULL
-            )
-            """
+        ensure_schema(connection)
+
+
+def ensure_schema(connection: sqlite3.Connection) -> None:
+    ensure_auth_schema(connection)
+    dev_user_id = ensure_dev_user(connection)
+    ensure_core_schema(connection)
+    default_deck_id = ensure_default_deck(connection)
+    ensure_shared_deck_schema(connection)
+    ensure_vocab_item_columns(connection)
+    ensure_user_scoped_columns(connection)
+    migrate_existing_data_to_dev_user(connection, dev_user_id)
+    migrate_deck_unique_constraint(connection)
+    migrate_vocab_unique_constraint(connection)
+    connection.execute(
+        """
+        UPDATE vocab_items
+        SET deck_id = ?
+        WHERE deck_id IS NULL
+           OR deck_id NOT IN (SELECT id FROM decks)
+        """,
+        (default_deck_id,),
+    )
+
+
+def ensure_auth_schema(connection: sqlite3.Connection) -> None:
+    ensure_users_table(connection)
+
+
+def ensure_core_schema(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS decks (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
         )
-        default_deck_id = ensure_default_deck(connection)
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS vocab_items (
-                id INTEGER PRIMARY KEY,
-                deck_id INTEGER,
-                surface TEXT NOT NULL,
-                base_form TEXT NOT NULL,
-                reading TEXT NOT NULL,
-                part_of_speech TEXT NOT NULL,
-                normalized_form TEXT NOT NULL,
-                meaning_ko TEXT NOT NULL DEFAULT '',
-                dictionary_gloss TEXT NOT NULL DEFAULT '',
-                quality_tag TEXT NOT NULL DEFAULT 'normal',
-                context_explanation_ko TEXT NOT NULL DEFAULT '',
-                example_sentence TEXT NOT NULL DEFAULT '',
-                status TEXT NOT NULL,
-                correct_count INTEGER NOT NULL DEFAULT 0,
-                wrong_count INTEGER NOT NULL DEFAULT 0,
-                last_reviewed_at DATETIME,
-                review_level INTEGER NOT NULL DEFAULT 0,
-                next_review_at DATETIME,
-                created_at DATETIME NOT NULL,
-                updated_at DATETIME NOT NULL
-            )
-            """
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS vocab_items (
+            id INTEGER PRIMARY KEY,
+            deck_id INTEGER,
+            surface TEXT NOT NULL,
+            base_form TEXT NOT NULL,
+            reading TEXT NOT NULL,
+            part_of_speech TEXT NOT NULL,
+            normalized_form TEXT NOT NULL,
+            meaning_ko TEXT NOT NULL DEFAULT '',
+            dictionary_gloss TEXT NOT NULL DEFAULT '',
+            quality_tag TEXT NOT NULL DEFAULT 'normal',
+            context_explanation_ko TEXT NOT NULL DEFAULT '',
+            example_sentence TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL,
+            correct_count INTEGER NOT NULL DEFAULT 0,
+            wrong_count INTEGER NOT NULL DEFAULT 0,
+            last_reviewed_at DATETIME,
+            review_level INTEGER NOT NULL DEFAULT 0,
+            next_review_at DATETIME,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
         )
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS custom_terms (
-                id INTEGER PRIMARY KEY,
-                term TEXT NOT NULL,
-                reading TEXT NOT NULL DEFAULT '',
-                part_of_speech TEXT NOT NULL DEFAULT '명사',
-                meaning_ko TEXT NOT NULL DEFAULT '',
-                description TEXT NOT NULL DEFAULT '',
-                deck_id INTEGER,
-                created_at DATETIME NOT NULL,
-                updated_at DATETIME NOT NULL
-            )
-            """
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS custom_terms (
+            id INTEGER PRIMARY KEY,
+            term TEXT NOT NULL,
+            reading TEXT NOT NULL DEFAULT '',
+            part_of_speech TEXT NOT NULL DEFAULT '명사',
+            meaning_ko TEXT NOT NULL DEFAULT '',
+            description TEXT NOT NULL DEFAULT '',
+            deck_id INTEGER,
+            created_at DATETIME NOT NULL,
+            updated_at DATETIME NOT NULL
         )
-        ensure_shared_deck_tables(connection)
-        ensure_column(connection, "deck_id", "INTEGER")
-        ensure_column(connection, "correct_count", "INTEGER NOT NULL DEFAULT 0")
-        ensure_column(connection, "wrong_count", "INTEGER NOT NULL DEFAULT 0")
-        ensure_column(connection, "last_reviewed_at", "DATETIME")
-        ensure_column(connection, "review_level", "INTEGER NOT NULL DEFAULT 0")
-        ensure_column(connection, "next_review_at", "DATETIME")
-        ensure_column(connection, "example_sentence", "TEXT NOT NULL DEFAULT ''")
-        ensure_column(connection, "dictionary_gloss", "TEXT NOT NULL DEFAULT ''")
-        ensure_column(connection, "quality_tag", "TEXT NOT NULL DEFAULT 'normal'")
-        ensure_column(
-            connection, "context_explanation_ko", "TEXT NOT NULL DEFAULT ''"
-        )
-        ensure_user_scope_columns(connection)
-        migrate_existing_data_to_dev_user(connection, dev_user_id)
-        migrate_deck_unique_constraint(connection)
-        migrate_vocab_unique_constraint(connection)
-        connection.execute(
-            """
-            UPDATE vocab_items
-            SET deck_id = ?
-            WHERE deck_id IS NULL
-               OR deck_id NOT IN (SELECT id FROM decks)
-            """,
-            (default_deck_id,),
-        )
+        """
+    )
+
+
+def ensure_shared_deck_schema(connection: sqlite3.Connection) -> None:
+    ensure_shared_deck_tables(connection)
+
+
+def ensure_vocab_item_columns(connection: sqlite3.Connection) -> None:
+    ensure_column(connection, "deck_id", "INTEGER")
+    ensure_column(connection, "correct_count", "INTEGER NOT NULL DEFAULT 0")
+    ensure_column(connection, "wrong_count", "INTEGER NOT NULL DEFAULT 0")
+    ensure_column(connection, "last_reviewed_at", "DATETIME")
+    ensure_column(connection, "review_level", "INTEGER NOT NULL DEFAULT 0")
+    ensure_column(connection, "next_review_at", "DATETIME")
+    ensure_column(connection, "example_sentence", "TEXT NOT NULL DEFAULT ''")
+    ensure_column(connection, "dictionary_gloss", "TEXT NOT NULL DEFAULT ''")
+    ensure_column(connection, "quality_tag", "TEXT NOT NULL DEFAULT 'normal'")
+    ensure_column(connection, "context_explanation_ko", "TEXT NOT NULL DEFAULT ''")
 
 
 def ensure_users_table(connection: sqlite3.Connection) -> None:
@@ -399,6 +465,10 @@ def ensure_user_scope_columns(connection: sqlite3.Connection) -> None:
     ensure_table_column(connection, "decks", "user_id", "INTEGER")
     ensure_table_column(connection, "vocab_items", "user_id", "INTEGER")
     ensure_table_column(connection, "custom_terms", "user_id", "INTEGER")
+
+
+def ensure_user_scoped_columns(connection: sqlite3.Connection) -> None:
+    ensure_user_scope_columns(connection)
 
 
 def migrate_existing_data_to_dev_user(

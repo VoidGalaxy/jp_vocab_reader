@@ -12,6 +12,8 @@
 - `decks`, `vocab_items`, `custom_terms`에는 `user_id` 컬럼이 있으며 기존 데이터는 개발용 기본 사용자 소유로 마이그레이션한다.
 - 덱, 단어장, 사용자 정의 용어, 학습 기록은 repository 계층에서 현재 사용자 `user_id` 조건으로 조회/수정/삭제한다.
 - 단어 생성/수정, 분석, 통계, 학습, CSV/JSON export처럼 `deck_id`를 받는 개인 데이터 요청은 현재 사용자 소유 덱인지 먼저 확인한다.
+- DB 연결 설정은 `DATABASE_URL` 환경변수를 읽는다. 값이 없으면 기존 `backend/vocab.db` SQLite 파일을 사용하고, `sqlite:///...` URL이면 해당 SQLite 파일을 사용한다.
+- `postgresql://...` URL은 아직 런타임 지원 대상이 아니며, 이후 마이그레이션 단계에서 지원할 예정이다.
 - 현재 덱 공유 JSON export/import는 로컬 파일을 통해 덱을 복사하는 방식이다.
 
 ## B. 서비스형 전환 목표
@@ -297,6 +299,8 @@ AI 문맥 설명, 분석 요청, 공개 마켓 사용량 등을 추적하는 운
 ## H. SQLite → PostgreSQL 전환 계획
 
 - 개발 중에는 SQLite를 유지할 수 있다.
+- postgres-readiness 단계에서 `DATABASE_URL` 기반 SQLite 설정, SQLite connection timeout, `row_factory`, `PRAGMA foreign_keys = ON`, 명시적 schema 초기화 함수 구조를 정리했다.
+- 자세한 전환 계획은 [postgres-migration-plan.md](postgres-migration-plan.md)를 참고한다.
 - 여러 사용자가 쓰는 서비스 배포 전에는 PostgreSQL 전환을 권장한다.
 - PostgreSQL은 동시성, 인덱스, 트랜잭션, 백업, 운영 도구 측면에서 서비스 운영에 적합하다.
 - SQLAlchemy 도입 여부를 검토한다.

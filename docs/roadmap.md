@@ -33,6 +33,15 @@
 - 완료: 공유 덱 publish/import가 개인 학습 기록을 공유하지 않고, 가져온 단어의 학습 상태를 초기화하는지 TestClient로 확인했다.
 - 완료: `python -m compileall app`, `npm run build`, 인증/분석/저장/공유/가져오기/데이터 분리 API 스모크 검증을 통과했다.
 
+## Postgres Readiness
+
+- 완료: `DATABASE_URL` 기반 DB 설정을 추가했다. 값이 없으면 기존 `backend/vocab.db` SQLite 파일을 사용한다.
+- 완료: `sqlite:///...` 형식으로 SQLite 파일 경로를 지정할 수 있게 했다.
+- 완료: `postgresql://...` URL은 아직 미지원임을 명확한 설정 오류로 처리하고, PostgreSQL 실제 도입은 이후 단계로 남겼다.
+- 완료: SQLite 연결에 `row_factory`, timeout, `PRAGMA foreign_keys = ON`을 일관되게 적용했다.
+- 완료: startup schema 보강 흐름을 `initialize_database`, `ensure_schema`, `ensure_auth_schema`, `ensure_core_schema`, `ensure_user_scoped_columns`, `ensure_shared_deck_schema` 중심으로 정리했다.
+- 완료: [postgres-migration-plan.md](postgres-migration-plan.md)에 PostgreSQL 전환 이유, 작업 목록, 데이터 마이그레이션 전략, 위험 요소, 추천 순서를 정리했다.
+
 ## 원칙
 
 - 첫 MVP는 작고 안정적으로 만든다.

@@ -69,6 +69,14 @@ OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-5.2
 ```
 
+DB는 기본적으로 `backend/vocab.db` SQLite 파일을 사용한다. 다른 SQLite 파일을 사용하려면 `backend/.env` 또는 실행 환경에 `DATABASE_URL`을 설정한다.
+
+```env
+DATABASE_URL=sqlite:///./vocab.db
+```
+
+현재 런타임에서 실제 지원하는 DB는 SQLite뿐이다. `postgresql://...` 형식의 `DATABASE_URL`은 이후 마이그레이션 단계를 위한 예약 형식이며, 지금 설정하면 명확한 미지원 오류를 반환한다. PostgreSQL 전환 계획은 [docs/postgres-migration-plan.md](docs/postgres-migration-plan.md)를 참고한다.
+
 헬스체크:
 
 ```bash
