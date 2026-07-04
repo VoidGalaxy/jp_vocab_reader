@@ -42,6 +42,14 @@
 - 완료: startup schema 보강 흐름을 `initialize_database`, `ensure_schema`, `ensure_auth_schema`, `ensure_core_schema`, `ensure_user_scoped_columns`, `ensure_shared_deck_schema` 중심으로 정리했다.
 - 완료: [postgres-migration-plan.md](postgres-migration-plan.md)에 PostgreSQL 전환 이유, 작업 목록, 데이터 마이그레이션 전략, 위험 요소, 추천 순서를 정리했다.
 
+## Deployment Readiness
+
+- 완료: 백엔드 환경변수 읽기를 `app.settings`로 정리하고 `DATABASE_URL`, `JWT_SECRET_KEY`, `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`, `OPENAI_API_KEY`, `CORS_ALLOW_ORIGINS`를 문서화했다.
+- 완료: CORS 허용 origin을 환경변수 기반으로 설정하고 기본 개발 origin을 `localhost`와 `127.0.0.1`로 정리했다.
+- 완료: `/health` 응답에 앱 이름, DB 종류, 인증 상태를 추가하되 민감정보는 노출하지 않는다.
+- 완료: `backend/.env.example`, `frontend/.env.example`, [deployment-checklist.md](deployment-checklist.md)를 준비했다.
+- 완료: README에 env 예시 복사, 로컬 실행 순서, 배포 체크리스트 링크를 추가했다.
+
 ## 원칙
 
 - 첫 MVP는 작고 안정적으로 만든다.

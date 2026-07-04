@@ -59,14 +59,18 @@ cd backend
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+copy .env.example .env
 uvicorn app.main:app --reload
 ```
 
 AI 문맥 설명을 사용하려면 `backend/.env`에 OpenAI API 키를 설정한다. `.env` 파일은 커밋하지 않는다.
 
 ```env
+DATABASE_URL=sqlite:///./vocab.db
+JWT_SECRET_KEY=change-this-in-production
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=10080
 OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_MODEL=gpt-5.2
+CORS_ALLOW_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 ```
 
 DB는 기본적으로 `backend/vocab.db` SQLite 파일을 사용한다. 다른 SQLite 파일을 사용하려면 `backend/.env` 또는 실행 환경에 `DATABASE_URL`을 설정한다.
@@ -75,7 +79,7 @@ DB는 기본적으로 `backend/vocab.db` SQLite 파일을 사용한다. 다른 S
 DATABASE_URL=sqlite:///./vocab.db
 ```
 
-현재 런타임에서 실제 지원하는 DB는 SQLite뿐이다. `postgresql://...` 형식의 `DATABASE_URL`은 이후 마이그레이션 단계를 위한 예약 형식이며, 지금 설정하면 명확한 미지원 오류를 반환한다. PostgreSQL 전환 계획은 [docs/postgres-migration-plan.md](docs/postgres-migration-plan.md)를 참고한다.
+현재 런타임에서 실제 지원하는 DB는 SQLite뿐이다. `postgresql://...` 형식의 `DATABASE_URL`은 이후 마이그레이션 단계를 위한 예약 형식이며, 지금 설정하면 명확한 미지원 오류를 반환한다. PostgreSQL 전환 계획은 [docs/postgres-migration-plan.md](docs/postgres-migration-plan.md)를 참고한다. 배포 전 환경변수와 보안 점검은 [docs/deployment-checklist.md](docs/deployment-checklist.md)를 참고한다.
 
 헬스체크:
 

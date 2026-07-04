@@ -62,6 +62,7 @@ from app.repositories.vocab_repository import (
     update_vocab_item,
 )
 from app.dictionary_service import lookup_meaning
+from app.settings import APP_NAME, get_cors_allow_origins
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -101,7 +102,7 @@ app = FastAPI(title="JP Vocab Reader API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=get_cors_allow_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -200,7 +201,12 @@ def startup() -> None:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "app": APP_NAME,
+        "database": "sqlite",
+        "auth": "enabled",
+    }
 
 
 def build_auth_response(user: dict) -> AuthTokenResponse:
@@ -600,7 +606,10 @@ def explain_vocab_item(item_id: int, http_request: Request) -> VocabItemResponse
     try:
         explanation = generate_context_explanation(item)
     except MissingOpenAIKeyError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=400,
+            detail="AI 설명 기능을 사용하려면 서버에 OPENAI_API_KEY를 설정해야 합니다.",
+        ) from exc
     except AIExplanationError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

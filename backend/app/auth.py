@@ -4,7 +4,6 @@ import base64
 import hashlib
 import hmac
 import json
-import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -17,25 +16,11 @@ except ImportError:  # pragma: no cover - local fallback for minimal dev install
     jwt = None
 
 from app.repositories.user_repository import get_or_create_dev_user, get_user_by_id
+from app.settings import get_access_token_expire_minutes, get_jwt_secret_key
 
 
 JWT_ALGORITHM = "HS256"
 PASSWORD_HASH_ITERATIONS = 260_000
-
-
-def get_jwt_secret_key() -> str:
-    # TODO: Set JWT_SECRET_KEY in production; the fallback is for local dev only.
-    return os.getenv("JWT_SECRET_KEY") or "dev-only-jwt-secret-change-me"
-
-
-def get_access_token_expire_minutes() -> int:
-    raw_value = os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "").strip()
-    if not raw_value:
-        return 60 * 24 * 7
-    try:
-        return int(raw_value)
-    except ValueError:
-        return 60 * 24 * 7
 
 
 def hash_password(password: str) -> str:

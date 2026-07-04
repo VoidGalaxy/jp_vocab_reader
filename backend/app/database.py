@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -15,9 +14,9 @@ from app.schemas import (
     VocabItemCreate,
     VocabItemUpdate,
 )
+from app.settings import DEFAULT_SQLITE_DB_PATH, get_database_url
 
 
-DEFAULT_SQLITE_DB_PATH = Path(__file__).resolve().parents[1] / "vocab.db"
 DB_PATH = DEFAULT_SQLITE_DB_PATH
 SQLITE_URL_PREFIX = "sqlite:///"
 SQLITE_CONNECTION_TIMEOUT_SECONDS = 10
@@ -52,10 +51,6 @@ class AppSQLiteConnection(sqlite3.Connection):
             return super().__exit__(exc_type, exc_value, traceback)
         finally:
             self.close()
-
-
-def get_database_url() -> str:
-    return os.getenv("DATABASE_URL", "").strip()
 
 
 def get_sqlite_database_path() -> str:

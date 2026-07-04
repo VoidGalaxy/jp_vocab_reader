@@ -14,6 +14,8 @@
 - 단어 생성/수정, 분석, 통계, 학습, CSV/JSON export처럼 `deck_id`를 받는 개인 데이터 요청은 현재 사용자 소유 덱인지 먼저 확인한다.
 - DB 연결 설정은 `DATABASE_URL` 환경변수를 읽는다. 값이 없으면 기존 `backend/vocab.db` SQLite 파일을 사용하고, `sqlite:///...` URL이면 해당 SQLite 파일을 사용한다.
 - `postgresql://...` URL은 아직 런타임 지원 대상이 아니며, 이후 마이그레이션 단계에서 지원할 예정이다.
+- deployment-readiness 단계에서 환경변수 읽기 위치를 `app.settings`로 정리하고, CORS 허용 origin을 `CORS_ALLOW_ORIGINS`로 설정할 수 있게 했다.
+- `/health`는 서비스 상태, 앱 이름, DB 종류, 인증 활성 상태만 반환하고 secret이나 URL 값은 노출하지 않는다.
 - 현재 덱 공유 JSON export/import는 로컬 파일을 통해 덱을 복사하는 방식이다.
 
 ## B. 서비스형 전환 목표

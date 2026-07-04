@@ -278,9 +278,14 @@
 
 ```json
 {
-  "status": "ok"
+  "status": "ok",
+  "app": "jp-vocab-reader",
+  "database": "sqlite",
+  "auth": "enabled"
 }
 ```
+
+민감한 설정값이나 secret은 포함하지 않는다.
 
 ## POST /auth/register
 

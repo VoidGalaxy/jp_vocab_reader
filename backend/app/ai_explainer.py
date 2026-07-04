@@ -1,12 +1,8 @@
-import os
-from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
 from openai import OpenAI, OpenAIError
 
-
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+from app.settings import get_openai_api_key, get_openai_model
 
 
 class MissingOpenAIKeyError(RuntimeError):
@@ -18,14 +14,14 @@ class AIExplanationError(RuntimeError):
 
 
 def generate_context_explanation(item: dict[str, Any]) -> str:
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = get_openai_api_key()
     if not api_key:
         raise MissingOpenAIKeyError(
-            "OPENAI_API_KEY is not set. Add it to backend/.env or the environment."
+            "AI 설명 기능을 사용하려면 서버에 OPENAI_API_KEY를 설정해야 합니다."
         )
 
     client = OpenAI(api_key=api_key)
-    model = os.getenv("OPENAI_MODEL", "gpt-5.2")
+    model = get_openai_model()
     prompt = build_prompt(item)
 
     try:
