@@ -52,6 +52,7 @@ export type VocabFormData = {
 };
 
 export type ReviewResult = "correct" | "wrong";
+export type StudyMode = "today" | "uncertain" | "unknown" | "all";
 
 export type DeckStats = {
   deck_id: number;

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Deck, ReviewResult, VocabItem } from "./types";
+import type { Deck, ReviewResult, StudyMode, VocabItem } from "./types";
 import type { StudyStats } from "./types";
 import { StatsPanel } from "./StatsPanel";
 
@@ -12,6 +12,7 @@ type StudySectionProps = {
   isAnswerVisible: boolean;
   isLoading: boolean;
   isReviewing: boolean;
+  hasStarted: boolean;
   message: string;
   stats: StudyStats | null;
   isStatsLoading: boolean;
@@ -20,10 +21,30 @@ type StudySectionProps = {
   wrongCount: number;
   decks: Deck[];
   selectedDeckId: string;
+  selectedDeckName: string;
+  studyMode: StudyMode;
   onSelectedDeckChange: (deckId: string) => void;
+  onStudyModeChange: (mode: StudyMode) => void;
   onStart: () => void;
+  onRestart: () => void;
+  onGoToVocab: () => void;
+  onGoToAnalyze: () => void;
   onShowAnswer: () => void;
   onReview: (result: ReviewResult) => void;
+};
+
+const studyModeLabels: Record<StudyMode, string> = {
+  today: "오늘 복습",
+  uncertain: "헷갈리는 단어",
+  unknown: "모르는 단어",
+  all: "전체 학습",
+};
+
+const emptyMessages: Record<StudyMode, string> = {
+  today: "이 덱에는 오늘 복습할 단어가 없습니다.",
+  uncertain: "헷갈리는 단어가 없습니다.",
+  unknown: "모르는 단어가 없습니다.",
+  all: "학습할 모르는 단어와 헷갈리는 단어가 없습니다.",
 };
 
 export function StudySection({
@@ -34,6 +55,7 @@ export function StudySection({
   isAnswerVisible,
   isLoading,
   isReviewing,
+  hasStarted,
   message,
   stats,
   isStatsLoading,
@@ -42,11 +64,26 @@ export function StudySection({
   wrongCount,
   decks,
   selectedDeckId,
+  selectedDeckName,
+  studyMode,
   onSelectedDeckChange,
+  onStudyModeChange,
   onStart,
+  onRestart,
+  onGoToVocab,
+  onGoToAnalyze,
   onShowAnswer,
   onReview,
 }: StudySectionProps) {
+  const totalStudied = correctCount + wrongCount;
+  const modeLabel = studyModeLabels[studyMode];
+  const dueCount = stats?.due_today_count ?? 0;
+  const uncertainCount = stats?.uncertain_count ?? 0;
+  const unknownCount = stats?.unknown_count ?? 0;
+  const allStudyCount = uncertainCount + unknownCount;
+  const visibleProgress =
+    items.length > 0 ? `${Math.min(currentIndex + 1, items.length)} / ${items.length}` : "0 / 0";
+
   return (
     <section className="tab-panel" aria-live="polite">
       <StatsPanel
@@ -56,55 +93,99 @@ export function StudySection({
         message={statsMessage}
       />
 
-      <div className="result-heading">
-        <div>
-          <h2>학습 모드</h2>
-          <span>
-            {items.length > 0
-              ? `${Math.min(currentIndex + 1, items.length)} / ${items.length}`
-              : "0 / 0"}
-          </span>
+      <section className="study-control-panel">
+        <div className="result-heading">
+          <div>
+            <h2>학습 모드</h2>
+            <span>
+              {selectedDeckName} · {modeLabel}
+            </span>
+          </div>
+          <div className="heading-actions">
+            <label className="inline-field">
+              학습 덱
+              <select
+                value={selectedDeckId}
+                onChange={(event) => onSelectedDeckChange(event.target.value)}
+              >
+                <option value="all">전체 단어장</option>
+                {decks.map((deck) => (
+                  <option key={deck.id} value={String(deck.id)}>
+                    {deck.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" onClick={onStart} disabled={isLoading}>
+              {isLoading ? "불러오는 중..." : "학습 시작"}
+            </button>
+          </div>
         </div>
-        <div className="heading-actions">
-          <label className="inline-field">
-            학습 덱
-            <select
-              value={selectedDeckId}
-              onChange={(event) => onSelectedDeckChange(event.target.value)}
+
+        <div className="study-mode-grid" role="group" aria-label="학습 모드">
+          {(["today", "uncertain", "unknown", "all"] as StudyMode[]).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              className={
+                studyMode === mode
+                  ? "study-mode-button active-study-mode"
+                  : "study-mode-button"
+              }
+              onClick={() => onStudyModeChange(mode)}
             >
-              <option value="all">전체 단어장</option>
-              {decks.map((deck) => (
-                <option key={deck.id} value={String(deck.id)}>
-                  {deck.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="button" onClick={onStart} disabled={isLoading}>
-            {isLoading ? "불러오는 중..." : "학습 시작"}
-          </button>
+              <span>{studyModeLabels[mode]}</span>
+              <strong>
+                {mode === "today"
+                  ? dueCount
+                  : mode === "uncertain"
+                    ? uncertainCount
+                    : mode === "unknown"
+                      ? unknownCount
+                      : allStudyCount}
+                개
+              </strong>
+            </button>
+          ))}
         </div>
-      </div>
+      </section>
 
       {message ? <p className="message">{message}</p> : null}
 
-      {!currentItem && !isComplete ? (
+      {!hasStarted && !currentItem && !isComplete ? (
         <div className="study-card study-ready-card">
-          <h3>오늘 복습할 단어를 불러오세요</h3>
+          <h3>학습할 단어를 불러오세요</h3>
           <p>
-            덱을 선택한 뒤 학습을 시작하면 모르는 단어와 헷갈리는 단어가
-            카드로 표시됩니다.
+            덱과 학습 모드를 선택한 뒤 학습 시작을 누르면 저장한 단어를 바로
+            외울 수 있습니다.
           </p>
+        </div>
+      ) : null}
+
+      {hasStarted && !currentItem && !isComplete ? (
+        <div className="study-card study-ready-card">
+          <h3>{emptyMessages[studyMode]}</h3>
+          <p>단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.</p>
+          <div className="study-actions">
+            <button type="button" className="secondary-button" onClick={onGoToVocab}>
+              단어장으로 가기
+            </button>
+            <button type="button" className="secondary-button" onClick={onGoToAnalyze}>
+              분석 탭으로 가기
+            </button>
+          </div>
         </div>
       ) : null}
 
       {currentItem && !isComplete ? (
         <div className="study-card">
-          <div className="study-progress">
-            {currentIndex + 1} / {items.length}
+          <div className="study-card-header">
+            <span>{modeLabel}</span>
+            <strong>{visibleProgress}</strong>
           </div>
           <div className="study-front">
-            {currentItem.surface || currentItem.base_form}
+            <div>{currentItem.surface || currentItem.base_form}</div>
+            <span>{currentItem.part_of_speech || "품사 없음"}</span>
           </div>
           {isAnswerVisible ? (
             <>
@@ -114,17 +195,9 @@ export function StudySection({
                   <dd>{currentItem.reading || "-"}</dd>
                 </div>
                 <div>
-                  <dt>한국어 뜻</dt>
+                  <dt>뜻</dt>
                   <dd>{currentItem.meaning_ko || "-"}</dd>
                 </div>
-                {currentItem.dictionary_gloss ? (
-                  <div>
-                    <dt>영어 gloss</dt>
-                    <dd className="gloss-text">
-                      {currentItem.dictionary_gloss}
-                    </dd>
-                  </div>
-                ) : null}
                 <div>
                   <dt>품사</dt>
                   <dd>{currentItem.part_of_speech || "-"}</dd>
@@ -170,9 +243,23 @@ export function StudySection({
       {isComplete ? (
         <div className="study-card complete-card">
           <h3>학습 완료</h3>
-          <p>이번 세션 맞은 개수: {correctCount}</p>
-          <p>이번 세션 틀린 개수: {wrongCount}</p>
-          <p>오늘 복습을 완료했습니다.</p>
+          <div className="study-complete-stats">
+            <span>맞음 {correctCount}개</span>
+            <span>틀림 {wrongCount}개</span>
+            <span>총 학습 {totalStudied}개</span>
+          </div>
+          <p>이번 세션을 완료했습니다. 다음 학습 흐름을 바로 이어갈 수 있습니다.</p>
+          <div className="study-actions">
+            <button type="button" onClick={onRestart}>
+              다시 학습하기
+            </button>
+            <button type="button" className="secondary-button" onClick={onGoToVocab}>
+              단어장으로 가기
+            </button>
+            <button type="button" className="secondary-button" onClick={onGoToAnalyze}>
+              분석 탭으로 가기
+            </button>
+          </div>
         </div>
       ) : null}
     </section>

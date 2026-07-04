@@ -10,6 +10,7 @@ import type {
   ReviewResult,
   Deck,
   QualityTag,
+  StudyMode,
   Token,
   TokenStatus,
   TokenWithStatus,
@@ -267,6 +268,7 @@ export default function HomePage() {
   const [selectedSaveDeckId, setSelectedSaveDeckId] = useState("");
   const [selectedVocabDeckId, setSelectedVocabDeckId] = useState("all");
   const [selectedStudyDeckId, setSelectedStudyDeckId] = useState("all");
+  const [studyMode, setStudyMode] = useState<StudyMode>("today");
   const [includeKnown, setIncludeKnown] = useState(false);
   const [currentAnalyzeCardIndex, setCurrentAnalyzeCardIndex] = useState(0);
   const [showAllAnalyzeResults, setShowAllAnalyzeResults] = useState(false);
@@ -357,6 +359,16 @@ export default function HomePage() {
   const [publishTitle, setPublishTitle] = useState("");
   const [publishDescription, setPublishDescription] = useState("");
   const [isPublishingDeck, setIsPublishingDeck] = useState(false);
+
+  function resetStudySession() {
+    setStudyItems([]);
+    setCurrentStudyIndex(0);
+    setHasStartedStudy(false);
+    setIsAnswerVisible(false);
+    setStudyMessage("");
+    setSessionCorrectCount(0);
+    setSessionWrongCount(0);
+  }
 
   useEffect(() => {
     void initializeUserSession();
@@ -459,12 +471,7 @@ export default function HomePage() {
     await loadStudyStats("all");
     await loadInfoStats();
     await loadSharedDecks();
-    setStudyItems([]);
-    setCurrentStudyIndex(0);
-    setHasStartedStudy(false);
-    setIsAnswerVisible(false);
-    setSessionCorrectCount(0);
-    setSessionWrongCount(0);
+    resetStudySession();
   }
 
   async function loadCurrentUser() {
@@ -1389,7 +1396,70 @@ export default function HomePage() {
     }
   }
 
-  async function startStudy() {
+  function getDeckDisplayName(deckId: string) {
+    if (deckId === "all") {
+      return "전체 단어장";
+    }
+    return decks.find((deck) => String(deck.id) === deckId)?.name ?? "선택한 덱";
+  }
+
+  async function fetchStudyItems(deckId: string, mode: StudyMode) {
+    const baseParams = new URLSearchParams();
+    if (deckId !== "all") {
+      baseParams.set("deck_id", deckId);
+    }
+
+    if (mode === "today") {
+      const query = baseParams.toString() ? `?${baseParams.toString()}` : "";
+      const data = await requestJson<StudyItemsResponse>(`/study-items${query}`);
+      return data.items;
+    }
+
+    if (mode === "all") {
+      const fetchByStatus = async (status: "unknown" | "uncertain") => {
+        const params = new URLSearchParams(baseParams);
+        params.set("status", status);
+        params.set("sort", "next_review_asc");
+        const data = await requestJson<VocabItemsResponse>(
+          `/vocab-items?${params.toString()}`,
+        );
+        return data.items;
+      };
+      const [unknownItems, uncertainItems] = await Promise.all([
+        fetchByStatus("unknown"),
+        fetchByStatus("uncertain"),
+      ]);
+      return [...unknownItems, ...uncertainItems];
+    }
+
+    const params = new URLSearchParams(baseParams);
+    params.set("status", mode);
+    params.set("sort", "next_review_asc");
+    const data = await requestJson<VocabItemsResponse>(
+      `/vocab-items?${params.toString()}`,
+    );
+    return data.items;
+  }
+
+  function getEmptyStudyMessage(mode: StudyMode, deckId: string) {
+    const deckName = getDeckDisplayName(deckId);
+    if (mode === "today") {
+      return `${deckName}에는 오늘 복습할 단어가 없습니다.`;
+    }
+    if (mode === "uncertain") {
+      return `${deckName}에 헷갈리는 단어가 없습니다.`;
+    }
+    if (mode === "unknown") {
+      return `${deckName}에 모르는 단어가 없습니다.`;
+    }
+    return `${deckName}에 학습할 모르는 단어와 헷갈리는 단어가 없습니다.`;
+  }
+
+  async function startStudy(
+    options: { deckId?: string; mode?: StudyMode } = {},
+  ) {
+    const deckId = options.deckId ?? selectedStudyDeckId;
+    const mode = options.mode ?? studyMode;
     setIsLoadingStudy(true);
     setStudyMessage("");
     setStudyItems([]);
@@ -1400,13 +1470,11 @@ export default function HomePage() {
     setHasStartedStudy(false);
 
     try {
-      const query =
-        selectedStudyDeckId !== "all" ? `?deck_id=${selectedStudyDeckId}` : "";
-      const data = await requestJson<StudyItemsResponse>(`/study-items${query}`);
-      setStudyItems(data.items);
+      const items = await fetchStudyItems(deckId, mode);
+      setStudyItems(items);
       setHasStartedStudy(true);
-      if (data.items.length === 0) {
-        setStudyMessage("오늘 복습할 단어가 없습니다.");
+      if (items.length === 0) {
+        setStudyMessage(getEmptyStudyMessage(mode, deckId));
       }
     } catch (error) {
       setStudyMessage(
@@ -1415,6 +1483,48 @@ export default function HomePage() {
     } finally {
       setIsLoadingStudy(false);
     }
+  }
+
+  function changeStudyMode(mode: StudyMode) {
+    setStudyMode(mode);
+    if (hasStartedStudy) {
+      void startStudy({ mode });
+    } else {
+      resetStudySession();
+    }
+  }
+
+  function changeStudyDeck(deckId: string) {
+    setSelectedStudyDeckId(deckId);
+    void loadStudyStats(deckId);
+    if (hasStartedStudy) {
+      void startStudy({ deckId });
+    } else {
+      resetStudySession();
+    }
+  }
+
+  function startStudyFromVocabDeck() {
+    if (selectedVocabDeckId === "all") {
+      setVocabMessage("학습할 특정 덱을 먼저 선택해 주세요.");
+      return;
+    }
+    setSelectedStudyDeckId(selectedVocabDeckId);
+    setActiveTab("study");
+    void loadStudyStats(selectedVocabDeckId);
+    void startStudy({ deckId: selectedVocabDeckId });
+  }
+
+  function goToVocabFromStudy() {
+    setSelectedVocabDeckId(selectedStudyDeckId);
+    setActiveTab("vocab");
+    setHasLoadedVocab(true);
+    void loadVocabItems(selectedStudyDeckId);
+    void loadCustomTerms(selectedStudyDeckId);
+  }
+
+  function goToAnalyzeFromStudy() {
+    setActiveTab("analyze");
   }
 
   async function submitStudyReview(result: ReviewResult) {
@@ -1594,6 +1704,7 @@ export default function HomePage() {
             onPublishTitleChange={setPublishTitle}
             onPublishDescriptionChange={setPublishDescription}
             onPublishDeck={() => void publishCurrentDeck()}
+            onStudySelectedDeck={startStudyFromVocabDeck}
             onStatusChange={(itemId, status) =>
               void updateVocabStatus(itemId, status)
             }
@@ -1636,11 +1747,15 @@ export default function HomePage() {
             wrongCount={sessionWrongCount}
             decks={decks}
             selectedDeckId={selectedStudyDeckId}
-            onSelectedDeckChange={(deckId) => {
-              setSelectedStudyDeckId(deckId);
-              void loadStudyStats(deckId);
-            }}
+            selectedDeckName={getDeckDisplayName(selectedStudyDeckId)}
+            studyMode={studyMode}
+            hasStarted={hasStartedStudy}
+            onSelectedDeckChange={changeStudyDeck}
+            onStudyModeChange={changeStudyMode}
             onStart={() => void startStudy()}
+            onRestart={() => void startStudy()}
+            onGoToVocab={goToVocabFromStudy}
+            onGoToAnalyze={goToAnalyzeFromStudy}
             onShowAnswer={() => setIsAnswerVisible(true)}
             onReview={(result) => void submitStudyReview(result)}
           />

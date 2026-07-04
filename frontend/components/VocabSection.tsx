@@ -85,6 +85,7 @@ type VocabSectionProps = {
   onPublishTitleChange: (title: string) => void;
   onPublishDescriptionChange: (description: string) => void;
   onPublishDeck: () => void;
+  onStudySelectedDeck: () => void;
   onStatusChange: (itemId: number, status: TokenStatus) => void;
   onDelete: (itemId: number) => void;
 };
@@ -155,6 +156,7 @@ export function VocabSection({
   onPublishTitleChange,
   onPublishDescriptionChange,
   onPublishDeck,
+  onStudySelectedDeck,
   onStatusChange,
   onDelete,
 }: VocabSectionProps) {
@@ -218,6 +220,19 @@ export function VocabSection({
             <option value="next_review_asc">다음 복습 가까운순</option>
           </select>
         </label>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={onStudySelectedDeck}
+          disabled={selectedDeckId === "all"}
+          title={
+            selectedDeckId === "all"
+              ? "학습할 특정 덱을 먼저 선택해 주세요."
+              : undefined
+          }
+        >
+          이 덱 학습하기
+        </button>
         <button
           type="button"
           className="secondary-button"

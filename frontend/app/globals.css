@@ -553,6 +553,54 @@ select {
   text-align: center;
 }
 
+.study-control-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+}
+
+.study-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.study-mode-button {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  border: 1px solid var(--border);
+  padding: 12px;
+  color: #334155;
+  background: var(--soft-bg);
+  text-align: left;
+  box-shadow: none;
+}
+
+.study-mode-button span {
+  font-size: 13px;
+}
+
+.study-mode-button strong {
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.active-study-mode {
+  border-color: #2563eb;
+  color: #ffffff;
+  background: var(--primary);
+}
+
+.active-study-mode strong {
+  color: #ffffff;
+}
+
 .study-card {
   display: grid;
   gap: 20px;
@@ -561,6 +609,15 @@ select {
   padding: 28px;
   background: #ffffff;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+}
+
+.study-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #52606d;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .study-progress {
@@ -579,6 +636,18 @@ select {
   font-weight: 800;
   line-height: 1.2;
   text-align: center;
+}
+
+.study-front span {
+  display: inline-block;
+  justify-self: center;
+  border: 1px solid #dbe5ef;
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: #52606d;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .study-answer {
@@ -621,6 +690,23 @@ select {
 .complete-card {
   justify-items: center;
   text-align: center;
+}
+
+.study-complete-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.study-complete-stats span {
+  border: 1px solid #d8e2ec;
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #334155;
+  background: var(--soft-bg);
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .study-ready-card {
@@ -1245,6 +1331,10 @@ select {
 
   .study-card {
     padding: 20px;
+  }
+
+  .study-mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .study-front {
