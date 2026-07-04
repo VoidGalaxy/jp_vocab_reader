@@ -360,8 +360,7 @@ export default function HomePage() {
   const [isPublishingDeck, setIsPublishingDeck] = useState(false);
 
   useEffect(() => {
-    void loadCurrentUser();
-    void loadDecks();
+    void initializeUserSession();
     const draft = parseClassificationDraft(
       window.localStorage.getItem(CLASSIFICATION_DRAFT_KEY),
     );
@@ -372,6 +371,11 @@ export default function HomePage() {
       window.localStorage.removeItem(CLASSIFICATION_DRAFT_KEY);
     }
   }, []);
+
+  async function initializeUserSession() {
+    await loadCurrentUser();
+    await refreshUserScopedData();
+  }
 
   useEffect(() => {
     if (tokens.length === 0) {
@@ -470,6 +474,19 @@ export default function HomePage() {
       const user = await requestJson<CurrentUser>("/me");
       setCurrentUser(user);
     } catch (error) {
+      if (isHttpError(error, 401)) {
+        clearAccessToken();
+        const devUser = await requestJson<CurrentUser>(
+          "/me",
+          {},
+          { includeAuth: false },
+        );
+        setCurrentUser(devUser);
+        setAuthMessage(
+          "저장된 로그인 정보가 만료되어 개발 모드 사용자로 전환했습니다.",
+        );
+        return;
+      }
       setCurrentUser(null);
       setAuthMessage(getErrorMessage(error, "현재 사용자 정보를 불러오지 못했습니다."));
     } finally {
@@ -874,15 +891,15 @@ export default function HomePage() {
         { method: "POST" },
       );
       setSharedDeckMessage(
-        `${result.deck_name} 덱을 가져왔습니다. 단어 ${result.imported_vocab_count}개, 용어 ${result.imported_custom_term_count}개를 복사했습니다.`,
-      );
-      setSharedDeckMessage(
         `내 단어장으로 가져왔습니다. 단어장 탭에서 확인할 수 있습니다. 단어 ${result.imported_vocab_count}개, 용어 ${result.imported_custom_term_count}개를 복사했습니다.`,
       );
       setImportedSharedDeckId(sharedDeckId);
+      const importedDeckId = String(result.deck_id);
+      setSelectedVocabDeckId(importedDeckId);
+      setSelectedSaveDeckId(importedDeckId);
       await loadDecks();
-      await loadVocabItems(selectedVocabDeckId);
-      await loadCustomTerms(selectedVocabDeckId);
+      await loadVocabItems(importedDeckId);
+      await loadCustomTerms(importedDeckId);
       await loadSharedDecks();
     } catch (error) {
       setSharedDeckMessage(
@@ -1802,13 +1819,13 @@ async function requestJson<T>(
     } catch {
       detail = "";
     }
-    throw new Error(`요청에 실패했습니다. (${response.status})${detail}`);
+    throw new ApiError(response.status, getHttpErrorMessage(response.status, detail));
   }
 
   return (await response.json()) as T;
 }
 
-function apiFetch(
+async function apiFetch(
   path: string,
   init: RequestInit = {},
   options: { includeAuth?: boolean } = {},
@@ -1822,10 +1839,14 @@ function apiFetch(
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
-  return fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers,
   });
+  if (includeAuth && token && response.status === 401) {
+    clearAccessToken();
+  }
+  return response;
 }
 
 function getAccessToken() {
@@ -1845,4 +1866,35 @@ function clearAccessToken() {
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
+}
+
+class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+function isHttpError(error: unknown, status: number) {
+  return error instanceof ApiError && error.status === status;
+}
+
+function getHttpErrorMessage(status: number, detail: string) {
+  const suffix = detail.trim() ? ` ${detail.trim()}` : "";
+  if (status === 400) {
+    return `요청 값을 확인해 주세요. (${status})${suffix}`;
+  }
+  if (status === 401) {
+    return `로그인이 만료되었습니다. (${status})${suffix}`;
+  }
+  if (status === 404) {
+    return `대상을 찾을 수 없습니다. (${status})${suffix}`;
+  }
+  if (status >= 500) {
+    return `서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요. (${status})${suffix}`;
+  }
+  return `요청에 실패했습니다. (${status})${suffix}`;
 }

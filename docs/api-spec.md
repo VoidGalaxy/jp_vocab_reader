@@ -7,7 +7,9 @@
 - CSV 내보내기 API만 `text/csv` 응답을 사용한다.
 - `POST /auth/register`, `POST /auth/login`은 JWT access token을 발급한다.
 - `Authorization: Bearer <token>`이 있으면 해당 토큰 사용자 기준으로 동작하고, 토큰이 없으면 개발용 사용자 `dev@example.local`로 fallback한다.
+- 잘못되었거나 만료된 토큰은 `401 Unauthorized`를 반환한다. 프론트엔드는 이 응답을 받으면 저장된 토큰을 제거하고 개발 모드 사용자 데이터로 돌아간다.
 - `/decks`, `/vocab-items`, `/custom-terms`, `/study-items`, `/stats`, 덱 패키지 API는 현재 사용자 데이터만 대상으로 동작한다.
+- 개인 데이터 API에서 `deck_id`를 받는 요청은 현재 사용자가 소유한 덱만 허용한다. 다른 사용자의 개인 덱 ID는 `404 Not Found`로 처리한다.
 - 사용자가 붙여넣은 원문 전체는 DB에 저장하지 않는다.
 - `/analyze` 요청의 원문은 형태소 분석과 응답 생성을 위해서만 사용하고, 처리 후 폐기한다.
 
@@ -902,6 +904,7 @@ surface,base_form,reading,part_of_speech,quality_tag,meaning_ko,dictionary_gloss
 ### POST /decks/{deck_id}/publish
 
 현재 사용자의 개인 덱을 공개 공유 덱으로 등록한다. 같은 개인 덱을 여러 번 등록하면 현재 단계에서는 새 공유 덱을 매번 만든다.
+다른 사용자의 개인 덱 ID로 publish를 요청하면 `404 Not Found`를 반환한다.
 
 요청:
 
@@ -952,6 +955,7 @@ surface,base_form,reading,part_of_speech,quality_tag,meaning_ko,dictionary_gloss
 ### POST /shared-decks/{shared_deck_id}/import
 
 공유 덱을 현재 사용자의 개인 덱으로 복사한다. 가져온 단어의 학습 상태는 초기화된다.
+가져오기 성공 후 프론트엔드는 생성된 `deck_id`를 선택 덱으로 바꾸고 단어장 목록을 다시 불러온다.
 
 응답:
 

@@ -565,6 +565,8 @@ def post_vocab_item(
         )
     if item.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="invalid status")
+    if item.deck_id is not None and not get_deck_by_id(user_id, item.deck_id):
+        raise HTTPException(status_code=404, detail="deck not found")
 
     saved_item, created = create_or_update_vocab_item(user_id, item)
     if not created:
@@ -579,6 +581,8 @@ def patch_vocab_item(
     user_id = current_user_id(http_request)
     if item.status is not None and item.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="invalid status")
+    if item.deck_id is not None and not get_deck_by_id(user_id, item.deck_id):
+        raise HTTPException(status_code=404, detail="deck not found")
 
     updated_item = update_vocab_item(user_id, item_id, item)
     if not updated_item:

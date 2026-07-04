@@ -8,8 +8,10 @@
 - 주요 영속 데이터는 `decks`, `vocab_items`, `custom_terms` 중심으로 관리된다.
 - 분석 카드 분류 진행상태는 브라우저 `localStorage` draft로 임시 저장된다.
 - 현재 API는 `Authorization: Bearer <token>`이 있으면 토큰 사용자를 현재 사용자로 사용하고, 토큰이 없으면 개발용 기본 사용자 `dev@example.local`을 사용한다.
+- 잘못되었거나 만료된 토큰은 백엔드에서 `401 Unauthorized`로 거부하고, 프론트엔드는 저장된 토큰을 제거한 뒤 개발용 기본 사용자 흐름으로 복구한다.
 - `decks`, `vocab_items`, `custom_terms`에는 `user_id` 컬럼이 있으며 기존 데이터는 개발용 기본 사용자 소유로 마이그레이션한다.
 - 덱, 단어장, 사용자 정의 용어, 학습 기록은 repository 계층에서 현재 사용자 `user_id` 조건으로 조회/수정/삭제한다.
+- 단어 생성/수정, 분석, 통계, 학습, CSV/JSON export처럼 `deck_id`를 받는 개인 데이터 요청은 현재 사용자 소유 덱인지 먼저 확인한다.
 - 현재 덱 공유 JSON export/import는 로컬 파일을 통해 덱을 복사하는 방식이다.
 
 ## B. 서비스형 전환 목표
@@ -344,6 +346,8 @@ AI 문맥 설명, 분석 요청, 공개 마켓 사용량 등을 추적하는 운
 - 공유 덱에는 개인 학습 기록과 원문 전체를 포함하지 않는다.
 - `GET /shared-decks`와 `GET /shared-decks/{shared_deck_id}`는 공개 공유 덱 목록과 상세를 제공한다.
 - `POST /shared-decks/{shared_deck_id}/import`는 공유 덱을 현재 사용자의 개인 덱으로 복사하고 학습 상태를 초기화한다.
+- 가져온 단어는 `status = unknown`, 정답/오답 횟수와 복습 단계 `0`, 다음 복습일 `NULL`로 시작한다.
+- 프론트엔드는 공유 덱 가져오기 성공 후 생성된 개인 덱을 즉시 선택하고 단어장/사용자 정의 용어 목록을 다시 불러온다.
 - 기존 JSON deck package export/import는 유지하며, 서버 공유 마켓은 같은 정책을 DB 테이블 기반으로 확장한 형태다.
 
 TODO:
