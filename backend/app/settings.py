@@ -49,7 +49,10 @@ def get_openai_model() -> str:
 
 
 def get_cors_allow_origins() -> list[str]:
-    raw_value = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
+    raw_value = (
+        os.getenv("CORS_ORIGINS", "").strip()
+        or os.getenv("CORS_ALLOW_ORIGINS", "").strip()
+    )
     if not raw_value:
         return DEFAULT_CORS_ALLOW_ORIGINS
     origins = [origin.strip() for origin in raw_value.split(",") if origin.strip()]

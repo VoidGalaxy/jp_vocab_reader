@@ -50,6 +50,12 @@
 - 완료: `backend/.env.example`, `frontend/.env.example`, [deployment-checklist.md](deployment-checklist.md)를 준비했다.
 - 완료: README에 env 예시 복사, 로컬 실행 순서, 배포 체크리스트 링크를 추가했다.
 
+## Deployment Check
+
+- 완료: `CORS_ORIGINS`를 배포용 권장 CORS 환경변수로 문서화하고 기존 `CORS_ALLOW_ORIGINS`도 호환 alias로 유지했다.
+- 완료: `backend/.env.example`, README, `docs/deployment-checklist.md`의 환경변수와 smoke test 흐름을 현재 SQLite/FastAPI/Next.js 구조 기준으로 정리했다.
+- 완료: 배포 전 backend compile, `/health` smoke, frontend build 점검 흐름을 확인했다.
+
 ## Per-word AI UX Removal
 
 - 완료: per-word AI explanation UX removed/hidden. 단어장과 학습 화면에서 개별 단어 AI 설명 생성/표시 UI를 숨겼다.
