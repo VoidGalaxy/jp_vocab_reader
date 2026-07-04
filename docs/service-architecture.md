@@ -365,3 +365,11 @@ TODO:
 - 페이지네이션
 - 같은 덱 재등록 시 버전 업데이트 정책
 - 저작권/원문 저장 제한 정책
+
+## PostgreSQL Readiness Complete
+
+The application still runs on SQLite. This step did not install PostgreSQL, connect to PostgreSQL, add SQLAlchemy, or add Alembic.
+
+Backend DB startup is grouped in `backend/app/database.py` around explicit schema and migration functions: `create_core_tables()`, `create_shared_deck_tables()`, `apply_sqlite_migrations()`, `seed_dev_user()`, `backfill_existing_data_to_dev_user()`, and per-user default deck helpers.
+
+Personal data access remains scoped by `user_id` in repositories. Public shared deck reads remain the intentional exception. Follow-up details are tracked in [postgres-readiness.md](postgres-readiness.md).

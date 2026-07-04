@@ -217,3 +217,18 @@
 - 페이지네이션
 - 버전 업데이트 정책
 - 저작권/원문 저장 제한 정책
+
+## PostgreSQL Readiness
+
+- Done: SQLite remains the active development database.
+- Done: Startup schema creation and compatibility migrations are grouped in `backend/app/database.py`.
+- Done: Safe SQLite `ALTER TABLE ADD COLUMN` helpers prevent duplicate migration failures.
+- Done: Personal repository access was checked for `user_id` scoping; public shared deck reads remain the explicit exception.
+- Done: PostgreSQL migration risks and recommended steps are documented in [postgres-readiness.md](postgres-readiness.md).
+
+Next TODO:
+
+- Introduce SQLAlchemy models while still running on SQLite.
+- Preserve API responses through the model transition.
+- Add Alembic only after model metadata is stable.
+- Test a real PostgreSQL connection in a later branch.

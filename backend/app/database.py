@@ -77,12 +77,15 @@ def get_sqlite_database_path() -> str:
 
 
 def get_connection() -> sqlite3.Connection:
+    # TODO(postgres): Replace this sqlite3 connection factory with a DB adapter
+    # boundary; repositories currently depend on sqlite3.Row and ? placeholders.
     connection = sqlite3.connect(
         get_sqlite_database_path(),
         timeout=SQLITE_CONNECTION_TIMEOUT_SECONDS,
         factory=AppSQLiteConnection,
     )
     connection.row_factory = sqlite3.Row
+    # TODO(postgres): PRAGMA is SQLite-specific and should move behind adapter setup.
     connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
@@ -97,25 +100,37 @@ def initialize_database() -> None:
 
 
 def ensure_schema(connection: sqlite3.Connection) -> None:
-    ensure_auth_schema(connection)
-    dev_user_id = ensure_dev_user(connection)
-    ensure_core_schema(connection)
-    default_deck_id = ensure_default_deck(connection)
-    ensure_shared_deck_schema(connection)
-    ensure_vocab_item_columns(connection)
-    ensure_user_scoped_columns(connection)
-    migrate_existing_data_to_dev_user(connection, dev_user_id)
+    create_core_tables(connection)
+    create_shared_deck_tables(connection)
+    apply_sqlite_migrations(connection)
+    dev_user_id = seed_dev_user(connection)
+    backfill_existing_data_to_dev_user(connection, dev_user_id)
     migrate_deck_unique_constraint(connection)
     migrate_vocab_unique_constraint(connection)
-    connection.execute(
-        """
-        UPDATE vocab_items
-        SET deck_id = ?
-        WHERE deck_id IS NULL
-           OR deck_id NOT IN (SELECT id FROM decks)
-        """,
-        (default_deck_id,),
-    )
+    apply_sqlite_migrations(connection)
+    backfill_existing_data_to_dev_user(connection, dev_user_id)
+    ensure_default_decks_for_users(connection)
+    backfill_vocab_items_to_default_decks(connection, dev_user_id)
+
+
+def create_core_tables(connection: sqlite3.Connection) -> None:
+    ensure_users_table(connection)
+    ensure_core_schema(connection)
+
+
+def apply_sqlite_migrations(connection: sqlite3.Connection) -> None:
+    ensure_vocab_item_columns(connection)
+    ensure_user_scoped_columns(connection)
+
+
+def seed_dev_user(connection: sqlite3.Connection) -> int:
+    return ensure_dev_user(connection)
+
+
+def backfill_existing_data_to_dev_user(
+    connection: sqlite3.Connection, dev_user_id: int
+) -> None:
+    migrate_existing_data_to_dev_user(connection, dev_user_id)
 
 
 def ensure_auth_schema(connection: sqlite3.Connection) -> None:
@@ -178,20 +193,34 @@ def ensure_core_schema(connection: sqlite3.Connection) -> None:
 
 
 def ensure_shared_deck_schema(connection: sqlite3.Connection) -> None:
-    ensure_shared_deck_tables(connection)
+    create_shared_deck_tables(connection)
 
 
 def ensure_vocab_item_columns(connection: sqlite3.Connection) -> None:
-    ensure_column(connection, "deck_id", "INTEGER")
-    ensure_column(connection, "correct_count", "INTEGER NOT NULL DEFAULT 0")
-    ensure_column(connection, "wrong_count", "INTEGER NOT NULL DEFAULT 0")
-    ensure_column(connection, "last_reviewed_at", "DATETIME")
-    ensure_column(connection, "review_level", "INTEGER NOT NULL DEFAULT 0")
-    ensure_column(connection, "next_review_at", "DATETIME")
-    ensure_column(connection, "example_sentence", "TEXT NOT NULL DEFAULT ''")
-    ensure_column(connection, "dictionary_gloss", "TEXT NOT NULL DEFAULT ''")
-    ensure_column(connection, "quality_tag", "TEXT NOT NULL DEFAULT 'normal'")
-    ensure_column(connection, "context_explanation_ko", "TEXT NOT NULL DEFAULT ''")
+    add_column_if_missing(connection, "vocab_items", "deck_id INTEGER")
+    add_column_if_missing(
+        connection, "vocab_items", "correct_count INTEGER NOT NULL DEFAULT 0"
+    )
+    add_column_if_missing(
+        connection, "vocab_items", "wrong_count INTEGER NOT NULL DEFAULT 0"
+    )
+    add_column_if_missing(connection, "vocab_items", "last_reviewed_at DATETIME")
+    add_column_if_missing(
+        connection, "vocab_items", "review_level INTEGER NOT NULL DEFAULT 0"
+    )
+    add_column_if_missing(connection, "vocab_items", "next_review_at DATETIME")
+    add_column_if_missing(
+        connection, "vocab_items", "example_sentence TEXT NOT NULL DEFAULT ''"
+    )
+    add_column_if_missing(
+        connection, "vocab_items", "dictionary_gloss TEXT NOT NULL DEFAULT ''"
+    )
+    add_column_if_missing(
+        connection, "vocab_items", "quality_tag TEXT NOT NULL DEFAULT 'normal'"
+    )
+    add_column_if_missing(
+        connection, "vocab_items", "context_explanation_ko TEXT NOT NULL DEFAULT ''"
+    )
 
 
 def ensure_users_table(connection: sqlite3.Connection) -> None:
@@ -210,7 +239,7 @@ def ensure_users_table(connection: sqlite3.Connection) -> None:
     )
 
 
-def ensure_shared_deck_tables(connection: sqlite3.Connection) -> None:
+def create_shared_deck_tables(connection: sqlite3.Connection) -> None:
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS shared_decks (
@@ -274,6 +303,10 @@ def ensure_shared_deck_tables(connection: sqlite3.Connection) -> None:
     )
 
 
+def ensure_shared_deck_tables(connection: sqlite3.Connection) -> None:
+    create_shared_deck_tables(connection)
+
+
 def ensure_dev_user(connection: sqlite3.Connection) -> int:
     ensure_users_table(connection)
     timestamp = now_iso()
@@ -317,6 +350,65 @@ def ensure_default_deck(connection: sqlite3.Connection) -> int:
         (DEFAULT_DECK_NAME, "기존 단어와 기본 저장 대상", timestamp, timestamp),
     )
     return int(cursor.lastrowid)
+
+
+def ensure_default_deck_for_user(connection: sqlite3.Connection, user_id: int) -> int:
+    timestamp = now_iso()
+    row = connection.execute(
+        """
+        SELECT id
+        FROM decks
+        WHERE user_id = ?
+          AND name = ?
+        """,
+        (user_id, DEFAULT_DECK_NAME),
+    ).fetchone()
+    if row:
+        return int(row["id"])
+
+    cursor = connection.execute(
+        """
+        INSERT INTO decks (user_id, name, description, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (user_id, DEFAULT_DECK_NAME, "", timestamp, timestamp),
+    )
+    return int(cursor.lastrowid)
+
+
+def ensure_default_decks_for_users(connection: sqlite3.Connection) -> None:
+    rows = connection.execute("SELECT id FROM users ORDER BY id ASC").fetchall()
+    for row in rows:
+        ensure_default_deck_for_user(connection, int(row["id"]))
+
+
+def backfill_vocab_items_to_default_decks(
+    connection: sqlite3.Connection, fallback_user_id: int
+) -> None:
+    rows = connection.execute(
+        """
+        SELECT DISTINCT COALESCE(user_id, ?) AS user_id
+        FROM vocab_items
+        WHERE deck_id IS NULL
+           OR deck_id NOT IN (SELECT id FROM decks)
+        """,
+        (fallback_user_id,),
+    ).fetchall()
+    for row in rows:
+        user_id = int(row["user_id"])
+        default_deck_id = ensure_default_deck_for_user(connection, user_id)
+        connection.execute(
+            """
+            UPDATE vocab_items
+            SET deck_id = ?
+            WHERE COALESCE(user_id, ?) = ?
+              AND (
+                  deck_id IS NULL
+                  OR deck_id NOT IN (SELECT id FROM decks)
+              )
+            """,
+            (default_deck_id, fallback_user_id, user_id),
+        )
 
 
 def migrate_vocab_unique_constraint(connection: sqlite3.Connection) -> None:
@@ -437,7 +529,35 @@ def migrate_deck_unique_constraint(connection: sqlite3.Connection) -> None:
 def ensure_column(
     connection: sqlite3.Connection, column_name: str, column_definition: str
 ) -> None:
-    ensure_table_column(connection, "vocab_items", column_name, column_definition)
+    add_column_if_missing(
+        connection, "vocab_items", f"{column_name} {column_definition}"
+    )
+
+
+def validate_sql_identifier(identifier: str) -> None:
+    if not identifier or not identifier.replace("_", "").isalnum():
+        raise ValueError(f"unsafe SQL identifier: {identifier}")
+
+
+def column_exists(
+    connection: sqlite3.Connection, table_name: str, column_name: str
+) -> bool:
+    validate_sql_identifier(table_name)
+    validate_sql_identifier(column_name)
+    # TODO(postgres): PRAGMA table_info is SQLite-specific schema introspection.
+    rows = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return any(row["name"] == column_name for row in rows)
+
+
+def add_column_if_missing(
+    connection: sqlite3.Connection, table_name: str, column_definition: str
+) -> None:
+    validate_sql_identifier(table_name)
+    column_name = column_definition.strip().split(maxsplit=1)[0]
+    validate_sql_identifier(column_name)
+    if not column_exists(connection, table_name, column_name):
+        # TODO(postgres): Replace ad hoc ALTER TABLE with versioned migrations.
+        connection.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_definition}")
 
 
 def ensure_table_column(
@@ -446,20 +566,13 @@ def ensure_table_column(
     column_name: str,
     column_definition: str,
 ) -> None:
-    columns = {
-        row["name"]
-        for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()
-    }
-    if column_name not in columns:
-        connection.execute(
-            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"
-        )
+    add_column_if_missing(connection, table_name, f"{column_name} {column_definition}")
 
 
 def ensure_user_scope_columns(connection: sqlite3.Connection) -> None:
-    ensure_table_column(connection, "decks", "user_id", "INTEGER")
-    ensure_table_column(connection, "vocab_items", "user_id", "INTEGER")
-    ensure_table_column(connection, "custom_terms", "user_id", "INTEGER")
+    add_column_if_missing(connection, "decks", "user_id INTEGER")
+    add_column_if_missing(connection, "vocab_items", "user_id INTEGER")
+    add_column_if_missing(connection, "custom_terms", "user_id INTEGER")
 
 
 def ensure_user_scoped_columns(connection: sqlite3.Connection) -> None:
@@ -485,7 +598,13 @@ def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    # TODO(timezone): Keep UTC ISO strings for now; define a full timezone policy
+    # before PostgreSQL TIMESTAMPTZ migration.
+    return now_utc().isoformat()
+
+
+def now_utc() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def next_review_for_correct(current_level: int, reviewed_at: datetime) -> str:
