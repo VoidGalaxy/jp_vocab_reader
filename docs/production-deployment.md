@@ -1,12 +1,12 @@
 # Production Deployment
 
-This guide prepares the app for a real hosting platform without changing the current runtime architecture. PostgreSQL, SQLAlchemy, and Alembic are still future work.
+This guide prepares the app for a real hosting platform without changing the current API surface. SQLite fallback remains available for local development, but PostgreSQL is recommended before real public multi-user traffic.
 
 ## 1. Recommended Structure
 
 - Frontend: Vercel or another Next.js-capable host.
 - Backend: Render, Railway, Fly.io, VPS, or another Python/FastAPI host.
-- Database: keep SQLite for the current stage only. Move to PostgreSQL before a real public multi-user service.
+- Database: use PostgreSQL for production. Keep SQLite only for local development or temporary single-instance testing.
 
 Deploy frontend and backend as separate services. The frontend calls the backend through `NEXT_PUBLIC_API_BASE_URL`.
 
@@ -122,29 +122,29 @@ NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example
 
 If the variable is missing, local development falls back to `http://127.0.0.1:8000`. Do not rely on that fallback in production.
 
-## 8. SQLite Notes
+## 8. Database Notes
 
-SQLite is still the active runtime database. It is acceptable for local development and very small single-instance testing, but it has production risks:
+SQLite remains the fallback when `DATABASE_URL` is empty. It is acceptable for local development and very small single-instance testing, but it has production risks:
 
 - Redeploys can replace or delete the local database file on hosts with ephemeral filesystems.
 - Multiple backend instances may not share the same database file.
 - Backups are manual unless the host provides persistent disk backup.
 - File permissions and working directory changes can point the app at a different SQLite file.
 
-For any real public service, PostgreSQL is recommended after the planned migration work.
+For any real public service, set a PostgreSQL `DATABASE_URL`, run the connection check, migrate existing SQLite data intentionally, and confirm backup/restore before launch.
 
-## 9. PostgreSQL TODO
+## 9. PostgreSQL Migration
 
-Before switching to PostgreSQL:
+Before switching production traffic to PostgreSQL:
 
-- Introduce SQLAlchemy models while preserving current API behavior.
-- Keep SQLite working through the new DB layer first.
-- Add Alembic migrations after the model layer is stable.
-- Migrate existing SQLite data intentionally.
-- Re-check SQLite-specific SQL, `?` placeholders, `sqlite3.Row`, datetime string comparisons, and startup-time schema changes.
+- Prepare an empty target database.
+- Set `DATABASE_URL` through the host secret/environment UI.
+- Run `python scripts/check_postgres_connection.py`.
+- Run `python scripts/migrate_sqlite_to_postgres.py` from `backend` if existing `backend/vocab.db` data must be copied.
+- Re-check insert ID returns, duplicate saves, search filters, date-string due filters, and shared-deck publish/import.
 - Add database backups and restore testing.
 
-PostgreSQL connection support exists behind `DATABASE_URL`, but do not move production traffic before data migration and managed database smoke tests are complete.
+See [postgres-data-migration.md](postgres-data-migration.md) for the full smoke-test and migration checklist. Do not move production traffic before data migration and managed database smoke tests are complete.
 
 ## 10. Smoke Test After Deployment
 

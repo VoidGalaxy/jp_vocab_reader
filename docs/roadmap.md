@@ -49,6 +49,14 @@
 - 완료: PostgreSQL용 핵심 테이블 생성 로직을 추가하고, dev user/default deck bootstrap이 PostgreSQL에서도 동작하도록 정리했다.
 - 완료: [postgres-migration.md](postgres-migration.md)에 SQLite fallback, DATABASE_URL 설정, API 확인 목록, 다음 단계 데이터 마이그레이션 범위를 문서화했다.
 
+## postgres-data-migration-and-test
+
+- Done: PostgreSQL smoke-test guide added in [postgres-data-migration.md](postgres-data-migration.md).
+- Done: `backend/scripts/check_postgres_connection.py` verifies a PostgreSQL `DATABASE_URL` without printing the password or full URL.
+- Done: `backend/scripts/migrate_sqlite_to_postgres.py` copies `backend/vocab.db` into PostgreSQL, preserves IDs where possible, prints before/after row counts, and stops by default if the target already has data.
+- Done: PostgreSQL startup compatibility was tightened so the dev-user seed path no longer emits SQLite-only `AUTOINCREMENT` DDL.
+- Next: Run the documented smoke list against a real disposable PostgreSQL database before production traffic.
+
 ## Deployment Readiness
 
 - 완료: 백엔드 환경변수 읽기를 `app.settings`로 정리하고 `DATABASE_URL`, `JWT_SECRET_KEY`, `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`, `OPENAI_API_KEY`, `CORS_ALLOW_ORIGINS`를 문서화했다.

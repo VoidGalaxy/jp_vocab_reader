@@ -581,7 +581,8 @@ def ensure_shared_deck_tables(connection: sqlite3.Connection) -> None:
 
 
 def ensure_dev_user(connection: sqlite3.Connection) -> int:
-    ensure_users_table(connection)
+    if not is_postgres_connection(connection):
+        ensure_users_table(connection)
     timestamp = now_iso()
     row = connection.execute(
         "SELECT id FROM users WHERE email = ?", (DEV_USER_EMAIL,)

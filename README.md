@@ -102,7 +102,9 @@ DATABASE_URL=sqlite:///./vocab.db
 
 기본 개발 DB는 SQLite이며, `DATABASE_URL`이 비어 있으면 기존 `backend/vocab.db`를 계속 사용한다. PostgreSQL 전환 계획은 [docs/postgres-migration-plan.md](docs/postgres-migration-plan.md)를 참고한다. 배포 전 환경변수, CORS, 빌드, smoke test 점검은 [docs/deployment-checklist.md](docs/deployment-checklist.md)를 참고한다. 실제 호스팅 플랫폼에 올릴 때의 실행 명령과 설정 순서는 [docs/production-deployment.md](docs/production-deployment.md)를 참고한다.
 
-PostgreSQL migration foundation is now available behind `DATABASE_URL`. Leave `DATABASE_URL` empty to keep the existing SQLite development DB, or set a `postgresql://...` URL for a PostgreSQL database after installing backend requirements. SQLite data migration is a separate follow-up step. See [docs/postgres-migration.md](docs/postgres-migration.md).
+PostgreSQL migration foundation is now available behind `DATABASE_URL`. Leave `DATABASE_URL` empty to keep the existing SQLite development DB, or set a `postgresql://...` URL for a PostgreSQL database after installing backend requirements. See [docs/postgres-migration.md](docs/postgres-migration.md).
+
+SQLite -> PostgreSQL data migration tooling is available in `backend/scripts`. Use `python scripts/check_postgres_connection.py` to verify a PostgreSQL `DATABASE_URL`, then `python scripts/migrate_sqlite_to_postgres.py` to copy `backend/vocab.db` into an empty PostgreSQL database. See [docs/postgres-data-migration.md](docs/postgres-data-migration.md).
 
 헬스체크:
 
@@ -267,4 +269,4 @@ Set `NEXT_PUBLIC_API_BASE_URL` to the deployed backend URL before building or de
 
 ## Development Database
 
-The backend currently uses SQLite for local development and runtime storage. PostgreSQL is not connected in this step; migration preparation notes are in [docs/postgres-readiness.md](docs/postgres-readiness.md).
+The backend uses SQLite for local development when `DATABASE_URL` is empty. PostgreSQL can be selected with a `postgresql://` or `postgres://` `DATABASE_URL`; keep SQLite fallback available for local recovery and test it before deployment.
