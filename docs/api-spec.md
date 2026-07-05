@@ -65,8 +65,8 @@
 - `reading`: 히라가나 읽기
 - `part_of_speech`: 한국어 대표 품사명
 - `normalized_form`: 정규화형
-- `meaning_ko`: dictionary service가 사용자 정의 용어 뜻, 내장 한국어 사전, JMdict gloss 기반 로컬 한국어 매핑 순서로 채운 기본 한국어 뜻. 사전에 없으면 빈 문자열을 반환한다.
-- `dictionary_gloss`: 로컬 JMdict JSON 사전에서 찾은 영어 gloss 후보. `meaning_ko`를 덮어쓰지 않으며, 매칭된 gloss를 `; `로 합친 문자열이다.
+- `meaning_ko`: dictionary service가 사용자 정의 용어 뜻, 내장 한국어 사전, JMdict gloss를 Kaikki/Wiktionary 영어→한국어 subset으로 변환한 후보 순서로 채운 기본 한국어 뜻. 사전에 없으면 빈 문자열을 반환한다.
+- `dictionary_gloss`: 로컬 JMdict JSON 사전에서 찾은 영어 gloss 후보. `meaning_ko`를 덮어쓰지 않으며, 매칭된 gloss를 `; `로 합친 내부 보조 문자열이다.
 - `quality_tag`: 분석 품질 태그. `normal`, `custom_term`, `compound_verb`, `noun_phrase_candidate` 중 하나다.
 - `example_sentence`: 단어가 처음 등장한 원문 문장. 문장 종료 기호를 포함한다.
 - `is_custom_term`: 사용자 정의 용어 사전에서 매칭된 토큰이면 `true`, 일반 분석 토큰이면 `false`
@@ -236,7 +236,7 @@
 - 반환 순서는 원문에서 처음 등장한 순서를 유지한다.
 - `reading`은 SudachiPy의 가타카나 읽기를 히라가나로 변환해 반환한다.
 - `part_of_speech`는 한국어 품사명으로 반환한다.
-- `meaning_ko`는 dictionary service를 통해 채운다. 조회 우선순위는 사용자 정의 용어 뜻, 내장 사전의 `base_form`, `normalized_form`, `surface`, JMdict gloss 기반 로컬 한국어 매핑 순서이며, 사전에 없으면 빈 문자열을 반환한다.
+- `meaning_ko`는 dictionary service를 통해 채운다. 조회 우선순위는 사용자 정의 용어 뜻, 내장 사전의 `base_form`, `normalized_form`, `surface`, JMdict gloss를 Kaikki/Wiktionary 영어→한국어 subset으로 변환한 후보 순서이며, 사전에 없으면 빈 문자열을 반환한다.
 - 일반 Sudachi 토큰의 `dictionary_gloss`는 로컬 JMdict JSON 사전에서 `surface`, `base_form`, `normalized_form`, `reading` 순서로 조회한다.
 - 사용자 정의 용어 토큰의 `dictionary_gloss`는 빈 문자열이다.
 - `quality_tag`는 일반 토큰 `normal`, 사용자 정의 용어 `custom_term`, 복합동사 `compound_verb`, 명사구 후보 `noun_phrase_candidate`로 반환한다.

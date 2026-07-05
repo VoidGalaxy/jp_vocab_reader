@@ -199,7 +199,7 @@ export function SharedDeckSection({
                     <div key={item.id} className="shared-preview-row">
                       <strong>{item.surface || item.base_form || "-"}</strong>
                       <span>{item.reading || "-"}</span>
-                      <span>{item.meaning_ko || item.dictionary_gloss || "-"}</span>
+                      <span>{item.meaning_ko || "-"}</span>
                     </div>
                   ))}
                 </div>

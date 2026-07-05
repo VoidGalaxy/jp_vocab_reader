@@ -1,4 +1,5 @@
 from app.dictionary import get_korean_meaning
+from app.en_ko_dictionary_service import translate_glosses_to_korean
 from app.gloss_ko_mapper import map_glosses_to_korean
 from app.jmdict_service import lookup_jmdict_gloss
 
@@ -27,6 +28,11 @@ def lookup_meaning(
         normalized_form=normalized_form,
         reading=reading,
     )
+    meaning = translate_glosses_to_korean(dictionary_gloss)
+    if meaning:
+        return meaning
+
+    # Deprecated fallback: keep only as a small exception patch for sample gaps.
     return map_glosses_to_korean(dictionary_gloss)
 
 

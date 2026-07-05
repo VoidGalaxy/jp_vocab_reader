@@ -20,6 +20,7 @@ dist/
 *.sqlite
 *.sqlite3
 backend/data/dictionary/jmdict_full.json
+backend/data/dictionary/en_ko_full.json
 
 # OS
 .DS_Store
@@ -33,6 +34,9 @@ Thumbs.db
 *.log
 
 backend/data/dictionary/raw_jmdict.json
+backend/data/dictionary/*raw*.json
+backend/data/dictionary/kaikki*.json
+backend/data/dictionary/*.jsonl
 backend/data/dictionary/*.gz
 backend/data/dictionary/*.zip
 backend/data/dictionary/*.tar.gz

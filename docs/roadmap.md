@@ -86,9 +86,11 @@
 - Done: JMdict full dictionary loader path and sample fallback policy documented.
 - Done: Dictionary validation and normalization scripts prepared.
 - Done: JMdict/EDICT source notice added to the Info tab and dictionary data docs.
+- Done: Kaikki/Wiktionary English-to-Korean fallback subset support added for JMdict gloss translation.
 - TODO: Prepare the actual `jmdict_full.json` file.
+- TODO: Build and deploy the actual `en_ko_full.json` file.
 - TODO: Place the full dictionary file in the production deployment environment.
-- TODO: Continue improving Korean gloss fallback mappings.
+- TODO: Continue improving Korean fallback coverage from Kaikki/Wiktionary data and small exception patches.
 - TODO: Add frequent missing words after tester feedback.
 
 ## Per-word AI UX Removal

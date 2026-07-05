@@ -635,11 +635,6 @@ export function VocabSection({
                     <td>{item.part_of_speech}</td>
                     <td>
                       <div>{item.meaning_ko || "-"}</div>
-                      {item.dictionary_gloss ? (
-                        <div className="gloss-text">
-                          영어 gloss: {item.dictionary_gloss}
-                        </div>
-                      ) : null}
                     </td>
                     <td>
                       <span className="example-text">

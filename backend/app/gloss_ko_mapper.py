@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 
+# Deprecated: primary JMdict gloss translation uses en_ko_dictionary_service.
+# Keep this table only as a small exception patch for sample/full coverage gaps.
 GLOSS_KO_MAP = {
     "ability": "능력",
     "above": "위",

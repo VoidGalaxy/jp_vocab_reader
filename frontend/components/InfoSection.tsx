@@ -55,9 +55,9 @@ export function InfoSection({
       <div>
         <h2>사전 데이터 출처</h2>
         <p>
-          JMdict/EDICT project by EDRDG 데이터를 참고합니다. 사전 데이터는
-          해당 프로젝트 라이선스에 따르며, 앱은 사용자 정의 용어와 개인
-          단어장 데이터를 별도로 저장합니다.
+          JMdict/EDICT project by EDRDG와 Kaikki/Wiktionary 데이터를
+          참고합니다. 사전 데이터는 각 프로젝트 라이선스에 따르며, 앱은
+          사용자 정의 용어와 개인 단어장 데이터를 별도로 저장합니다.
         </p>
       </div>
 

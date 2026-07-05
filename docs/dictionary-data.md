@@ -1,15 +1,19 @@
 # Dictionary Data
 
-The app keeps dictionary data file-based. PostgreSQL stores user data only, such as accounts, decks, saved vocabulary, custom terms, shared decks, and review progress. Do not import the full JMdict dataset into PostgreSQL.
+The app keeps dictionary data file-based. PostgreSQL stores user data only, such as accounts, decks, saved vocabulary, custom terms, shared decks, and review progress. Do not import the full JMdict or Kaikki/Wiktionary datasets into PostgreSQL.
 
 ## Local Dictionary Files
 
 - Default development dictionary: `backend/data/dictionary/jmdict_sample.json`
 - Optional full dictionary: `backend/data/dictionary/jmdict_full.json`
+- English-to-Korean fallback sample: `backend/data/dictionary/en_ko_sample.json`
+- Optional full English-to-Korean fallback: `backend/data/dictionary/en_ko_full.json`
 
 If `jmdict_full.json` exists and is valid, the backend loads it before the sample file. If it is missing or invalid, the app falls back to `jmdict_sample.json`. If neither file can be loaded, the app still starts and returns empty JMdict fallback results.
 
 `jmdict_full.json` is intentionally ignored by Git because it can be large. Keep `jmdict_sample.json` committed for local development and tests.
+
+`en_ko_full.json` is generated from Kaikki/Wiktionary raw data and is also ignored by Git. Keep `en_ko_sample.json` committed for local development and smoke tests.
 
 ## Supported JSON Entry Formats
 
@@ -57,6 +61,14 @@ Check the active dictionary without printing full contents:
 ```bash
 cd backend
 python scripts/check_dictionary_file.py
+python scripts/check_en_ko_dictionary.py
+```
+
+Build an English-to-Korean fallback subset from a Kaikki/Wiktionary JSON or JSONL dump:
+
+```bash
+cd backend
+python scripts/build_en_ko_from_kaikki.py --input kaikki_raw.jsonl --output data/dictionary/en_ko_full.json
 ```
 
 ## Meaning Priority
@@ -65,8 +77,9 @@ python scripts/check_dictionary_file.py
 
 1. User-defined term meaning
 2. Built-in Korean dictionary meaning
-3. Korean fallback mapped from local JMdict glosses
-4. Empty string
+3. Korean fallback mapped from local JMdict glosses through `en_ko_full.json` or `en_ko_sample.json`
+4. Deprecated manual exception mapper for small gaps
+5. Empty string
 
 `dictionary_gloss` remains auxiliary data. The main learning UI should prioritize Korean meanings.
 
@@ -82,7 +95,7 @@ Render deployments may not include `jmdict_full.json` automatically. The current
 - If `JMDICT_FULL_JSON_URL` is missing or the download fails, the app continues with `jmdict_sample.json` fallback.
 - A `sha256:...` value is an integrity hash, not a download URL. Do not put hash text in `JMDICT_FULL_JSON_URL`.
 
-Do not commit the full file, and do not store the full JMdict data in PostgreSQL. Render's filesystem can be ephemeral, so the file may need to be downloaded again after restart or redeploy. A Render persistent disk or a dedicated dictionary artifact/storage flow can be reviewed later for paid or more stable operations.
+Do not commit the full files, and do not store the full JMdict or Kaikki/Wiktionary data in PostgreSQL. Render's filesystem can be ephemeral, so the file may need to be downloaded again after restart or redeploy. A Render persistent disk or a dedicated dictionary artifact/storage flow can be reviewed later for paid or more stable operations.
 
 Optional environment variables:
 
@@ -93,4 +106,4 @@ Neither variable should contain secrets in committed documentation. If the URL i
 
 ## Source Notice
 
-The dictionary fallback can use JMdict/EDICT project data by EDRDG. When using JMdict data, keep an appropriate source and license notice in product and deployment documentation. User-defined terms and personal vocabulary data are stored separately from JMdict data.
+The dictionary fallback can use JMdict/EDICT project data by EDRDG and Kaikki/Wiktionary data. JMdict/EDICT has its own license requirements, and Kaikki/Wiktionary data can require CC-BY-SA/GFDL attribution and share-alike handling. Keep appropriate source and license notices in product and deployment documentation. User-defined terms and personal vocabulary data are stored separately from dictionary source data.
