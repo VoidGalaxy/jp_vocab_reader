@@ -5,9 +5,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from app.dictionary_file_manager import DICTIONARY_DIR, get_full_dictionary_path
 
-DICTIONARY_DIR = Path(__file__).resolve().parents[1] / "data" / "dictionary"
-JMDICT_FULL_PATH = DICTIONARY_DIR / "jmdict_full.json"
+JMDICT_FULL_PATH = get_full_dictionary_path()
 JMDICT_SAMPLE_PATH = DICTIONARY_DIR / "jmdict_sample.json"
 MAX_GLOSSES_PER_LOOKUP = 8
 ENTRY_LIST_KEYS = ("entries", "words", "jmdict", "JMdict")
@@ -154,7 +154,7 @@ def _load_jmdict_index() -> dict[str, list[str]]:
         return index
 
     _jmdict_status = {
-        "source": "empty",
+        "source": "fallback",
         "path": "",
         "entry_count": 0,
         "key_count": 0,

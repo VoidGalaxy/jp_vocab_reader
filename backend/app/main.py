@@ -19,6 +19,8 @@ from app.auth import (
     verify_password,
 )
 from app.database import get_database_engine, init_db
+from app.dictionary_file_manager import ensure_full_dictionary_file
+from app.jmdict_service import get_jmdict_status
 from app.repositories.custom_term_repository import (
     create_custom_term,
     delete_custom_term,
@@ -196,16 +198,34 @@ def merge_custom_terms(
 
 @app.on_event("startup")
 def startup() -> None:
+    ensure_full_dictionary_file()
     init_db()
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
+def health() -> dict[str, object]:
+    dictionary_status = get_jmdict_status()
     return {
         "status": "ok",
         "app": APP_NAME,
         "database": get_database_engine(),
         "auth": "enabled",
+        "dictionary": {
+            "source": dictionary_status.get("source", "fallback"),
+            "entries": dictionary_status.get("entry_count", 0),
+            "keys": dictionary_status.get("key_count", 0),
+        },
+    }
+
+
+@app.get("/dictionary-status")
+def dictionary_status() -> dict[str, object]:
+    status = get_jmdict_status()
+    return {
+        "source": status.get("source", "fallback"),
+        "entries": status.get("entry_count", 0),
+        "keys": status.get("key_count", 0),
+        "errors": status.get("errors", []),
     }
 
 

@@ -77,6 +77,7 @@ JWT_ACCESS_TOKEN_EXPIRE_MINUTES=10080
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.2
 CORS_ORIGINS=http://localhost:3000,https://your-frontend-domain.example
+JMDICT_FULL_JSON_URL=
 ```
 
 Frontend:
@@ -86,6 +87,8 @@ NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example
 ```
 
 Never commit real `.env` files. Use the host's secret/environment variable UI. Do not write real `DATABASE_URL`, `JWT_SECRET_KEY`, API keys, Render URLs, Vercel URLs, or Neon connection strings into this document.
+
+`JMDICT_FULL_JSON_URL` is optional. Set it only when the Render backend should download `jmdict_full.json` at startup. Do not commit the downloaded file.
 
 ## 5. CORS
 
@@ -161,6 +164,7 @@ See [postgres-data-migration.md](postgres-data-migration.md) for the full smoke-
 Backend:
 
 - `GET /health`
+- Confirm `/health` shows `dictionary.source` as `full` when full dictionary delivery is enabled.
 - `GET /me`
 - `POST /auth/register`
 - `POST /auth/login`
@@ -170,6 +174,7 @@ Frontend:
 
 - Login/register/logout
 - Analyze Japanese text
+- Confirm analyzed tokens can receive `meaning_ko` or `dictionary_gloss` from the active local dictionary.
 - Classify and save words
 - Confirm saved words in the vocab tab
 - Start a study session from a deck

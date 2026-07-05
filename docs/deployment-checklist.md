@@ -40,6 +40,8 @@ Backend:
 - `OPENAI_MODEL`: Optional. Defaults to the backend setting.
 - `CORS_ORIGINS`: Comma-separated frontend origins. Example: `http://localhost:3000,http://127.0.0.1:3000`.
 - `CORS_ALLOW_ORIGINS`: Backward-compatible alias for `CORS_ORIGINS`.
+- `JMDICT_FULL_JSON_URL`: Optional. URL for a normalized full JMdict JSON file downloaded at backend startup when the local full dictionary file is missing.
+- `JMDICT_FULL_JSON_PATH`: Optional. Custom local path for the full dictionary JSON file.
 
 Frontend:
 
@@ -57,6 +59,7 @@ Do not commit `.env`, `.env.local`, `backend/.env`, or `frontend/.env.local`.
 - Start locally with `uvicorn app.main:app --reload` and confirm startup initializes the SQLite schema without deleting data.
 - Production start command from `backend`: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 - Confirm `GET /health` returns `status: ok`.
+- If full dictionary delivery is enabled, confirm `GET /health` shows `dictionary.source: full`.
 
 ## 4. Frontend Pre-Deployment Checks
 

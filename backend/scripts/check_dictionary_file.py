@@ -16,8 +16,10 @@ from app.jmdict_service import (  # noqa: E402
     JMDICT_FULL_PATH,
     JMDICT_SAMPLE_PATH,
     build_jmdict_index,
+    get_jmdict_status,
     read_jmdict_entries,
 )
+from app.dictionary_file_manager import get_full_dictionary_url  # noqa: E402
 
 
 DEFAULT_TEST_WORDS = ["怠惰", "自覚", "見上げる", "立ち上がる", "希望", "闇", "声"]
@@ -63,6 +65,13 @@ def main() -> int:
 
     print()
     print(f"active lookup source: {active_label}")
+    status = get_jmdict_status()
+    print(
+        "loader status: "
+        f"source={status.get('source')} "
+        f"entries={status.get('entry_count')} "
+        f"keys={status.get('key_count')}"
+    )
     for word in words:
         glosses = active_index.get(word, [])
         if glosses:
@@ -74,6 +83,17 @@ def main() -> int:
 
     if not full_index:
         print()
+        if get_full_dictionary_url():
+            print(
+                "JMDICT_FULL_JSON_URL is configured. This script does not download "
+                "the file; the backend startup path downloads it when the local full "
+                "dictionary file is missing."
+            )
+        else:
+            print(
+                "For production, set JMDICT_FULL_JSON_URL so the Render backend can "
+                "download jmdict_full.json at startup when the local file is missing."
+            )
         print(
             "jmdict_full.json is not active. The app will continue with the sample "
             "dictionary or empty fallback, but production-quality coverage requires "
