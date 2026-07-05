@@ -75,6 +75,7 @@
 
 ## Production Deployment Setup
 
+- Done: Vercel frontend + Render backend + Neon PostgreSQL deployment test completed successfully.
 - 완료: backend production start command를 `uvicorn app.main:app --host 0.0.0.0 --port $PORT`로 정리하고 `backend/Procfile`에 추가했다.
 - 완료: `docs/production-deployment.md`에 frontend/backend 배포 절차, 환경변수, CORS, SQLite 주의점, smoke test, troubleshooting 순서를 정리했다.
 - 완료: README에 로컬 실행과 production 실행을 구분하고 production deployment 문서 링크를 추가했다.

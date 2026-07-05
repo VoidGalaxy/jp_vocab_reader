@@ -1,14 +1,22 @@
 # Production Deployment
 
-This guide prepares the app for a real hosting platform without changing the current API surface. SQLite fallback remains available for local development, but PostgreSQL is recommended before real public multi-user traffic.
+This guide captures the production deployment shape that has been tested successfully: Vercel frontend, Render backend, and Neon PostgreSQL. SQLite fallback remains available for local development only.
 
 ## 1. Recommended Structure
 
-- Frontend: Vercel or another Next.js-capable host.
-- Backend: Render, Railway, Fly.io, VPS, or another Python/FastAPI host.
-- Database: use Neon PostgreSQL for production. Keep SQLite only as the local development fallback.
+- Frontend: Vercel.
+- Backend: Render.
+- Database: Neon PostgreSQL.
 
 Deploy frontend and backend as separate services. The frontend calls the backend through `NEXT_PUBLIC_API_BASE_URL`.
+
+Production deployment is considered successful when:
+
+- Vercel serves the frontend over HTTPS.
+- Render serves the FastAPI backend over HTTPS and `GET /health` succeeds.
+- The backend uses a Neon PostgreSQL `DATABASE_URL` configured in the host environment.
+- The Vercel frontend can register/login, analyze text, save vocabulary, and read saved data through the Render backend.
+- CORS allows the exact Vercel frontend origin.
 
 ## 2. Frontend Deployment
 
@@ -32,7 +40,7 @@ Set:
 NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example
 ```
 
-For Vercel-style hosting, set the environment variable in the project settings before building.
+For Vercel, set the environment variable in the project settings before building. The value must be the HTTPS Render backend URL. Do not use `http://` in production; a Vercel HTTPS page calling an HTTP API can fail with `Failed to fetch` or a browser mixed content block.
 
 ## 3. Backend Deployment
 
@@ -77,7 +85,7 @@ Frontend:
 NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example
 ```
 
-Never commit real `.env` files. Use the host's secret/environment variable UI.
+Never commit real `.env` files. Use the host's secret/environment variable UI. Do not write real `DATABASE_URL`, `JWT_SECRET_KEY`, API keys, Render URLs, Vercel URLs, or Neon connection strings into this document.
 
 ## 5. CORS
 
@@ -93,6 +101,8 @@ Production example:
 ```env
 CORS_ORIGINS=https://your-frontend-domain.example
 ```
+
+For the tested Vercel + Render deployment, `CORS_ORIGINS` must include the Vercel origin with `https://`. If the backend still uses the compatibility alias, put the same HTTPS Vercel origin in `CORS_ALLOW_ORIGINS`.
 
 If the browser shows a CORS error, first verify:
 
@@ -120,18 +130,18 @@ The frontend reads:
 NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example
 ```
 
-If the variable is missing, local development falls back to `http://127.0.0.1:8000`. Do not rely on that fallback in production.
+In production this must be the HTTPS Render backend URL. If the variable is missing, local development falls back to `http://127.0.0.1:8000`. Do not rely on that fallback in production.
 
 ## 8. Database Notes
 
-SQLite remains the fallback when `DATABASE_URL` is empty. It is for local development only in the planned deployment. Production should use Neon PostgreSQL.
+SQLite remains the fallback when `DATABASE_URL` is empty. It is for local development only. The tested production deployment uses Neon PostgreSQL.
 
 - Redeploys can replace or delete the local database file on hosts with ephemeral filesystems.
 - Multiple backend instances may not share the same database file.
 - Backups are manual unless the host provides persistent disk backup.
 - File permissions and working directory changes can point the app at a different SQLite file.
 
-For the planned public service, set a Neon PostgreSQL `DATABASE_URL`, run the connection check, and confirm backup/restore before launch. The current SQLite database contains only test data, so production starts from a clean PostgreSQL database.
+For production, set a Neon PostgreSQL `DATABASE_URL`, run the connection check, and confirm backup/restore before launch. The current SQLite database contains only test data, so production starts from a clean PostgreSQL database.
 
 ## 9. PostgreSQL Migration
 
@@ -172,7 +182,9 @@ Frontend:
 2. Check `GET /health`.
 3. Check `JWT_SECRET_KEY` is set in backend production.
 4. Check `CORS_ORIGINS` and `NEXT_PUBLIC_API_BASE_URL` together.
-5. Check whether the SQLite file path is persistent and writable.
-6. Check frontend build-time environment variables.
-7. Check browser network responses for `401`, `404`, `500`, or CORS failures.
-8. Check OpenAI settings only if assistant endpoints are being used.
+5. Check that `NEXT_PUBLIC_API_BASE_URL` uses `https://` and points to the Render backend URL.
+6. Check that `CORS_ORIGINS` or `CORS_ALLOW_ORIGINS` includes the Vercel frontend origin with `https://`.
+7. Check whether the SQLite file path is accidentally being used instead of Neon PostgreSQL.
+8. Check frontend build-time environment variables.
+9. Check browser network responses for `401`, `404`, `500`, CORS failures, `Failed to fetch`, or mixed content.
+10. Check OpenAI settings only if assistant endpoints are being used.

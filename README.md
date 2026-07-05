@@ -1,5 +1,13 @@
 # jp-vocab-reader
 
+## Recommended Production Deployment
+
+- Frontend: Vercel
+- Backend: Render
+- Database: Neon PostgreSQL
+
+Use the hosting provider environment variable UI for production settings. `NEXT_PUBLIC_API_BASE_URL` must be the `https://` Render backend URL, and `CORS_ORIGINS` or `CORS_ALLOW_ORIGINS` must include the Vercel frontend origin with `https://`. Do not commit `.env` files or document real `DATABASE_URL`, `JWT_SECRET_KEY`, API keys, or service URLs.
+
 ## 단어장 탭 UI
 
 - 단어장 탭 상단은 덱 선택, 검색, 상태 필터, 복습 대상 필터, 정렬, 단어 직접 추가만 기본으로 보여주는 compact toolbar로 정리했습니다.
