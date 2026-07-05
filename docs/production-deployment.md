@@ -6,7 +6,7 @@ This guide prepares the app for a real hosting platform without changing the cur
 
 - Frontend: Vercel or another Next.js-capable host.
 - Backend: Render, Railway, Fly.io, VPS, or another Python/FastAPI host.
-- Database: use PostgreSQL for production. Keep SQLite only for local development or temporary single-instance testing.
+- Database: use Neon PostgreSQL for production. Keep SQLite only as the local development fallback.
 
 Deploy frontend and backend as separate services. The frontend calls the backend through `NEXT_PUBLIC_API_BASE_URL`.
 
@@ -124,14 +124,14 @@ If the variable is missing, local development falls back to `http://127.0.0.1:80
 
 ## 8. Database Notes
 
-SQLite remains the fallback when `DATABASE_URL` is empty. It is acceptable for local development and very small single-instance testing, but it has production risks:
+SQLite remains the fallback when `DATABASE_URL` is empty. It is for local development only in the planned deployment. Production should use Neon PostgreSQL.
 
 - Redeploys can replace or delete the local database file on hosts with ephemeral filesystems.
 - Multiple backend instances may not share the same database file.
 - Backups are manual unless the host provides persistent disk backup.
 - File permissions and working directory changes can point the app at a different SQLite file.
 
-For any real public service, set a PostgreSQL `DATABASE_URL`, run the connection check, migrate existing SQLite data intentionally, and confirm backup/restore before launch.
+For the planned public service, set a Neon PostgreSQL `DATABASE_URL`, run the connection check, and confirm backup/restore before launch. The current SQLite database contains only test data, so production starts from a clean PostgreSQL database.
 
 ## 9. PostgreSQL Migration
 
@@ -140,7 +140,7 @@ Before switching production traffic to PostgreSQL:
 - Prepare an empty target database.
 - Set `DATABASE_URL` through the host secret/environment UI.
 - Run `python scripts/check_postgres_connection.py`.
-- Run `python scripts/migrate_sqlite_to_postgres.py` from `backend` if existing `backend/vocab.db` data must be copied.
+- Keep `python scripts/migrate_sqlite_to_postgres.py` available, but run it only if existing `backend/vocab.db` data must be preserved. For the current deployment, skip it because the SQLite data is test data only.
 - Re-check insert ID returns, duplicate saves, search filters, date-string due filters, and shared-deck publish/import.
 - Add database backups and restore testing.
 

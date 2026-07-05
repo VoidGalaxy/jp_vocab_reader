@@ -55,7 +55,9 @@
 - Done: `backend/scripts/check_postgres_connection.py` verifies a PostgreSQL `DATABASE_URL` without printing the password or full URL.
 - Done: `backend/scripts/migrate_sqlite_to_postgres.py` copies `backend/vocab.db` into PostgreSQL, preserves IDs where possible, prints before/after row counts, and stops by default if the target already has data.
 - Done: PostgreSQL startup compatibility was tightened so the dev-user seed path no longer emits SQLite-only `AUTOINCREMENT` DDL.
-- Next: Run the documented smoke list against a real disposable PostgreSQL database before production traffic.
+- Done: Empty PostgreSQL feature smoke testing completed successfully.
+- Done: SQLite data migration is skipped for this deployment because the existing `backend/vocab.db` contains only test data; production starts from a clean PostgreSQL database.
+- Next: Keep the migration script available for future cases where SQLite contains meaningful user data.
 
 ## Deployment Readiness
 

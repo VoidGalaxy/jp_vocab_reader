@@ -38,6 +38,10 @@ For external PostgreSQL:
 The migration script is safest against an empty target DB. If target tables
 already contain rows, it stops by default.
 
+For the current production preparation, start from a clean PostgreSQL database.
+The existing `backend/vocab.db` contains only test data, not meaningful user
+data, so SQLite -> PostgreSQL data migration is intentionally skipped.
+
 ## 3. Before Starting The Backend
 
 From `backend`:
@@ -62,6 +66,11 @@ exist:
 It masks the password and does not print the full `DATABASE_URL`.
 
 ## 4. Migrate SQLite Data
+
+Keep `backend/scripts/migrate_sqlite_to_postgres.py` in the repository, but run
+it only when the existing SQLite database contains meaningful user data that must
+be preserved. For this project stage, the existing SQLite data is test data only,
+so do not run the migration for production setup.
 
 Default source:
 
