@@ -8,6 +8,15 @@
 
 Use the hosting provider environment variable UI for production settings. `NEXT_PUBLIC_API_BASE_URL` must be the `https://` Render backend URL, and `CORS_ORIGINS` or `CORS_ALLOW_ORIGINS` must include the Vercel frontend origin with `https://`. Do not commit `.env` files or document real `DATABASE_URL`, `JWT_SECRET_KEY`, API keys, or service URLs.
 
+## Dictionary Data
+
+- Built-in Korean meanings and user-defined terms are checked before JMdict fallback data.
+- The committed `backend/data/dictionary/jmdict_sample.json` is for development and tests.
+- A full local JMdict file can be placed at `backend/data/dictionary/jmdict_full.json`; it is ignored by Git and should not be committed.
+- Dictionary data remains file-based. PostgreSQL stores user data, not the full JMdict dataset.
+
+See [docs/dictionary-data.md](docs/dictionary-data.md) for supported JSON formats, validation scripts, production placement options, and JMdict/EDICT source notice requirements.
+
 ## 단어장 탭 UI
 
 - 단어장 탭 상단은 덱 선택, 검색, 상태 필터, 복습 대상 필터, 정렬, 단어 직접 추가만 기본으로 보여주는 compact toolbar로 정리했습니다.
@@ -126,7 +135,7 @@ curl http://localhost:8000/health
 curl.exe -X POST http://localhost:8000/analyze -H "Content-Type: application/json" -d "{\"text\":\"彼は怠惰であることを自覚していた。\"}"
 ```
 
-분석 결과의 `reading`은 히라가나로 반환되고, `part_of_speech`는 한국어 품사명으로 반환된다. `meaning_ko`는 사전 조회 서비스에서 사용자 정의 용어 뜻, 내장 기본 사전의 `base_form`, `normalized_form`, `surface` 순서로 조회한다. 이 값이 비어 있으면 JMdict 기반 영어 gloss를 작은 로컬 매핑으로 한국어 뜻 후보로 변환해 채운다. JMdict 기반 영어 gloss 원문은 `meaning_ko`를 덮어쓰지 않고 `dictionary_gloss`로 별도 제공한다. 전체 JMdict JSON을 사용하려면 `backend/data/dictionary/jmdict_full.json` 파일을 직접 넣는다. full 파일이 없거나 파싱할 수 없으면 `backend/data/dictionary/jmdict_sample.json` 샘플 JSON 사전을 사용한다. 찾지 못하면 빈 문자열로 반환된다. 단어장은 `backend/vocab.db` SQLite 파일에 저장된다.
+분석 결과의 `reading`은 히라가나로 반환되고, `part_of_speech`는 한국어 품사명으로 반환된다. `meaning_ko`는 사전 조회 서비스에서 사용자 정의 용어 뜻, 내장 기본 사전의 `base_form`, `normalized_form`, `surface` 순서로 조회한다. 이 값이 비어 있으면 JMdict 기반 영어 gloss를 작은 로컬 매핑으로 한국어 뜻 후보로 변환해 채운다. JMdict 기반 영어 gloss 원문은 `meaning_ko`를 덮어쓰지 않고 `dictionary_gloss`로 별도 제공한다. 전체 JMdict JSON을 사용하려면 `backend/data/dictionary/jmdict_full.json` 파일을 직접 넣는다. full 파일이 없거나 파싱할 수 없으면 `backend/data/dictionary/jmdict_sample.json` 샘플 JSON 사전을 사용한다. 찾지 못하면 빈 문자열로 반환된다. 운영 사용자 데이터는 PostgreSQL에 저장하고, SQLite는 로컬 개발 fallback으로만 사용한다.
 분석 결과에는 단어가 처음 등장한 원문 문장인 `example_sentence`도 포함된다. 예문은 단어장 저장, 학습 카드, CSV 내보내기에 함께 사용된다.
 분석 후처리에서 일부 복합동사와 `명사 + の + 명사` 표현을 학습 후보로 추가한다. 후보 유형은 `quality_tag`로 구분하며, 사용자 정의 용어는 `custom_term`, 복합동사는 `compound_verb`, 명사구 후보는 `noun_phrase_candidate`, 일반 토큰은 `normal`로 반환된다.
 앱 시작 시 `기본 단어장` 덱이 자동 생성되며, 기존 저장 단어 중 덱이 없는 항목은 기본 단어장에 자동 연결된다.
@@ -140,7 +149,7 @@ curl.exe -X POST http://localhost:8000/analyze -H "Content-Type: application/jso
 - `backend/app/gloss_ko_mapper.py`는 샘플 영어 gloss를 한국어 뜻 후보로 매핑한다. AI 자동 호출이나 외부 API 호출은 하지 않는다.
 - 사전 우선순위는 사용자 정의 용어 `meaning_ko`, 내장 한국어 사전 `meaning_ko`, 로컬 JMdict gloss 기반 한국어 후보, 빈 값 순서다.
 - `dictionary_gloss`는 내부 참고/보조 데이터로 유지하며, 화면에서는 한국어 `meaning_ko`를 우선 보여준다.
-- JMdict/EDRDG 라이선스 표기 TODO: 전체 JMdict 데이터 연동 전에 앱/문서/배포물에 필요한 라이선스 문구와 출처 표기를 추가한다.
+- JMdict/EDRDG 출처 고지는 Info 탭과 [docs/dictionary-data.md](docs/dictionary-data.md)에 정리했다.
 
 ## 분석 품질 개선
 

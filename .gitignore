@@ -19,6 +19,7 @@ dist/
 *.db
 *.sqlite
 *.sqlite3
+backend/data/dictionary/jmdict_full.json
 
 # OS
 .DS_Store

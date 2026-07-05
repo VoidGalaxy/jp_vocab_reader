@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -9,8 +10,18 @@ DICTIONARY_DIR = Path(__file__).resolve().parents[1] / "data" / "dictionary"
 JMDICT_FULL_PATH = DICTIONARY_DIR / "jmdict_full.json"
 JMDICT_SAMPLE_PATH = DICTIONARY_DIR / "jmdict_sample.json"
 MAX_GLOSSES_PER_LOOKUP = 8
+ENTRY_LIST_KEYS = ("entries", "words", "jmdict", "JMdict")
+
+logger = logging.getLogger(__name__)
 
 _jmdict_index: dict[str, list[str]] | None = None
+_jmdict_status: dict[str, Any] = {
+    "source": "not-loaded",
+    "path": "",
+    "entry_count": 0,
+    "key_count": 0,
+    "errors": [],
+}
 
 
 def _clean_text(value: Any) -> str:
@@ -19,6 +30,18 @@ def _clean_text(value: Any) -> str:
 
 def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+def _root_entries(value: Any) -> list[Any] | None:
+    if isinstance(value, list):
+        return value
+    if not isinstance(value, dict):
+        return None
+    for key in ENTRY_LIST_KEYS:
+        entries = value.get(key)
+        if isinstance(entries, list):
+            return entries
+    return None
 
 
 def _extract_texts(values: Any, text_keys: tuple[str, ...]) -> list[str]:
@@ -68,8 +91,8 @@ def normalize_jmdict_entry(entry: Any) -> dict[str, list[str]] | None:
         return None
 
     return {
-        "kanji_terms": dedupe_texts(kanji_terms),
-        "kana_terms": dedupe_texts(kana_terms),
+        "kanji": dedupe_texts(kanji_terms),
+        "kana": dedupe_texts(kana_terms),
         "glosses": glosses,
     }
 
@@ -85,27 +108,59 @@ def dedupe_texts(values: list[str]) -> list[str]:
     return deduped
 
 
-def _read_jmdict_entries(path: Path) -> list[Any] | None:
+def read_jmdict_entries(path: Path) -> tuple[list[Any] | None, str]:
+    if not path.exists():
+        return None, "missing"
     try:
-        entries = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
+        raw_data = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return None, f"read error: {exc}"
+    except json.JSONDecodeError as exc:
+        return None, f"json parse error: line {exc.lineno} column {exc.colno}"
 
-    return entries if isinstance(entries, list) else None
+    entries = _root_entries(raw_data)
+    if entries is None:
+        return None, "unsupported root format"
+    return entries, ""
 
 
 def _load_jmdict_index() -> dict[str, list[str]]:
+    global _jmdict_status
+    errors: list[str] = []
     for path in (JMDICT_FULL_PATH, JMDICT_SAMPLE_PATH):
-        entries = _read_jmdict_entries(path)
+        entries, error = read_jmdict_entries(path)
         if entries is None:
+            errors.append(f"{path.name}: {error}")
+            logger.info("JMdict dictionary skipped: %s (%s)", path.name, error)
             continue
         index = build_jmdict_index(entries)
         if not index:
+            errors.append(f"{path.name}: no valid entries")
+            logger.info("JMdict dictionary skipped: %s (no valid entries)", path.name)
             continue
-        print(f"Loaded JMdict dictionary: {path.name} ({len(index)} keys)")
+        _jmdict_status = {
+            "source": "full" if path == JMDICT_FULL_PATH else "sample",
+            "path": str(path),
+            "entry_count": len(entries),
+            "key_count": len(index),
+            "errors": errors,
+        }
+        logger.info(
+            "JMdict dictionary loaded: %s (%s entries, %s keys)",
+            path.name,
+            len(entries),
+            len(index),
+        )
         return index
 
-    print("Loaded JMdict dictionary: empty (no valid local dictionary file)")
+    _jmdict_status = {
+        "source": "empty",
+        "path": "",
+        "entry_count": 0,
+        "key_count": 0,
+        "errors": errors,
+    }
+    logger.warning("JMdict dictionary unavailable; no valid local dictionary file")
     return {}
 
 
@@ -116,7 +171,7 @@ def build_jmdict_index(entries: list[Any]) -> dict[str, list[str]]:
         if not normalized:
             continue
 
-        keys = [*normalized["kanji_terms"], *normalized["kana_terms"]]
+        keys = [*normalized["kanji"], *normalized["kana"]]
         for key in keys:
             index.setdefault(key, [])
             for gloss in normalized["glosses"]:
@@ -131,6 +186,11 @@ def get_jmdict_index() -> dict[str, list[str]]:
     if _jmdict_index is None:
         _jmdict_index = _load_jmdict_index()
     return _jmdict_index
+
+
+def get_jmdict_status() -> dict[str, Any]:
+    get_jmdict_index()
+    return dict(_jmdict_status)
 
 
 def lookup_jmdict_gloss(

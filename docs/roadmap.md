@@ -81,6 +81,16 @@
 - 완료: README에 로컬 실행과 production 실행을 구분하고 production deployment 문서 링크를 추가했다.
 - 다음 TODO: 실제 배포, PostgreSQL 실제 전환, 운영용 DB 백업, AI 사용량 제한, 공유 덱 신고/관리 기능.
 
+## Dictionary Quality Upgrade
+
+- Done: JMdict full dictionary loader path and sample fallback policy documented.
+- Done: Dictionary validation and normalization scripts prepared.
+- Done: JMdict/EDICT source notice added to the Info tab and dictionary data docs.
+- TODO: Prepare the actual `jmdict_full.json` file.
+- TODO: Place the full dictionary file in the production deployment environment.
+- TODO: Continue improving Korean gloss fallback mappings.
+- TODO: Add frequent missing words after tester feedback.
+
 ## Per-word AI UX Removal
 
 - 완료: per-word AI explanation UX removed/hidden. 단어장과 학습 화면에서 개별 단어 AI 설명 생성/표시 UI를 숨겼다.

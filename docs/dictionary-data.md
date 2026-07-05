@@ -1,0 +1,85 @@
+# Dictionary Data
+
+The app keeps dictionary data file-based. PostgreSQL stores user data only, such as accounts, decks, saved vocabulary, custom terms, shared decks, and review progress. Do not import the full JMdict dataset into PostgreSQL.
+
+## Local Dictionary Files
+
+- Default development dictionary: `backend/data/dictionary/jmdict_sample.json`
+- Optional full dictionary: `backend/data/dictionary/jmdict_full.json`
+
+If `jmdict_full.json` exists and is valid, the backend loads it before the sample file. If it is missing or invalid, the app falls back to `jmdict_sample.json`. If neither file can be loaded, the app still starts and returns empty JMdict fallback results.
+
+`jmdict_full.json` is intentionally ignored by Git because it can be large. Keep `jmdict_sample.json` committed for local development and tests.
+
+## Supported JSON Entry Formats
+
+The loader accepts a list of entries, or an object with an entry list under `entries`, `words`, `jmdict`, or `JMdict`.
+
+App-normalized format:
+
+```json
+{
+  "kanji": ["怠惰"],
+  "kana": ["たいだ"],
+  "glosses": ["laziness", "sloth"]
+}
+```
+
+Object format:
+
+```json
+{
+  "kanji": [{"text": "怠惰"}],
+  "kana": [{"text": "たいだ"}],
+  "sense": [{"gloss": [{"text": "laziness"}]}]
+}
+```
+
+`k_ele` / `r_ele` / `sense` format:
+
+```json
+{
+  "k_ele": [{"keb": "怠惰"}],
+  "r_ele": [{"reb": "たいだ"}],
+  "sense": [{"gloss": ["laziness"]}]
+}
+```
+
+For best runtime behavior, normalize full dictionary data into the app-normalized format:
+
+```bash
+cd backend
+python scripts/normalize_jmdict_json.py --input raw_jmdict.json --output data/dictionary/jmdict_full.json
+```
+
+Check the active dictionary without printing full contents:
+
+```bash
+cd backend
+python scripts/check_dictionary_file.py
+```
+
+## Meaning Priority
+
+`meaning_ko` is resolved in this order:
+
+1. User-defined term meaning
+2. Built-in Korean dictionary meaning
+3. Korean fallback mapped from local JMdict glosses
+4. Empty string
+
+`dictionary_gloss` remains auxiliary data. The main learning UI should prioritize Korean meanings.
+
+## Production Placement Strategy
+
+Render deployments may not include `jmdict_full.json` automatically. To use the full dictionary in production, choose an explicit placement strategy:
+
+1. Download the normalized file from external storage during deployment.
+2. Store the file on Render persistent disk or similar storage.
+3. Publish a separate dictionary artifact and copy it into `backend/data/dictionary/jmdict_full.json`.
+
+This project does not require automated download at this stage. Do not commit the full file, and do not store the full JMdict data in PostgreSQL.
+
+## Source Notice
+
+The dictionary fallback can use JMdict/EDICT project data by EDRDG. When using JMdict data, keep an appropriate source and license notice in product and deployment documentation. User-defined terms and personal vocabulary data are stored separately from JMdict data.

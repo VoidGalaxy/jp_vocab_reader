@@ -223,14 +223,6 @@ export function AnalyzeSection({
                     <dt>예문</dt>
                     <dd>{currentToken.example_sentence || "-"}</dd>
                   </div>
-                  {currentToken.dictionary_gloss ? (
-                    <div className="classify-example">
-                      <dt>영어 gloss</dt>
-                      <dd className="gloss-text">
-                        {currentToken.dictionary_gloss}
-                      </dd>
-                    </div>
-                  ) : null}
                 </dl>
                 <div className="classify-actions">
                   <button
@@ -330,11 +322,6 @@ export function AnalyzeSection({
                         <td>{token.part_of_speech}</td>
                         <td>
                           <div>{token.meaning_ko || "-"}</div>
-                          {token.dictionary_gloss ? (
-                            <div className="gloss-text">
-                              영어 gloss: {token.dictionary_gloss}
-                            </div>
-                          ) : null}
                         </td>
                         <td>
                           <span className="example-text">
