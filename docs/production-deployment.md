@@ -88,7 +88,7 @@ NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example
 
 Never commit real `.env` files. Use the host's secret/environment variable UI. Do not write real `DATABASE_URL`, `JWT_SECRET_KEY`, API keys, Render URLs, Vercel URLs, or Neon connection strings into this document.
 
-`JMDICT_FULL_JSON_URL` is optional. Set it only when the Render backend should download `jmdict_full.json` at startup. Do not commit the downloaded file.
+`JMDICT_FULL_JSON_URL` is optional. Set it only when the Render backend should download `jmdict_full.json` at startup. Plain `.json` and `.json.zip` / `.zip` URLs are supported. Do not put `sha256:...` hash text in this variable, and do not commit the downloaded file.
 
 ## 5. CORS
 
@@ -165,6 +165,7 @@ Backend:
 
 - `GET /health`
 - Confirm `/health` shows `dictionary.source` as `full` when full dictionary delivery is enabled.
+- If dictionary delivery fails or analysis returns `500`, check Render logs for download, ZIP extraction, or JSON validation errors.
 - `GET /me`
 - `POST /auth/register`
 - `POST /auth/login`

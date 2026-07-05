@@ -31,6 +31,11 @@ def check_file(path: Path, label: str) -> tuple[list[object] | None, dict[str, l
     if entries is None:
         if error == "missing":
             print(f"  missing: place the file here if this dictionary should be used.")
+        elif "ZIP archive" in error:
+            print(
+                "  invalid: jmdict_full.json appears to be a ZIP archive; "
+                "use unzip/normalizer or zipped download support."
+            )
         else:
             print(f"  invalid: {error}")
         return None, {}

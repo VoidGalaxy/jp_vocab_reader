@@ -76,15 +76,17 @@ Render deployments may not include `jmdict_full.json` automatically. The current
 
 - Put the normalized full dictionary JSON file in private storage that can be read by the backend.
 - Set `JMDICT_FULL_JSON_URL` in the Render backend environment to that file URL.
-- On backend startup, if `backend/data/dictionary/jmdict_full.json` is missing, the app downloads the file to a temporary path and then moves it into place.
+- The URL may point to a plain `.json` file or a `.json.zip` / `.zip` archive. GitHub release asset ZIP URLs are supported; the backend extracts one JSON file and stores only JSON content as `jmdict_full.json`.
+- On backend startup, if `backend/data/dictionary/jmdict_full.json` is missing, the app downloads the file to a temporary path, extracts it if needed, validates it as JSON, and then moves it into place.
 - If the file already exists, startup skips the download.
 - If `JMDICT_FULL_JSON_URL` is missing or the download fails, the app continues with `jmdict_sample.json` fallback.
+- A `sha256:...` value is an integrity hash, not a download URL. Do not put hash text in `JMDICT_FULL_JSON_URL`.
 
 Do not commit the full file, and do not store the full JMdict data in PostgreSQL. Render's filesystem can be ephemeral, so the file may need to be downloaded again after restart or redeploy. A Render persistent disk or a dedicated dictionary artifact/storage flow can be reviewed later for paid or more stable operations.
 
 Optional environment variables:
 
-- `JMDICT_FULL_JSON_URL`: URL for the normalized full dictionary JSON file.
+- `JMDICT_FULL_JSON_URL`: URL for the normalized full dictionary JSON file, either plain `.json` or zipped `.json.zip` / `.zip`.
 - `JMDICT_FULL_JSON_PATH`: custom local path for the downloaded or pre-mounted full dictionary file.
 
 Neither variable should contain secrets in committed documentation. If the URL is private or signed, configure it only in the host environment UI.

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.jmdict_service import normalize_jmdict_entry, read_jmdict_entries  # noqa: E402
+from app.dictionary_file_manager import _select_json_member  # noqa: E402
 
 
 def dedupe_entries(entries: list[dict[str, list[str]]]) -> list[dict[str, list[str]]]:
@@ -49,6 +51,26 @@ def normalize_entries(raw_entries: list[Any]) -> list[dict[str, list[str]]]:
     return dedupe_entries(normalized_entries)
 
 
+def read_input_entries(input_path: Path) -> tuple[list[Any] | None, str]:
+    if zipfile.is_zipfile(input_path):
+        with zipfile.ZipFile(input_path) as archive:
+            member_name = _select_json_member(archive.namelist())
+            if not member_name:
+                return None, "ZIP archive does not contain a JSON file"
+            with archive.open(member_name) as input_file:
+                raw_data = json.load(input_file)
+        if isinstance(raw_data, list):
+            return raw_data, ""
+        if isinstance(raw_data, dict):
+            for key in ("entries", "words", "jmdict", "JMdict"):
+                entries = raw_data.get(key)
+                if isinstance(entries, list):
+                    return entries, ""
+        return None, "unsupported root format"
+
+    return read_jmdict_entries(input_path)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Normalize a JMdict JSON file into the app dictionary format."
@@ -64,7 +86,7 @@ def main() -> int:
     input_path = Path(args.input)
     output_path = Path(args.output)
 
-    raw_entries, error = read_jmdict_entries(input_path)
+    raw_entries, error = read_input_entries(input_path)
     if raw_entries is None:
         print(f"Input is not readable as supported JMdict JSON: {error}")
         return 1

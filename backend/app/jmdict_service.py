@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -111,6 +112,11 @@ def dedupe_texts(values: list[str]) -> list[str]:
 def read_jmdict_entries(path: Path) -> tuple[list[Any] | None, str]:
     if not path.exists():
         return None, "missing"
+    if zipfile.is_zipfile(path):
+        return (
+            None,
+            "appears to be a ZIP archive; use zipped download support or extract JSON",
+        )
     try:
         raw_data = json.loads(path.read_text(encoding="utf-8"))
     except OSError as exc:
@@ -127,11 +133,16 @@ def read_jmdict_entries(path: Path) -> tuple[list[Any] | None, str]:
 def _load_jmdict_index() -> dict[str, list[str]]:
     global _jmdict_status
     errors: list[str] = []
+    invalid_full_seen = False
     for path in (JMDICT_FULL_PATH, JMDICT_SAMPLE_PATH):
         entries, error = read_jmdict_entries(path)
         if entries is None:
             errors.append(f"{path.name}: {error}")
-            logger.info("JMdict dictionary skipped: %s (%s)", path.name, error)
+            if path == JMDICT_FULL_PATH and error != "missing":
+                invalid_full_seen = True
+                logger.warning("JMdict full dictionary skipped: %s", error)
+            else:
+                logger.info("JMdict dictionary skipped: %s (%s)", path.name, error)
             continue
         index = build_jmdict_index(entries)
         if not index:
@@ -154,7 +165,7 @@ def _load_jmdict_index() -> dict[str, list[str]]:
         return index
 
     _jmdict_status = {
-        "source": "fallback",
+        "source": "invalid_full" if invalid_full_seen else "fallback",
         "path": "",
         "entry_count": 0,
         "key_count": 0,
