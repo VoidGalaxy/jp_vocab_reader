@@ -31,3 +31,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+backend/data/dictionary/jmdict_full.json
+backend/data/dictionary/raw_jmdict.json
+backend/data/dictionary/*.gz
+backend/data/dictionary/*.zip
+backend/data/dictionary/*.tar.gz
