@@ -8,12 +8,16 @@ The app keeps dictionary data file-based. PostgreSQL stores user data only, such
 - Optional full dictionary: `backend/data/dictionary/jmdict_full.json`
 - English-to-Korean fallback sample: `backend/data/dictionary/en_ko_sample.json`
 - Optional full English-to-Korean fallback: `backend/data/dictionary/en_ko_full.json`
+- krdict reverse index sample (boost/ranking only): `backend/data/dictionary/krdict_reverse_sample.json`
+- Optional full krdict reverse index: `backend/data/dictionary/krdict_reverse_full.json`
 
 If `jmdict_full.json` exists and is valid, the backend loads it before the sample file. If it is missing or invalid, the app falls back to `jmdict_sample.json`. If neither file can be loaded, the app still starts and returns empty JMdict fallback results.
 
 `jmdict_full.json` is intentionally ignored by Git because it can be large. Keep `jmdict_sample.json` committed for local development and tests.
 
 `en_ko_full.json` is generated from Kaikki/Wiktionary raw data and is also ignored by Git. Keep `en_ko_sample.json` committed for local development and smoke tests.
+
+`krdict_reverse_full.json` (see the krdict section below) is also ignored by Git. Keep `krdict_reverse_sample.json` committed for local development and tests.
 
 ## Supported JSON Entry Formats
 
@@ -130,6 +134,69 @@ Optional environment variables:
 
 Kaikki/Wiktionary data can require CC BY-SA/GFDL-style attribution and share-alike handling. If `en_ko_full.json` is published as a public release asset, keep the source and license notice alongside it (see the Source Notice section below and the Info tab in the app).
 
+## krdict Reverse Index (Boost-Only Auxiliary Data)
+
+`backend/app/krdict_reverse_service.py` loads an optional 국립국어원 한국어기초사전/우리말샘-style
+reverse index: a flat `{"english gloss": ["korean word", ...]}` JSON mapping.
+
+This is **not** a main translation engine. It is a small, boost-only auxiliary
+data source used to correct and rank the Kaikki/Wiktionary-based `en_ko`
+fallback candidates that `en_ko_dictionary_service.translate_glosses_to_korean`
+already produces:
+
+- Kaikki candidates that also appear in the krdict reverse index are ranked
+  first (treated as verified/higher confidence).
+- krdict candidates that Kaikki does not already have can be added as a
+  supplementary candidate, still subject to the same 1-3 candidate cap and
+  the same garbage/archaic-character filter as every other candidate
+  (`meaning_ranker.is_valid_korean_candidate`).
+- The priority order is unchanged: user-defined term meaning, user-saved
+  `meaning_ko`, and the built-in Japanese-to-Korean dictionary are still
+  checked first and always win. krdict only influences the JMdict-gloss →
+  Kaikki/en_ko fallback tier below those.
+
+### Local file precedence
+
+- Default sample: `backend/data/dictionary/krdict_reverse_sample.json` (small,
+  committed for local development and tests).
+- Optional full index: `backend/data/dictionary/krdict_reverse_full.json`. If
+  present and valid, it is used instead of the sample. It is intentionally
+  ignored by Git because 국립국어원 data has its own usage terms and the file
+  can be large.
+
+### No runtime API calls
+
+Build the reverse index file in a local/offline preprocessing step, not at
+request time:
+
+```bash
+cd backend
+python scripts/build_krdict_reverse_index.py --input krdict_raw.json --output data/dictionary/krdict_reverse_full.json
+```
+
+`scripts/build_krdict_reverse_index.py` only reshapes an already-exported
+JSON/JSONL input file into the reverse-index shape; it does not call the
+국립국어원 API itself. Exporting/fetching source data from
+한국어기초사전(https://krdict.korean.go.kr) or 우리말샘 is a separate manual
+step, and any bulk export or API usage must follow their published API/data
+usage terms.
+
+Check the active reverse index without printing full contents:
+
+```bash
+cd backend
+python scripts/check_krdict_reverse.py
+```
+
+### Licensing and attribution
+
+한국어기초사전/우리말샘 data is provided by 국립국어원 under the Korean
+government's 공공데이터 이용조건. Confirm the current usage terms and any
+required attribution before bulk-exporting data or publishing a derived
+`krdict_reverse_full.json` file anywhere. Keep source/attribution notices for
+this data alongside the JMdict/EDICT and Kaikki/Wiktionary notices already
+documented below and in the Info tab.
+
 ## Source Notice
 
-The dictionary fallback can use JMdict/EDICT project data by EDRDG and Kaikki/Wiktionary data. JMdict/EDICT has its own license requirements, and Kaikki/Wiktionary data can require CC-BY-SA/GFDL attribution and share-alike handling. Keep appropriate source and license notices in product and deployment documentation. User-defined terms and personal vocabulary data are stored separately from dictionary source data.
+The dictionary fallback can use JMdict/EDICT project data by EDRDG and Kaikki/Wiktionary data. JMdict/EDICT has its own license requirements, and Kaikki/Wiktionary data can require CC-BY-SA/GFDL attribution and share-alike handling. The optional krdict reverse index can use 국립국어원 한국어기초사전/우리말샘 data, subject to Korea's 공공데이터 이용조건 and any required attribution. Keep appropriate source and license notices in product and deployment documentation. User-defined terms and personal vocabulary data are stored separately from dictionary source data.

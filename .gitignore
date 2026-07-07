@@ -42,3 +42,9 @@ backend/data/dictionary/*.zip
 backend/data/dictionary/*.tar.gz
 backend/data/dictionary/*.download
 backend/data/dictionary/*.prepared
+
+backend/data/dictionary/krdict_reverse_full.json
+backend/data/dictionary/krdict_raw.json
+backend/data/dictionary/krdict_raw.jsonl
+backend/data/dictionary/krdict_raw.json.gz
+backend/data/dictionary/krdict_raw.zip

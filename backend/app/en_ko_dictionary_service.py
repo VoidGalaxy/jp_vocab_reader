@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from app.dictionary_file_manager import DICTIONARY_DIR, get_en_ko_dictionary_path
+from app.krdict_reverse_service import lookup_krdict_reverse
 from app.meaning_ranker import (
     MAX_PER_GLOSS_CANDIDATES,
     build_meaning_ko,
@@ -230,6 +231,21 @@ def _order_translations_for_gloss(translations: list[str], gloss: str) -> list[s
     return [*verb_shaped, *other]
 
 
+def _boost_with_krdict_reverse(translations: list[str], gloss: str) -> list[str]:
+    """Reorder Kaikki candidates so ones also found in the krdict reverse
+    index come first, and append krdict-only candidates as a supplement.
+    krdict is a curated, authoritative source, so it outranks the cheap
+    verb-ending heuristic above."""
+    krdict_words = lookup_krdict_reverse(gloss)
+    if not krdict_words:
+        return translations
+    krdict_set = set(krdict_words)
+    boosted = [word for word in translations if word in krdict_set]
+    remaining = [word for word in translations if word not in krdict_set]
+    supplemental = [word for word in krdict_words if word not in translations]
+    return [*boosted, *remaining, *supplemental]
+
+
 def translate_glosses_to_korean(
     dictionary_gloss: str, *, prefer_verb_glosses: bool = False
 ) -> str:
@@ -247,6 +263,7 @@ def translate_glosses_to_korean(
             if translations:
                 break
         translations = _order_translations_for_gloss(translations, gloss)
+        translations = _boost_with_krdict_reverse(translations, gloss)
         for translation in translations[:MAX_TRANSLATIONS_PER_GLOSS]:
             if translation in seen:
                 continue

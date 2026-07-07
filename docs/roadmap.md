@@ -88,8 +88,11 @@
 - Done: JMdict/EDICT source notice added to the Info tab and dictionary data docs.
 - Done: Kaikki/Wiktionary English-to-Korean fallback subset support added for JMdict gloss translation.
 - Done: Production can now download `en_ko_full.json` (or `.gz`/`.zip`) at startup via `EN_KO_DICTIONARY_URL`, mirroring the existing `JMDICT_FULL_JSON_URL` flow, with automatic sample fallback on missing/invalid data.
+- Done: `meaning_ranker` limits `meaning_ko` to 1-3 clean, learner-facing Korean candidates and filters archaic/broken forms.
+- Done: Added an optional krdict (한국어기초사전/우리말샘-style) reverse index as boost-only auxiliary data -- it ranks/corrects Kaikki-based candidates but is not a translation engine on its own; built and loaded locally, no runtime API calls.
 - TODO: Prepare the actual `jmdict_full.json` file.
 - TODO: Build and upload the actual `en_ko_full.json` file to production file storage.
+- TODO: Build and upload an actual `krdict_reverse_full.json` file (subject to 국립국어원 공공데이터 이용조건) to production file storage.
 - TODO: Place the full dictionary file in the production deployment environment.
 - TODO: Continue improving Korean fallback coverage from Kaikki/Wiktionary data and small exception patches.
 - TODO: Add frequent missing words after tester feedback.

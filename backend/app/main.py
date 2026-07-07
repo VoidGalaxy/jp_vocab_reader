@@ -25,6 +25,7 @@ from app.dictionary_file_manager import (
 )
 from app.en_ko_dictionary_service import get_en_ko_status
 from app.jmdict_service import get_jmdict_status
+from app.krdict_reverse_service import get_krdict_reverse_status
 from app.repositories.custom_term_repository import (
     create_custom_term,
     delete_custom_term,
@@ -220,6 +221,19 @@ def _safe_en_ko_status() -> dict[str, object]:
     }
 
 
+def _safe_krdict_reverse_status() -> dict[str, object]:
+    try:
+        status = get_krdict_reverse_status()
+    except Exception:
+        return {"source": "none", "entries": 0, "loaded": False, "reason": "status error"}
+    return {
+        "source": status.get("source", "none"),
+        "entries": status.get("entries", 0),
+        "loaded": status.get("loaded", False),
+        "reason": status.get("reason"),
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, object]:
     dictionary_status = get_jmdict_status()
@@ -233,6 +247,7 @@ def health() -> dict[str, object]:
             "entries": dictionary_status.get("entry_count", 0),
             "keys": dictionary_status.get("key_count", 0),
             "en_ko": _safe_en_ko_status(),
+            "krdict_reverse": _safe_krdict_reverse_status(),
         },
     }
 
@@ -246,6 +261,7 @@ def dictionary_status() -> dict[str, object]:
         "keys": status.get("key_count", 0),
         "errors": status.get("errors", []),
         "en_ko": _safe_en_ko_status(),
+        "krdict_reverse": _safe_krdict_reverse_status(),
     }
 
 
