@@ -724,6 +724,7 @@ const qualityTagLabels: Record<Exclude<QualityTag, "normal">, string> = {
   custom_term: "사용자 용어",
   compound_verb: "복합동사",
   noun_phrase_candidate: "명사구 후보",
+  known_phrase: "관용구",
 };
 
 function QualityBadge({ qualityTag }: { qualityTag: QualityTag }) {

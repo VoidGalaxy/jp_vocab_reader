@@ -3,7 +3,8 @@ export type QualityTag =
   | "normal"
   | "custom_term"
   | "compound_verb"
-  | "noun_phrase_candidate";
+  | "noun_phrase_candidate"
+  | "known_phrase";
 
 export type Token = {
   surface: string;

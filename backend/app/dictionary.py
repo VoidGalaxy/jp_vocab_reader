@@ -47,6 +47,11 @@ BUILTIN_KOREAN_MEANINGS = {
     "運命": "운명",
     "絶望": "절망",
     "希望": "희망",
+    # Small hotfix: en_ko_full.json/krdict have no coverage at all for this
+    # verb's specific JMdict glosses ("to haul in", "to pull in", "to reel
+    # in", "to trace/retrace"), so there is nothing for the automatic
+    # pipeline to find.
+    "手繰る": "끌어당기다, 손으로 끌어오다, 더듬어 찾다",
 }
 
 

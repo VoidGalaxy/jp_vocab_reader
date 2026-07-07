@@ -12,6 +12,7 @@ from app.krdict_reverse_service import lookup_krdict_reverse
 from app.meaning_quality_filter import (
     CONFIDENCE_THRESHOLD,
     is_risky_gloss,
+    is_risky_korean,
     score_candidate,
 )
 from app.meaning_ranker import (
@@ -239,12 +240,20 @@ def translate_glosses_to_korean(
     scored via meaning_quality_filter. A candidate scoring below
     CONFIDENCE_THRESHOLD is dropped -- an empty result is preferred over a
     low-confidence guess (e.g. "point"/"tip"-style glosses producing noise
-    like 포인트/팁)."""
+    like 포인트/팁).
+
+    Safety net: if every candidate falls under threshold (which can still
+    happen purely from gloss-rank decay on a long gloss list), the single
+    best-scoring "safe" candidate -- Kaikki-sourced, from a non-risky gloss,
+    and not itself a risky Korean word -- is kept anyway, rather than
+    leaving a word with genuine dictionary coverage empty. KRDIC-only
+    candidates are never eligible for this safety net."""
     index = get_en_ko_index()
     max_total = get_max_meaning_candidates()
     glosses = _order_glosses(dictionary_gloss.split(";"), prefer_verb_glosses=prefer_verb_glosses)
 
     best_score: dict[str, float] = {}
+    safe_score: dict[str, float] = {}
     first_rank: dict[str, int] = {}
     next_rank = 0
 
@@ -295,7 +304,15 @@ def translate_glosses_to_korean(
                 next_rank += 1
             if cleaned not in best_score or score > best_score[cleaned]:
                 best_score[cleaned] = score
+            if not gloss_risky and not krdict_only and not is_risky_korean(cleaned):
+                if cleaned not in safe_score or score > safe_score[cleaned]:
+                    safe_score[cleaned] = score
 
     ordered = sorted(best_score, key=lambda word: (-best_score[word], first_rank[word]))
     meanings = [word for word in ordered if best_score[word] >= CONFIDENCE_THRESHOLD]
+
+    if not meanings and safe_score:
+        best_safe_word = max(safe_score, key=lambda word: (safe_score[word], -first_rank[word]))
+        meanings = [best_safe_word]
+
     return build_meaning_ko(meanings, max_candidates=max_total)

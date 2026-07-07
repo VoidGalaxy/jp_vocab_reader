@@ -164,10 +164,10 @@ practical at the scale of a full novel's vocabulary), `meaning_ko` candidates
 from the Kaikki/krdict tier go through a general scoring filter:
 
 - **Risky English glosses** -- very broad glosses like `point`, `tip`,
-  `thing`, `one`, `part`, `place`, `way`, `matter`, `case`, `time`, `end`,
-  `side`, `line`, `form`, `mark`, `sign`, `piece`, `object` match almost any
-  noun in a bilingual dictionary, so a Korean candidate sourced only from one
-  of these is weak evidence and is scored down.
+  `thing`, `one`, `part`, `place`, `way`, `matter`, `case`, `time`, `side`,
+  `line`, `form`, `mark`, `sign`, `piece`, `object` match almost any noun in a
+  bilingual dictionary, so a Korean candidate sourced only from one of these
+  is weak evidence and is scored down.
 - **Risky Korean candidates** -- generic/ambiguous words like `포인트`, `팁`,
   `점`, `것`, `수`, `때`, `곳`, `부분`, `경우`, `문제`, `정`, `문신`, `끌`,
   `형태`, `라인`, `사이드`, `오브젝트` are demoted (not hard-removed -- a few
@@ -187,10 +187,43 @@ from the Kaikki/krdict tier go through a general scoring filter:
   demoting *plausible-looking but low-confidence* candidates, not replacing
   that existing garbage filter.
 
-Manual per-lemma overrides (`app/gloss_ko_mapper.py`'s small exception table)
-remain a last-resort hotfix mechanism only, not the primary fix path -- the
-quality filter is meant to generalize across the full vocabulary of a book
-without hand-curating each word.
+Manual per-lemma overrides (`app/gloss_ko_mapper.py`'s small exception table,
+and a handful of entries in `app/dictionary.py`'s built-in dictionary such as
+`手繰る`) remain a last-resort hotfix mechanism only, not the primary fix
+path -- the quality filter is meant to generalize across the full vocabulary
+of a book without hand-curating each word.
+
+### Precision/recall balance
+
+An earlier version of this filter was tuned conservatively enough that some
+normal words lost their meaning entirely (`meaning_ko` came back empty even
+though a genuinely correct Korean candidate existed). Two changes rebalance
+this without reopening the door to the original garbage-candidate problem:
+
+- **High-confidence fallback** -- if every scored candidate for a word falls
+  under the confidence threshold, the single best-scoring *safe* candidate
+  (Kaikki-sourced, from a non-risky gloss, not itself a risky Korean word) is
+  kept anyway rather than leaving a word with real dictionary coverage
+  empty. A KRDIC-only candidate, or one that only exists because of a risky
+  gloss, is never eligible for this fallback -- risky candidates like
+  점/포인트/팁 still cannot use it to sneak back in.
+- **Capped gloss-rank penalty** -- some JMdict entries interleave dozens of
+  languages/senses under one headword (e.g. 先's "just now" sense alone fills
+  many gloss slots with English+Dutch duplicates of the same meaning before
+  its "front"/"before"/"previous" senses even appear). The per-rank penalty
+  used to grow without bound, so a legitimate but late-appearing sense could
+  be zeroed out purely by unrelated noise ahead of it in the list; it is now
+  capped, and `MAX_GLOSSES_PER_LOOKUP` (`app/jmdict_service.py`) was raised
+  so those later senses are reachable at all.
+
+**Simple noun-phrase candidates are suppressed by default.** A
+"noun + の + noun" combination reconstructed from adjacent tokens (e.g.
+自分の身 when 自分 and 身 already appear separately) is only kept as its own
+candidate if the phrase itself resolves to a real, independent dictionary
+meaning (custom term, built-in dictionary, or a genuine JMdict headword) --
+tagged `known_phrase` in that case. A bare compositional combination with no
+independent meaning is dropped instead of surfacing an empty-meaning phrase
+candidate that outranks its already-analyzed parts.
 
 ### Local file precedence
 

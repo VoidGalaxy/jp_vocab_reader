@@ -20,7 +20,6 @@ RISKY_ENGLISH_GLOSSES = {
     "matter",
     "case",
     "time",
-    "end",
     "side",
     "line",
     "form",
@@ -74,14 +73,24 @@ def is_risky_korean(candidate: str) -> bool:
 # guess.
 KAIKKI_BASE_SCORE = 55.0
 KRDICT_ONLY_BASE_SCORE = 30.0
-GLOSS_RANK_PENALTY = 8.0
+GLOSS_RANK_PENALTY = 3.0
+# Capped rather than left to grow linearly forever: some JMdict entries
+# interleave dozens of languages/senses under one headword, so a legitimate
+# sense (e.g. "front"/"before" for 先) can sit at gloss_rank 25+ purely
+# because of unrelated language noise ahead of it, not because it is less
+# relevant. An uncapped penalty would zero out every candidate from such a
+# sense regardless of how good it otherwise is.
+MAX_GLOSS_RANK_PENALTY = 24.0
 KRDICT_OVERLAP_BOOST = 15.0
 RISKY_GLOSS_PENALTY = 35.0
 RISKY_KOREAN_PENALTY = 45.0
 VERB_FIT_BOOST = 8.0
 VERB_FIT_PENALTY = 12.0
 LENGTH_PENALTY = 6.0
-IDEAL_LENGTH_RANGE = range(2, 5)  # 2-4 characters, excluding spaces
+# 1-4 characters, excluding spaces. Many perfectly ordinary Korean words are
+# a single syllable (앞, 끝, 왕, 빛, 검, ...); only unusually long candidates
+# (long garbled phrases, not short common words) are penalized.
+IDEAL_LENGTH_RANGE = range(1, 5)
 
 CONFIDENCE_THRESHOLD = 20.0
 
@@ -109,7 +118,7 @@ def score_candidate(
     risky_korean = is_risky_korean(cleaned)
 
     score = KRDICT_ONLY_BASE_SCORE if krdict_only else KAIKKI_BASE_SCORE
-    score -= gloss_rank * GLOSS_RANK_PENALTY
+    score -= min(gloss_rank * GLOSS_RANK_PENALTY, MAX_GLOSS_RANK_PENALTY)
 
     if krdict_confirmed and not krdict_only and not risky_korean:
         score += KRDICT_OVERLAP_BOOST

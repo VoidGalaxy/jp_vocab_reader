@@ -185,7 +185,8 @@ function isQualityTag(value: unknown): value is QualityTag {
     value === "normal" ||
     value === "custom_term" ||
     value === "compound_verb" ||
-    value === "noun_phrase_candidate"
+    value === "noun_phrase_candidate" ||
+    value === "known_phrase"
   );
 }
 

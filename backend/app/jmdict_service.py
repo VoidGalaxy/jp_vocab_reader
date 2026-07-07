@@ -10,7 +10,13 @@ from app.dictionary_file_manager import DICTIONARY_DIR, get_full_dictionary_path
 
 JMDICT_FULL_PATH = get_full_dictionary_path()
 JMDICT_SAMPLE_PATH = DICTIONARY_DIR / "jmdict_sample.json"
-MAX_GLOSSES_PER_LOOKUP = 8
+# Some entries interleave many languages/senses per headword (e.g. a single
+# multi-language "just now" sense for 先 alone fills 8+ slots), which used to
+# starve out legitimate later senses ("front"/"before"/"end") before they
+# were ever looked up. Raised so those senses are reachable; downstream
+# scoring (meaning_quality_filter) -- not this cap -- is what keeps
+# low-ranked/irrelevant senses from being picked as the top candidate.
+MAX_GLOSSES_PER_LOOKUP = 40
 ENTRY_LIST_KEYS = ("entries", "words", "jmdict", "JMdict")
 
 logger = logging.getLogger(__name__)

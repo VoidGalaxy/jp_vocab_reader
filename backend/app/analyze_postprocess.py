@@ -104,6 +104,7 @@ def improve_analysis_tokens(
         sentences=sentences,
         custom_ranges=custom_ranges,
         occupied_ranges=compound_ranges,
+        deck_id=deck_id,
     )
 
     combined = [*filtered_tokens, *compound_tokens, *noun_phrase_tokens]
@@ -182,6 +183,7 @@ def find_noun_phrase_candidates(
     sentences: list[tuple[int, int, str]],
     custom_ranges: list[tuple[int, int]],
     occupied_ranges: list[tuple[int, int]],
+    deck_id: int | None,
 ) -> list[dict[str, Any]]:
     candidates: list[dict[str, Any]] = []
     for index in range(len(raw_tokens) - 2):
@@ -207,6 +209,23 @@ def find_noun_phrase_candidates(
             katakana_to_hiragana(str(token.get("reading", "")))
             for token in (first, particle, second)
         )
+        # A bare "noun + の + noun" combination is only worth surfacing as
+        # its own candidate if the *phrase itself* has an independent
+        # dictionary meaning (custom term, built-in dictionary, or a real
+        # JMdict headword) -- not just because its two parts happen to be
+        # adjacent nouns. Without that, it is noise once the components
+        # (e.g. 自分, 身) already appear as their own tokens.
+        meaning_ko = lookup_meaning(
+            surface=surface,
+            base_form=surface,
+            normalized_form=surface,
+            reading=reading,
+            deck_id=deck_id,
+            part_of_speech="名詞",
+        )
+        if not meaning_ko:
+            continue
+
         candidates.append(
             {
                 "surface": surface,
@@ -214,11 +233,17 @@ def find_noun_phrase_candidates(
                 "reading": reading,
                 "part_of_speech": "명사구",
                 "normalized_form": surface,
-                "meaning_ko": "",
-                "dictionary_gloss": "",
+                "meaning_ko": meaning_ko,
+                "dictionary_gloss": lookup_dictionary_gloss(
+                    surface=surface,
+                    base_form=surface,
+                    normalized_form=surface,
+                    reading=reading,
+                    deck_id=deck_id,
+                ),
                 "example_sentence": find_example_sentence(sentences, start),
                 "is_custom_term": False,
-                "quality_tag": "noun_phrase_candidate",
+                "quality_tag": "known_phrase",
                 "_start": start,
                 "_end": end,
             }
@@ -244,6 +269,7 @@ def dedupe_and_sort_tokens(tokens: list[dict[str, Any]]) -> list[dict[str, Any]]
     priority = {
         "custom_term": 0,
         "compound_verb": 1,
+        "known_phrase": 2,
         "noun_phrase_candidate": 2,
         "normal": 3,
     }

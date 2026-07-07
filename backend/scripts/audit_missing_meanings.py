@@ -12,6 +12,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
+from app.analyze_postprocess import improve_analysis_tokens  # noqa: E402
 from app.analyzer import analyzer  # noqa: E402
 from app.krdict_reverse_service import (  # noqa: E402
     get_krdict_reverse_index,
@@ -22,10 +23,11 @@ from app.meaning_ranker import get_max_meaning_candidates, is_valid_korean_candi
 
 
 DEFAULT_SENTENCES = [
+    "手繰って進む。",
     "先へ進む。",
     "え、彼は立ち上がり、闇の中で声を聞いた。",
-    "少女は小さく笑い、約束を思い出した。",
-    "騎士は剣を握り、敵から王を守った。",
+    "自分の身を守る。",
+    "少女は約束を思い出した。",
 ]
 
 
@@ -41,7 +43,13 @@ def audit_sentence(
     text: str, max_candidates: int, krdict_words: set[str]
 ) -> tuple[int, int, int, int, int, int]:
     print(f"文: {text}")
-    tokens = analyzer.analyze(text)
+    # Run the same pipeline /analyze uses (raw tokenization + compound-verb/
+    # noun-phrase postprocessing + dedup), not just the bare analyzer, so
+    # noun-phrase suppression and quality_tag are visible here too.
+    tokens, raw_tokens = analyzer.analyze_with_raw(text)
+    tokens = improve_analysis_tokens(
+        text=text, raw_tokens=raw_tokens, tokens=tokens, deck_id=None
+    )
     missing_count = 0
     over_limit_count = 0
     broken_count = 0
@@ -73,7 +81,9 @@ def audit_sentence(
         flag_text = f"  [{'; '.join(flags)}]" if flags else ""
 
         print(
-            f"  {token['surface']} ({token['base_form']}, {token['part_of_speech']}): "
+            f"  {token['surface']} (base={token['base_form']}, "
+            f"norm={token.get('normalized_form', '')}, {token['part_of_speech']}, "
+            f"tag={token.get('quality_tag', 'normal')}): "
             f"{meaning_ko or '-'} (candidates: {len(candidates)}){flag_text}"
         )
     print()
@@ -91,8 +101,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Audit meaning_ko output for sample sentences: flags tokens with no "
-            "meaning_ko and tokens whose meaning_ko has more candidates than the "
-            "configured learner-facing limit."
+            "meaning_ko, tokens whose meaning_ko has more candidates than the "
+            "configured learner-facing limit, broken/risky candidates that "
+            "survived, and krdict hits. Runs the same analyze_with_raw + "
+            "improve_analysis_tokens pipeline as /analyze, so noun-phrase "
+            "suppression and quality_tag are visible."
         )
     )
     parser.add_argument(
