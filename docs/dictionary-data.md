@@ -262,6 +262,60 @@ runtime code path -- the deployed app never calls the krdict API.
   (hosting, download, Render integration) is out of scope here and is
   handled in a later krdict-dictionary-delivery step.
 
+### Generating a real-world-sized krdict_reverse_full.json
+
+To go beyond the small built-in seed list, `backend/scripts/build_krdict_seed_from_en_ko.py`
+extracts Korean candidate words from the Kaikki/Wiktionary-derived
+`en_ko_full.json` (falling back to the committed `en_ko_sample.json` if the
+full file is not present) and writes them as a plain-text seed list, one
+word per line, cleaned of Hanja/romanization annotations, combined
+candidates, and broken/overlong entries. It only reads `en_ko_full.json`;
+it never writes to it, and `en_ko_full.json` itself stays out of Git as
+already documented above.
+
+Full pipeline, from Kaikki data to a real-scale local reverse index:
+
+```bash
+cd backend
+.\.venv\Scripts\Activate.ps1
+
+# 1. Extract a large Korean seed list from en_ko_full.json, plus a small
+#    curated core-vocabulary seed list that is always kept (never truncated
+#    away by --limit).
+python scripts/build_krdict_seed_from_en_ko.py --limit 3000 --extra-seed-file data/dictionary/krdict_seed_core_sample.txt --output data/dictionary/krdict_seed_generated.txt
+
+# 2. Call the real krdict API for each seed word (small, resumable batches;
+#    re-running with the same --output skips words already collected).
+python scripts/fetch_krdict_api.py --seed-file data/dictionary/krdict_seed_generated.txt --limit 3000 --sleep 0.5 --output data/dictionary/krdict_raw_real.jsonl
+
+# 3. Build the local reverse index and check it.
+python scripts/build_krdict_reverse_index.py --input data/dictionary/krdict_raw_real.jsonl --output data/dictionary/krdict_reverse_full.json
+python scripts/check_krdict_reverse.py
+```
+
+Notes:
+
+- `krdict_seed_generated.txt`, `krdict_raw_real.jsonl`, and
+  `krdict_reverse_full.json` are all generated files and are **not**
+  committed to Git (see `.gitignore`). Only the small
+  `krdict_seed_sample.txt` and `krdict_seed_core_sample.txt` seed lists are
+  committed.
+- The API key is managed only through `backend/.env` (local) or a platform
+  environment variable (CI/Render) -- see the fetcher section above. It is
+  never placed in code, docs, or committed files.
+- Before running a large `--limit`, confirm the 국립국어원 Open API terms
+  of use, call-rate limits, and any required source attribution.
+- This whole pipeline is a preprocessing step run manually by a developer,
+  not something the running app calls at request time. In production,
+  Render is expected to instead download an already-built
+  `krdict_reverse_full.json.gz` via a `KRDIC_REVERSE_URL`-style setting in a
+  later step -- not build it from these scripts at runtime.
+- If a fetch run is interrupted, seed words that failed every retry are
+  logged to `<output>.failed.txt` (e.g.
+  `krdict_raw_real.jsonl.failed.txt`) for visibility. They are not written
+  to the main JSONL output, so a later run with `--resume` (the default)
+  retries them automatically without needing that log as input.
+
 ## Source Notice
 
 The dictionary fallback can use JMdict/EDICT project data by EDRDG and Kaikki/Wiktionary data. JMdict/EDICT has its own license requirements, and Kaikki/Wiktionary data can require CC-BY-SA/GFDL attribution and share-alike handling. The optional krdict reverse index can use 국립국어원 한국어기초사전/우리말샘 data, subject to Korea's 공공데이터 이용조건 and any required attribution. Keep appropriate source and license notices in product and deployment documentation. User-defined terms and personal vocabulary data are stored separately from dictionary source data.

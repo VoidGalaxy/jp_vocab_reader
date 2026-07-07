@@ -279,7 +279,10 @@ def build_request_url(word: str, api_key: str) -> str:
     return f"{API_BASE_URL}?{urllib.parse.urlencode(params)}"
 
 
-def fetch_word(word: str, api_key: str, timeout: float, max_retries: int) -> list[dict[str, Any]]:
+def fetch_word(word: str, api_key: str, timeout: float, max_retries: int) -> list[dict[str, Any]] | None:
+    """Returns a (possibly empty) entry list on a successful request, or None
+    if every retry failed (network/timeout/parse error) -- distinct from a
+    successful request that simply found no translations for the word."""
     url = build_request_url(word, api_key)
     last_error: Exception | None = None
     for attempt in range(1, max_retries + 1):
@@ -296,7 +299,7 @@ def fetch_word(word: str, api_key: str, timeout: float, max_retries: int) -> lis
             if attempt < max_retries:
                 time.sleep(min(2**attempt, 10))
     print(f"  error: giving up on '{word}' after {max_retries} attempts ({last_error})")
-    return []
+    return None
 
 
 def run_from_sample(sample_path: Path) -> list[dict[str, Any]]:
@@ -389,6 +392,13 @@ def main() -> int:
         help="Parse a saved sample API response (XML or JSON) instead of calling "
         "the real API. No API key or network access needed.",
     )
+    parser.add_argument(
+        "--failed-log",
+        help="Where to write seed words that failed every retry this run, one "
+        "per line (default: --output with a .failed.txt suffix). Words are "
+        "not written to --output on failure, so they remain eligible for a "
+        "later --resume run regardless of this log.",
+    )
     args = parser.parse_args()
 
     output_path = Path(args.output)
@@ -467,20 +477,41 @@ def main() -> int:
 
     mode = "w" if args.overwrite else "a"
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    failed_log_path = Path(args.failed_log) if args.failed_log else output_path.with_name(
+        output_path.name + ".failed.txt"
+    )
 
     fetched_count = 0
     entry_count = 0
+    failed_words: list[str] = []
     with output_path.open(mode, encoding="utf-8") as output_file:
         for index, word in enumerate(pending_words, start=1):
             print(f"[{index}/{len(pending_words)}] fetching '{word}'...")
             entries = fetch_word(word, api_key, timeout=args.timeout, max_retries=args.max_retries)
-            for entry in entries:
-                output_file.write(json.dumps(entry, ensure_ascii=False) + "\n")
-                entry_count += 1
-            output_file.flush()
-            fetched_count += 1
+            if entries is None:
+                failed_words.append(word)
+            else:
+                for entry in entries:
+                    output_file.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                    entry_count += 1
+                output_file.flush()
+                fetched_count += 1
             if index < len(pending_words):
                 time.sleep(args.sleep)
+
+    if failed_words:
+        failed_log_path.write_text(
+            "".join(f"{word}\n" for word in failed_words), encoding="utf-8"
+        )
+        print(
+            f"Failed: {len(failed_words)} word(s) failed every retry and were "
+            f"NOT written to {output_path}. Logged to {failed_log_path} -- they "
+            "remain eligible for a later --resume run."
+        )
+    elif failed_log_path.exists():
+        # Clear a stale failed-log from a previous run now that this run had
+        # no failures, so it doesn't look like an unresolved problem.
+        failed_log_path.unlink()
 
     print(f"Done. Words fetched: {fetched_count}, entries written: {entry_count}")
     print(f"Output: {output_path}")
