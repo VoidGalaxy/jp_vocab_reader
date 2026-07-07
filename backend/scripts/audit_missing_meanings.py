@@ -13,6 +13,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.analyzer import analyzer  # noqa: E402
+from app.krdict_reverse_service import get_krdict_reverse_status  # noqa: E402
 from app.meaning_ranker import get_max_meaning_candidates  # noqa: E402
 
 
@@ -65,6 +66,13 @@ def main() -> int:
 
     max_candidates = get_max_meaning_candidates()
     print(f"meaning_ko candidate limit: {max_candidates}")
+
+    krdict_status = get_krdict_reverse_status()
+    print(
+        "krdict reverse index: "
+        f"source={krdict_status.get('source')} entries={krdict_status.get('entries')} "
+        "(boosts/ranks en_ko fallback candidates only)"
+    )
     print()
 
     sentences = args.texts or DEFAULT_SENTENCES

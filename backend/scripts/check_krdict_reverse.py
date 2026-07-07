@@ -28,6 +28,8 @@ DEFAULT_GLOSSES = [
     "stand up",
     "rise",
     "darkness",
+    "protect",
+    "sword",
 ]
 
 

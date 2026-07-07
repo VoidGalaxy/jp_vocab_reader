@@ -48,3 +48,12 @@ backend/data/dictionary/krdict_raw.json
 backend/data/dictionary/krdict_raw.jsonl
 backend/data/dictionary/krdict_raw.json.gz
 backend/data/dictionary/krdict_raw.zip
+backend/data/dictionary/krdict_raw_*.json
+backend/data/dictionary/krdict_raw_*.jsonl
+backend/data/dictionary/krdict_raw_*.gz
+backend/data/dictionary/krdict_raw_*.zip
+
+# Keep small committed samples even though the broad *raw*.json pattern above
+# and krdict_raw_*.json above would otherwise ignore them.
+!backend/data/dictionary/krdict_raw_sample.json
+!backend/data/dictionary/krdict_reverse_sample.json
