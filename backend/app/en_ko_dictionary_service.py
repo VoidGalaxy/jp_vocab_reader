@@ -9,6 +9,11 @@ from typing import Any
 
 from app.dictionary_file_manager import DICTIONARY_DIR, get_en_ko_dictionary_path
 from app.krdict_reverse_service import lookup_krdict_reverse
+from app.meaning_quality_filter import (
+    CONFIDENCE_THRESHOLD,
+    is_risky_gloss,
+    score_candidate,
+)
 from app.meaning_ranker import (
     MAX_PER_GLOSS_CANDIDATES,
     build_meaning_ko,
@@ -223,52 +228,74 @@ def _order_glosses(glosses: list[str], *, prefer_verb_glosses: bool) -> list[str
     return [*verb_shaped, *other]
 
 
-def _order_translations_for_gloss(translations: list[str], gloss: str) -> list[str]:
-    if not gloss.strip().lower().startswith("to "):
-        return translations
-    verb_shaped = [word for word in translations if word.endswith("다")]
-    other = [word for word in translations if not word.endswith("다")]
-    return [*verb_shaped, *other]
-
-
-def _boost_with_krdict_reverse(translations: list[str], gloss: str) -> list[str]:
-    """Reorder Kaikki candidates so ones also found in the krdict reverse
-    index come first, and append krdict-only candidates as a supplement.
-    krdict is a curated, authoritative source, so it outranks the cheap
-    verb-ending heuristic above."""
-    krdict_words = lookup_krdict_reverse(gloss)
-    if not krdict_words:
-        return translations
-    krdict_set = set(krdict_words)
-    boosted = [word for word in translations if word in krdict_set]
-    remaining = [word for word in translations if word not in krdict_set]
-    supplemental = [word for word in krdict_words if word not in translations]
-    return [*boosted, *remaining, *supplemental]
+KRDICT_ONLY_SUPPLEMENT_LIMIT = 2
 
 
 def translate_glosses_to_korean(
     dictionary_gloss: str, *, prefer_verb_glosses: bool = False
 ) -> str:
+    """Build meaning_ko candidates from Kaikki-derived en_ko translations,
+    boosted/validated (never generated) by the krdict reverse index, and
+    scored via meaning_quality_filter. A candidate scoring below
+    CONFIDENCE_THRESHOLD is dropped -- an empty result is preferred over a
+    low-confidence guess (e.g. "point"/"tip"-style glosses producing noise
+    like 포인트/팁)."""
     index = get_en_ko_index()
     max_total = get_max_meaning_candidates()
-    meanings: list[str] = []
-    seen: set[str] = set()
     glosses = _order_glosses(dictionary_gloss.split(";"), prefer_verb_glosses=prefer_verb_glosses)
-    for gloss in glosses:
-        if len(meanings) >= max_total:
-            break
+
+    best_score: dict[str, float] = {}
+    first_rank: dict[str, int] = {}
+    next_rank = 0
+
+    for gloss_rank, gloss in enumerate(glosses):
+        gloss = gloss.strip()
+        if not gloss:
+            continue
+
         translations: list[str] = []
         for key in _candidate_keys(gloss):
             translations = index.get(key, [])
             if translations:
                 break
-        translations = _order_translations_for_gloss(translations, gloss)
-        translations = _boost_with_krdict_reverse(translations, gloss)
-        for translation in translations[:MAX_TRANSLATIONS_PER_GLOSS]:
-            if translation in seen:
+        translations = translations[:MAX_TRANSLATIONS_PER_GLOSS]
+
+        krdict_words = lookup_krdict_reverse(gloss)
+        krdict_set = set(krdict_words)
+        gloss_risky = is_risky_gloss(gloss)
+        prefer_verb_form = gloss.lower().startswith("to ")
+
+        candidates_this_gloss = list(translations)
+        if not gloss_risky:
+            supplement_count = 0
+            for word in krdict_words:
+                if word in candidates_this_gloss:
+                    continue
+                if supplement_count >= KRDICT_ONLY_SUPPLEMENT_LIMIT:
+                    break
+                candidates_this_gloss.append(word)
+                supplement_count += 1
+
+        for word in candidates_this_gloss:
+            krdict_confirmed = word in krdict_set
+            krdict_only = krdict_confirmed and word not in translations
+            score = score_candidate(
+                word,
+                gloss_rank=gloss_rank,
+                gloss_risky=gloss_risky,
+                krdict_confirmed=krdict_confirmed,
+                krdict_only=krdict_only,
+                prefer_verb_form=prefer_verb_form,
+            )
+            if score is None:
                 continue
-            meanings.append(translation)
-            seen.add(translation)
-            if len(meanings) >= max_total:
-                break
+            cleaned = " ".join(word.strip().split())
+            if cleaned not in first_rank:
+                first_rank[cleaned] = next_rank
+                next_rank += 1
+            if cleaned not in best_score or score > best_score[cleaned]:
+                best_score[cleaned] = score
+
+    ordered = sorted(best_score, key=lambda word: (-best_score[word], first_rank[word]))
+    meanings = [word for word in ordered if best_score[word] >= CONFIDENCE_THRESHOLD]
     return build_meaning_ko(meanings, max_candidates=max_total)

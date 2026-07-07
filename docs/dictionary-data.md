@@ -139,21 +139,58 @@ Kaikki/Wiktionary data can require CC BY-SA/GFDL-style attribution and share-ali
 `backend/app/krdict_reverse_service.py` loads an optional 국립국어원 한국어기초사전/우리말샘-style
 reverse index: a flat `{"english gloss": ["korean word", ...]}` JSON mapping.
 
-This is **not** a main translation engine. It is a small, boost-only auxiliary
-data source used to correct and rank the Kaikki/Wiktionary-based `en_ko`
-fallback candidates that `en_ko_dictionary_service.translate_glosses_to_korean`
-already produces:
+This is **not** a main translation engine, and it is **not a candidate
+generator either** -- it is a validator/ranking booster for the
+Kaikki/Wiktionary-based `en_ko` fallback candidates that
+`en_ko_dictionary_service.translate_glosses_to_korean` already produces:
 
-- Kaikki candidates that also appear in the krdict reverse index are ranked
-  first (treated as verified/higher confidence).
-- krdict candidates that Kaikki does not already have can be added as a
-  supplementary candidate, still subject to the same 1-3 candidate cap and
-  the same garbage/archaic-character filter as every other candidate
-  (`meaning_ranker.is_valid_korean_candidate`).
+- A Kaikki candidate that also appears in the krdict reverse index for the
+  same gloss is scored higher (treated as verified/higher confidence).
+- A candidate that krdict has but Kaikki does not is only added at a low
+  score, and never for a gloss judged "risky" (see below) -- krdict cannot
+  introduce a brand-new candidate on the strength of a generic/ambiguous
+  gloss alone.
+- A candidate flagged as a generically risky Korean word (see below) is
+  never boosted by a krdict match, even if krdict confirms it.
 - The priority order is unchanged: user-defined term meaning, user-saved
   `meaning_ko`, and the built-in Japanese-to-Korean dictionary are still
   checked first and always win. krdict only influences the JMdict-gloss →
   Kaikki/en_ko fallback tier below those.
+
+### Automatic meaning quality filter (`app/meaning_quality_filter.py`)
+
+Rather than hand-fixing individual Japanese lemmas one at a time (not
+practical at the scale of a full novel's vocabulary), `meaning_ko` candidates
+from the Kaikki/krdict tier go through a general scoring filter:
+
+- **Risky English glosses** -- very broad glosses like `point`, `tip`,
+  `thing`, `one`, `part`, `place`, `way`, `matter`, `case`, `time`, `end`,
+  `side`, `line`, `form`, `mark`, `sign`, `piece`, `object` match almost any
+  noun in a bilingual dictionary, so a Korean candidate sourced only from one
+  of these is weak evidence and is scored down.
+- **Risky Korean candidates** -- generic/ambiguous words like `포인트`, `팁`,
+  `점`, `것`, `수`, `때`, `곳`, `부분`, `경우`, `문제`, `정`, `문신`, `끌`,
+  `형태`, `라인`, `사이드`, `오브젝트` are demoted (not hard-removed -- a few
+  are occasionally the genuinely correct meaning, so they can still surface
+  if nothing better scores higher).
+- **Confidence threshold** -- a candidate scoring below the threshold is
+  dropped entirely. If every candidate for a token ends up below threshold,
+  `meaning_ko` is left as an empty string. **An empty meaning is preferred
+  over showing a wrong one.**
+- **Single hiragana token guardrail** -- a one-character hiragana token
+  tagged as an interjection/conjunction/adnominal/affix (or with no reliable
+  part-of-speech at all) -- e.g. `え` as a filler/interjection -- skips
+  gloss-based translation entirely rather than guessing from whatever
+  JMdict/Kaikki sense happens to exist for that character.
+- Genuinely broken/archaic/invalid text is still hard-removed as before via
+  `meaning_ranker.is_valid_korean_candidate` -- the filter above is about
+  demoting *plausible-looking but low-confidence* candidates, not replacing
+  that existing garbage filter.
+
+Manual per-lemma overrides (`app/gloss_ko_mapper.py`'s small exception table)
+remain a last-resort hotfix mechanism only, not the primary fix path -- the
+quality filter is meant to generalize across the full vocabulary of a book
+without hand-curating each word.
 
 ### Local file precedence
 

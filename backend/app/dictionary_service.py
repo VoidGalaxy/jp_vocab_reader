@@ -2,6 +2,7 @@ from app.dictionary import get_korean_meaning
 from app.en_ko_dictionary_service import translate_glosses_to_korean
 from app.gloss_ko_mapper import map_glosses_to_korean
 from app.jmdict_service import lookup_jmdict_gloss
+from app.meaning_quality_filter import should_suppress_short_token
 from app.meaning_ranker import build_meaning_ko
 
 
@@ -26,6 +27,13 @@ def lookup_meaning(
         meaning = get_korean_meaning((key or "").strip())
         if meaning:
             return build_meaning_ko(meaning.split(","))
+
+    # A single hiragana interjection/conjunction/adnominal/affix (or a token
+    # with no reliable POS at all) is almost always a discourse filler in
+    # running text (e.g. "え"), not a content word -- don't guess a Kaikki/
+    # KRDIC-derived meaning for it.
+    if should_suppress_short_token(surface, part_of_speech):
+        return ""
 
     dictionary_gloss = lookup_jmdict_gloss(
         surface=surface,

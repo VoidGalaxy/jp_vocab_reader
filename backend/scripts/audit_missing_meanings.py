@@ -17,11 +17,13 @@ from app.krdict_reverse_service import (  # noqa: E402
     get_krdict_reverse_index,
     get_krdict_reverse_status,
 )
+from app.meaning_quality_filter import is_risky_korean  # noqa: E402
 from app.meaning_ranker import get_max_meaning_candidates, is_valid_korean_candidate  # noqa: E402
 
 
 DEFAULT_SENTENCES = [
-    "彼は立ち上がり、闇の中で声を聞いた。",
+    "先へ進む。",
+    "え、彼は立ち上がり、闇の中で声を聞いた。",
     "少女は小さく笑い、約束を思い出した。",
     "騎士は剣を握り、敵から王を守った。",
 ]
@@ -37,17 +39,19 @@ def _krdict_word_set() -> set[str]:
 
 def audit_sentence(
     text: str, max_candidates: int, krdict_words: set[str]
-) -> tuple[int, int, int, int, int]:
+) -> tuple[int, int, int, int, int, int]:
     print(f"文: {text}")
     tokens = analyzer.analyze(text)
     missing_count = 0
     over_limit_count = 0
     broken_count = 0
     krdict_hit_count = 0
+    risky_survived_count = 0
     for token in tokens:
         meaning_ko = str(token.get("meaning_ko") or "")
         candidates = [part.strip() for part in meaning_ko.split(",") if part.strip()]
         broken_candidates = [c for c in candidates if not is_valid_korean_candidate(c)]
+        risky_candidates = [c for c in candidates if is_risky_korean(c)]
         krdict_hit = any(c in krdict_words for c in candidates)
 
         flags = []
@@ -60,6 +64,9 @@ def audit_sentence(
         if broken_candidates:
             broken_count += 1
             flags.append(f"broken candidate: {broken_candidates}")
+        if risky_candidates:
+            risky_survived_count += 1
+            flags.append(f"risky candidate survived: {risky_candidates}")
         if krdict_hit:
             krdict_hit_count += 1
             flags.append("krdict hit")
@@ -70,7 +77,14 @@ def audit_sentence(
             f"{meaning_ko or '-'} (candidates: {len(candidates)}){flag_text}"
         )
     print()
-    return len(tokens), missing_count, over_limit_count, broken_count, krdict_hit_count
+    return (
+        len(tokens),
+        missing_count,
+        over_limit_count,
+        broken_count,
+        krdict_hit_count,
+        risky_survived_count,
+    )
 
 
 def main() -> int:
@@ -109,21 +123,29 @@ def main() -> int:
     total_over_limit = 0
     total_broken = 0
     total_krdict_hits = 0
+    total_risky_survived = 0
     for sentence in sentences:
-        token_count, missing_count, over_limit_count, broken_count, krdict_hit_count = audit_sentence(
-            sentence, max_candidates, krdict_words
-        )
+        (
+            token_count,
+            missing_count,
+            over_limit_count,
+            broken_count,
+            krdict_hit_count,
+            risky_survived_count,
+        ) = audit_sentence(sentence, max_candidates, krdict_words)
         total_tokens += token_count
         total_missing += missing_count
         total_over_limit += over_limit_count
         total_broken += broken_count
         total_krdict_hits += krdict_hit_count
+        total_risky_survived += risky_survived_count
 
     print(
         "summary: "
         f"sentences={len(sentences)} tokens={total_tokens} "
         f"missing_meaning={total_missing} over_limit_meaning={total_over_limit} "
-        f"broken_candidate={total_broken} krdict_hit={total_krdict_hits}"
+        f"broken_candidate={total_broken} krdict_hit={total_krdict_hits} "
+        f"risky_candidate_survived={total_risky_survived}"
     )
     return 0
 
