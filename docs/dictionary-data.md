@@ -197,6 +197,71 @@ required attribution before bulk-exporting data or publishing a derived
 this data alongside the JMdict/EDICT and Kaikki/Wiktionary notices already
 documented below and in the Info tab.
 
+### krdict API fetcher (development/preprocessing only)
+
+`backend/scripts/fetch_krdict_api.py` can call the real 국립국어원
+한국어기초사전/우리말샘 Open API to build the raw JSONL input for
+`build_krdict_reverse_index.py`. This is a manual developer tool, never a
+runtime code path -- the deployed app never calls the krdict API.
+
+- The API key is read from the `KRDIC_API_KEY` or `KRDICT_API_KEY`
+  environment variable (either name works). Resolution order: the current
+  process environment is checked first; only if neither variable is set
+  there does the script fall back to loading `backend/.env` (via
+  `python-dotenv` if installed, otherwise a small built-in `KEY=VALUE`
+  parser so a missing optional dependency never crashes the script) and
+  check both names again.
+  - Local development: put `KRDIC_API_KEY=...` in `backend/.env`. `.env` is
+    never committed (see `.gitignore`); `.env.example` only documents the
+    variable name (`KRDIC_API_KEY=`), never a real key.
+  - CI/Render/other platforms: inject `KRDIC_API_KEY` as a platform
+    environment variable (Render's dashboard, GitHub Actions secrets,
+    etc.). No `.env` file is needed there since process-level environment
+    variables are checked first.
+  - Setting `$env:KRDIC_API_KEY` directly in a PowerShell session is fine
+    for a one-off manual test, but is not the supported way to run this
+    regularly -- it does not persist across sessions/processes and can
+    also silently shadow a correct `backend/.env` value if it lingers in a
+    long-lived shell. Use `backend/.env` (local) or a platform environment
+    variable (CI/Render) instead.
+  - The API key itself is never logged or included in error messages; the
+    script only reports whether a key was found, its source (process
+    environment vs. the `.env` path), and its length.
+- Default collection is small and safe: `--limit 100` and a `--sleep 0.5`
+  delay between requests. Larger runs require explicitly passing a bigger
+  `--limit`.
+- The fetcher reads Korean words from a seed word list
+  (`--seed-file`, default `data/dictionary/krdict_seed_sample.txt`) and
+  writes one JSON object per line to `--output` (default
+  `data/dictionary/krdict_raw_real.jsonl`).
+- Re-running with the same `--output` resumes by default (`--resume`,
+  skips words already present) so a large seed list can be collected across
+  multiple runs; pass `--overwrite` to start clean instead.
+- No API key or network access is needed to try the script: `--input-sample
+  data/dictionary/krdict_api_response_sample.xml` (or `.json`) replays a
+  committed sample API response through the same parsing/output code path.
+  `python scripts/check_krdict_fetcher.py` runs this offline check plus a
+  compatibility check against `build_krdict_reverse_index.py` and always
+  passes without a key.
+- Before running a large collection, confirm the 국립국어원 Open API terms
+  of use, call-rate limits, and any required source attribution.
+- Fetcher output (`krdict_raw_real.jsonl` and similar `krdict_raw_*` files)
+  is raw collected data and is not committed to Git.
+- Convert fetcher output into the reverse index with the same command used
+  for any other raw input:
+
+  ```bash
+  cd backend
+  python scripts/fetch_krdict_api.py --seed-file data/dictionary/krdict_seed_sample.txt --output data/dictionary/krdict_raw_real.jsonl --limit 100
+  python scripts/build_krdict_reverse_index.py --input data/dictionary/krdict_raw_real.jsonl --output data/dictionary/krdict_reverse_full.json
+  ```
+
+  `krdict_reverse_full.json` is not committed either (see above).
+- This stage only produces a local, reviewable `krdict_reverse_full.json`
+  for development. Production delivery of a full krdict reverse index
+  (hosting, download, Render integration) is out of scope here and is
+  handled in a later krdict-dictionary-delivery step.
+
 ## Source Notice
 
 The dictionary fallback can use JMdict/EDICT project data by EDRDG and Kaikki/Wiktionary data. JMdict/EDICT has its own license requirements, and Kaikki/Wiktionary data can require CC-BY-SA/GFDL attribution and share-alike handling. The optional krdict reverse index can use 국립국어원 한국어기초사전/우리말샘 data, subject to Korea's 공공데이터 이용조건 and any required attribution. Keep appropriate source and license notices in product and deployment documentation. User-defined terms and personal vocabulary data are stored separately from dictionary source data.

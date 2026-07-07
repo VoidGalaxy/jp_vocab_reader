@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<channel>
+  <title>한국어기초사전 검색 결과 (샘플, 실제 API 응답 아님)</title>
+  <item>
+    <word>약속</word>
+    <sense>
+      <definition>다른 사람과 앞으로의 일을 어떻게 할 것인가를 미리 정하여 둠.</definition>
+      <translation>
+        <trans_lang>영어</trans_lang>
+        <trans_word>promise</trans_word>
+      </translation>
+      <translation>
+        <trans_lang>영어</trans_lang>
+        <trans_word>appointment</trans_word>
+      </translation>
+    </sense>
+  </item>
+  <item>
+    <word>기억</word>
+    <sense>
+      <definition>이전의 인상이나 경험을 다시 생각해 냄.</definition>
+      <translation>
+        <trans_lang>영어</trans_lang>
+        <trans_word>memory</trans_word>
+      </translation>
+      <translation>
+        <trans_lang>영어</trans_lang>
+        <trans_word>recollection</trans_word>
+      </translation>
+    </sense>
+  </item>
+  <item>
+    <word>일어서다</word>
+    <sense>
+      <definition>앉아 있던 자리에서 몸을 일으켜 서다.</definition>
+      <translation>
+        <trans_lang>영어</trans_lang>
+        <trans_word>stand up</trans_word>
+      </translation>
+      <translation>
+        <trans_lang>영어</trans_lang>
+        <trans_word>rise</trans_word>
+      </translation>
+    </sense>
+  </item>
+</channel>

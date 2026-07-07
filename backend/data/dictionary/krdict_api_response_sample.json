@@ -1,0 +1,42 @@
+{
+  "channel": {
+    "title": "한국어기초사전 검색 결과 (샘플, 실제 API 응답 아님)",
+    "item": [
+      {
+        "word": "목소리",
+        "sense": [
+          {
+            "definition": "목에서 나는 소리.",
+            "translation": [
+              {"trans_lang": "영어", "trans_word": "voice"}
+            ]
+          }
+        ]
+      },
+      {
+        "word": "어둠",
+        "sense": [
+          {
+            "definition": "빛이 없어 사물이 보이지 않는 상태.",
+            "translation": [
+              {"trans_lang": "영어", "trans_word": "darkness"},
+              {"trans_lang": "영어", "trans_word": "the dark"}
+            ]
+          }
+        ]
+      },
+      {
+        "word": "지키다",
+        "sense": [
+          {
+            "definition": "위험이 생기지 않도록 보호하거나 감시하여 막다.",
+            "translation": [
+              {"trans_lang": "영어", "trans_word": "protect"},
+              {"trans_lang": "영어", "trans_word": "defend"}
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
