@@ -6,11 +6,11 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from app.dictionary_file_manager import DICTIONARY_DIR
+from app.dictionary_file_manager import DICTIONARY_DIR, get_krdict_reverse_path
 from app.meaning_ranker import is_valid_korean_candidate
 
 
-KRDICT_REVERSE_FULL_PATH = DICTIONARY_DIR / "krdict_reverse_full.json"
+KRDICT_REVERSE_FULL_PATH = get_krdict_reverse_path()
 KRDICT_REVERSE_SAMPLE_PATH = DICTIONARY_DIR / "krdict_reverse_sample.json"
 GZIP_MAGIC = b"\x1f\x8b"
 

@@ -92,9 +92,10 @@
 - Done: Added an optional krdict (한국어기초사전/우리말샘-style) reverse index as boost-only auxiliary data -- it ranks/corrects Kaikki-based candidates but is not a translation engine on its own; built and loaded locally, no runtime API calls.
 - Done: Added a krdict API fetcher foundation (`scripts/fetch_krdict_api.py`) -- a development/preprocessing-only script that can call the real 국립국어원 Open API in small, resumable batches (or replay a committed sample response with no key/network needed) to produce raw JSONL for `build_krdict_reverse_index.py`.
 - Done: Added `scripts/build_krdict_seed_from_en_ko.py` to mine large Korean seed lists from the Kaikki-derived `en_ko_full.json`, plus a curated core-vocabulary seed sample, so `fetch_krdict_api.py` can build a real-world-sized local `krdict_reverse_full.json` instead of only the small built-in seed list.
+- Done: Added KRDIC reverse dictionary delivery support -- `ensure_krdict_reverse_file()` downloads/decompresses/validates `krdict_reverse_full.json` (or `.gz`/`.zip`) via `KRDIC_REVERSE_URL` at Render startup, mirroring the existing JMdict/en_ko download flow exactly, with automatic sample fallback on missing/invalid data and no runtime krdict API calls.
 - TODO: Prepare the actual `jmdict_full.json` file.
 - TODO: Build and upload the actual `en_ko_full.json` file to production file storage.
-- TODO: Build and upload an actual `krdict_reverse_full.json` file (subject to 국립국어원 공공데이터 이용조건) to production file storage.
+- TODO: Build and upload an actual `krdict_reverse_full.json` file (subject to 국립국어원 공공데이터 이용조건) to production file storage and set `KRDIC_REVERSE_URL` on Render.
 - TODO: Place the full dictionary file in the production deployment environment.
 - TODO: Continue improving Korean fallback coverage from Kaikki/Wiktionary data and small exception patches.
 - TODO: Add frequent missing words after tester feedback.

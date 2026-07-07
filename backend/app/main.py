@@ -22,6 +22,9 @@ from app.database import get_database_engine, init_db
 from app.dictionary_file_manager import (
     ensure_en_ko_dictionary_file,
     ensure_full_dictionary_file,
+    ensure_krdict_reverse_file,
+    get_krdict_reverse_path,
+    get_krdict_reverse_url,
 )
 from app.en_ko_dictionary_service import get_en_ko_status
 from app.jmdict_service import get_jmdict_status
@@ -205,6 +208,7 @@ def merge_custom_terms(
 def startup() -> None:
     ensure_full_dictionary_file()
     ensure_en_ko_dictionary_file()
+    ensure_krdict_reverse_file()
     init_db()
 
 
@@ -222,15 +226,34 @@ def _safe_en_ko_status() -> dict[str, object]:
 
 
 def _safe_krdict_reverse_status() -> dict[str, object]:
+    # download_enabled reflects only whether KRDIC_REVERSE_URL is set, never
+    # the URL value itself -- the URL is never exposed via this endpoint.
+    try:
+        download_enabled = bool(get_krdict_reverse_url())
+    except Exception:
+        download_enabled = False
+    try:
+        path_exists = get_krdict_reverse_path().exists()
+    except Exception:
+        path_exists = False
     try:
         status = get_krdict_reverse_status()
     except Exception:
-        return {"source": "none", "entries": 0, "loaded": False, "reason": "status error"}
+        return {
+            "source": "none",
+            "entries": 0,
+            "loaded": False,
+            "reason": "status error",
+            "download_enabled": download_enabled,
+            "path_exists": path_exists,
+        }
     return {
         "source": status.get("source", "none"),
         "entries": status.get("entries", 0),
         "loaded": status.get("loaded", False),
         "reason": status.get("reason"),
+        "download_enabled": download_enabled,
+        "path_exists": path_exists,
     }
 
 

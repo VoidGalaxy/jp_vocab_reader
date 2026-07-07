@@ -258,9 +258,8 @@ runtime code path -- the deployed app never calls the krdict API.
 
   `krdict_reverse_full.json` is not committed either (see above).
 - This stage only produces a local, reviewable `krdict_reverse_full.json`
-  for development. Production delivery of a full krdict reverse index
-  (hosting, download, Render integration) is out of scope here and is
-  handled in a later krdict-dictionary-delivery step.
+  for development. See "Production delivery" below for getting it onto
+  Render.
 
 ### Generating a real-world-sized krdict_reverse_full.json
 
@@ -307,14 +306,66 @@ Notes:
   of use, call-rate limits, and any required source attribution.
 - This whole pipeline is a preprocessing step run manually by a developer,
   not something the running app calls at request time. In production,
-  Render is expected to instead download an already-built
-  `krdict_reverse_full.json.gz` via a `KRDIC_REVERSE_URL`-style setting in a
-  later step -- not build it from these scripts at runtime.
+  Render instead downloads an already-built `krdict_reverse_full.json.gz`
+  via `KRDIC_REVERSE_URL` at startup -- see "Production delivery" below.
 - If a fetch run is interrupted, seed words that failed every retry are
   logged to `<output>.failed.txt` (e.g.
   `krdict_raw_real.jsonl.failed.txt`) for visibility. They are not written
   to the main JSONL output, so a later run with `--resume` (the default)
   retries them automatically without needing that log as input.
+
+### Production delivery (Render)
+
+`krdict_reverse_full.json` is built offline (as above) and shipped to
+Render the same way `jmdict_full.json` and `en_ko_full.json` already are --
+`app/dictionary_file_manager.py` provides `ensure_krdict_reverse_file()`,
+which mirrors `ensure_full_dictionary_file()`/`ensure_en_ko_dictionary_file()`
+exactly (same download/gzip/zip/atomic-replace/fallback-on-failure
+machinery), plus a krdict-specific structural JSON check.
+
+Steps to publish an update:
+
+1. Build `krdict_reverse_full.json` locally (see above), then gzip it:
+   `python -c "import gzip,shutil; shutil.copyfileobj(open('data/dictionary/krdict_reverse_full.json','rb'), gzip.open('data/dictionary/krdict_reverse_full.json.gz','wb'))"`
+   (or any gzip tool).
+2. Upload `krdict_reverse_full.json.gz` (plain `.json` and `.zip` also work)
+   to a GitHub Release asset, Cloudflare R2, S3, or similar file storage.
+3. On Render, set the `KRDIC_REVERSE_URL` environment variable to that
+   file's URL. Optionally set `KRDIC_REVERSE_PATH` to store it somewhere
+   other than the default `backend/data/dictionary/krdict_reverse_full.json`.
+4. On the next backend restart, `startup()` calls
+   `ensure_krdict_reverse_file()` (alongside the existing JMdict/en_ko
+   calls), which downloads, decompresses if needed, validates the JSON
+   structure, and atomically replaces the local file only after validation
+   passes. `krdict_reverse_service` then loads it and reports
+   `source: "full"`.
+
+Failure handling, matching the existing JMdict/en_ko behavior exactly:
+
+- No `KRDIC_REVERSE_URL` set: no download is attempted; the app uses
+  whatever local file is already there, or the committed
+  `krdict_reverse_sample.json` if there is none.
+- Download/decompress/validation fails: the temporary/partial file is
+  discarded, any existing local full file is left untouched, and the app
+  falls back to the sample -- it never crashes on a bad or unreachable URL.
+- `/health` and `/dictionary-status` expose `krdict_reverse.source`
+  (`full`/`sample`/`none`/`fallback`), `entries`, `download_enabled`
+  (whether `KRDIC_REVERSE_URL` is set -- not the URL value itself), and
+  `path_exists`, so a bad production config is visible without exposing
+  the URL.
+- Runtime API calls are never made for this: the 국립국어원 API key is only
+  used by the offline `scripts/fetch_krdict_api.py` preprocessing step and
+  is not needed (or read) for normal analyze requests in production.
+
+Check the delivery setup locally without hitting the network:
+
+```bash
+cd backend
+python scripts/check_krdict_delivery.py
+```
+
+Pass `--url <file-url>` to that script to test an actual download (to a
+throwaway temp path, never the real configured path).
 
 ## Source Notice
 

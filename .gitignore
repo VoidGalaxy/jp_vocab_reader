@@ -56,6 +56,8 @@ backend/data/dictionary/krdict_raw_*.zip
 backend/data/dictionary/krdict_seed_generated.txt
 backend/data/dictionary/krdict_seed_*.generated.txt
 backend/data/dictionary/*.failed.txt
+backend/data/dictionary/*krdict*full*.json
+backend/data/dictionary/*krdict*full*.gz
 
 # Keep small committed samples even though the broad *raw*.json pattern above
 # and krdict_raw_*.json above would otherwise ignore them.
