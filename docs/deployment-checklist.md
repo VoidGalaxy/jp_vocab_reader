@@ -42,6 +42,8 @@ Backend:
 - `CORS_ALLOW_ORIGINS`: Backward-compatible alias for `CORS_ORIGINS`.
 - `JMDICT_FULL_JSON_URL`: Optional. Downloadable HTTPS URL for a normalized full JMdict JSON file. Plain `.json` and `.json.zip` / `.zip` URLs are supported; do not use `sha256:...` hash text as the URL.
 - `JMDICT_FULL_JSON_PATH`: Optional. Custom local path for the full dictionary JSON file.
+- `EN_KO_DICTIONARY_URL`: Optional. Downloadable HTTPS URL for the Kaikki/Wiktionary-derived English-to-Korean full JSON file. Plain `.json`, gzipped `.json.gz` / `.gz`, and zipped `.json.zip` / `.zip` URLs are supported.
+- `EN_KO_DICTIONARY_PATH`: Optional. Custom local path for the English-to-Korean full dictionary file.
 
 Frontend:
 
@@ -60,7 +62,8 @@ Do not commit `.env`, `.env.local`, `backend/.env`, or `frontend/.env.local`.
 - Production start command from `backend`: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
 - Confirm `GET /health` returns `status: ok`.
 - If full dictionary delivery is enabled, confirm `GET /health` shows `dictionary.source: full`.
-- If dictionary delivery fails or the app returns `500`, check Render logs for download, ZIP extraction, or JSON validation errors.
+- If `EN_KO_DICTIONARY_URL` is configured, confirm `GET /health` shows `dictionary.en_ko.source: full`; otherwise it should show `sample` or `fallback` without failing the request.
+- If dictionary delivery fails or the app returns `500`, check Render logs for download, ZIP/GZIP extraction, or JSON validation errors.
 
 ## 4. Frontend Pre-Deployment Checks
 

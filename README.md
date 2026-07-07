@@ -15,6 +15,7 @@ Use the hosting provider environment variable UI for production settings. `NEXT_
 - The committed `backend/data/dictionary/en_ko_sample.json` is a small English-to-Korean fallback sample.
 - A full local JMdict file can be placed at `backend/data/dictionary/jmdict_full.json`; it is ignored by Git and should not be committed.
 - A full Kaikki/Wiktionary English-to-Korean subset can be built as `backend/data/dictionary/en_ko_full.json`; it is ignored by Git and should not be committed.
+- In production, Render can also download `en_ko_full.json` (or `.gz`/`.zip`) automatically at startup via `EN_KO_DICTIONARY_URL`, the same way `JMDICT_FULL_JSON_URL` works for JMdict.
 - Dictionary data remains file-based. PostgreSQL stores user data, not the full JMdict or Kaikki/Wiktionary datasets.
 
 See [docs/dictionary-data.md](docs/dictionary-data.md) for supported JSON formats, validation scripts, production placement options, and source notice requirements.

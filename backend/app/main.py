@@ -19,7 +19,11 @@ from app.auth import (
     verify_password,
 )
 from app.database import get_database_engine, init_db
-from app.dictionary_file_manager import ensure_full_dictionary_file
+from app.dictionary_file_manager import (
+    ensure_en_ko_dictionary_file,
+    ensure_full_dictionary_file,
+)
+from app.en_ko_dictionary_service import get_en_ko_status
 from app.jmdict_service import get_jmdict_status
 from app.repositories.custom_term_repository import (
     create_custom_term,
@@ -199,7 +203,21 @@ def merge_custom_terms(
 @app.on_event("startup")
 def startup() -> None:
     ensure_full_dictionary_file()
+    ensure_en_ko_dictionary_file()
     init_db()
+
+
+def _safe_en_ko_status() -> dict[str, object]:
+    try:
+        status = get_en_ko_status()
+    except Exception:
+        return {"source": "fallback", "entries": 0, "loaded": False, "reason": "status error"}
+    return {
+        "source": status.get("source", "fallback"),
+        "entries": status.get("entries", 0),
+        "loaded": status.get("loaded", False),
+        "reason": status.get("reason"),
+    }
 
 
 @app.get("/health")
@@ -214,6 +232,7 @@ def health() -> dict[str, object]:
             "source": dictionary_status.get("source", "fallback"),
             "entries": dictionary_status.get("entry_count", 0),
             "keys": dictionary_status.get("key_count", 0),
+            "en_ko": _safe_en_ko_status(),
         },
     }
 
@@ -226,6 +245,7 @@ def dictionary_status() -> dict[str, object]:
         "entries": status.get("entry_count", 0),
         "keys": status.get("key_count", 0),
         "errors": status.get("errors", []),
+        "en_ko": _safe_en_ko_status(),
     }
 
 

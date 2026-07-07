@@ -40,3 +40,5 @@ backend/data/dictionary/*.jsonl
 backend/data/dictionary/*.gz
 backend/data/dictionary/*.zip
 backend/data/dictionary/*.tar.gz
+backend/data/dictionary/*.download
+backend/data/dictionary/*.prepared

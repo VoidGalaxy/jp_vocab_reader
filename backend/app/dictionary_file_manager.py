@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import logging
 import os
 import shutil
@@ -14,8 +15,14 @@ DICTIONARY_DIR = Path(__file__).resolve().parents[1] / "data" / "dictionary"
 DEFAULT_JMDICT_FULL_PATH = DICTIONARY_DIR / "jmdict_full.json"
 JMDICT_FULL_JSON_PATH_ENV = "JMDICT_FULL_JSON_PATH"
 JMDICT_FULL_JSON_URL_ENV = "JMDICT_FULL_JSON_URL"
+
+DEFAULT_EN_KO_FULL_PATH = DICTIONARY_DIR / "en_ko_full.json"
+EN_KO_DICTIONARY_PATH_ENV = "EN_KO_DICTIONARY_PATH"
+EN_KO_DICTIONARY_URL_ENV = "EN_KO_DICTIONARY_URL"
+
 DOWNLOAD_TIMEOUT_SECONDS = 120
 ZIP_SUFFIXES = (".zip", ".json.zip")
+GZIP_SUFFIXES = (".gz", ".json.gz")
 JSON_SUFFIX = ".json"
 
 logger = logging.getLogger(__name__)
@@ -32,24 +39,35 @@ def get_full_dictionary_url() -> str:
     return os.getenv(JMDICT_FULL_JSON_URL_ENV, "").strip()
 
 
-def _url_points_to_zip(url: str) -> bool:
+def get_en_ko_dictionary_path() -> Path:
+    configured_path = os.getenv(EN_KO_DICTIONARY_PATH_ENV, "").strip()
+    if configured_path:
+        return Path(configured_path).expanduser()
+    return DEFAULT_EN_KO_FULL_PATH
+
+
+def get_en_ko_dictionary_url() -> str:
+    return os.getenv(EN_KO_DICTIONARY_URL_ENV, "").strip()
+
+
+def _url_matches_suffix(url: str, suffixes: tuple[str, ...]) -> bool:
     url_path = url.split("?", 1)[0].split("#", 1)[0].lower()
-    return url_path.endswith(ZIP_SUFFIXES)
+    return url_path.endswith(suffixes)
 
 
-def _select_json_member(names: list[str]) -> str | None:
+def _select_json_member(names: list[str], name_prefix: str) -> str | None:
     json_names = [name for name in names if name.lower().endswith(JSON_SUFFIX)]
     if not json_names:
         return None
 
     for name in json_names:
         filename = Path(name).name.lower()
-        if filename.startswith("jmdict") and filename.endswith(JSON_SUFFIX):
+        if filename.startswith(name_prefix) and filename.endswith(JSON_SUFFIX):
             return name
 
     for name in json_names:
         filename = Path(name).name.lower()
-        if "jmdict" in filename and filename.endswith(JSON_SUFFIX):
+        if name_prefix in filename and filename.endswith(JSON_SUFFIX):
             return name
 
     return json_names[0]
@@ -61,18 +79,24 @@ def _validate_json_file(path: Path) -> None:
 
 
 def _prepare_downloaded_dictionary(
-    *, downloaded_path: Path, prepared_path: Path, source_url: str
+    *, downloaded_path: Path, prepared_path: Path, source_url: str, name_prefix: str
 ) -> None:
-    if _url_points_to_zip(source_url):
+    if _url_matches_suffix(source_url, ZIP_SUFFIXES):
         logger.info("Detected ZIP dictionary archive")
         with zipfile.ZipFile(downloaded_path) as archive:
-            member_name = _select_json_member(archive.namelist())
+            member_name = _select_json_member(archive.namelist(), name_prefix)
             if not member_name:
                 raise ValueError("ZIP archive does not contain a JSON file")
             with archive.open(member_name) as input_file:
                 with prepared_path.open("wb") as output_file:
                     shutil.copyfileobj(input_file, output_file)
         logger.info("Extracted JSON from dictionary archive")
+    elif _url_matches_suffix(source_url, GZIP_SUFFIXES):
+        logger.info("Detected GZIP dictionary file")
+        with gzip.open(downloaded_path, "rb") as input_file:
+            with prepared_path.open("wb") as output_file:
+                shutil.copyfileobj(input_file, output_file)
+        logger.info("Decompressed GZIP dictionary file")
     else:
         shutil.copyfile(downloaded_path, prepared_path)
 
@@ -80,25 +104,31 @@ def _prepare_downloaded_dictionary(
         raise OSError("prepared dictionary file is empty")
 
     _validate_json_file(prepared_path)
-    logger.info("Validated JMdict full dictionary JSON")
+    logger.info("Validated dictionary JSON")
 
 
-def ensure_full_dictionary_file() -> dict[str, str]:
-    full_path = get_full_dictionary_path()
+def _ensure_dictionary_file(
+    *,
+    get_path,
+    get_url,
+    name_prefix: str,
+    label: str,
+) -> dict[str, str]:
+    full_path = get_path()
     if full_path.exists():
-        logger.info("JMdict full dictionary already exists: %s", full_path)
+        logger.info("%s already exists: %s", label, full_path)
         return {"status": "exists", "path": str(full_path)}
 
-    url = get_full_dictionary_url()
+    url = get_url()
     if not url:
-        logger.info("JMDICT_FULL_JSON_URL not configured; using local fallback")
+        logger.info("%s URL not configured; using local fallback", label)
         return {"status": "not-configured", "path": str(full_path)}
 
     full_path.parent.mkdir(parents=True, exist_ok=True)
     download_path = full_path.with_name(f"{full_path.name}.download")
     prepared_path = full_path.with_name(f"{full_path.name}.prepared")
 
-    logger.info("Downloading JMdict full dictionary")
+    logger.info("Downloading %s", label)
     try:
         with urlopen(url, timeout=DOWNLOAD_TIMEOUT_SECONDS) as response:
             with download_path.open("wb") as output:
@@ -111,6 +141,7 @@ def ensure_full_dictionary_file() -> dict[str, str]:
             downloaded_path=download_path,
             prepared_path=prepared_path,
             source_url=url,
+            name_prefix=name_prefix,
         )
         os.replace(prepared_path, full_path)
     except (
@@ -121,14 +152,16 @@ def ensure_full_dictionary_file() -> dict[str, str]:
         ValueError,
         json.JSONDecodeError,
         zipfile.BadZipFile,
+        gzip.BadGzipFile,
     ) as exc:
         for path in (download_path, prepared_path):
             try:
                 path.unlink(missing_ok=True)
             except OSError:
-                logger.warning("Failed to remove temporary JMdict file: %s", path)
+                logger.warning("Failed to remove temporary file: %s", path)
         logger.warning(
-            "Failed to prepare JMdict full dictionary; falling back to sample (%s)",
+            "Failed to prepare %s; falling back to sample (%s)",
+            label,
             exc,
         )
         return {"status": "failed", "path": str(full_path)}
@@ -137,11 +170,30 @@ def ensure_full_dictionary_file() -> dict[str, str]:
             try:
                 path.unlink(missing_ok=True)
             except OSError:
-                logger.warning("Failed to remove temporary JMdict file: %s", path)
+                logger.warning("Failed to remove temporary file: %s", path)
 
     logger.info(
-        "JMdict full dictionary downloaded: %s (%s bytes)",
+        "%s downloaded: %s (%s bytes)",
+        label,
         full_path,
         full_path.stat().st_size,
     )
     return {"status": "downloaded", "path": str(full_path)}
+
+
+def ensure_full_dictionary_file() -> dict[str, str]:
+    return _ensure_dictionary_file(
+        get_path=get_full_dictionary_path,
+        get_url=get_full_dictionary_url,
+        name_prefix="jmdict",
+        label="JMdict full dictionary",
+    )
+
+
+def ensure_en_ko_dictionary_file() -> dict[str, str]:
+    return _ensure_dictionary_file(
+        get_path=get_en_ko_dictionary_path,
+        get_url=get_en_ko_dictionary_url,
+        name_prefix="en_ko",
+        label="English-Korean dictionary",
+    )

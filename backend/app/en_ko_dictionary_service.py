@@ -3,16 +3,18 @@ from __future__ import annotations
 import json
 import logging
 import re
+import zipfile
 from pathlib import Path
 from typing import Any
 
-from app.dictionary_file_manager import DICTIONARY_DIR
+from app.dictionary_file_manager import DICTIONARY_DIR, get_en_ko_dictionary_path
 
 
-EN_KO_FULL_PATH = DICTIONARY_DIR / "en_ko_full.json"
+EN_KO_FULL_PATH = get_en_ko_dictionary_path()
 EN_KO_SAMPLE_PATH = DICTIONARY_DIR / "en_ko_sample.json"
 MAX_TRANSLATIONS_PER_GLOSS = 4
 ENTRY_LIST_KEYS = ("entries", "items", "translations")
+GZIP_MAGIC = b"\x1f\x8b"
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +22,10 @@ _en_ko_index: dict[str, list[str]] | None = None
 _en_ko_status: dict[str, Any] = {
     "source": "not-loaded",
     "path": "",
-    "entry_count": 0,
-    "key_count": 0,
+    "entries": 0,
+    "keys": 0,
+    "loaded": False,
+    "reason": None,
     "errors": [],
 }
 
@@ -67,13 +71,33 @@ def _clean_korean(value: Any) -> str:
     return text
 
 
+def _looks_like_gzip(path: Path) -> bool:
+    try:
+        with path.open("rb") as input_file:
+            return input_file.read(2) == GZIP_MAGIC
+    except OSError:
+        return False
+
+
 def _read_entries(path: Path) -> tuple[list[Any] | None, str]:
     if not path.exists():
         return None, "missing"
+    if zipfile.is_zipfile(path):
+        return (
+            None,
+            "appears to be a ZIP archive; check EN_KO_DICTIONARY_URL download/extraction",
+        )
+    if _looks_like_gzip(path):
+        return (
+            None,
+            "appears to be a GZIP file; check EN_KO_DICTIONARY_URL download/extraction",
+        )
     try:
         raw_data = json.loads(path.read_text(encoding="utf-8"))
     except OSError as exc:
         return None, f"read error: {exc}"
+    except UnicodeDecodeError as exc:
+        return None, f"decode error: {exc}"
     except json.JSONDecodeError as exc:
         return None, f"json parse error: line {exc.lineno} column {exc.colno}"
 
@@ -131,11 +155,16 @@ def _build_index(entries: list[Any]) -> dict[str, list[str]]:
 def _load_index() -> dict[str, list[str]]:
     global _en_ko_status
     errors: list[str] = []
+    invalid_full_seen = False
     for path in (EN_KO_FULL_PATH, EN_KO_SAMPLE_PATH):
         entries, error = _read_entries(path)
         if entries is None:
             errors.append(f"{path.name}: {error}")
-            logger.info("English-Korean dictionary skipped: %s (%s)", path.name, error)
+            if path == EN_KO_FULL_PATH and error != "missing":
+                invalid_full_seen = True
+                logger.warning("English-Korean full dictionary skipped: %s", error)
+            else:
+                logger.info("English-Korean dictionary skipped: %s (%s)", path.name, error)
             continue
         index = _build_index(entries)
         if not index:
@@ -145,8 +174,10 @@ def _load_index() -> dict[str, list[str]]:
         _en_ko_status = {
             "source": "full" if path == EN_KO_FULL_PATH else "sample",
             "path": str(path),
-            "entry_count": len(entries),
-            "key_count": len(index),
+            "entries": len(entries),
+            "keys": len(index),
+            "loaded": True,
+            "reason": None,
             "errors": errors,
         }
         logger.info(
@@ -158,10 +189,12 @@ def _load_index() -> dict[str, list[str]]:
         return index
 
     _en_ko_status = {
-        "source": "fallback",
+        "source": "invalid_full" if invalid_full_seen else "fallback",
         "path": "",
-        "entry_count": 0,
-        "key_count": 0,
+        "entries": 0,
+        "keys": 0,
+        "loaded": False,
+        "reason": errors[0] if errors else None,
         "errors": errors,
     }
     return {}

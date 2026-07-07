@@ -78,6 +78,7 @@ OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.2
 CORS_ORIGINS=http://localhost:3000,https://your-frontend-domain.example
 JMDICT_FULL_JSON_URL=
+EN_KO_DICTIONARY_URL=
 ```
 
 Frontend:
@@ -89,6 +90,8 @@ NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example
 Never commit real `.env` files. Use the host's secret/environment variable UI. Do not write real `DATABASE_URL`, `JWT_SECRET_KEY`, API keys, Render URLs, Vercel URLs, or Neon connection strings into this document.
 
 `JMDICT_FULL_JSON_URL` is optional. Set it only when the Render backend should download `jmdict_full.json` at startup. Plain `.json` and `.json.zip` / `.zip` URLs are supported. Do not put `sha256:...` hash text in this variable, and do not commit the downloaded file.
+
+`EN_KO_DICTIONARY_URL` is optional. Set it only when the Render backend should download the Kaikki/Wiktionary-derived `en_ko_full.json` at startup. Plain `.json`, gzipped `.json.gz`/`.gz`, and zipped `.json.zip`/`.zip` URLs are supported. `EN_KO_DICTIONARY_PATH` optionally overrides the local storage path. If the URL is missing or the download/validation fails, the backend keeps running with the committed `en_ko_sample.json` fallback.
 
 ## 5. CORS
 
@@ -165,7 +168,9 @@ Backend:
 
 - `GET /health`
 - Confirm `/health` shows `dictionary.source` as `full` when full dictionary delivery is enabled.
-- If dictionary delivery fails or analysis returns `500`, check Render logs for download, ZIP extraction, or JSON validation errors.
+- Confirm `/health` shows `dictionary.en_ko.source` as `full` when `EN_KO_DICTIONARY_URL` is configured, or `sample`/`fallback` otherwise.
+- Confirm analyzed results still show a Korean fallback meaning (not a raw English gloss) in the UI when `meaning_ko` is empty.
+- If dictionary delivery fails or analysis returns `500`, check Render logs for download, ZIP/GZIP extraction, or JSON validation errors.
 - `GET /me`
 - `POST /auth/register`
 - `POST /auth/login`

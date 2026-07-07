@@ -104,6 +104,32 @@ Optional environment variables:
 
 Neither variable should contain secrets in committed documentation. If the URL is private or signed, configure it only in the host environment UI.
 
+## English-to-Korean Fallback in Production
+
+The Kaikki/Wiktionary-derived English-to-Korean fallback (`en_ko_full.json`) follows the same environment-variable delivery path as `jmdict_full.json`:
+
+1. Build the file locally from a Kaikki/Wiktionary raw dump:
+
+   ```bash
+   cd backend
+   python scripts/build_en_ko_from_kaikki.py --input kaikki_raw.jsonl --output data/dictionary/en_ko_full.json
+   ```
+
+2. Do not commit `en_ko_full.json`, `en_ko_raw.json`, or the Kaikki raw `jsonl`/`jsonl.gz` dump to Git; all are ignored by `.gitignore`.
+3. Upload `en_ko_full.json` (or a gzipped/zipped version) to private file storage: a GitHub Release asset, Cloudflare R2, S3, or similar.
+4. Set `EN_KO_DICTIONARY_URL` in the Render backend environment to that file's download URL.
+5. On backend startup, if `backend/data/dictionary/en_ko_full.json` is missing, the app downloads the file to a temporary path, decompresses/extracts it if needed, validates it as JSON, and only then moves it into place. If the file already exists, startup skips the download.
+6. If `EN_KO_DICTIONARY_URL` is missing, the download fails, or the downloaded/local file is not valid JSON, the app continues with `en_ko_sample.json` fallback instead of crashing.
+
+Supported `EN_KO_DICTIONARY_URL` file types: `.json`, `.json.gz`, `.gz`, `.json.zip`, `.zip`. For a ZIP archive, the loader picks the JSON member whose filename starts with `en_ko`, falls back to any filename containing `en_ko`, and otherwise uses the first `.json` member found.
+
+Optional environment variables:
+
+- `EN_KO_DICTIONARY_URL`: URL for the English-to-Korean full dictionary JSON file, plain `.json`, gzipped `.json.gz`/`.gz`, or zipped `.json.zip`/`.zip`.
+- `EN_KO_DICTIONARY_PATH`: custom local path for the downloaded or pre-mounted English-to-Korean full dictionary file.
+
+Kaikki/Wiktionary data can require CC BY-SA/GFDL-style attribution and share-alike handling. If `en_ko_full.json` is published as a public release asset, keep the source and license notice alongside it (see the Source Notice section below and the Info tab in the app).
+
 ## Source Notice
 
 The dictionary fallback can use JMdict/EDICT project data by EDRDG and Kaikki/Wiktionary data. JMdict/EDICT has its own license requirements, and Kaikki/Wiktionary data can require CC-BY-SA/GFDL attribution and share-alike handling. Keep appropriate source and license notices in product and deployment documentation. User-defined terms and personal vocabulary data are stored separately from dictionary source data.

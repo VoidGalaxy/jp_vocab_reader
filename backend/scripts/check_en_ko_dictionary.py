@@ -18,6 +18,7 @@ from app.en_ko_dictionary_service import (  # noqa: E402
     get_en_ko_status,
     translate_glosses_to_korean,
 )
+from app.dictionary_file_manager import get_en_ko_dictionary_url  # noqa: E402
 
 
 DEFAULT_GLOSSES = [
@@ -27,15 +28,28 @@ DEFAULT_GLOSSES = [
     "hope",
     "darkness",
     "voice",
+    "sound",
+    "promise",
+    "memory",
 ]
 
 
 def describe_file(path: Path, label: str) -> None:
     print(f"{label}: {path}")
-    if path.exists():
-        print(f"  exists: {path.stat().st_size} bytes")
-    else:
+    if not path.exists():
         print("  missing")
+        return
+
+    print(f"  exists: {path.stat().st_size} bytes")
+    try:
+        with path.open("rb") as input_file:
+            header = input_file.read(4)
+    except OSError:
+        header = b""
+    if header[:2] == b"\x1f\x8b":
+        print("  warning: file looks like a GZIP archive, not JSON")
+    elif header[:2] == b"PK":
+        print("  warning: file looks like a ZIP archive, not JSON")
 
 
 def main() -> int:
@@ -53,9 +67,12 @@ def main() -> int:
     print(
         "loader status: "
         f"source={status.get('source')} "
-        f"entries={status.get('entry_count')} "
-        f"keys={status.get('key_count')}"
+        f"entries={status.get('entries')} "
+        f"keys={status.get('keys')} "
+        f"loaded={status.get('loaded')}"
     )
+    if status.get("reason"):
+        print(f"  reason: {status.get('reason')}")
     for error in status.get("errors", []):
         print(f"  note: {error}")
 
@@ -66,9 +83,21 @@ def main() -> int:
     if status.get("source") != "full":
         print()
         print(
-            "en_ko_full.json is not active. Build it with "
+            "en_ko_full.json is not active. Build it locally with "
             "scripts/build_en_ko_from_kaikki.py and keep the generated file out of Git."
         )
+        if get_en_ko_dictionary_url():
+            print(
+                "EN_KO_DICTIONARY_URL is configured. This script does not download "
+                "the file; the backend startup path downloads it when the local full "
+                "dictionary file is missing."
+            )
+        else:
+            print(
+                "For production, upload en_ko_full.json (or .gz/.zip) to file storage "
+                "and set EN_KO_DICTIONARY_URL so the Render backend can download it "
+                "at startup."
+            )
     return 0
 
 
