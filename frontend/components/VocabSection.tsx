@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { HighlightedExample } from "./HighlightedExample";
 import { formatDateTime, formatNextReview, StatusSelect } from "./shared";
 import type {
   Deck,
@@ -638,7 +639,12 @@ export function VocabSection({
                     </td>
                     <td>
                       <span className="example-text">
-                        {item.example_sentence || "-"}
+                        <HighlightedExample
+                          sentence={item.example_sentence}
+                          surface={item.surface}
+                          baseForm={item.base_form}
+                          normalizedForm={item.normalized_form}
+                        />
                       </span>
                     </td>
                     <td>

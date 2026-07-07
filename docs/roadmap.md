@@ -122,6 +122,13 @@
 - 완료: 분석, 단어장, 학습, 공유 탭의 카드/입력/목록 간격과 긴 일본어 텍스트 줄바꿈을 개선했다.
 - 완료: 단어장과 사용자 정의 용어 테이블은 기능을 유지하면서 모바일 가로 스크롤과 첫 열 고정으로 읽기성을 보강했다.
 
+## Reader Mode & Word Status Display
+
+- 완료: 분석 탭에 "읽기 모드"를 추가했다 (`ReaderMode.tsx`). 기존 카드/전체 결과 테이블은 그대로 두고, 분석된 token을 원문 순서대로(문장 단위는 `example_sentence` 그룹핑으로 구분) 자연스럽게 이어 보여준다. 백엔드 변경 없이 프론트에서만 구현했다.
+- 완료: 단어 상태(known/uncertain/unknown/unclassified)별 색상과 조사/기능어/기호 계열 품사에 대한 무채색 처리를 추가했다 (`TokenChip.tsx`).
+- 완료: 읽기 모드에서 단어를 클릭하면 하단 시트/팝업(`TokenDetailSheet.tsx`)으로 기본형·읽기·품사·한국어 뜻·현재 상태를 보여주고, 기존 분류 저장 흐름(`onStatusChange`)을 그대로 재사용해 상태를 변경할 수 있다. 새 API는 추가하지 않았다.
+- 완료: 단어장(및 분석 결과 테이블)의 예문에서 해당 단어를 surface → base_form → normalized_form 순으로 매칭해 하이라이트한다 (`HighlightedExample.tsx`). `dangerouslySetInnerHTML` 없이 순수 React 노드 조합으로 렌더링한다.
+
 ## 원칙
 
 - 첫 MVP는 작고 안정적으로 만든다.

@@ -1,6 +1,8 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { HighlightedExample } from "./HighlightedExample";
+import { ReaderMode } from "./ReaderMode";
 import { StatusSelect, statusLabels } from "./shared";
 import type { Deck, QualityTag, TokenStatus, TokenWithStatus } from "./types";
 
@@ -176,6 +178,7 @@ export function AnalyzeSection({
 
         {tokens.length > 0 ? (
           <>
+            <ReaderMode tokens={tokens} onStatusChange={onStatusChange} />
             <div className="classification-summary">
               <span>분류 완료 {classifiedCount}개</span>
               <span>남은 단어 {remainingCount}개</span>
@@ -325,7 +328,12 @@ export function AnalyzeSection({
                         </td>
                         <td>
                           <span className="example-text">
-                            {token.example_sentence || "-"}
+                            <HighlightedExample
+                              sentence={token.example_sentence}
+                              surface={token.surface}
+                              baseForm={token.base_form}
+                              normalizedForm={token.normalized_form}
+                            />
                           </span>
                         </td>
                         <td>
