@@ -128,6 +128,7 @@ class JapaneseAnalyzer:
                         normalized_form=normalized_form,
                         reading=reading,
                         deck_id=deck_id,
+                        part_of_speech=part_of_speech,
                     ),
                     "dictionary_gloss": lookup_dictionary_gloss(
                         surface=surface,

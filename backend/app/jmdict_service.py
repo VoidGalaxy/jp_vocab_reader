@@ -213,7 +213,11 @@ def lookup_jmdict_gloss(
 ) -> str:
     index = get_jmdict_index()
     glosses: list[str] = []
-    for key in (surface, base_form, normalized_form, reading):
+    # base_form is the canonical JMdict headword; check it before the raw
+    # inflected surface, which can otherwise coincidentally match an
+    # unrelated entry (e.g. a noun sharing spelling with a verb's okurigana
+    # form) and crowd out the real sense once MAX_GLOSSES_PER_LOOKUP is hit.
+    for key in (base_form, normalized_form, surface, reading):
         for gloss in index.get((key or "").strip(), []):
             if gloss not in glosses:
                 glosses.append(gloss)

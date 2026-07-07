@@ -157,6 +157,7 @@ def find_compound_verb_tokens(
                         normalized_form=base_form,
                         reading=reading,
                         deck_id=deck_id,
+                        part_of_speech="動詞",
                     ),
                     "dictionary_gloss": lookup_dictionary_gloss(
                         surface=surface,

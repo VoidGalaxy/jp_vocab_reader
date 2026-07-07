@@ -8,11 +8,17 @@ from pathlib import Path
 from typing import Any
 
 from app.dictionary_file_manager import DICTIONARY_DIR, get_en_ko_dictionary_path
+from app.meaning_ranker import (
+    MAX_PER_GLOSS_CANDIDATES,
+    build_meaning_ko,
+    get_max_meaning_candidates,
+    is_valid_korean_candidate,
+)
 
 
 EN_KO_FULL_PATH = get_en_ko_dictionary_path()
 EN_KO_SAMPLE_PATH = DICTIONARY_DIR / "en_ko_sample.json"
-MAX_TRANSLATIONS_PER_GLOSS = 4
+MAX_TRANSLATIONS_PER_GLOSS = MAX_PER_GLOSS_CANDIDATES
 ENTRY_LIST_KEYS = ("entries", "items", "translations")
 GZIP_MAGIC = b"\x1f\x8b"
 
@@ -62,11 +68,7 @@ def _clean_korean(value: Any) -> str:
     if not isinstance(value, str):
         return ""
     text = " ".join(value.strip().split())
-    if not text or len(text) > 40:
-        return ""
-    if not re.search(r"[가-힣]", text):
-        return ""
-    if any(mark in text for mark in ("\n", "\r")):
+    if not is_valid_korean_candidate(text):
         return ""
     return text
 
@@ -212,18 +214,44 @@ def get_en_ko_status() -> dict[str, Any]:
     return dict(_en_ko_status)
 
 
-def translate_glosses_to_korean(dictionary_gloss: str) -> str:
+def _order_glosses(glosses: list[str], *, prefer_verb_glosses: bool) -> list[str]:
+    if not prefer_verb_glosses:
+        return glosses
+    verb_shaped = [gloss for gloss in glosses if gloss.strip().lower().startswith("to ")]
+    other = [gloss for gloss in glosses if not gloss.strip().lower().startswith("to ")]
+    return [*verb_shaped, *other]
+
+
+def _order_translations_for_gloss(translations: list[str], gloss: str) -> list[str]:
+    if not gloss.strip().lower().startswith("to "):
+        return translations
+    verb_shaped = [word for word in translations if word.endswith("다")]
+    other = [word for word in translations if not word.endswith("다")]
+    return [*verb_shaped, *other]
+
+
+def translate_glosses_to_korean(
+    dictionary_gloss: str, *, prefer_verb_glosses: bool = False
+) -> str:
     index = get_en_ko_index()
+    max_total = get_max_meaning_candidates()
     meanings: list[str] = []
     seen: set[str] = set()
-    for gloss in dictionary_gloss.split(";"):
+    glosses = _order_glosses(dictionary_gloss.split(";"), prefer_verb_glosses=prefer_verb_glosses)
+    for gloss in glosses:
+        if len(meanings) >= max_total:
+            break
         translations: list[str] = []
         for key in _candidate_keys(gloss):
             translations = index.get(key, [])
             if translations:
                 break
+        translations = _order_translations_for_gloss(translations, gloss)
         for translation in translations[:MAX_TRANSLATIONS_PER_GLOSS]:
-            if translation not in seen:
-                meanings.append(translation)
-                seen.add(translation)
-    return ", ".join(meanings)
+            if translation in seen:
+                continue
+            meanings.append(translation)
+            seen.add(translation)
+            if len(meanings) >= max_total:
+                break
+    return build_meaning_ko(meanings, max_candidates=max_total)
