@@ -205,6 +205,7 @@ class SharedDeckSummaryResponse(BaseModel):
     custom_term_count: int
     import_count: int
     created_at: str
+    is_owner: bool = False
 
 
 class SharedDeckItemResponse(BaseModel):
@@ -236,6 +237,13 @@ class SharedDeckDetailResponse(SharedDeckSummaryResponse):
     updated_at: str
     items: list[SharedDeckItemResponse] = []
     custom_terms: list[SharedDeckTermResponse] = []
+
+
+class SharedDeckDeleteResponse(BaseModel):
+    ok: bool = True
+    shared_deck_id: int
+    title: str
+    message: str
 
 
 class SharedDeckImportResponse(BaseModel):
