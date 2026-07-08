@@ -339,3 +339,10 @@ Next TODO:
 - 완료: 읽기 탭에도 "입력한 원문은 본인 학습용으로 사용하세요. 원문 전체는 서버에 자동 저장되지 않으며 공유 덱에 포함되지 않습니다." 안내 문구를 작게 추가했다.
 - 완료: 모바일에서 결과가 있으면 원문 입력 폼을 "원문 입력 접기/펼치기" 버튼으로 접을 수 있게 했다 (분석 완료 시 기본으로 접힘).
 - 확인: 이번 작업에서도 원문 전체를 저장하는 서버 컬럼/엔드포인트를 추가하지 않았고, `DeckPackage`/공유 덱 스키마에는 여전히 원문 전체 필드가 없다.
+
+## JLPT Starter Shared Decks
+
+- 완료: N5~N1 레벨별 "추천 어휘" 공유덱을 만들기 위한 오프라인 파이프라인을 추가했다. 공식 JLPT 어휘 목록이 아니라는 점과 출처/라이선스 정책은 [jlpt-decks.md](jlpt-decks.md)에 정리했다.
+- 완료: 손으로 작성한 N5 샘플 30단어 CSV(`backend/data/jlpt/n5_sample.csv`)와 이를 기존 deck package(`jp_vocab_reader_deck`) 형식 JSON으로 변환하는 `backend/scripts/build_jlpt_deck_package.py`를 추가했다. 뜻/읽기가 CSV에 없으면 기존 `app.analyzer`/사전 파이프라인을 재사용해 보강하고, 새 DB 스키마나 런타임 외부 API 호출은 추가하지 않았다.
+- 완료: 생성된 deck package JSON을 dev 사용자 기준으로 개인 덱 생성 + 공유덱 등록까지 이어주는 선택 스크립트 `backend/scripts/seed_jlpt_shared_decks.py`를 추가했다. 기존 `import_deck_package`/`publish_deck` repository 함수를 그대로 재사용하며, 기본은 읽기 전용 dry-run이고 `--apply`를 명시해야 실제 DB에 기록한다.
+- TODO: N4~N1 CSV는 출처/라이선스가 확인된 뒤에만 추가한다. 대량 목록은 확인 전까지 커밋하지 않는다.
