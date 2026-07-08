@@ -346,3 +346,11 @@ Next TODO:
 - 완료: 손으로 작성한 N5 샘플 30단어 CSV(`backend/data/jlpt/n5_sample.csv`)와 이를 기존 deck package(`jp_vocab_reader_deck`) 형식 JSON으로 변환하는 `backend/scripts/build_jlpt_deck_package.py`를 추가했다. 뜻/읽기가 CSV에 없으면 기존 `app.analyzer`/사전 파이프라인을 재사용해 보강하고, 새 DB 스키마나 런타임 외부 API 호출은 추가하지 않았다.
 - 완료: 생성된 deck package JSON을 dev 사용자 기준으로 개인 덱 생성 + 공유덱 등록까지 이어주는 선택 스크립트 `backend/scripts/seed_jlpt_shared_decks.py`를 추가했다. 기존 `import_deck_package`/`publish_deck` repository 함수를 그대로 재사용하며, 기본은 읽기 전용 dry-run이고 `--apply`를 명시해야 실제 DB에 기록한다.
 - TODO: N4~N1 CSV는 출처/라이선스가 확인된 뒤에만 추가한다. 대량 목록은 확인 전까지 커밋하지 않는다.
+
+## JLPT Deck Quality Pipeline
+
+- 완료: 외부에서 확보한 JLPT 단어 CSV를 바로 공유덱에 넣지 않고, 정규화 → 1차 한국어 뜻 생성/검수용 audit CSV → 사람 검수 → deck package 순서로 이어지는 파이프라인을 추가했다. 전체 흐름과 warning 코드 설명은 [jlpt-decks.md](jlpt-decks.md)에 정리했다.
+- 완료: `backend/scripts/normalize_jlpt_word_list.py` — 다양한 컬럼명(word/expression/kanji, kana/furigana, english/gloss 등)의 외부 CSV를 `level,surface,reading,source_meaning_en,source_meaning_ko,source_note` 표준 컬럼으로 정규화한다.
+- 완료: `backend/scripts/build_jlpt_quality_draft.py` — 정규화된 CSV를 기존 `app.analyzer`/사전 파이프라인(JMdict + Kaikki/en_ko fallback + krdict 부스팅 + meaning quality filter)으로 처리해 `generated_meaning_ko`, `dictionary_found`, `meaning_confidence`, `warnings`(10종: NO_DICTIONARY_MATCH/EMPTY_MEANING/READING_MISMATCH/LOW_CONFIDENCE_MEANING/RISKY_KOREAN_CANDIDATE/TOO_MANY_MEANINGS/MULTIPLE_SENSES/SOURCE_EN_MISMATCH/DUPLICATE_SURFACE/DUPLICATE_SURFACE_READING)을 채운 검수용 draft CSV를 만든다. 외부 `source_meaning_en`/`source_meaning_ko`는 참고용일 뿐 그대로 신뢰하지 않으며, 사전 매칭이 없을 때만 검증을 거쳐 보조적으로 사용한다.
+- 완료: `backend/scripts/build_jlpt_deck_from_reviewed_csv.py` — 사람이 검수해 `meaning_ko`를 확정한 CSV(`level,surface,reading,meaning_ko,example_sentence,example_translation_ko,note_ko`)를 기존 deck package 형식 JSON으로 변환한다. `meaning_ko`는 검수 결과를 그대로 신뢰하고, base_form/품사 등 구조 필드만 analyzer로 보강한다.
+- 완료: `.gitignore`에 `backend/data/jlpt/{raw,work,reviewed,packages}/`와 생성 파일 패턴을 추가해 검수 전/후 CSV와 생성된 deck package JSON이 커밋되지 않게 했다. `n5_sample.csv`, `samples/`, `README.md`만 커밋 가능하다.

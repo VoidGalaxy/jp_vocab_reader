@@ -70,3 +70,22 @@ backend/data/dictionary/*krdict*full*.gz
 # regenerate locally instead of committing). Seed CSVs like n5_sample.csv are
 # not *.json and stay committable.
 backend/data/jlpt/*.json
+
+# JLPT external word-list pipeline (normalize -> quality draft -> human
+# review -> deck package, see docs/jlpt-decks.md): raw external exports,
+# working/generated files, review copies, and generated deck packages are
+# never committed until reviewed, and even then only hand-authored samples
+# are meant to live in Git -- not bulk external lists.
+backend/data/jlpt/raw/
+backend/data/jlpt/work/
+backend/data/jlpt/reviewed/
+backend/data/jlpt/packages/
+backend/data/jlpt/*_quality_draft.csv
+backend/data/jlpt/*_normalized.csv
+backend/data/jlpt/*_reviewed.csv
+backend/data/jlpt/*_recommended_deck.json
+
+# Hand-written, license-clean samples stay committable.
+!backend/data/jlpt/samples/
+!backend/data/jlpt/n5_sample.csv
+!backend/data/jlpt/README.md

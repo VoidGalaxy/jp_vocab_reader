@@ -107,14 +107,118 @@ uses the approved wording:
    don't intend to change. Pass `--skip-publish` to only create the
    personal deck without publishing it.
 
+## Pipeline for externally-sourced word lists (quality review)
+
+The MVP pipeline above works for a small, hand-written sample where you
+already trust every field. For a word list obtained from an external source
+(e.g. a downloaded JLPT study CSV), don't feed it straight into a shared
+deck -- run it through this quality-review pipeline first so a human (or an
+LLM given the CSV) can catch mistakes before anything is published:
+
+```
+1. Confirm the source/license of the external CSV -- see "Source policy" above.
+   Save it to backend/data/jlpt/raw/<level>.csv (not committed).
+
+2. Normalize whatever column names it uses into the standard shape:
+   cd backend
+   .\.venv\Scripts\Activate.ps1
+   python .\scripts\normalize_jlpt_word_list.py --input .\data\jlpt\raw\n5.csv --output .\data\jlpt\work\n5_normalized.csv --level N5
+
+3. Generate a first-pass Korean meaning + audit warnings using this app's
+   own dictionary/analyze pipeline (no runtime API calls, no trusting the
+   external English/Korean gloss blindly):
+   python .\scripts\build_jlpt_quality_draft.py --input .\data\jlpt\work\n5_normalized.csv --output .\data\jlpt\work\n5_quality_draft.csv
+
+4. A human reviews data\jlpt\work\n5_quality_draft.csv (open it in a
+   spreadsheet, or upload it to an LLM for a first-pass review). For each
+   row: check the `warnings` column first, confirm/correct
+   `generated_meaning_ko`, fill in `note_ko` if useful, and only keep short
+   self-written example sentences (or leave `example_sentence` blank).
+   Save the approved result as backend/data/jlpt/reviewed/n5_reviewed.csv
+   with `generated_meaning_ko` renamed/promoted to `meaning_ko` (the
+   required column for the next step).
+
+5. Build the deck package from the reviewed CSV:
+   python .\scripts\build_jlpt_deck_from_reviewed_csv.py --level N5 --input .\data\jlpt\reviewed\n5_reviewed.csv --output .\data\jlpt\packages\jlpt_n5_recommended_deck.json
+
+6. Import it (POST /decks/import-package, or the existing deck-package
+   import UI) or register it as a shared deck with
+   scripts/seed_jlpt_shared_decks.py (dry-run by default; --apply to write).
+```
+
+Everything under `raw/`, `work/`, `reviewed/`, and `packages/` is git-ignored
+-- see `backend/data/jlpt/README.md`. Nothing before step 6 touches the
+database, and nothing is published as a shared deck until a human has
+reviewed the quality draft.
+
+### build_jlpt_quality_draft.py: how generated_meaning_ko is decided
+
+For each row, `surface` is run through the exact same tokenize + dictionary
+lookup pipeline `/analyze` uses (`app.analyzer`, single headword instead of
+a sentence):
+
+1. If the pipeline (JMdict full-text lookup → Kaikki/en_ko fallback → krdict
+   boosting → `meaning_quality_filter`) produces a `meaning_ko`, that is used
+   as `generated_meaning_ko`. Confidence is `high` if JMdict itself has a
+   matching entry (`dictionary_found=True`), `medium` if the meaning came
+   from elsewhere (e.g. the small built-in exception dictionary) without a
+   JMdict match.
+2. Only if the pipeline produces nothing does the external CSV's
+   `source_meaning_ko` get considered, and only after passing the same
+   Korean-candidate validator (`is_valid_korean_candidate`) and risky-word
+   filter (`is_risky_korean`) used everywhere else in the app. This is the
+   "참고하되 그대로 맹신하지 않음" (reference it, don't blindly trust it)
+   policy from the product requirements. Confidence is `low` in this case.
+3. If nothing survives either step, `generated_meaning_ko` is left empty
+   (confidence `none`) -- an empty meaning is preferred over a wrong one,
+   matching the existing meaning-quality-filter policy documented in
+   [dictionary-data.md](dictionary-data.md).
+
+`source_meaning_en` (the external CSV's English gloss, if any) is carried
+through the draft CSV for reference only; it is never shown in the app UI
+and never used as the Korean meaning.
+
+### Audit warning columns
+
+`build_jlpt_quality_draft.py` fills a `warnings` column (semicolon-separated
+codes) so a reviewer can triage rows by risk instead of reading every row
+equally:
+
+| Code | Meaning |
+| --- | --- |
+| `NO_DICTIONARY_MATCH` | JMdict has no entry for this surface/base form -- the word may be a name, slang, or outside the current dictionary data. |
+| `EMPTY_MEANING` | No usable Korean meaning was produced at all. |
+| `READING_MISMATCH` | The external CSV's reading and the analyzer-derived reading disagree after hiragana normalization -- check for a wrong kanji/homograph. |
+| `LOW_CONFIDENCE_MEANING` | `meaning_confidence` is `medium` or `low` -- worth a second look. |
+| `RISKY_KOREAN_CANDIDATE` | One of the final candidates is flagged by `meaning_quality_filter.is_risky_korean` (generic/ambiguous word) even after the pipeline's own filtering -- a belt-and-suspenders check. |
+| `TOO_MANY_MEANINGS` | More Korean candidates than the configured max (should be rare; the pipeline caps this already). |
+| `MULTIPLE_SENSES` | Best-effort heuristic: the dictionary entry has many plain-ASCII-looking gloss segments, suggesting a versatile/polysemous word worth confirming the chosen sense fits this level. Not precise -- the underlying JMdict data interleaves multiple languages under one headword, so this is noisy by nature. |
+| `SOURCE_EN_MISMATCH` | The external CSV's English gloss shares no words with our dictionary's English gloss for this surface -- possible wrong-word mapping in the source file. |
+| `DUPLICATE_SURFACE` | The same surface appears more than once in the input. |
+| `DUPLICATE_SURFACE_READING` | The same (surface, reading) pair appears more than once -- likely a true duplicate row to remove. |
+
+### Example sentences and notes at the draft stage
+
+`build_jlpt_quality_draft.py` never invents example sentences. It only
+fills `example_sentence`/`example_translation_ko` when the surface matches
+an already-committed, self-written sample (currently `n5_sample.csv`);
+otherwise both stay blank for the reviewer to fill in (short, self-written
+sentences only -- never copied from a textbook, app, or web novel).
+`note_ko` is always left blank at this stage; the column exists so a
+reviewer has somewhere to add a short usage note.
+
 ## Scaling to N4–N1
 
 This step is intentionally deferred, not built yet:
 
-- Add `backend/data/jlpt/n4_sample.csv`, `n3_sample.csv`, etc., using the
-  same column format and the same sourcing rules above.
-- Re-run `build_jlpt_deck_package.py --level N4 ...` per level -- the script
-  is already level-generic.
+- For a small, fully hand-written level sample, follow the same pattern as
+  `n5_sample.csv` and run `build_jlpt_deck_package.py --level N4 ...`
+  directly -- both scripts are already level-generic.
+- For a level built from an externally-sourced word list, use the quality
+  review pipeline above (`normalize_jlpt_word_list.py` →
+  `build_jlpt_quality_draft.py` → human review →
+  `build_jlpt_deck_from_reviewed_csv.py`) instead of skipping straight to a
+  deck package.
 - Only commit a level's CSV once its word source and example sentences are
   confirmed license-clean. A large, unreviewed bulk list should stay outside
   Git (or in a local-only/private location) until reviewed, the same way
