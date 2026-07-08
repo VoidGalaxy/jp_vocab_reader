@@ -81,6 +81,13 @@ type SharedDeckImportResponse = {
   message: string;
 };
 
+type SharedDeckDeleteResponse = {
+  ok: boolean;
+  shared_deck_id: number;
+  title: string;
+  message: string;
+};
+
 type CurrentUser = {
   id: number;
   email: string;
@@ -372,6 +379,9 @@ export default function HomePage() {
   const [importedSharedDeckId, setImportedSharedDeckId] = useState<number | null>(
     null,
   );
+  const [unpublishingSharedDeckId, setUnpublishingSharedDeckId] = useState<
+    number | null
+  >(null);
   const [publishTitle, setPublishTitle] = useState("");
   const [publishDescription, setPublishDescription] = useState("");
   const [isPublishingDeck, setIsPublishingDeck] = useState(false);
@@ -1101,6 +1111,46 @@ export default function HomePage() {
       );
     } finally {
       setImportingSharedDeckId(null);
+    }
+  }
+
+  async function unpublishSharedDeck(sharedDeckId: number) {
+    if (
+      !window.confirm(
+        "이 공유덱을 공유 목록에서 내릴까요? 이미 다른 사용자가 가져간 개인 덱은 삭제되지 않습니다.",
+      )
+    ) {
+      return;
+    }
+
+    setUnpublishingSharedDeckId(sharedDeckId);
+    setSharedDeckMessage("");
+
+    try {
+      await requestJson<SharedDeckDeleteResponse>(
+        `/shared-decks/${sharedDeckId}`,
+        { method: "DELETE" },
+      );
+      setSharedDecks((currentDecks) =>
+        currentDecks.filter((deck) => deck.id !== sharedDeckId),
+      );
+      if (selectedSharedDeckId === sharedDeckId) {
+        closeSharedDeckDetail();
+      }
+      setSharedDeckMessage("공유덱을 공유 목록에서 내렸습니다.");
+    } catch (error) {
+      if (isHttpError(error, 403)) {
+        setSharedDeckMessage("내가 올린 공유덱만 공유 취소할 수 있습니다.");
+      } else if (isHttpError(error, 404)) {
+        setSharedDeckMessage("이미 삭제되었거나 존재하지 않는 공유덱입니다.");
+        setSharedDecks((currentDecks) =>
+          currentDecks.filter((deck) => deck.id !== sharedDeckId),
+        );
+      } else {
+        setSharedDeckMessage("공유 취소에 실패했습니다.");
+      }
+    } finally {
+      setUnpublishingSharedDeckId(null);
     }
   }
 
@@ -1928,11 +1978,13 @@ export default function HomePage() {
             isLoadingDetail={isLoadingSharedDeckDetail}
             importingDeckId={importingSharedDeckId}
             importedDeckId={importedSharedDeckId}
+            unpublishingDeckId={unpublishingSharedDeckId}
             message={sharedDeckMessage}
             onRefresh={() => void loadSharedDecks()}
             onSelectDeck={(deckId) => void loadSharedDeckDetail(deckId)}
             onCloseDetail={closeSharedDeckDetail}
             onImportDeck={(deckId) => void importSharedDeckToMyDeck(deckId)}
+            onUnpublishDeck={(deckId) => void unpublishSharedDeck(deckId)}
             onGoToVocab={goToVocabTab}
           />
         ) : null}

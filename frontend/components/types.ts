@@ -138,6 +138,7 @@ export type SharedDeckSummary = {
   custom_term_count: number;
   import_count: number;
   created_at: string;
+  is_owner: boolean;
 };
 
 export type SharedDeckItem = {

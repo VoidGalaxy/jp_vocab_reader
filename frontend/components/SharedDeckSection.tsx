@@ -9,11 +9,13 @@ type SharedDeckSectionProps = {
   isLoadingDetail: boolean;
   importingDeckId: number | null;
   importedDeckId: number | null;
+  unpublishingDeckId: number | null;
   message: string;
   onRefresh: () => void;
   onSelectDeck: (deckId: number) => void;
   onCloseDetail: () => void;
   onImportDeck: (deckId: number) => void;
+  onUnpublishDeck: (deckId: number) => void;
   onGoToVocab: () => void;
 };
 
@@ -25,11 +27,13 @@ export function SharedDeckSection({
   isLoadingDetail,
   importingDeckId,
   importedDeckId,
+  unpublishingDeckId,
   message,
   onRefresh,
   onSelectDeck,
   onCloseDetail,
   onImportDeck,
+  onUnpublishDeck,
   onGoToVocab,
 }: SharedDeckSectionProps) {
   return (
@@ -70,6 +74,7 @@ export function SharedDeckSection({
             const isSelected = selectedDeckId === deck.id;
             const isImporting = importingDeckId === deck.id;
             const isImported = importedDeckId === deck.id;
+            const isUnpublishing = unpublishingDeckId === deck.id;
             return (
               <article
                 key={deck.id}
@@ -142,6 +147,16 @@ export function SharedDeckSection({
                         ? "가져오기 완료"
                         : "내 덱으로 가져오기"}
                   </button>
+                  {deck.is_owner ? (
+                    <button
+                      type="button"
+                      className="secondary-button compact-button danger-button"
+                      onClick={() => onUnpublishDeck(deck.id)}
+                      disabled={isUnpublishing}
+                    >
+                      {isUnpublishing ? "공유 취소 중..." : "공유 취소"}
+                    </button>
+                  ) : null}
                 </div>
               </article>
             );
@@ -184,11 +199,29 @@ export function SharedDeckSection({
                     ? "가져오기 완료"
                     : "내 덱으로 가져오기"}
               </button>
+              {selectedDeck.is_owner ? (
+                <button
+                  type="button"
+                  className="secondary-button danger-button"
+                  onClick={() => onUnpublishDeck(selectedDeck.id)}
+                  disabled={unpublishingDeckId === selectedDeck.id}
+                >
+                  {unpublishingDeckId === selectedDeck.id
+                    ? "공유 취소 중..."
+                    : "공유 취소"}
+                </button>
+              ) : null}
             </div>
           </div>
           <p className="muted-text">
             {selectedDeck.description || "설명이 없습니다."}
           </p>
+          {selectedDeck.is_owner ? (
+            <p className="muted-text shared-deck-owner-hint">
+              공유 취소하면 공유 목록에서만 내려가며, 이미 가져간 개인 덱은
+              삭제되지 않습니다.
+            </p>
+          ) : null}
 
           <div className="shared-detail-columns">
             <div>
