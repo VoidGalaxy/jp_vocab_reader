@@ -33,6 +33,11 @@ REQUIRED_FIELDS = (
     "note_ko",
 )
 
+# Leftover-review markers that must never reach a published shared deck.
+# Mirrors the marker checks in validate_jlpt_reviewed_csv.py -- this is a
+# last-line-of-defense guard, not a replacement for running that script.
+UNREVIEWED_MARKERS = ("확인 필요", "TODO", "MEANING_NEEDS_REVIEW", "source English")
+
 DECK_NAME_TEMPLATE = "JLPT {level} 추천 어휘"
 # Not an official JLPT word list -- the new-format JLPT does not publish one.
 # Keep this wording in sync with docs/jlpt-decks.md and
@@ -122,6 +127,22 @@ def read_reviewed_rows(input_path: Path, level: str) -> list[dict[str, str]]:
     return matched
 
 
+def find_unreviewed_rows(rows: list[dict[str, str]]) -> list[str]:
+    """Return one message per row that still carries a leftover-review
+    marker in meaning_ko or note_ko, e.g. "확인 필요: ..." or "source
+    English: ...". Empty list means the CSV looks fully reviewed."""
+    problems: list[str] = []
+    for row in rows:
+        text = f"{row.get('meaning_ko', '')} {row.get('note_ko', '')}"
+        matched = [marker for marker in UNREVIEWED_MARKERS if marker.lower() in text.lower()]
+        if matched:
+            problems.append(
+                f"surface={row.get('surface', '')!r} meaning_ko={row.get('meaning_ko', '')!r} "
+                f"-- unreviewed marker(s): {', '.join(matched)}"
+            )
+    return problems
+
+
 def build_vocab_item(row: dict[str, str]) -> dict[str, object]:
     surface = row["surface"]
     enriched = enrich_from_analyzer(surface)
@@ -187,6 +208,17 @@ def main() -> int:
     parser.add_argument(
         "--output", required=True, type=Path, help="Deck package JSON output path"
     )
+    parser.add_argument(
+        "--allow-unreviewed",
+        action="store_true",
+        default=False,
+        help=(
+            "Allow building the package even if rows still carry leftover "
+            "review markers (확인 필요/TODO/MEANING_NEEDS_REVIEW/source "
+            "English). Off by default -- run validate_jlpt_reviewed_csv.py "
+            "and build from its clean CSV instead of using this flag."
+        ),
+    )
     args = parser.parse_args()
 
     if not args.input.exists():
@@ -202,6 +234,19 @@ def main() -> int:
     if not rows:
         print(f"no reviewed rows matched level={args.level} in {args.input}")
         return 1
+
+    if not args.allow_unreviewed:
+        problems = find_unreviewed_rows(rows)
+        if problems:
+            print(
+                f"refusing to build: {len(problems)} row(s) still carry unreviewed "
+                "markers (확인 필요/TODO/MEANING_NEEDS_REVIEW/source English). "
+                "Run scripts/validate_jlpt_reviewed_csv.py and build from its "
+                "clean CSV, or pass --allow-unreviewed to override."
+            )
+            for problem in problems:
+                print(f"  {problem}")
+            return 1
 
     print(f"building deck package for level={args.level.upper()} from {len(rows)} row(s)")
     package = build_deck_package(args.level, rows)

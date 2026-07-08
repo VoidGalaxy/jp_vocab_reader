@@ -138,13 +138,71 @@ LLM given the CSV) can catch mistakes before anything is published:
    with `generated_meaning_ko` renamed/promoted to `meaning_ko` (the
    required column for the next step).
 
-5. Build the deck package from the reviewed CSV:
-   python .\scripts\build_jlpt_deck_from_reviewed_csv.py --level N5 --input .\data\jlpt\reviewed\n5_reviewed.csv --output .\data\jlpt\packages\jlpt_n5_recommended_deck.json
+5. Validate the reviewed CSV and split it into a clean CSV and a
+   needs_review CSV. **Required for N3 and up** (and any CSV a human hasn't
+   line-by-line approved) -- a reviewed CSV can still carry leftover
+   placeholder text (e.g. `확인 필요: ...`, `source English: ...`) or
+   katakana entries whose "meaning" is just the reading transliterated into
+   Hangul. Only the clean CSV is safe to turn into a shared deck:
+   python .\scripts\validate_jlpt_reviewed_csv.py --input .\data\jlpt\reviewed\n5_reviewed.csv --clean-output .\data\jlpt\work\n5_clean.csv --needs-review-output .\data\jlpt\work\n5_needs_review.csv
 
-6. Import it (POST /decks/import-package, or the existing deck-package
+   A human reviews `n5_needs_review.csv` (the `reason` column explains why
+   each row was pulled out -- see the table below), fixes what can be fixed,
+   and either moves corrected rows back into the reviewed CSV for
+   re-validation or leaves them out of this deck entirely. Rows still
+   showing "확인 필요" must never be added to a shared deck.
+
+6. Build the deck package from the **clean** CSV:
+   python .\scripts\build_jlpt_deck_from_reviewed_csv.py --level N5 --input .\data\jlpt\work\n5_clean.csv --output .\data\jlpt\packages\jlpt_n5_recommended_deck.json
+
+   This script also refuses to build (exit code 1, one line per offending
+   row) if the input still contains `확인 필요`, `TODO`,
+   `MEANING_NEEDS_REVIEW`, or `source English` in `meaning_ko`/`note_ko` --
+   even if you skip step 5 and point `--input` at the raw reviewed CSV
+   directly. This is a last-line-of-defense guard, not a substitute for
+   running the validator; only pass `--allow-unreviewed` if you have a
+   specific, deliberate reason to publish an unreviewed row (this should be
+   rare enough to need a second person's sign-off).
+
+7. Import it (POST /decks/import-package, or the existing deck-package
    import UI) or register it as a shared deck with
    scripts/seed_jlpt_shared_decks.py (dry-run by default; --apply to write).
 ```
+
+### validate_jlpt_reviewed_csv.py: reason codes
+
+Every row that fails at least one check goes to the needs_review CSV with a
+`reason` column (semicolon-separated if more than one applies) instead of
+the clean CSV:
+
+| Code | Meaning |
+| --- | --- |
+| `EMPTY_MEANING` | `meaning_ko` is blank. |
+| `HAS_CONFIRM_NEEDED` | `meaning_ko` or `note_ko` contains `확인 필요`. |
+| `HAS_TODO` | `meaning_ko` or `note_ko` contains `TODO` or `MEANING_NEEDS_REVIEW`. |
+| `HAS_SOURCE_ENGLISH` | `meaning_ko` or `note_ko` contains `source English`. |
+| `ENGLISH_REMAINS` | `meaning_ko` has as many or more ASCII letters than Hangul characters -- an English gloss leaked into a user-facing field. |
+| `TOO_MANY_MEANINGS` | More than `--max-candidates` (default 4) comma-separated candidates in `meaning_ko`. |
+| `TOO_LONG_MEANING` | `meaning_ko` is longer than `--max-meaning-length` (default 40 characters). |
+| `TOO_GENERIC_MEANING` | `meaning_ko` is exactly one of a short list of near-meaningless words (기타/것/수/때/점/부분/경우). |
+| `KATAKANA_TRANSLITERATION_ONLY` | `surface` is a katakana word and `meaning_ko` is a single bare candidate -- see below. |
+
+Every rule runs independently and all matching reasons are recorded, so a
+row like `확인 필요: to avoid (physical contact)` typically shows
+`HAS_CONFIRM_NEEDED;ENGLISH_REMAINS`.
+
+**Katakana policy**: a katakana loanword whose `meaning_ko` is a single,
+comma-free candidate (e.g. テーマ → "테마", タイプ → "타입", スピーチ →
+"스피치") is *always* routed to needs_review, even though some of these are
+in fact correct -- Korean borrows plenty of the same loanwords, so "발음
+그대로"can legitimately be the right answer (e.g. 엔진 → "엔진",
+스위치 → "스위치"). The validator has no reliable way to tell a correct
+loanword apart from a garbled pipeline artifact (real examples found in
+n3_reviewed.csv: アイスクリーム → "아이스쿠리무", バッグ → "바구", ゲーム →
+"게무" -- all wrong), so per policy it never guesses; it always defers to a
+human, who can move the good ones back into the clean CSV. Prefer the
+actual Korean meaning over the bare transliteration wherever one exists
+(다리미, not "아이론", for アイロン).
 
 Everything under `raw/`, `work/`, `reviewed/`, and `packages/` is git-ignored
 -- see `backend/data/jlpt/README.md`. Nothing before step 6 touches the
@@ -224,6 +282,13 @@ This step is intentionally deferred, not built yet:
   Git (or in a local-only/private location) until reviewed, the same way
   `krdict_raw_real.jsonl` and similar bulk fetcher output are excluded from
   Git today (see [dictionary-data.md](dictionary-data.md)).
+- **N3 and up must always go through `validate_jlpt_reviewed_csv.py`
+  (pipeline step 5) before building a deck package.** These levels are
+  large enough that a "reviewed" CSV realistically still has leftover
+  placeholder markers and bad katakana transliterations a first pass
+  missed -- only the resulting clean CSV should be turned into a shared
+  deck; the needs_review CSV stays a human task, not something the pipeline
+  guesses its way through.
 
 ## What is intentionally out of scope for this step
 
