@@ -172,7 +172,7 @@ button {
 
 .tab-nav {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -783,9 +783,12 @@ select {
   font-size: 12px;
 }
 
-.result-view-tabs {
-  width: fit-content;
-  margin: 0 0 2px;
+.reading-input-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .gloss-text {

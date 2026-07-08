@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import type { FormEvent } from "react";
 import { CoverageSummary } from "./CoverageSummary";
-import { computeCoverageStats, buildPriorityStudyList } from "./coverageUtils";
+import { computeCoverageStats } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
-import { PriorityVocabList } from "./PriorityVocabList";
-import { ReaderMode } from "./ReaderMode";
 import { StatusSelect, statusLabels } from "./shared";
 import type {
   Deck,
@@ -45,6 +43,7 @@ type AnalyzeSectionProps = {
   onShowAllResultsChange: (checked: boolean) => void;
   onRestoreDraft: () => void;
   onDiscardDraft: () => void;
+  onViewInReadingTab: () => void;
 };
 
 export function AnalyzeSection({
@@ -73,8 +72,8 @@ export function AnalyzeSection({
   onShowAllResultsChange,
   onRestoreDraft,
   onDiscardDraft,
+  onViewInReadingTab,
 }: AnalyzeSectionProps) {
-  const [resultView, setResultView] = useState<"read" | "classify">("read");
   const currentToken = tokens[currentCardIndex];
   const classifiedCount = tokens.filter((token) => token.isClassified).length;
   const remainingCount = Math.max(tokens.length - classifiedCount, 0);
@@ -93,12 +92,6 @@ export function AnalyzeSection({
     deckVocabItems,
     selectedDeckId,
     ignoredTokenCount,
-  );
-  const priorityItems = buildPriorityStudyList(
-    tokens,
-    deckVocabItems,
-    selectedDeckId,
-    10,
   );
   const savedAtText = draftSavedAt
     ? new Date(draftSavedAt).toLocaleString("ko-KR", {
@@ -197,6 +190,15 @@ export function AnalyzeSection({
             </span>
           </div>
           <div className="heading-actions">
+            {tokens.length > 0 ? (
+              <button
+                type="button"
+                className="secondary-button compact-button"
+                onClick={onViewInReadingTab}
+              >
+                이 원문을 읽기 탭에서 보기
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onSaveSelected}
@@ -210,217 +212,177 @@ export function AnalyzeSection({
         {tokens.length > 0 ? (
           <>
             <CoverageSummary stats={coverageStats} />
-            <PriorityVocabList items={priorityItems} onStatusChange={onStatusChange} />
 
-            <div
-              className="account-mode result-view-tabs"
-              role="tablist"
-              aria-label="결과 보기 방식"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={resultView === "read"}
-                className={
-                  resultView === "read" ? "mode-button active-mode" : "mode-button"
-                }
-                onClick={() => setResultView("read")}
-              >
-                읽기 모드
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={resultView === "classify"}
-                className={
-                  resultView === "classify"
-                    ? "mode-button active-mode"
-                    : "mode-button"
-                }
-                onClick={() => setResultView("classify")}
-              >
-                분류 모드
-              </button>
+            <div className="classification-summary">
+              <span>분류 완료 {classifiedCount}개</span>
+              <span>남은 단어 {remainingCount}개</span>
+              <span>{statusLabels.known} {knownCount}개</span>
+              <span>{statusLabels.uncertain} {uncertainCount}개</span>
+              <span>{statusLabels.unknown} {unknownCount}개</span>
             </div>
+            {savedAtText ? (
+              <p className="draft-status">
+                분류 진행상태 자동 저장 중 · 마지막 저장: {savedAtText}
+              </p>
+            ) : null}
 
-            {resultView === "read" ? (
-              <ReaderMode tokens={tokens} onStatusChange={onStatusChange} />
+            {!isClassificationComplete && currentToken ? (
+              <div className="classify-card">
+                <div className="classify-progress">
+                  {currentCardIndex + 1} / {tokens.length}
+                </div>
+                <div className="classify-word">
+                  {currentToken.surface || currentToken.base_form}
+                </div>
+                {currentToken.quality_tag !== "normal" ? (
+                  <div className="term-badge-wrap">
+                    <QualityBadge qualityTag={currentToken.quality_tag} />
+                  </div>
+                ) : null}
+                <dl className="classify-details">
+                  <div>
+                    <dt>기본형</dt>
+                    <dd>{currentToken.base_form || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>읽기</dt>
+                    <dd>{currentToken.reading || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>품사</dt>
+                    <dd>{currentToken.part_of_speech || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>한국어 뜻</dt>
+                    <dd>{currentToken.meaning_ko || "-"}</dd>
+                  </div>
+                  <div className="classify-example">
+                    <dt>예문</dt>
+                    <dd>{currentToken.example_sentence || "-"}</dd>
+                  </div>
+                </dl>
+                <div className="classify-actions">
+                  <button
+                    type="button"
+                    className="success-button"
+                    onClick={() => onClassifyCurrent("known")}
+                  >
+                    완벽히 아는 단어
+                  </button>
+                  <button
+                    type="button"
+                    className="warning-button"
+                    onClick={() => onClassifyCurrent("uncertain")}
+                  >
+                    헷갈리는 단어
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() => onClassifyCurrent("unknown")}
+                  >
+                    모르는 단어
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => onClassifyCurrent("unclassified")}
+                  >
+                    건너뛰기
+                  </button>
+                </div>
+                <div className="card-navigation">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={onPreviousCard}
+                    disabled={currentCardIndex === 0}
+                  >
+                    이전
+                  </button>
+                </div>
+              </div>
             ) : (
-              <>
-                <div className="classification-summary">
-                  <span>분류 완료 {classifiedCount}개</span>
-                  <span>남은 단어 {remainingCount}개</span>
+              <div className="classification-complete">
+                <h3>분류 완료</h3>
+                <div className="classification-summary final-summary">
                   <span>{statusLabels.known} {knownCount}개</span>
                   <span>{statusLabels.uncertain} {uncertainCount}개</span>
                   <span>{statusLabels.unknown} {unknownCount}개</span>
+                  <span>건너뛴 단어 {skippedCount}개</span>
                 </div>
-                {savedAtText ? (
-                  <p className="draft-status">
-                    분류 진행상태 자동 저장 중 · 마지막 저장: {savedAtText}
-                  </p>
-                ) : null}
-
-                {!isClassificationComplete && currentToken ? (
-                  <div className="classify-card">
-                    <div className="classify-progress">
-                      {currentCardIndex + 1} / {tokens.length}
-                    </div>
-                    <div className="classify-word">
-                      {currentToken.surface || currentToken.base_form}
-                    </div>
-                    {currentToken.quality_tag !== "normal" ? (
-                      <div className="term-badge-wrap">
-                        <QualityBadge qualityTag={currentToken.quality_tag} />
-                      </div>
-                    ) : null}
-                    <dl className="classify-details">
-                      <div>
-                        <dt>기본형</dt>
-                        <dd>{currentToken.base_form || "-"}</dd>
-                      </div>
-                      <div>
-                        <dt>읽기</dt>
-                        <dd>{currentToken.reading || "-"}</dd>
-                      </div>
-                      <div>
-                        <dt>품사</dt>
-                        <dd>{currentToken.part_of_speech || "-"}</dd>
-                      </div>
-                      <div>
-                        <dt>한국어 뜻</dt>
-                        <dd>{currentToken.meaning_ko || "-"}</dd>
-                      </div>
-                      <div className="classify-example">
-                        <dt>예문</dt>
-                        <dd>{currentToken.example_sentence || "-"}</dd>
-                      </div>
-                    </dl>
-                    <div className="classify-actions">
-                      <button
-                        type="button"
-                        className="success-button"
-                        onClick={() => onClassifyCurrent("known")}
-                      >
-                        완벽히 아는 단어
-                      </button>
-                      <button
-                        type="button"
-                        className="warning-button"
-                        onClick={() => onClassifyCurrent("uncertain")}
-                      >
-                        헷갈리는 단어
-                      </button>
-                      <button
-                        type="button"
-                        className="danger-button"
-                        onClick={() => onClassifyCurrent("unknown")}
-                      >
-                        모르는 단어
-                      </button>
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={() => onClassifyCurrent("unclassified")}
-                      >
-                        건너뛰기
-                      </button>
-                    </div>
-                    <div className="card-navigation">
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={onPreviousCard}
-                        disabled={currentCardIndex === 0}
-                      >
-                        이전
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="classification-complete">
-                    <h3>분류 완료</h3>
-                    <div className="classification-summary final-summary">
-                      <span>{statusLabels.known} {knownCount}개</span>
-                      <span>{statusLabels.uncertain} {uncertainCount}개</span>
-                      <span>{statusLabels.unknown} {unknownCount}개</span>
-                      <span>건너뛴 단어 {skippedCount}개</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={onSaveSelected}
-                      disabled={isSaving || !selectedDeckId}
-                    >
-                      {isSaving ? "저장 중..." : "분류한 단어 저장"}
-                    </button>
-                    <p className="muted-text">
-                      분류한 단어 저장 시 임시 저장이 삭제됩니다.
-                    </p>
-                  </div>
-                )}
-
-                <label className="checkbox-field show-results-toggle">
-                  <input
-                    type="checkbox"
-                    checked={showAllResults}
-                    onChange={(event) =>
-                      onShowAllResultsChange(event.target.checked)
-                    }
-                  />
-                  전체 결과 보기
-                </label>
-
-                {showAllResults ? (
-                  <div className="table-wrap">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>단어</th>
-                          <th>기본형</th>
-                          <th>읽기</th>
-                          <th>품사</th>
-                          <th>뜻</th>
-                          <th>예문</th>
-                          <th>상태</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tokens.map((token, index) => (
-                          <tr key={`${token.base_form}-${token.reading}-${index}`}>
-                            <td>
-                              <div>{token.surface}</div>
-                              <QualityBadge qualityTag={token.quality_tag} />
-                            </td>
-                            <td>{token.base_form}</td>
-                            <td>{token.reading}</td>
-                            <td>{token.part_of_speech}</td>
-                            <td>
-                              <div>{token.meaning_ko || "-"}</div>
-                            </td>
-                            <td>
-                              <span className="example-text">
-                                <HighlightedExample
-                                  sentence={token.example_sentence}
-                                  surface={token.surface}
-                                  baseForm={token.base_form}
-                                  normalizedForm={token.normalized_form}
-                                />
-                              </span>
-                            </td>
-                            <td>
-                              <StatusSelect
-                                value={token.status}
-                                label={`${token.surface} 상태`}
-                                onChange={(status) => onStatusChange(index, status)}
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
-              </>
+                <button
+                  type="button"
+                  onClick={onSaveSelected}
+                  disabled={isSaving || !selectedDeckId}
+                >
+                  {isSaving ? "저장 중..." : "분류한 단어 저장"}
+                </button>
+                <p className="muted-text">
+                  분류한 단어 저장 시 임시 저장이 삭제됩니다.
+                </p>
+              </div>
             )}
+
+            <label className="checkbox-field show-results-toggle">
+              <input
+                type="checkbox"
+                checked={showAllResults}
+                onChange={(event) => onShowAllResultsChange(event.target.checked)}
+              />
+              전체 결과 보기
+            </label>
+
+            {showAllResults ? (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>단어</th>
+                      <th>기본형</th>
+                      <th>읽기</th>
+                      <th>품사</th>
+                      <th>뜻</th>
+                      <th>예문</th>
+                      <th>상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tokens.map((token, index) => (
+                      <tr key={`${token.base_form}-${token.reading}-${index}`}>
+                        <td>
+                          <div>{token.surface}</div>
+                          <QualityBadge qualityTag={token.quality_tag} />
+                        </td>
+                        <td>{token.base_form}</td>
+                        <td>{token.reading}</td>
+                        <td>{token.part_of_speech}</td>
+                        <td>
+                          <div>{token.meaning_ko || "-"}</div>
+                        </td>
+                        <td>
+                          <span className="example-text">
+                            <HighlightedExample
+                              sentence={token.example_sentence}
+                              surface={token.surface}
+                              baseForm={token.base_form}
+                              normalizedForm={token.normalized_form}
+                            />
+                          </span>
+                        </td>
+                        <td>
+                          <StatusSelect
+                            value={token.status}
+                            label={`${token.surface} 상태`}
+                            onChange={(status) => onStatusChange(index, status)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
           </>
         ) : (
           <p className="empty">분석 결과가 아직 없습니다.</p>

@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { AnalyzeSection } from "../components/AnalyzeSection";
+import { getTokenGroupKey, getTokenStatus } from "../components/coverageUtils";
 import { InfoSection } from "../components/InfoSection";
+import { ReadingTab } from "../components/ReadingTab";
 import { SharedDeckSection } from "../components/SharedDeckSection";
 import { StudySection } from "../components/StudySection";
 import { VocabSection } from "../components/VocabSection";
@@ -92,7 +94,7 @@ type AuthResponse = {
   user: CurrentUser;
 };
 
-type TabKey = "analyze" | "vocab" | "study" | "shared" | "info";
+type TabKey = "analyze" | "reading" | "vocab" | "study" | "shared" | "info";
 type VocabStatusFilter = "all" | TokenStatus;
 
 type ClassificationDraft = {
@@ -112,6 +114,7 @@ const ACCESS_TOKEN_KEY = "jp-vocab-reader:access-token";
 
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "analyze", label: "분석" },
+  { key: "reading", label: "읽기" },
   { key: "vocab", label: "단어장" },
   { key: "study", label: "학습" },
   { key: "shared", label: "공유" },
@@ -308,6 +311,15 @@ export default function HomePage() {
   const [tokens, setTokens] = useState<TokenWithStatus[]>([]);
   const [ignoredTokenCount, setIgnoredTokenCount] = useState(0);
   const [deckVocabItems, setDeckVocabItems] = useState<VocabItem[]>([]);
+  const [readingText, setReadingText] = useState("");
+  const [readingSelectedDeckId, setReadingSelectedDeckId] = useState("");
+  const [readingTokens, setReadingTokens] = useState<TokenWithStatus[]>([]);
+  const [readingDeckVocabItems, setReadingDeckVocabItems] = useState<VocabItem[]>(
+    [],
+  );
+  const [isReadingAnalyzing, setIsReadingAnalyzing] = useState(false);
+  const [readingMessage, setReadingMessage] = useState("");
+  const [isReadingTextCollapsed, setIsReadingTextCollapsed] = useState(false);
   const [vocabItems, setVocabItems] = useState<VocabItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -610,6 +622,13 @@ export default function HomePage() {
             ? String(defaultDeck.id)
             : "",
       );
+      setReadingSelectedDeckId((currentDeckId) =>
+        data.items.some((deck) => String(deck.id) === currentDeckId)
+          ? currentDeckId
+          : defaultDeck
+            ? String(defaultDeck.id)
+            : "",
+      );
     } catch (error) {
       setDeckMessage(getErrorMessage(error, "덱 목록을 불러오지 못했습니다."));
     }
@@ -777,6 +796,142 @@ export default function HomePage() {
       setDeckVocabItems(data.items);
     } catch {
       setDeckVocabItems([]);
+    }
+  }
+
+  // Reading tab: analyzes text with include_known always true so already-known
+  // words still render in the natural text flow (just muted), then derives
+  // each token's live status from the selected deck's saved vocab items so
+  // colors match the deck the user picked. The original text only ever lives
+  // in this component's React state (and the classification draft in
+  // localStorage) -- it is never sent anywhere for server-side storage.
+  async function performReadingAnalyze(analyzeText: string, deckId: string) {
+    if (!analyzeText.trim()) {
+      setReadingMessage("읽을 일본어 원문을 입력해 주세요.");
+      setReadingTokens([]);
+      return;
+    }
+    if (!deckId) {
+      setReadingMessage("읽기 덱을 선택해 주세요.");
+      return;
+    }
+
+    setIsReadingAnalyzing(true);
+    setReadingMessage("");
+
+    try {
+      const [analyzeResponse, deckVocabResponse] = await Promise.all([
+        apiFetch("/analyze", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: analyzeText,
+            deck_id: Number(deckId),
+            include_known: true,
+          }),
+        }),
+        requestJson<VocabItemsResponse>(`/vocab-items?deck_id=${deckId}`),
+      ]);
+
+      if (!analyzeResponse.ok) {
+        throw new Error(`분석 요청에 실패했습니다. (${analyzeResponse.status})`);
+      }
+
+      const analyzeData = (await analyzeResponse.json()) as AnalyzeResponse;
+      const deckItems = deckVocabResponse.items;
+      const derivedTokens: TokenWithStatus[] = analyzeData.tokens.map((token) => {
+        const base: TokenWithStatus = {
+          ...token,
+          status: "unclassified",
+          isClassified: false,
+        };
+        const status = getTokenStatus(base, deckItems, deckId);
+        return { ...base, status, isClassified: status !== "unclassified" };
+      });
+
+      setReadingTokens(derivedTokens);
+      setReadingDeckVocabItems(deckItems);
+      setIsReadingTextCollapsed(true);
+    } catch (error) {
+      setReadingMessage(
+        getErrorMessage(error, "분석 중 알 수 없는 오류가 발생했습니다."),
+      );
+      setReadingTokens([]);
+    } finally {
+      setIsReadingAnalyzing(false);
+    }
+  }
+
+  function handleReadingAnalyze(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void performReadingAnalyze(readingText, readingSelectedDeckId);
+  }
+
+  function toggleReadingTextCollapsed() {
+    setIsReadingTextCollapsed((collapsed) => !collapsed);
+  }
+
+  // Sends the analyze-tab's current text/deck straight into reading-tab state
+  // (in-memory only) and kicks off the same read-only analysis there -- no
+  // localStorage/server hop needed since both tabs live in one page.
+  function viewCurrentTextInReadingTab() {
+    setReadingText(text);
+    setReadingSelectedDeckId(selectedSaveDeckId);
+    setActiveTab("reading");
+    void performReadingAnalyze(text, selectedSaveDeckId);
+  }
+
+  // Reading tab persists status changes immediately (no separate save step):
+  // update the matching vocab item if the word is already saved in this
+  // deck, otherwise create a new one -- reusing the same base_form ->
+  // normalized_form -> surface matching policy as the coverage dashboard.
+  async function handleReadingStatusChange(index: number, status: TokenStatus) {
+    const token = readingTokens[index];
+    if (!token || !readingSelectedDeckId) {
+      return;
+    }
+
+    setReadingTokens((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, status, isClassified: true } : item,
+      ),
+    );
+
+    const deckIdNumber = Number(readingSelectedDeckId);
+    const key = getTokenGroupKey(token);
+    const existing = readingDeckVocabItems.find(
+      (item) => item.deck_id === deckIdNumber && getTokenGroupKey(item) === key,
+    );
+
+    try {
+      if (existing) {
+        const updated = await requestJson<VocabItem>(
+          `/vocab-items/${existing.id}`,
+          {
+            method: "PATCH",
+            body: JSON.stringify({ status }),
+          },
+        );
+        setReadingDeckVocabItems((current) =>
+          current.map((item) => (item.id === updated.id ? updated : item)),
+        );
+      } else {
+        const created = await requestJson<VocabItem>("/vocab-items", {
+          method: "POST",
+          body: JSON.stringify({
+            ...token,
+            status,
+            deck_id: deckIdNumber,
+          }),
+        });
+        setReadingDeckVocabItems((current) => [...current, created]);
+      }
+    } catch (error) {
+      setReadingMessage(
+        getErrorMessage(error, "단어 상태 저장에 실패했습니다."),
+      );
     }
   }
 
@@ -1666,6 +1821,26 @@ export default function HomePage() {
             onShowAllResultsChange={setShowAllAnalyzeResults}
             onRestoreDraft={restoreClassificationDraft}
             onDiscardDraft={clearClassificationDraft}
+            onViewInReadingTab={viewCurrentTextInReadingTab}
+          />
+        ) : null}
+
+        {activeTab === "reading" ? (
+          <ReadingTab
+            text={readingText}
+            tokens={readingTokens}
+            decks={decks}
+            selectedDeckId={readingSelectedDeckId}
+            isAnalyzing={isReadingAnalyzing}
+            message={readingMessage}
+            isTextCollapsed={isReadingTextCollapsed}
+            onTextChange={setReadingText}
+            onSelectedDeckChange={setReadingSelectedDeckId}
+            onAnalyze={handleReadingAnalyze}
+            onStatusChange={(index, status) =>
+              void handleReadingStatusChange(index, status)
+            }
+            onToggleTextCollapsed={toggleReadingTextCollapsed}
           />
         ) : null}
 
