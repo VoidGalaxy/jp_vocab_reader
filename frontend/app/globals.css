@@ -778,6 +778,16 @@ select {
   color: #94a3b8;
 }
 
+.copyright-note {
+  margin: -6px 0 0;
+  font-size: 12px;
+}
+
+.result-view-tabs {
+  width: fit-content;
+  margin: 0 0 2px;
+}
+
 .gloss-text {
   margin-top: 4px;
   color: #64748b;
@@ -1784,6 +1794,15 @@ select {
   background: #ffffff;
 }
 
+.reader-mode-header-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .reader-mode-title {
   margin: 0 0 4px;
   color: #0f172a;
@@ -1791,74 +1810,93 @@ select {
 }
 
 .reader-mode-hint {
-  margin: 0 0 12px;
+  margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.reading-focus-toggle {
+  flex-shrink: 0;
+  min-height: 36px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .reader-text {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  font-size: 17px;
+  line-height: 2.1;
 }
 
 .reader-sentence {
   margin: 0;
   padding: 4px 0;
-  line-height: 2.4;
+  line-height: inherit;
   word-break: keep-all;
 }
 
 .token-chip {
-  display: inline-flex;
-  align-items: center;
+  display: inline;
   min-width: 0;
-  min-height: 34px;
-  margin: 2px;
-  padding: 4px 8px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--text);
-  background: #eef2f7;
-  font-size: 16px;
+  margin: 0;
+  padding: 3px 2px;
+  border: none;
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+  font-size: inherit;
   font-weight: 500;
-  line-height: 1.4;
   cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+/* Known/plain words stay close to normal reading text -- only a faint tint,
+   no border -- so they don't compete visually with words worth studying. */
+.token-chip-known,
+.token-chip-plain {
+  background: transparent;
+  color: inherit;
 }
 
 .token-chip-known {
-  border-color: #86efac;
-  background: #dcfce7;
-  color: #14532d;
+  background: #eef9f1;
 }
 
 .token-chip-uncertain {
-  border-color: #fcd34d;
-  background: #fef3c7;
-  color: #78350f;
+  background: #fbf0d9;
+  color: #7a5b12;
 }
 
 .token-chip-unknown {
-  border-color: #fca5a5;
-  background: #fee2e2;
-  color: #7f1d1d;
+  background: #fbe8ea;
+  color: #9b3b42;
 }
 
 .token-chip-unclassified {
-  border-color: #c7d2fe;
-  background: #e0e7ff;
-  color: #3730a5;
+  background: #eef1fb;
+  color: #46508a;
 }
 
 .token-chip-muted {
-  min-height: 28px;
-  padding: 2px 5px;
-  border-color: transparent;
-  background: transparent;
+  padding: 3px 1px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 0.94em;
   font-weight: 400;
-  opacity: 0.85;
+  opacity: 0.8;
+}
+
+/* Selection cue shares the same warm tone as .example-highlight so the
+   "currently open" word reads consistently with example-sentence highlights. */
+.token-chip-active {
+  background: #fef3b8;
+  color: #422006;
+  box-shadow: 0 0 0 2px #f6d675;
 }
 
 .reader-legend {
@@ -1867,7 +1905,7 @@ select {
   gap: 12px;
   margin-top: 14px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .legend-item {
@@ -1880,6 +1918,7 @@ select {
   display: inline-block;
   width: 12px;
   height: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 3px;
 }
 
@@ -1937,14 +1976,28 @@ select {
 }
 
 @media (min-width: 641px) {
+  /* Desktop: dock the detail panel to the right edge instead of a centered,
+     screen-dimming modal, so the reading text underneath stays visible and
+     clickable while the panel is open. */
   .token-sheet-overlay {
-    align-items: center;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: auto;
+    width: min(420px, 100vw);
+    align-items: flex-start;
+    justify-content: flex-end;
     padding: 24px;
+    background: transparent;
   }
 
   .token-sheet {
+    width: 100%;
+    max-width: 380px;
+    max-height: min(640px, calc(100vh - 48px));
+    border: 1px solid var(--border);
     border-radius: 16px;
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.22);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
   }
 }
 
@@ -1953,8 +2006,18 @@ select {
     padding: 14px;
   }
 
+  .reader-mode-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reader-text {
+    font-size: 18px;
+    line-height: 2.3;
+  }
+
   .token-chip {
-    font-size: 17px;
+    padding: 4px 3px;
   }
 
   .token-sheet-word {

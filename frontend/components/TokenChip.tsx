@@ -22,13 +22,28 @@ export function isMutedToken(token: Pick<TokenWithStatus, "part_of_speech">): bo
 
 type TokenChipProps = {
   token: TokenWithStatus;
+  isActive: boolean;
+  focusMode: boolean;
   onSelect: () => void;
 };
 
-export function TokenChip({ token, onSelect }: TokenChipProps) {
+export function TokenChip({ token, isActive, focusMode, onSelect }: TokenChipProps) {
   const label = token.surface || token.base_form;
   const muted = isMutedToken(token);
-  const statusClass = muted ? "token-chip-muted" : `token-chip-${token.status}`;
+  // focusMode ("모르는/헷갈리는 단어만 강조") mutes known/unclassified words down to
+  // plain text so only unknown/uncertain words stand out while reading.
+  const isEmphasizedStatus =
+    token.status === "unknown" || token.status === "uncertain";
+  const showStatusColor = !muted && (!focusMode || isEmphasizedStatus);
+  const statusClass = muted
+    ? "token-chip-muted"
+    : showStatusColor
+      ? `token-chip-${token.status}`
+      : "token-chip-plain";
+  const classNames = ["token-chip", statusClass];
+  if (isActive) {
+    classNames.push("token-chip-active");
+  }
   const title = [
     token.base_form && token.base_form !== token.surface
       ? `기본형: ${token.base_form}`
@@ -43,7 +58,7 @@ export function TokenChip({ token, onSelect }: TokenChipProps) {
   return (
     <button
       type="button"
-      className={`token-chip ${statusClass}`}
+      className={classNames.join(" ")}
       onClick={onSelect}
       title={title}
       aria-label={`${label}, ${statusLabels[token.status]}`}

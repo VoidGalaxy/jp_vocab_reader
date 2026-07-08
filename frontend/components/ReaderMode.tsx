@@ -38,6 +38,7 @@ function groupTokensBySentence(tokens: TokenWithStatus[]): SentenceGroup[] {
 
 export function ReaderMode({ tokens, onStatusChange }: ReaderModeProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [focusMode, setFocusMode] = useState(false);
 
   if (tokens.length === 0) {
     return null;
@@ -48,10 +49,23 @@ export function ReaderMode({ tokens, onStatusChange }: ReaderModeProps) {
 
   return (
     <div className="reader-mode">
-      <h3 className="reader-mode-title">읽기 모드</h3>
-      <p className="reader-mode-hint">
-        단어를 누르면 뜻과 상태를 확인하고 바로 분류할 수 있습니다.
-      </p>
+      <div className="reader-mode-header-row">
+        <div>
+          <h3 className="reader-mode-title">읽기 모드</h3>
+          <p className="reader-mode-hint">
+            원문을 읽으면서 단어를 누르면 뜻과 상태를 확인하고 바로 분류할 수
+            있습니다.
+          </p>
+        </div>
+        <label className="checkbox-field reading-focus-toggle">
+          <input
+            type="checkbox"
+            checked={focusMode}
+            onChange={(event) => setFocusMode(event.target.checked)}
+          />
+          모르는/헷갈리는 단어만 강조
+        </label>
+      </div>
       <div className="reader-text">
         {groups.map((group, groupIndex) => (
           <p
@@ -62,6 +76,8 @@ export function ReaderMode({ tokens, onStatusChange }: ReaderModeProps) {
               <TokenChip
                 key={`${token.base_form}-${token.reading}-${index}`}
                 token={token}
+                isActive={activeIndex === index}
+                focusMode={focusMode}
                 onSelect={() => setActiveIndex(index)}
               />
             ))}
