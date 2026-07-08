@@ -1,10 +1,19 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { CoverageSummary } from "./CoverageSummary";
+import { computeCoverageStats, buildPriorityStudyList } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
+import { PriorityVocabList } from "./PriorityVocabList";
 import { ReaderMode } from "./ReaderMode";
 import { StatusSelect, statusLabels } from "./shared";
-import type { Deck, QualityTag, TokenStatus, TokenWithStatus } from "./types";
+import type {
+  Deck,
+  QualityTag,
+  TokenStatus,
+  TokenWithStatus,
+  VocabItem,
+} from "./types";
 
 type ClassificationDraftSummary = {
   saved_at: string;
@@ -13,6 +22,8 @@ type ClassificationDraftSummary = {
 type AnalyzeSectionProps = {
   text: string;
   tokens: TokenWithStatus[];
+  ignoredTokenCount: number;
+  deckVocabItems: VocabItem[];
   isAnalyzing: boolean;
   isSaving: boolean;
   message: string;
@@ -39,6 +50,8 @@ type AnalyzeSectionProps = {
 export function AnalyzeSection({
   text,
   tokens,
+  ignoredTokenCount,
+  deckVocabItems,
   isAnalyzing,
   isSaving,
   message,
@@ -74,6 +87,18 @@ export function AnalyzeSection({
   ).length;
   const isClassificationComplete =
     tokens.length > 0 && currentCardIndex >= tokens.length;
+  const coverageStats = computeCoverageStats(
+    tokens,
+    deckVocabItems,
+    selectedDeckId,
+    ignoredTokenCount,
+  );
+  const priorityItems = buildPriorityStudyList(
+    tokens,
+    deckVocabItems,
+    selectedDeckId,
+    10,
+  );
   const savedAtText = draftSavedAt
     ? new Date(draftSavedAt).toLocaleString("ko-KR", {
         month: "2-digit",
@@ -178,6 +203,8 @@ export function AnalyzeSection({
 
         {tokens.length > 0 ? (
           <>
+            <CoverageSummary stats={coverageStats} />
+            <PriorityVocabList items={priorityItems} onStatusChange={onStatusChange} />
             <ReaderMode tokens={tokens} onStatusChange={onStatusChange} />
             <div className="classification-summary">
               <span>분류 완료 {classifiedCount}개</span>

@@ -1,3 +1,5 @@
+from collections import Counter
+
 from sudachipy import dictionary
 
 from app.dictionary_service import lookup_dictionary_gloss, lookup_meaning
@@ -146,6 +148,14 @@ class JapaneseAnalyzer:
                     "_end": token_start + len(surface) if token_start != -1 else -1,
                 }
             )
+
+        occurrence_counts = Counter(
+            raw_token["base_form"]
+            for raw_token in raw_tokens
+            if raw_token["part_of_speech"] not in EXCLUDED_POS
+        )
+        for token in tokens:
+            token["occurrence_count"] = occurrence_counts.get(token["base_form"], 1)
 
         return tokens, raw_tokens
 

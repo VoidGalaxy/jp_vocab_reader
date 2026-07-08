@@ -1592,6 +1592,189 @@ select {
   }
 }
 
+/* Coverage summary */
+
+.coverage-summary {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.coverage-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.coverage-percent {
+  color: #0f172a;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.coverage-percent-sub {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.coverage-stats-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coverage-stat {
+  border: 1px solid #d8e2ec;
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: #334155;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.coverage-stat-known {
+  border-color: #86efac;
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.coverage-stat-uncertain {
+  border-color: #fcd34d;
+  background: #fef3c7;
+  color: #78350f;
+}
+
+.coverage-stat-unknown {
+  border-color: #fca5a5;
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
+.coverage-stat-unclassified {
+  border-color: #c7d2fe;
+  background: #e0e7ff;
+  color: #3730a5;
+}
+
+.coverage-stat-ignored {
+  border-color: #d8e2ec;
+  background: #f1f5f9;
+  color: #52606d;
+}
+
+.coverage-footnote {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Priority vocab list */
+
+.priority-vocab-list {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.priority-vocab-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+}
+
+.priority-vocab-items {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.priority-vocab-item {
+  border-left: 4px solid #c7d2fe;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--soft-bg);
+}
+
+.priority-vocab-item-unknown {
+  border-left-color: #fca5a5;
+}
+
+.priority-vocab-item-uncertain {
+  border-left-color: #fcd34d;
+}
+
+.priority-vocab-item-unclassified {
+  border-left-color: #c7d2fe;
+}
+
+.priority-vocab-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.priority-vocab-word {
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.priority-vocab-reading {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.priority-vocab-status-badge {
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: #334155;
+  background: #eef2f7;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.priority-vocab-occurrence {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.priority-vocab-meaning {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.priority-vocab-actions {
+  margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .coverage-summary,
+  .priority-vocab-list {
+    padding: 12px;
+  }
+
+  .coverage-percent {
+    font-size: 19px;
+  }
+
+  .priority-vocab-occurrence {
+    margin-left: 0;
+  }
+}
+
 /* Reader mode */
 
 .reader-mode {

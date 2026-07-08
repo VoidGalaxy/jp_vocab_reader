@@ -46,10 +46,12 @@ class TokenResponse(BaseModel):
     quality_tag: str = "normal"
     example_sentence: str
     is_custom_term: bool = False
+    occurrence_count: int = 1
 
 
 class AnalyzeResponse(BaseModel):
     tokens: list[TokenResponse]
+    ignored_token_count: int = 0
 
 
 class VocabItemCreate(BaseModel):

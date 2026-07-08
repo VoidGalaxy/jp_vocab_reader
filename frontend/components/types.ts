@@ -17,6 +17,7 @@ export type Token = {
   quality_tag: QualityTag;
   example_sentence: string;
   is_custom_term: boolean;
+  occurrence_count: number;
 };
 
 export type TokenWithStatus = Token & {
@@ -168,4 +169,24 @@ export type SharedDeckDetail = SharedDeckSummary & {
   updated_at: string;
   items: SharedDeckItem[];
   custom_terms: SharedDeckTerm[];
+};
+
+export type CoverageStats = {
+  uniqueTotal: number;
+  uniqueKnown: number;
+  uniqueUncertain: number;
+  uniqueUnknown: number;
+  uniqueUnclassified: number;
+  occurrenceTotal: number;
+  occurrenceKnown: number;
+  occurrenceUncertain: number;
+  occurrenceUnknown: number;
+  occurrenceUnclassified: number;
+  ignoredCount: number;
+  coveragePercent: number;
+  occurrenceCoveragePercent: number;
+};
+
+export type PriorityVocabEntry = TokenWithStatus & {
+  tokenIndex: number;
 };

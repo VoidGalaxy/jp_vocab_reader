@@ -137,6 +137,7 @@ def find_compound_verb_tokens(
     tokens: list[dict[str, Any]] = []
     occupied_ranges: list[tuple[int, int]] = []
     for base_form, reading, pattern in COMPOUND_VERBS:
+        pattern_tokens: list[dict[str, Any]] = []
         for match in re.finditer(pattern, text):
             start, end = match.span()
             if any(ranges_overlap(start, end, custom_start, custom_end) for custom_start, custom_end in custom_ranges):
@@ -145,7 +146,7 @@ def find_compound_verb_tokens(
                 continue
             occupied_ranges.append((start, end))
             surface = match.group(0)
-            tokens.append(
+            pattern_tokens.append(
                 {
                     "surface": surface,
                     "base_form": base_form,
@@ -174,6 +175,9 @@ def find_compound_verb_tokens(
                     "_end": end,
                 }
             )
+        for token in pattern_tokens:
+            token["occurrence_count"] = len(pattern_tokens)
+        tokens.extend(pattern_tokens)
     return sorted(tokens, key=lambda token: token.get("_start", 0))
 
 

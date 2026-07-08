@@ -26,6 +26,7 @@ import type {
 
 type AnalyzeResponse = {
   tokens: Token[];
+  ignored_token_count: number;
 };
 
 type VocabItemsResponse = {
@@ -305,6 +306,8 @@ export default function HomePage() {
   const [isCreatingDeck, setIsCreatingDeck] = useState(false);
   const [text, setText] = useState("");
   const [tokens, setTokens] = useState<TokenWithStatus[]>([]);
+  const [ignoredTokenCount, setIgnoredTokenCount] = useState(0);
+  const [deckVocabItems, setDeckVocabItems] = useState<VocabItem[]>([]);
   const [vocabItems, setVocabItems] = useState<VocabItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -577,14 +580,13 @@ export default function HomePage() {
       return;
     }
 
+    const restoredDeckId = decks.some((deck) => String(deck.id) === draft.deck_id)
+      ? draft.deck_id
+      : defaultDeck
+        ? String(defaultDeck.id)
+        : "";
     setText(draft.text);
-    setSelectedSaveDeckId(
-      decks.some((deck) => String(deck.id) === draft.deck_id)
-        ? draft.deck_id
-        : defaultDeck
-          ? String(defaultDeck.id)
-          : "",
-    );
+    setSelectedSaveDeckId(restoredDeckId);
     setIncludeKnown(draft.include_known);
     setTokens(draft.tokens);
     setCurrentAnalyzeCardIndex(draft.current_index);
@@ -592,6 +594,7 @@ export default function HomePage() {
     setClassificationDraftSavedAt(draft.saved_at);
     setPendingClassificationDraft(null);
     setActiveTab("analyze");
+    void loadDeckVocabItemsForCoverage(restoredDeckId);
   }
 
   async function loadDecks() {
@@ -652,12 +655,15 @@ export default function HomePage() {
           isClassified: false,
         })),
       );
+      setIgnoredTokenCount(data.ignored_token_count || 0);
       setCurrentAnalyzeCardIndex(0);
       setShowAllAnalyzeResults(false);
       setPendingClassificationDraft(null);
+      void loadDeckVocabItemsForCoverage(selectedSaveDeckId);
     } catch (error) {
       setMessage(getErrorMessage(error, "분석 중 알 수 없는 오류가 발생했습니다."));
       setTokens([]);
+      setIgnoredTokenCount(0);
       setCurrentAnalyzeCardIndex(0);
       setShowAllAnalyzeResults(false);
     } finally {
@@ -748,6 +754,29 @@ export default function HomePage() {
       );
     } finally {
       setIsLoadingVocab(false);
+    }
+  }
+
+  function handleSelectedSaveDeckChange(deckId: string) {
+    setSelectedSaveDeckId(deckId);
+    if (tokens.length > 0) {
+      void loadDeckVocabItemsForCoverage(deckId);
+    }
+  }
+
+  async function loadDeckVocabItemsForCoverage(deckId: string) {
+    if (!deckId) {
+      setDeckVocabItems([]);
+      return;
+    }
+
+    try {
+      const data = await requestJson<VocabItemsResponse>(
+        `/vocab-items?deck_id=${deckId}`,
+      );
+      setDeckVocabItems(data.items);
+    } catch {
+      setDeckVocabItems([]);
     }
   }
 
@@ -1614,6 +1643,8 @@ export default function HomePage() {
           <AnalyzeSection
             text={text}
             tokens={tokens}
+            ignoredTokenCount={ignoredTokenCount}
+            deckVocabItems={deckVocabItems}
             isAnalyzing={isAnalyzing}
             isSaving={isSaving}
             message={message}
@@ -1625,7 +1656,7 @@ export default function HomePage() {
             pendingDraft={pendingClassificationDraft}
             draftSavedAt={classificationDraftSavedAt}
             onTextChange={setText}
-            onSelectedDeckChange={setSelectedSaveDeckId}
+            onSelectedDeckChange={handleSelectedSaveDeckChange}
             onIncludeKnownChange={setIncludeKnown}
             onAnalyze={handleAnalyze}
             onSaveSelected={() => void saveSelectedTokens()}

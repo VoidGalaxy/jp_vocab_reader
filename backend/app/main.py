@@ -10,7 +10,7 @@ from app.ai_explainer import (
     generate_context_explanation,
 )
 from app.analyze_postprocess import improve_analysis_tokens
-from app.analyzer import analyzer
+from app.analyzer import EXCLUDED_POS, analyzer
 from app.analyzer import find_example_sentence, split_sentences
 from app.auth import (
     create_access_token,
@@ -136,6 +136,7 @@ def find_custom_term_tokens(
         term_text = term["term"]
         if not term_text:
             continue
+        term_matches: list[dict] = []
         search_start = 0
         while True:
             start = text.find(term_text, search_start)
@@ -149,7 +150,7 @@ def find_custom_term_tokens(
             ):
                 continue
             occupied_ranges.append((start, end))
-            matches.append(
+            term_matches.append(
                 {
                     "surface": term_text,
                     "base_form": term_text,
@@ -172,6 +173,9 @@ def find_custom_term_tokens(
                     "_end": end,
                 }
             )
+        for match in term_matches:
+            match["occurrence_count"] = len(term_matches)
+        matches.extend(term_matches)
 
     return sorted(matches, key=lambda item: item["_start"])
 
@@ -368,7 +372,13 @@ def analyze(request: AnalyzeRequest, http_request: Request) -> AnalyzeResponse:
             if (token["base_form"], token["reading"]) not in known_keys
         ]
 
-    return AnalyzeResponse(tokens=tokens)
+    ignored_token_count = sum(
+        1
+        for raw_token in raw_tokens
+        if raw_token["part_of_speech"] in EXCLUDED_POS
+    )
+
+    return AnalyzeResponse(tokens=tokens, ignored_token_count=ignored_token_count)
 
 
 @app.get("/custom-terms", response_model=CustomTermsResponse)

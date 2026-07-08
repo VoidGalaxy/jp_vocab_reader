@@ -304,3 +304,13 @@ Next TODO:
 - Preserve API responses through the model transition.
 - Add Alembic only after model metadata is stable.
 - Test a real PostgreSQL connection in a later branch.
+
+## Text Coverage Dashboard
+
+- 완료: 분석 결과 상단에 텍스트 커버리지 카드(`CoverageSummary.tsx`)를 추가했다. 의미 있는 어휘 token(조사/조동사/기호/공백은 이미 백엔드에서 제외됨) 기준으로 아는/헷갈리는/모르는/미분류 단어 수와 커버리지 %를 unique 기준으로, 등장 횟수 기준 커버리지는 보조 지표로 함께 보여준다.
+- 완료: `/analyze` 응답에 토큰별 `occurrence_count`(같은 base_form이 원문에 등장한 횟수)와 응답 전체의 `ignored_token_count`(조사/기호 등 제외된 원시 토큰 수)를 추가했다. 새 엔드포인트 없이 기존 `/analyze` 응답만 확장했고 DB 스키마는 변경하지 않았다.
+- 완료: 분석 결과에서 unknown → uncertain → unclassified 순으로, 같은 상태 안에서는 등장 횟수·뜻 존재 여부·명사/동사/형용사 여부를 기준으로 우선순위를 매겨 "이 텍스트에서 먼저 볼 단어" 목록(`PriorityVocabList.tsx`)을 최대 10개 보여준다. 상태 변경은 기존 `onStatusChange`/분류 저장 흐름을 그대로 재사용한다.
+- 완료: 커버리지와 우선 학습 목록은 현재 선택된 분석/저장 덱(`selectedDeckId`) 기준으로 계산한다 (`coverageUtils.ts`의 `getTokenStatus`). base_form → normalized_form → surface 순서로 단어를 묶고, 세션에서 직접 분류한 상태를 최우선으로, 없으면 해당 덱에 저장된 단어 상태를 사용한다.
+- 완료: 읽기 모드에서 단어 상태를 바로 클릭해 바꾸면 같은 `tokens` state를 공유하는 커버리지 카드도 즉시 갱신된다.
+- TODO: occurrence 기준 우선순위 정렬을 명사구/복합동사/사용자 정의 용어의 실제 반복 등장까지 더 정확히 반영한다.
+- TODO: 커버리지 계산을 텍스트 저장 없이 세션 간에도 이어볼 수 있게 할지 검토한다.
