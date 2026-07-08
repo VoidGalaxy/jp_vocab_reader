@@ -48,6 +48,7 @@ from app.repositories.deck_repository import (
     update_deck,
 )
 from app.repositories.shared_deck_repository import (
+    delete_shared_deck,
     get_shared_deck as get_shared_deck_data,
     import_shared_deck,
     list_shared_decks,
@@ -92,6 +93,7 @@ from app.schemas import (
     DeckResponse,
     DecksResponse,
     DeckUpdate,
+    SharedDeckDeleteResponse,
     SharedDeckDetailResponse,
     SharedDeckImportResponse,
     SharedDeckSummaryResponse,
@@ -517,13 +519,17 @@ def post_deck_package_import(
 
 
 @app.get("/shared-decks", response_model=list[SharedDeckSummaryResponse])
-def get_shared_decks() -> list[SharedDeckSummaryResponse]:
-    return [SharedDeckSummaryResponse(**deck) for deck in list_shared_decks()]
+def get_shared_decks(http_request: Request) -> list[SharedDeckSummaryResponse]:
+    user_id = current_user_id(http_request)
+    return [
+        SharedDeckSummaryResponse(**deck) for deck in list_shared_decks(user_id)
+    ]
 
 
 @app.get("/shared-decks/{shared_deck_id}", response_model=SharedDeckDetailResponse)
-def get_shared_deck(shared_deck_id: int) -> SharedDeckDetailResponse:
-    shared_deck = get_shared_deck_data(shared_deck_id)
+def get_shared_deck(shared_deck_id: int, http_request: Request) -> SharedDeckDetailResponse:
+    user_id = current_user_id(http_request)
+    shared_deck = get_shared_deck_data(shared_deck_id, user_id)
     if not shared_deck:
         raise HTTPException(status_code=404, detail="shared deck not found")
     return SharedDeckDetailResponse(**shared_deck)
@@ -539,6 +545,20 @@ def post_shared_deck_import(
     if not imported:
         raise HTTPException(status_code=404, detail="shared deck not found")
     return SharedDeckImportResponse(**imported)
+
+
+@app.delete("/shared-decks/{shared_deck_id}", response_model=SharedDeckDeleteResponse)
+def remove_shared_deck(
+    shared_deck_id: int, http_request: Request
+) -> SharedDeckDeleteResponse:
+    result = delete_shared_deck(current_user_id(http_request), shared_deck_id)
+    if result == "not_found":
+        raise HTTPException(status_code=404, detail="shared deck not found")
+    if result == "forbidden":
+        raise HTTPException(
+            status_code=403, detail="only the owner can unpublish this shared deck"
+        )
+    return SharedDeckDeleteResponse(**result)
 
 
 @app.get("/vocab-items", response_model=VocabItemsResponse)

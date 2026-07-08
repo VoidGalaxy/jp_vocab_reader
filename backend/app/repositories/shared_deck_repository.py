@@ -124,12 +124,12 @@ def publish_deck(
     }
 
 
-def list_shared_decks() -> list[dict[str, Any]]:
+def list_shared_decks(user_id: int | None = None) -> list[dict[str, Any]]:
     with get_connection() as connection:
         rows = connection.execute(
             """
             SELECT shared_decks.id, shared_decks.title, shared_decks.description,
-                   users.display_name AS owner_display_name,
+                   shared_decks.owner_user_id, users.display_name AS owner_display_name,
                    shared_decks.vocab_count, shared_decks.custom_term_count,
                    shared_decks.import_count, shared_decks.created_at
             FROM shared_decks
@@ -138,15 +138,18 @@ def list_shared_decks() -> list[dict[str, Any]]:
             ORDER BY shared_decks.created_at DESC, shared_decks.id DESC
             """
         ).fetchall()
-    return [row_to_dict(row) for row in rows]
+    results = [row_to_dict(row) for row in rows]
+    for result in results:
+        result["is_owner"] = user_id is not None and result["owner_user_id"] == user_id
+    return results
 
 
-def get_shared_deck(shared_deck_id: int) -> dict[str, Any] | None:
+def get_shared_deck(shared_deck_id: int, user_id: int | None = None) -> dict[str, Any] | None:
     with get_connection() as connection:
         deck = connection.execute(
             """
             SELECT shared_decks.id, shared_decks.title, shared_decks.description,
-                   users.display_name AS owner_display_name,
+                   shared_decks.owner_user_id, users.display_name AS owner_display_name,
                    shared_decks.vocab_count, shared_decks.custom_term_count,
                    shared_decks.import_count, shared_decks.created_at,
                    shared_decks.updated_at
@@ -181,9 +184,45 @@ def get_shared_deck(shared_deck_id: int) -> dict[str, Any] | None:
         ).fetchall()
 
     result = row_to_dict(deck)
+    result["is_owner"] = user_id is not None and result["owner_user_id"] == user_id
     result["items"] = [row_to_dict(row) for row in item_rows]
     result["custom_terms"] = [row_to_dict(row) for row in term_rows]
     return result
+
+
+def delete_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | str:
+    """Unpublish a shared deck: removes the shared_decks row and its
+    shared_deck_items/shared_deck_terms/shared_deck_imports rows only.
+    Never touches personal decks/vocab_items, including copies other
+    users already imported from this shared deck.
+    """
+    with get_connection() as connection:
+        deck = connection.execute(
+            "SELECT id, owner_user_id, title FROM shared_decks WHERE id = ?",
+            (shared_deck_id,),
+        ).fetchone()
+        if not deck:
+            return "not_found"
+        if int(deck["owner_user_id"]) != user_id:
+            return "forbidden"
+
+        title = deck["title"]
+        connection.execute(
+            "DELETE FROM shared_deck_items WHERE shared_deck_id = ?", (shared_deck_id,)
+        )
+        connection.execute(
+            "DELETE FROM shared_deck_terms WHERE shared_deck_id = ?", (shared_deck_id,)
+        )
+        connection.execute(
+            "DELETE FROM shared_deck_imports WHERE shared_deck_id = ?", (shared_deck_id,)
+        )
+        connection.execute("DELETE FROM shared_decks WHERE id = ?", (shared_deck_id,))
+
+    return {
+        "shared_deck_id": shared_deck_id,
+        "title": title,
+        "message": "공유를 취소했습니다. 이미 가져간 개인 덱은 유지됩니다.",
+    }
 
 
 def import_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | None:
