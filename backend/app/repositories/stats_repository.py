@@ -145,6 +145,7 @@ def build_stats(user_id: int, deck_id: int | None = None) -> dict[str, Any]:
         "deck_id": deck_id,
         "deck_name": deck_row["name"] if deck_row else None,
         "total_count": total_count,
+        "total_vocab_count": total_count,
         "known_count": known_count,
         "uncertain_count": uncertain_count,
         "unknown_count": int(stats.get("unknown_count") or 0),

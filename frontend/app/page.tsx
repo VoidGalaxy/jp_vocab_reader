@@ -359,6 +359,9 @@ export default function HomePage() {
   const [sessionCounts, setSessionCounts] = useState<SessionReviewCounts>(
     createEmptySessionCounts(),
   );
+  const [nextUpcomingReviewAt, setNextUpcomingReviewAt] = useState<string | null>(
+    null,
+  );
   const answerShownAtRef = useRef<number | null>(null);
   const [hasStartedStudy, setHasStartedStudy] = useState(false);
   const [isLoadingStudyStats, setIsLoadingStudyStats] = useState(false);
@@ -401,6 +404,7 @@ export default function HomePage() {
     setIsAnswerVisible(false);
     setStudyMessage("");
     setSessionCounts(createEmptySessionCounts());
+    setNextUpcomingReviewAt(null);
     answerShownAtRef.current = null;
   }
 
@@ -1684,6 +1688,15 @@ export default function HomePage() {
       return [...unknownItems, ...uncertainItems];
     }
 
+    if (mode === "new") {
+      const params = new URLSearchParams(baseParams);
+      params.set("sort", "created_asc");
+      const data = await requestJson<VocabItemsResponse>(
+        `/vocab-items?${params.toString()}`,
+      );
+      return data.items.filter((item) => !item.last_reviewed_at);
+    }
+
     const params = new URLSearchParams(baseParams);
     params.set("status", mode);
     params.set("sort", "next_review_asc");
@@ -1704,6 +1717,9 @@ export default function HomePage() {
     if (mode === "unknown") {
       return `${deckName}에 모르는 단어가 없습니다.`;
     }
+    if (mode === "new") {
+      return "새로 학습할 단어가 없습니다.";
+    }
     return `${deckName}에 학습할 모르는 단어와 헷갈리는 단어가 없습니다.`;
   }
 
@@ -1718,6 +1734,7 @@ export default function HomePage() {
     setCurrentStudyIndex(0);
     setIsAnswerVisible(false);
     setSessionCounts(createEmptySessionCounts());
+    setNextUpcomingReviewAt(null);
     answerShownAtRef.current = null;
     setHasStartedStudy(false);
 
@@ -1744,6 +1761,11 @@ export default function HomePage() {
     } else {
       resetStudySession();
     }
+  }
+
+  function quickStartStudy(mode: StudyMode) {
+    setStudyMode(mode);
+    void startStudy({ mode });
   }
 
   function changeStudyDeck(deckId: string) {
@@ -1809,6 +1831,15 @@ export default function HomePage() {
         ...counts,
         [rating]: counts[rating] + 1,
       }));
+      setNextUpcomingReviewAt((current) => {
+        if (!updatedItem.next_review_at) {
+          return current;
+        }
+        if (!current || updatedItem.next_review_at < current) {
+          return updatedItem.next_review_at;
+        }
+        return current;
+      });
       setCurrentStudyIndex((index) => index + 1);
       setIsAnswerVisible(false);
       answerShownAtRef.current = null;
@@ -2024,6 +2055,7 @@ export default function HomePage() {
             isStatsLoading={isLoadingStudyStats}
             statsMessage={studyStatsMessage}
             sessionCounts={sessionCounts}
+            nextUpcomingReviewAt={nextUpcomingReviewAt}
             decks={decks}
             selectedDeckId={selectedStudyDeckId}
             selectedDeckName={getDeckDisplayName(selectedStudyDeckId)}
@@ -2031,6 +2063,7 @@ export default function HomePage() {
             hasStarted={hasStartedStudy}
             onSelectedDeckChange={changeStudyDeck}
             onStudyModeChange={changeStudyMode}
+            onQuickStart={quickStartStudy}
             onStart={() => void startStudy()}
             onRestart={() => void startStudy()}
             onGoToVocab={goToVocabFromStudy}

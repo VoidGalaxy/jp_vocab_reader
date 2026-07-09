@@ -883,6 +883,57 @@ select {
   font-size: 20px;
 }
 
+.today-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.today-progress-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.today-progress-label strong {
+  color: #0f172a;
+}
+
+.study-cta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.study-cta-button {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: #0f172a;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  text-align: center;
+}
+
+.study-cta-button:hover {
+  border-color: var(--primary);
+}
+
+.study-cta-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.study-cta-hint {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(140px, 1fr));
@@ -1696,6 +1747,15 @@ select {
 
   .today-dashboard {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .study-cta-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .today-progress-label {
+    flex-direction: column;
+    gap: 2px;
   }
 
   .study-complete-stats {

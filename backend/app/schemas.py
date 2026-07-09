@@ -149,6 +149,7 @@ class StatsResponse(BaseModel):
     deck_id: int | None
     deck_name: str | None
     total_count: int
+    total_vocab_count: int = 0
     known_count: int
     uncertain_count: int
     unknown_count: int

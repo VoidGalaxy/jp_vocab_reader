@@ -55,7 +55,7 @@ export type VocabFormData = {
 };
 
 export type ReviewResult = "again" | "hard" | "good" | "easy";
-export type StudyMode = "today" | "uncertain" | "unknown" | "all";
+export type StudyMode = "today" | "uncertain" | "unknown" | "all" | "new";
 
 export type SessionReviewCounts = Record<ReviewResult, number>;
 
@@ -81,6 +81,7 @@ export type StudyStats = {
   deck_id: number | null;
   deck_name: string | null;
   total_count: number;
+  total_vocab_count: number;
   known_count: number;
   uncertain_count: number;
   unknown_count: number;

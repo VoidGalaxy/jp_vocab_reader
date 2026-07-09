@@ -9,6 +9,7 @@ import type {
 } from "./types";
 import type { StudyStats } from "./types";
 import { StatsPanel } from "./StatsPanel";
+import { formatNextReview } from "./shared";
 
 type StudySectionProps = {
   items: VocabItem[];
@@ -24,12 +25,14 @@ type StudySectionProps = {
   isStatsLoading: boolean;
   statsMessage: string;
   sessionCounts: SessionReviewCounts;
+  nextUpcomingReviewAt: string | null;
   decks: Deck[];
   selectedDeckId: string;
   selectedDeckName: string;
   studyMode: StudyMode;
   onSelectedDeckChange: (deckId: string) => void;
   onStudyModeChange: (mode: StudyMode) => void;
+  onQuickStart: (mode: StudyMode) => void;
   onStart: () => void;
   onRestart: () => void;
   onGoToVocab: () => void;
@@ -43,14 +46,35 @@ const studyModeLabels: Record<StudyMode, string> = {
   uncertain: "헷갈리는 단어",
   unknown: "모르는 단어",
   all: "전체 학습",
+  new: "새 단어 학습",
 };
 
 const emptyMessages: Record<StudyMode, string> = {
-  today: "이 덱에는 오늘 복습할 단어가 없습니다.",
+  today: "오늘 복습할 단어가 없습니다.",
   uncertain: "헷갈리는 단어가 없습니다.",
   unknown: "모르는 단어가 없습니다.",
   all: "학습할 모르는 단어와 헷갈리는 단어가 없습니다.",
+  new: "새로 학습할 단어가 없습니다.",
 };
+
+const emptySecondaryMessages: Record<StudyMode, string> = {
+  today: "새 단어를 추가하거나 전체 학습을 시작해보세요.",
+  uncertain: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
+  unknown: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
+  all: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
+  new: "읽기나 분석 탭에서 단어를 저장하면 이곳에서 바로 학습할 수 있습니다.",
+};
+
+const quickStartCta: Array<{
+  mode: StudyMode;
+  label: string;
+  countKey: keyof StudyStats;
+}> = [
+  { mode: "today", label: "오늘 복습 시작", countKey: "due_today_count" },
+  { mode: "new", label: "새 단어 학습", countKey: "new_count" },
+  { mode: "uncertain", label: "어려운 단어 복습", countKey: "hard_count" },
+  { mode: "all", label: "덱별 학습", countKey: "total_vocab_count" },
+];
 
 const ratingButtons: Array<{
   result: ReviewResult;
@@ -90,6 +114,54 @@ function TodayDashboard({ stats }: { stats: StudyStats | null }) {
   );
 }
 
+function TodayProgress({ stats }: { stats: StudyStats | null }) {
+  if (!stats) {
+    return null;
+  }
+  const completed = stats.reviewed_today_count;
+  const total = completed + stats.due_today_count;
+  const percent = total > 0 ? Math.min(Math.round((completed / total) * 100), 100) : 0;
+  return (
+    <div className="today-progress">
+      <div className="today-progress-label">
+        <span>오늘 진행률</span>
+        <strong>
+          {completed} / {total} 완료
+        </strong>
+      </div>
+      <div className="progress-bar" aria-hidden="true">
+        <div style={{ width: `${percent}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function StudyQuickStartGrid({
+  stats,
+  onQuickStart,
+}: {
+  stats: StudyStats | null;
+  onQuickStart: (mode: StudyMode) => void;
+}) {
+  return (
+    <div className="study-cta-grid" role="group" aria-label="오늘 학습 시작">
+      {quickStartCta.map(({ mode, label, countKey }) => (
+        <button
+          key={mode}
+          type="button"
+          className="study-cta-button"
+          onClick={() => onQuickStart(mode)}
+        >
+          <span className="study-cta-label">{label}</span>
+          <span className="study-cta-hint">
+            {stats ? `${stats[countKey]}개` : "-"}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function StudySection({
   items,
   currentItem,
@@ -104,12 +176,14 @@ export function StudySection({
   isStatsLoading,
   statsMessage,
   sessionCounts,
+  nextUpcomingReviewAt,
   decks,
   selectedDeckId,
   selectedDeckName,
   studyMode,
   onSelectedDeckChange,
   onStudyModeChange,
+  onQuickStart,
   onStart,
   onRestart,
   onGoToVocab,
@@ -130,6 +204,8 @@ export function StudySection({
   return (
     <section className="tab-panel" aria-live="polite">
       <TodayDashboard stats={stats} />
+      <TodayProgress stats={stats} />
+      <StudyQuickStartGrid stats={stats} onQuickStart={onQuickStart} />
 
       <StatsPanel
         title="학습 현황"
@@ -141,7 +217,7 @@ export function StudySection({
       <section className="study-control-panel">
         <div className="result-heading">
           <div>
-            <h2>학습 모드</h2>
+            <h2>덱과 모드 직접 선택</h2>
             <span>
               {selectedDeckName} · {modeLabel}
             </span>
@@ -210,7 +286,7 @@ export function StudySection({
       {hasStarted && !currentItem && !isComplete ? (
         <div className="study-card study-ready-card">
           <h3>{emptyMessages[studyMode]}</h3>
-          <p>단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.</p>
+          <p>{emptySecondaryMessages[studyMode]}</p>
           <div className="study-actions">
             <button type="button" className="secondary-button" onClick={onGoToVocab}>
               단어장으로 가기
@@ -283,7 +359,7 @@ export function StudySection({
 
       {isComplete ? (
         <div className="study-card complete-card">
-          <h3>학습 완료</h3>
+          <h3>오늘 학습 완료!</h3>
           <div className="study-complete-stats">
             <span>다시 {sessionCounts.again}개</span>
             <span>어려움 {sessionCounts.hard}개</span>
@@ -291,7 +367,14 @@ export function StudySection({
             <span>쉬움 {sessionCounts.easy}개</span>
             <span>총 학습 {totalStudied}개</span>
           </div>
-          <p>이번 세션을 완료했습니다. 다음 학습 흐름을 바로 이어갈 수 있습니다.</p>
+          {stats ? (
+            <p className="muted-text">오늘 완료 {stats.reviewed_today_count}개</p>
+          ) : null}
+          <p>
+            {nextUpcomingReviewAt
+              ? formatNextReview(nextUpcomingReviewAt)
+              : "다음 복습 단어는 아직 예정되어 있지 않습니다."}
+          </p>
           <div className="study-actions">
             <button type="button" onClick={onRestart}>
               다시 학습하기
