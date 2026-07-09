@@ -206,6 +206,152 @@ button {
   gap: 18px;
 }
 
+/* Landing/onboarding hero shown above the account panel on the app's
+   default (analyze) tab -- reuses the same warm "paper" tones as the
+   reading tab so the first-impression promise ("모르는 단어만 골라 문맥
+   예문과 함께 복습") visually matches the actual reading experience it
+   points to. */
+.landing-hero {
+  display: grid;
+  gap: 22px;
+  margin-bottom: 22px;
+  padding: 28px;
+  border: 1px solid var(--paper-border);
+  border-radius: 14px;
+  background: var(--paper-bg);
+  box-shadow: 0 14px 32px var(--paper-shadow);
+}
+
+.landing-hero-copy {
+  display: grid;
+  gap: 10px;
+  max-width: 640px;
+}
+
+.landing-hero-title {
+  margin: 0;
+  color: #22201a;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.landing-hero-subtitle {
+  margin: 0;
+  color: #6b6248;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.landing-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.landing-trust-note {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--paper-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.6);
+  color: #6b5f3f;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.landing-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.landing-step-card {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+}
+
+.landing-step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.landing-step-card h3 {
+  margin: 2px 0 0;
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.landing-step-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.landing-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.landing-preview-card {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid #e7edf4;
+  border-radius: 8px;
+  background: var(--soft-bg);
+}
+
+.landing-preview-card strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.landing-preview-card span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .landing-hero {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .landing-hero-title {
+    font-size: 20px;
+  }
+
+  .landing-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .landing-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Generic reusable card frame -- introduced for the reading tab's polish
    pass so its sections (input, summary) share one consistent card look
    instead of each redefining border/radius/padding/shadow. Existing cards

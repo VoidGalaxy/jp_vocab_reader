@@ -131,7 +131,7 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "reading", label: "읽기" },
   { key: "vocab", label: "단어장" },
   { key: "study", label: "학습" },
-  { key: "shared", label: "공유" },
+  { key: "shared", label: "공유덱" },
   { key: "info", label: "정보" },
 ];
 
@@ -2028,6 +2028,16 @@ export default function HomePage() {
   const isStudyComplete =
     hasStartedStudy && studyItems.length > 0 && currentStudyIndex >= studyItems.length;
 
+  // Same "not really signed in" check AccountPanel uses internally, lifted
+  // up so the landing hero's CTAs can vary by auth state too.
+  const isDevUser = !currentUser || currentUser.auth_provider === "dev";
+
+  function scrollToAccountPanel() {
+    document
+      .getElementById("account-panel")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <main className="page">
       <section className="workspace">
@@ -2035,6 +2045,83 @@ export default function HomePage() {
           <h1>일본어 단어 분석</h1>
           <p>일본어 원문을 붙여넣고 학습할 단어 후보를 확인합니다.</p>
         </header>
+
+        {activeTab === "analyze" ? (
+          <section className="landing-hero" aria-label="서비스 소개">
+            <div className="landing-hero-copy">
+              <h2 className="landing-hero-title">
+                일본어 원문을 붙여넣으면,
+                <br />
+                모르는 단어만 골라 문맥 예문과 함께 복습합니다.
+              </h2>
+              <p className="landing-hero-subtitle">
+                웹소설·원서·기사 속 일본어 단어를 자동으로 분석하고, 한국어
+                뜻과 읽기를 확인한 뒤 SRS로 복습할 수 있습니다.
+              </p>
+              <div className="landing-hero-actions">
+                <button
+                  type="button"
+                  onClick={() => void handleTabChange("reading")}
+                >
+                  {isDevUser ? "원문 분석 시작하기" : "읽기 탭으로 이동"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={
+                    isDevUser
+                      ? scrollToAccountPanel
+                      : () => void handleTabChange("study")
+                  }
+                >
+                  {isDevUser ? "회원가입 · 로그인" : "오늘 복습하러 가기"}
+                </button>
+              </div>
+              <p className="landing-trust-note">
+                입력한 원문은 분석에만 사용되며, 원문 전체는 저장하지
+                않습니다. 단어장에는 학습에 필요한 단어 정보와 짧은 문맥
+                예문만 저장됩니다.
+              </p>
+            </div>
+
+            <div className="landing-steps">
+              <div className="landing-step-card">
+                <span className="landing-step-number">1</span>
+                <h3>원문 붙여넣기</h3>
+                <p>읽고 싶은 일본어 문장을 붙여넣고 분석합니다.</p>
+              </div>
+              <div className="landing-step-card">
+                <span className="landing-step-number">2</span>
+                <h3>모르는 단어 저장</h3>
+                <p>뜻과 읽기를 확인하고, 모르는 단어만 단어장에 저장합니다.</p>
+              </div>
+              <div className="landing-step-card">
+                <span className="landing-step-number">3</span>
+                <h3>문맥 예문으로 복습</h3>
+                <p>단어가 나온 짧은 문장과 함께 SRS로 복습합니다.</p>
+              </div>
+            </div>
+
+            <div className="landing-preview-grid">
+              <div className="landing-preview-card">
+                <strong>원문 분석</strong>
+                <span>붙여넣은 문장에서 학습할 단어를 자동으로 추출합니다.</span>
+              </div>
+              <div className="landing-preview-card">
+                <strong>상태별 단어 표시</strong>
+                <span>아는/모르는/헷갈리는 단어를 색으로 구분해 보여줍니다.</span>
+              </div>
+              <div className="landing-preview-card">
+                <strong>문맥 예문 SRS</strong>
+                <span>단어가 나온 문장과 함께 복습 카드를 만듭니다.</span>
+              </div>
+              <div className="landing-preview-card">
+                <strong>JLPT 추천 어휘 공유덱</strong>
+                <span>레벨별 추천 단어 덱을 가져와 바로 학습합니다.</span>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <AccountPanel
           user={currentUser}
@@ -2300,7 +2387,7 @@ function AccountPanel({
   const isDevUser = !user || user.auth_provider === "dev";
 
   return (
-    <section className="account-panel" aria-label="계정">
+    <section id="account-panel" className="account-panel" aria-label="계정">
       <div className="account-summary">
         <div>
           <strong>{isDevUser ? "로그인하지 않은 개발 모드" : user.display_name}</strong>
