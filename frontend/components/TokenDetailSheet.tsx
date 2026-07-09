@@ -52,6 +52,23 @@ export function TokenDetailSheet({
             <dt>한국어 뜻</dt>
             <dd>{token.meaning_ko || "뜻 후보 없음"}</dd>
           </div>
+          <div>
+            <dt>JLPT 추천 레벨</dt>
+            <dd>
+              {token.jlpt_level ? (
+                <>
+                  {token.jlpt_level}
+                  <span className="jlpt-detail-hint">
+                    {" "}
+                    · JLPT 추천 어휘 기준이며, 공식 JLPT 어휘 목록은
+                    아닙니다.
+                  </span>
+                </>
+              ) : (
+                "-"
+              )}
+            </dd>
+          </div>
         </dl>
         <p className="token-sheet-status">
           현재 상태: <strong>{statusLabels[token.status]}</strong>

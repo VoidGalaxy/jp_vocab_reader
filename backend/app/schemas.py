@@ -47,6 +47,7 @@ class TokenResponse(BaseModel):
     example_sentence: str
     is_custom_term: bool = False
     occurrence_count: int = 1
+    jlpt_level: str | None = None
 
 
 class AnalyzeResponse(BaseModel):

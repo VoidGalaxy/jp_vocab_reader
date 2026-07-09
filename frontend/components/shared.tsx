@@ -59,7 +59,10 @@ export function formatNextReview(value: string | null) {
   })}`;
 }
 
-const JLPT_LEVEL_PATTERN = /^JLPT\s*(N[1-5])\s*추천\s*어휘/;
+// Matches both the documented "JLPT {level} 추천 어휘" naming and the
+// "{level}어휘모음" naming currently used by the live registered decks.
+const JLPT_LEVEL_PATTERN =
+  /^(?:JLPT\s*(N[1-5])\s*추천\s*어휘|(N[1-5])어휘모음)/;
 const JLPT_LEVEL_ORDER: Record<string, number> = {
   N5: 0,
   N4: 1,
@@ -70,7 +73,10 @@ const JLPT_LEVEL_ORDER: Record<string, number> = {
 
 export function getJlptLevel(title: string): string | null {
   const match = title.match(JLPT_LEVEL_PATTERN);
-  return match ? match[1] : null;
+  if (!match) {
+    return null;
+  }
+  return match[1] || match[2] || null;
 }
 
 export function sortSharedDecksByJlptLevel<T extends { title: string }>(

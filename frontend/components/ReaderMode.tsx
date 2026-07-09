@@ -39,6 +39,7 @@ function groupTokensBySentence(tokens: TokenWithStatus[]): SentenceGroup[] {
 export function ReaderMode({ tokens, onStatusChange }: ReaderModeProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [focusMode, setFocusMode] = useState(false);
+  const [showJlptTags, setShowJlptTags] = useState(true);
 
   if (tokens.length === 0) {
     return null;
@@ -57,14 +58,24 @@ export function ReaderMode({ tokens, onStatusChange }: ReaderModeProps) {
             있습니다.
           </p>
         </div>
-        <label className="checkbox-field reading-focus-toggle">
-          <input
-            type="checkbox"
-            checked={focusMode}
-            onChange={(event) => setFocusMode(event.target.checked)}
-          />
-          모르는/헷갈리는 단어만 강조
-        </label>
+        <div className="reader-mode-toggles">
+          <label className="checkbox-field reading-focus-toggle">
+            <input
+              type="checkbox"
+              checked={focusMode}
+              onChange={(event) => setFocusMode(event.target.checked)}
+            />
+            모르는/헷갈리는 단어만 강조
+          </label>
+          <label className="checkbox-field reading-jlpt-toggle">
+            <input
+              type="checkbox"
+              checked={showJlptTags}
+              onChange={(event) => setShowJlptTags(event.target.checked)}
+            />
+            JLPT 태그 표시
+          </label>
+        </div>
       </div>
       <div className="reader-text">
         {groups.map((group, groupIndex) => (
@@ -78,6 +89,7 @@ export function ReaderMode({ tokens, onStatusChange }: ReaderModeProps) {
                 token={token}
                 isActive={activeIndex === index}
                 focusMode={focusMode}
+                showJlptTags={showJlptTags}
                 onSelect={() => setActiveIndex(index)}
               />
             ))}

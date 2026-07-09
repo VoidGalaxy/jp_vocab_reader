@@ -27,6 +27,7 @@ from app.dictionary_file_manager import (
     get_krdict_reverse_url,
 )
 from app.en_ko_dictionary_service import get_en_ko_status
+from app.jlpt_level_service import attach_jlpt_levels
 from app.jmdict_service import get_jmdict_status
 from app.krdict_reverse_service import get_krdict_reverse_status
 from app.repositories.custom_term_repository import (
@@ -366,6 +367,7 @@ def analyze(request: AnalyzeRequest, http_request: Request) -> AnalyzeResponse:
         tokens=tokens,
         deck_id=request.deck_id,
     )
+    tokens = attach_jlpt_levels(tokens)
     if not request.include_known:
         known_keys = list_known_vocab_keys(user_id, deck_id=request.deck_id)
         tokens = [

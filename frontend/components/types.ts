@@ -18,6 +18,7 @@ export type Token = {
   example_sentence: string;
   is_custom_term: boolean;
   occurrence_count: number;
+  jlpt_level?: string | null;
 };
 
 export type TokenWithStatus = Token & {

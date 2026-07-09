@@ -24,10 +24,17 @@ type TokenChipProps = {
   token: TokenWithStatus;
   isActive: boolean;
   focusMode: boolean;
+  showJlptTags: boolean;
   onSelect: () => void;
 };
 
-export function TokenChip({ token, isActive, focusMode, onSelect }: TokenChipProps) {
+export function TokenChip({
+  token,
+  isActive,
+  focusMode,
+  showJlptTags,
+  onSelect,
+}: TokenChipProps) {
   const label = token.surface || token.base_form;
   const muted = isMutedToken(token);
   // focusMode ("모르는/헷갈리는 단어만 강조") mutes known/unclassified words down to
@@ -54,16 +61,26 @@ export function TokenChip({ token, isActive, focusMode, onSelect }: TokenChipPro
   ]
     .filter(Boolean)
     .join(" · ");
+  const jlptLevel = showJlptTags ? token.jlpt_level : null;
 
   return (
     <button
       type="button"
       className={classNames.join(" ")}
       onClick={onSelect}
-      title={title}
-      aria-label={`${label}, ${statusLabels[token.status]}`}
+      title={
+        jlptLevel ? `${title} · JLPT 추천 레벨: ${jlptLevel}` : title
+      }
+      aria-label={
+        jlptLevel
+          ? `${label}, ${statusLabels[token.status]}, JLPT 추천 레벨 ${jlptLevel}`
+          : `${label}, ${statusLabels[token.status]}`
+      }
     >
       {label}
+      {jlptLevel ? (
+        <span className="jlpt-chip-badge">{jlptLevel}</span>
+      ) : null}
     </button>
   );
 }
