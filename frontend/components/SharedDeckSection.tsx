@@ -50,6 +50,21 @@ export function SharedDeckSection({
 }: SharedDeckSectionProps) {
   const sortedDecks = sortSharedDecksByJlptLevel(decks);
   const hasJlptDeck = sortedDecks.some((deck) => getJlptLevel(deck.title));
+  const selectedAlreadyImported = selectedDeck
+    ? Boolean(selectedDeck.imported_at) || importedDeckId === selectedDeck.id
+    : false;
+
+  function handleImportClick(deck: SharedDeckSummary) {
+    if (deck.imported_at) {
+      const confirmed = window.confirm(
+        `이미 가져온 공유덱입니다 (${formatDateTime(deck.imported_at)}). 다시 가져올까요?`,
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+    onImportDeck(deck.id);
+  }
 
   return (
     <section className="tab-panel shared-deck-section" aria-live="polite">
@@ -99,6 +114,7 @@ export function SharedDeckSection({
             const isUnpublishing = unpublishingDeckId === deck.id;
             const level = getJlptLevel(deck.title);
             const totalWordCount = deck.vocab_count + deck.custom_term_count;
+            const alreadyImported = Boolean(deck.imported_at) || isImported;
             return (
               <article
                 key={deck.id}
@@ -115,6 +131,21 @@ export function SharedDeckSection({
                     <span className="shared-deck-word-count-badge">
                       단어 {totalWordCount}개
                     </span>
+                    {alreadyImported ? (
+                      <span
+                        className="shared-deck-imported-badge"
+                        title={
+                          deck.imported_at
+                            ? `가져온 날짜: ${formatDateTime(deck.imported_at)}`
+                            : undefined
+                        }
+                      >
+                        가져옴
+                        {deck.imported_at
+                          ? ` · ${formatDateTime(deck.imported_at)}`
+                          : ""}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="muted-text">
                     {deck.description || "설명이 없습니다."}
@@ -144,8 +175,8 @@ export function SharedDeckSection({
                   <div>
                     <dt>상태</dt>
                     <dd>
-                      {isImported
-                        ? "가져오기 완료"
+                      {alreadyImported
+                        ? "가져옴"
                         : isSelected
                           ? "상세 표시 중"
                           : "공개"}
@@ -167,14 +198,18 @@ export function SharedDeckSection({
                   </button>
                   <button
                     type="button"
-                    className="compact-button"
-                    onClick={() => onImportDeck(deck.id)}
+                    className={
+                      alreadyImported
+                        ? "secondary-button compact-button"
+                        : "compact-button"
+                    }
+                    onClick={() => handleImportClick(deck)}
                     disabled={isImporting}
                   >
                     {isImporting
                       ? "가져오는 중..."
-                      : isImported
-                        ? "가져오기 완료"
+                      : alreadyImported
+                        ? "다시 가져오기"
                         : "내 덱으로 가져오기"}
                   </button>
                   {deck.is_owner ? (
@@ -208,6 +243,21 @@ export function SharedDeckSection({
                 {getJlptLevel(selectedDeck.title) ? (
                   <JlptLevelTag level={getJlptLevel(selectedDeck.title)!} />
                 ) : null}
+                {selectedAlreadyImported ? (
+                  <span
+                    className="shared-deck-imported-badge"
+                    title={
+                      selectedDeck.imported_at
+                        ? `가져온 날짜: ${formatDateTime(selectedDeck.imported_at)}`
+                        : undefined
+                    }
+                  >
+                    가져옴
+                    {selectedDeck.imported_at
+                      ? ` · ${formatDateTime(selectedDeck.imported_at)}`
+                      : ""}
+                  </span>
+                ) : null}
               </div>
               <span>
                 단어 수 {selectedDeck.vocab_count}개 · 용어 수{" "}
@@ -225,13 +275,14 @@ export function SharedDeckSection({
               </button>
               <button
                 type="button"
-                onClick={() => onImportDeck(selectedDeck.id)}
+                className={selectedAlreadyImported ? "secondary-button" : undefined}
+                onClick={() => handleImportClick(selectedDeck)}
                 disabled={importingDeckId === selectedDeck.id}
               >
                 {importingDeckId === selectedDeck.id
                   ? "가져오는 중..."
-                  : importedDeckId === selectedDeck.id
-                    ? "가져오기 완료"
+                  : selectedAlreadyImported
+                    ? "다시 가져오기"
                     : "내 덱으로 가져오기"}
               </button>
               {selectedDeck.is_owner ? (

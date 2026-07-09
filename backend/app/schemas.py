@@ -222,6 +222,7 @@ class SharedDeckSummaryResponse(BaseModel):
     import_count: int
     created_at: str
     is_owner: bool = False
+    imported_at: str | None = None
 
 
 class SharedDeckItemResponse(BaseModel):

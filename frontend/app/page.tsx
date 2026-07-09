@@ -320,6 +320,188 @@ function parseClassificationDraft(value: string | null): ClassificationDraft | n
   }
 }
 
+// Reading-tab work-in-progress persistence -- browser-local only (never
+// sent to the server beyond the existing /analyze call). Lets a user
+// refresh or switch tabs and pick the reading session back up: original
+// text, analyzed tokens/status, the selected word, and the last save
+// message. Deliberately excludes readingDeckVocabItems -- that's re-fetched
+// fresh on restore so "already saved"/example-sentence state reflects the
+// live server rather than a possibly-stale local copy.
+const READING_SESSION_KEY = "jp-vocab-reader:reading-session-v1";
+const MAX_READING_SESSION_TEXT_LENGTH = 20000;
+
+type ReadingSession = {
+  version: 1;
+  originalText: string;
+  analyzedText: string;
+  deckId: string;
+  tokens: TokenWithStatus[];
+  selectedTokenKey: string | null;
+  message: string;
+  isTextCollapsed: boolean;
+  recentlySavedVocabItemIds: number[];
+  updatedAt: string;
+};
+
+function parseReadingSession(value: string | null): ReadingSession | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as Partial<ReadingSession>;
+    if (
+      parsed.version !== 1 ||
+      typeof parsed.originalText !== "string" ||
+      typeof parsed.analyzedText !== "string" ||
+      typeof parsed.deckId !== "string" ||
+      !Array.isArray(parsed.tokens) ||
+      typeof parsed.message !== "string" ||
+      typeof parsed.isTextCollapsed !== "boolean" ||
+      !Array.isArray(parsed.recentlySavedVocabItemIds) ||
+      typeof parsed.updatedAt !== "string"
+    ) {
+      return null;
+    }
+
+    const tokens = parsed.tokens.map((token) => {
+      if (
+        typeof token.surface !== "string" ||
+        typeof token.base_form !== "string" ||
+        typeof token.reading !== "string" ||
+        typeof token.part_of_speech !== "string" ||
+        typeof token.normalized_form !== "string" ||
+        typeof token.meaning_ko !== "string" ||
+        typeof token.example_sentence !== "string" ||
+        !isTokenStatus(token.status)
+      ) {
+        throw new Error("invalid token");
+      }
+      return {
+        ...token,
+        dictionary_gloss:
+          typeof token.dictionary_gloss === "string"
+            ? token.dictionary_gloss
+            : "",
+        quality_tag: isQualityTag(token.quality_tag)
+          ? token.quality_tag
+          : token.is_custom_term
+            ? "custom_term"
+            : "normal",
+        is_custom_term:
+          typeof token.is_custom_term === "boolean"
+            ? token.is_custom_term
+            : false,
+        occurrence_count:
+          typeof token.occurrence_count === "number"
+            ? token.occurrence_count
+            : 1,
+        isClassified:
+          typeof token.isClassified === "boolean"
+            ? token.isClassified
+            : token.status !== "unclassified",
+        savedExampleSentence:
+          typeof token.savedExampleSentence === "string" ||
+          token.savedExampleSentence === null
+            ? token.savedExampleSentence
+            : null,
+      };
+    });
+
+    const recentlySavedVocabItemIds = parsed.recentlySavedVocabItemIds.filter(
+      (id): id is number => typeof id === "number",
+    );
+
+    return {
+      version: 1,
+      originalText: parsed.originalText,
+      analyzedText: parsed.analyzedText,
+      deckId: parsed.deckId,
+      tokens,
+      selectedTokenKey:
+        typeof parsed.selectedTokenKey === "string"
+          ? parsed.selectedTokenKey
+          : null,
+      message: parsed.message,
+      isTextCollapsed: parsed.isTextCollapsed,
+      recentlySavedVocabItemIds,
+      updatedAt: parsed.updatedAt,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistReadingSession(
+  session: Omit<ReadingSession, "version" | "updatedAt">,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    if (
+      session.originalText.length > MAX_READING_SESSION_TEXT_LENGTH ||
+      session.analyzedText.length > MAX_READING_SESSION_TEXT_LENGTH
+    ) {
+      // Too long to keep re-persisting on every keystroke -- drop it rather
+      // than risk a slow/failing localStorage write, or restoring a huge
+      // blob later. The user can still work with it in-memory this session.
+      window.localStorage.removeItem(READING_SESSION_KEY);
+      return;
+    }
+    if (!session.originalText && session.tokens.length === 0) {
+      window.localStorage.removeItem(READING_SESSION_KEY);
+      return;
+    }
+    const payload: ReadingSession = {
+      version: 1,
+      ...session,
+      updatedAt: new Date().toISOString(),
+    };
+    window.localStorage.setItem(READING_SESSION_KEY, JSON.stringify(payload));
+  } catch {
+    // localStorage can throw (quota exceeded, disabled, private mode) --
+    // never let persistence failures break the reading tab itself.
+  }
+}
+
+function clearReadingSession() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.removeItem(READING_SESSION_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+// Shared by a fresh /analyze response and by session restore (re-deriving
+// from freshly-fetched deck items rather than trusting possibly-stale
+// persisted status).
+function deriveReadingTokens(
+  baseTokens: Token[],
+  deckItems: VocabItem[],
+  deckId: string,
+): TokenWithStatus[] {
+  return baseTokens.map((token) => {
+    const base: TokenWithStatus = {
+      ...token,
+      status: "unclassified",
+      isClassified: false,
+    };
+    const status = getTokenStatus(base, deckItems, deckId);
+    const key = getTokenGroupKey(base);
+    const savedItem = deckItems.find((item) => getTokenGroupKey(item) === key);
+    return {
+      ...base,
+      status,
+      isClassified: status !== "unclassified",
+      savedExampleSentence: savedItem?.example_sentence || null,
+    };
+  });
+}
+
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabKey>("analyze");
   const [hasLoadedVocab, setHasLoadedVocab] = useState(false);
@@ -384,6 +566,11 @@ export default function HomePage() {
   const [recentlySavedVocabItemIds, setRecentlySavedVocabItemIds] = useState<
     number[]
   >([]);
+  const [currentSelectedTokenKey, setCurrentSelectedTokenKey] = useState<
+    string | null
+  >(null);
+  const [isReadingSessionRestored, setIsReadingSessionRestored] =
+    useState(false);
   const [vocabItems, setVocabItems] = useState<VocabItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -470,7 +657,60 @@ export default function HomePage() {
     } else {
       window.localStorage.removeItem(CLASSIFICATION_DRAFT_KEY);
     }
+
+    const readingSession = parseReadingSession(
+      window.localStorage.getItem(READING_SESSION_KEY),
+    );
+    if (readingSession) {
+      setReadingText(readingSession.originalText);
+      setAnalyzedReadingText(readingSession.analyzedText);
+      setReadingSelectedDeckId(readingSession.deckId);
+      setReadingTokens(readingSession.tokens);
+      setReadingMessage(readingSession.message);
+      setIsReadingTextCollapsed(readingSession.isTextCollapsed);
+      setRecentlySavedVocabItemIds(readingSession.recentlySavedVocabItemIds);
+      setCurrentSelectedTokenKey(readingSession.selectedTokenKey);
+      setIsReadingSessionRestored(true);
+      if (readingSession.deckId && readingSession.tokens.length > 0) {
+        void refreshReadingDeckVocabItems(
+          readingSession.deckId,
+          readingSession.tokens,
+        );
+      }
+    } else {
+      clearReadingSession();
+    }
   }, []);
+
+  // Debounced auto-save: covers every meaningful reading-tab checkpoint
+  // (analyze complete, per-word status change, batch save, word selection,
+  // and textarea edits) in one place, rather than threading explicit
+  // persist calls through each handler. A short debounce keeps large-text
+  // typing from writing to localStorage on every keystroke.
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      persistReadingSession({
+        originalText: readingText,
+        analyzedText: analyzedReadingText,
+        deckId: readingSelectedDeckId,
+        tokens: readingTokens,
+        selectedTokenKey: currentSelectedTokenKey,
+        message: readingMessage,
+        isTextCollapsed: isReadingTextCollapsed,
+        recentlySavedVocabItemIds,
+      });
+    }, 600);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    readingText,
+    analyzedReadingText,
+    readingSelectedDeckId,
+    readingTokens,
+    currentSelectedTokenKey,
+    readingMessage,
+    isReadingTextCollapsed,
+    recentlySavedVocabItemIds,
+  ]);
 
   async function initializeUserSession() {
     await loadCurrentUser();
@@ -892,6 +1132,8 @@ export default function HomePage() {
     setIsReadingAnalyzing(true);
     setReadingMessage("");
     setRecentlySavedVocabItemIds([]);
+    setCurrentSelectedTokenKey(null);
+    setIsReadingSessionRestored(false);
 
     try {
       const [analyzeResponse, deckVocabResponse] = await Promise.all([
@@ -915,24 +1157,11 @@ export default function HomePage() {
 
       const analyzeData = (await analyzeResponse.json()) as AnalyzeResponse;
       const deckItems = deckVocabResponse.items;
-      const derivedTokens: TokenWithStatus[] = analyzeData.tokens.map((token) => {
-        const base: TokenWithStatus = {
-          ...token,
-          status: "unclassified",
-          isClassified: false,
-        };
-        const status = getTokenStatus(base, deckItems, deckId);
-        const key = getTokenGroupKey(base);
-        const savedItem = deckItems.find(
-          (item) => getTokenGroupKey(item) === key,
-        );
-        return {
-          ...base,
-          status,
-          isClassified: status !== "unclassified",
-          savedExampleSentence: savedItem?.example_sentence || null,
-        };
-      });
+      const derivedTokens = deriveReadingTokens(
+        analyzeData.tokens,
+        deckItems,
+        deckId,
+      );
 
       setReadingTokens(derivedTokens);
       setReadingDeckVocabItems(deckItems);
@@ -955,6 +1184,55 @@ export default function HomePage() {
 
   function toggleReadingTextCollapsed() {
     setIsReadingTextCollapsed((collapsed) => !collapsed);
+  }
+
+  // Restoring a reading session only brings back the tokens as they were
+  // last saved locally; re-fetching the deck's vocab items and re-deriving
+  // status/example-sentence from them keeps "already saved" state accurate
+  // even if something changed server-side since the last visit.
+  async function refreshReadingDeckVocabItems(
+    deckId: string,
+    baseTokens: TokenWithStatus[],
+  ) {
+    try {
+      const deckVocabResponse = await requestJson<VocabItemsResponse>(
+        `/vocab-items?deck_id=${deckId}`,
+      );
+      const deckItems = deckVocabResponse.items;
+      setReadingDeckVocabItems(deckItems);
+      setReadingTokens(deriveReadingTokens(baseTokens, deckItems, deckId));
+    } catch {
+      // Restored tokens still render fine with their last-known status;
+      // this refresh is a nice-to-have, not required for the tab to work.
+    }
+  }
+
+  function handleReadingSelectedTokenKeyChange(key: string | null) {
+    setCurrentSelectedTokenKey(key);
+  }
+
+  function dismissRestoredReadingNotice() {
+    setIsReadingSessionRestored(false);
+  }
+
+  function resetReadingSession() {
+    if (
+      !window.confirm(
+        "현재 읽기 작업을 초기화할까요? 원문과 분석 결과가 모두 사라집니다.",
+      )
+    ) {
+      return;
+    }
+    setReadingText("");
+    setAnalyzedReadingText("");
+    setReadingTokens([]);
+    setReadingDeckVocabItems([]);
+    setReadingMessage("");
+    setIsReadingTextCollapsed(false);
+    setRecentlySavedVocabItemIds([]);
+    setCurrentSelectedTokenKey(null);
+    setIsReadingSessionRestored(false);
+    clearReadingSession();
   }
 
   // Sends the analyze-tab's current text/deck straight into reading-tab state
@@ -2197,6 +2475,8 @@ export default function HomePage() {
             isTextCollapsed={isReadingTextCollapsed}
             isSavingBatch={isSavingReadingBatch}
             canStartFromSaved={recentlySavedVocabItemIds.length > 0}
+            isSessionRestored={isReadingSessionRestored}
+            selectedTokenKey={currentSelectedTokenKey}
             onTextChange={setReadingText}
             onSelectedDeckChange={setReadingSelectedDeckId}
             onAnalyze={handleReadingAnalyze}
@@ -2206,6 +2486,9 @@ export default function HomePage() {
             onToggleTextCollapsed={toggleReadingTextCollapsed}
             onSaveBatch={(mode) => void saveReadingTokensBatch(mode)}
             onStartStudyFromSaved={startStudyFromRecentlySaved}
+            onSelectedTokenKeyChange={handleReadingSelectedTokenKeyChange}
+            onDismissRestoredNotice={dismissRestoredReadingNotice}
+            onResetSession={resetReadingSession}
           />
         ) : null}
 

@@ -158,6 +158,7 @@ export type SharedDeckSummary = {
   import_count: number;
   created_at: string;
   is_owner: boolean;
+  imported_at: string | null;
 };
 
 export type SharedDeckItem = {

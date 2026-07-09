@@ -18,6 +18,8 @@ type ReadingTabProps = {
   isTextCollapsed: boolean;
   isSavingBatch: boolean;
   canStartFromSaved: boolean;
+  isSessionRestored: boolean;
+  selectedTokenKey: string | null;
   onTextChange: (text: string) => void;
   onSelectedDeckChange: (deckId: string) => void;
   onAnalyze: (event: FormEvent<HTMLFormElement>) => void;
@@ -25,6 +27,9 @@ type ReadingTabProps = {
   onToggleTextCollapsed: () => void;
   onSaveBatch: (mode: ReadingSaveMode) => void;
   onStartStudyFromSaved: () => void;
+  onSelectedTokenKeyChange: (key: string | null) => void;
+  onDismissRestoredNotice: () => void;
+  onResetSession: () => void;
 };
 
 const saveButtons: Array<{
@@ -65,6 +70,8 @@ export function ReadingTab({
   isTextCollapsed,
   isSavingBatch,
   canStartFromSaved,
+  isSessionRestored,
+  selectedTokenKey,
   onTextChange,
   onSelectedDeckChange,
   onAnalyze,
@@ -72,6 +79,9 @@ export function ReadingTab({
   onToggleTextCollapsed,
   onSaveBatch,
   onStartStudyFromSaved,
+  onSelectedTokenKeyChange,
+  onDismissRestoredNotice,
+  onResetSession,
 }: ReadingTabProps) {
   const hasResult = tokens.length > 0;
   const showForm = !hasResult || !isTextCollapsed;
@@ -89,6 +99,22 @@ export function ReadingTab({
         </p>
       </div>
 
+      {isSessionRestored && hasResult ? (
+        <div className="reading-restored-banner">
+          <span>
+            이전 작업이 복원되었습니다. 원문·분석 결과·선택한 단어를 이어서
+            볼 수 있습니다.
+          </span>
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={onDismissRestoredNotice}
+          >
+            확인
+          </button>
+        </div>
+      ) : null}
+
       <section className="panel-card reading-input-card">
         <div className="panel-card-header">
           <h3 className="panel-card-title">원문 입력</h3>
@@ -99,15 +125,26 @@ export function ReadingTab({
         <form className="analyze-form" onSubmit={onAnalyze}>
           <div className="reading-input-header">
             <label htmlFor="reading-source-text">원문</label>
-            {hasResult ? (
-              <button
-                type="button"
-                className="ghost-button compact-button"
-                onClick={onToggleTextCollapsed}
-              >
-                {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
-              </button>
-            ) : null}
+            <div className="reading-input-header-actions">
+              {hasResult ? (
+                <button
+                  type="button"
+                  className="ghost-button compact-button"
+                  onClick={onToggleTextCollapsed}
+                >
+                  {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
+                </button>
+              ) : null}
+              {hasResult || text ? (
+                <button
+                  type="button"
+                  className="ghost-button compact-button"
+                  onClick={onResetSession}
+                >
+                  현재 읽기 작업 초기화
+                </button>
+              ) : null}
+            </div>
           </div>
 
           {showForm ? (
@@ -145,8 +182,10 @@ export function ReadingTab({
 
         <p className="muted-text copyright-note">
           입력한 원문은 분석에만 사용되며, 원문 전체는 서버에 저장되지 않고
-          공유 덱에도 포함되지 않습니다. 단어 저장 시 해당 단어가 포함된 짧은
-          문장만 예문으로 저장됩니다.
+          공유 덱에도 포함되지 않습니다. 이어서 읽을 수 있도록 이 브라우저에만
+          임시로 저장되며, 언제든 "현재 읽기 작업 초기화"로 직접 지울 수
+          있습니다. 단어 저장 시 해당 단어가 포함된 짧은 문장만 예문으로
+          저장됩니다.
         </p>
       </section>
 
@@ -219,6 +258,8 @@ export function ReadingTab({
           originalText={analyzedText}
           tokens={tokens}
           onStatusChange={onStatusChange}
+          initialSelectedTokenKey={selectedTokenKey}
+          onSelectedTokenKeyChange={onSelectedTokenKeyChange}
         />
       ) : !isAnalyzing ? (
         <p className="empty">

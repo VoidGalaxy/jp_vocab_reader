@@ -131,12 +131,19 @@ def list_shared_decks(user_id: int | None = None) -> list[dict[str, Any]]:
             SELECT shared_decks.id, shared_decks.title, shared_decks.description,
                    shared_decks.owner_user_id, users.display_name AS owner_display_name,
                    shared_decks.vocab_count, shared_decks.custom_term_count,
-                   shared_decks.import_count, shared_decks.created_at
+                   shared_decks.import_count, shared_decks.created_at,
+                   (
+                       SELECT MAX(shared_deck_imports.imported_at)
+                       FROM shared_deck_imports
+                       WHERE shared_deck_imports.shared_deck_id = shared_decks.id
+                         AND shared_deck_imports.user_id = ?
+                   ) AS imported_at
             FROM shared_decks
             LEFT JOIN users ON users.id = shared_decks.owner_user_id
             WHERE shared_decks.visibility = 'public'
             ORDER BY shared_decks.created_at DESC, shared_decks.id DESC
-            """
+            """,
+            (user_id,),
         ).fetchall()
     results = [row_to_dict(row) for row in rows]
     for result in results:
@@ -152,13 +159,19 @@ def get_shared_deck(shared_deck_id: int, user_id: int | None = None) -> dict[str
                    shared_decks.owner_user_id, users.display_name AS owner_display_name,
                    shared_decks.vocab_count, shared_decks.custom_term_count,
                    shared_decks.import_count, shared_decks.created_at,
-                   shared_decks.updated_at
+                   shared_decks.updated_at,
+                   (
+                       SELECT MAX(shared_deck_imports.imported_at)
+                       FROM shared_deck_imports
+                       WHERE shared_deck_imports.shared_deck_id = shared_decks.id
+                         AND shared_deck_imports.user_id = ?
+                   ) AS imported_at
             FROM shared_decks
             LEFT JOIN users ON users.id = shared_decks.owner_user_id
             WHERE shared_decks.id = ?
               AND shared_decks.visibility = 'public'
             """,
-            (shared_deck_id,),
+            (user_id, shared_deck_id),
         ).fetchone()
         if not deck:
             return None

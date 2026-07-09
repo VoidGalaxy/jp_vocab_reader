@@ -1084,6 +1084,27 @@ select {
   gap: 8px;
 }
 
+.reading-input-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reading-restored-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--paper-border);
+  border-radius: 8px;
+  background: var(--paper-bg);
+  color: #6b5f3f;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* Scoped overrides so the reading tab's input form sits inside one
    .panel-card shell (title + description + form + notice) instead of
    nesting two card borders. .analyze-form itself is untouched -- the
@@ -1559,6 +1580,19 @@ select {
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.shared-deck-imported-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #bfe3cc;
+  border-radius: 999px;
+  padding: 2px 10px;
+  background: #f1faf4;
+  color: #1f6f43;
+  font-size: 12px;
+  font-weight: 700;
   white-space: nowrap;
 }
 

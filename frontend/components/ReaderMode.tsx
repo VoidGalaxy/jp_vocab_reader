@@ -1,29 +1,70 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet } from "./TokenDetailSheet";
 import { buildReaderLayout } from "./readerLayout";
+import { getTokenGroupKey } from "./coverageUtils";
 
 type ReaderModeProps = {
   originalText: string;
   tokens: TokenWithStatus[];
   onStatusChange: (index: number, status: TokenStatus) => void;
+  initialSelectedTokenKey?: string | null;
+  onSelectedTokenKeyChange?: (key: string | null) => void;
 };
 
-export function ReaderMode({ originalText, tokens, onStatusChange }: ReaderModeProps) {
+export function ReaderMode({
+  originalText,
+  tokens,
+  onStatusChange,
+  initialSelectedTokenKey = null,
+  onSelectedTokenKeyChange,
+}: ReaderModeProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [showJlptTags, setShowJlptTags] = useState(true);
+  // Guards against re-applying a restored selection every time tokens
+  // change (e.g. after a status save) -- only ever resolved once, right
+  // after a restore, then the user's own clicks take over.
+  const [hasAppliedInitialSelection, setHasAppliedInitialSelection] =
+    useState(false);
 
   const layout = useMemo(
     () => buildReaderLayout(originalText, tokens),
     [originalText, tokens],
   );
 
+  useEffect(() => {
+    if (
+      hasAppliedInitialSelection ||
+      !initialSelectedTokenKey ||
+      tokens.length === 0
+    ) {
+      return;
+    }
+    const matchIndex = tokens.findIndex(
+      (token) => getTokenGroupKey(token) === initialSelectedTokenKey,
+    );
+    if (matchIndex !== -1) {
+      setActiveIndex(matchIndex);
+    }
+    setHasAppliedInitialSelection(true);
+  }, [hasAppliedInitialSelection, initialSelectedTokenKey, tokens]);
+
   if (tokens.length === 0) {
     return null;
+  }
+
+  function selectToken(index: number) {
+    setActiveIndex(index);
+    onSelectedTokenKeyChange?.(getTokenGroupKey(tokens[index]));
+  }
+
+  function closeDetail() {
+    setActiveIndex(null);
+    onSelectedTokenKeyChange?.(null);
   }
 
   const activeToken = activeIndex !== null ? tokens[activeIndex] : null;
@@ -69,13 +110,13 @@ export function ReaderMode({ originalText, tokens, onStatusChange }: ReaderModeP
                       isActive={activeIndex === segment.tokenIndex}
                       focusMode={focusMode}
                       showJlptTags={showJlptTags}
-                      onSelect={() => setActiveIndex(segment.tokenIndex)}
+                      onSelect={() => selectToken(segment.tokenIndex)}
                     />
                   ) : (
                     <span key={segment.key}>{segment.content}</span>
                   ),
                 )
-              : " "}
+              : " "}
           </p>
         ))}
       </div>
@@ -92,7 +133,7 @@ export function ReaderMode({ originalText, tokens, onStatusChange }: ReaderModeP
                 isActive={activeIndex === tokenIndex}
                 focusMode={focusMode}
                 showJlptTags={showJlptTags}
-                onSelect={() => setActiveIndex(tokenIndex)}
+                onSelect={() => selectToken(tokenIndex)}
               />
             ))}
           </div>
@@ -115,7 +156,7 @@ export function ReaderMode({ originalText, tokens, onStatusChange }: ReaderModeP
       {activeToken ? (
         <TokenDetailSheet
           token={activeToken}
-          onClose={() => setActiveIndex(null)}
+          onClose={closeDetail}
           onStatusChange={(status) => {
             if (activeIndex !== null) {
               onStatusChange(activeIndex, status);
