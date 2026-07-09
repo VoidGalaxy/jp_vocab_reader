@@ -114,6 +114,12 @@ export type ReadingSaveTarget = {
   index: number;
   token: TokenWithStatus;
   targetStatus: TokenStatus;
+  // True when the word is already saved with this exact status AND already
+  // has a context sentence -- nothing would actually change, so callers can
+  // skip the API call entirely and report it as "already saved" instead of
+  // "saved" or "failed".
+  alreadySaved: boolean;
+  existingItemId: number | null;
 };
 
 // Resolves which tokens each bulk-save button should act on, and what
@@ -130,10 +136,10 @@ export function resolveReadingSaveTargets(
   const targets: ReadingSaveTarget[] = [];
 
   tokens.forEach((token, index) => {
+    const existingItem = findMatchingVocabItem(token, vocabItems, deckId);
     const status = getTokenStatus(token, vocabItems, deckId);
-    const isSaved = isTokenSavedInDeck(token, vocabItems, deckId);
     const bucket: TokenStatus | "new" =
-      status === "unclassified" && !isSaved ? "new" : status;
+      status === "unclassified" && !existingItem ? "new" : status;
 
     if (bucket === "known") {
       return;
@@ -150,10 +156,19 @@ export function resolveReadingSaveTargets(
       return;
     }
 
+    const targetStatus = bucket === "new" ? "unknown" : bucket;
+    const alreadySaved = Boolean(
+      existingItem &&
+        existingItem.status === targetStatus &&
+        existingItem.example_sentence,
+    );
+
     targets.push({
       index,
       token,
-      targetStatus: bucket === "new" ? "unknown" : bucket,
+      targetStatus,
+      alreadySaved,
+      existingItemId: existingItem ? existingItem.id : null,
     });
   });
 

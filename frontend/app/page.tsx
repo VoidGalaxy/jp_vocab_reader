@@ -1013,12 +1013,18 @@ export default function HomePage() {
       return;
     }
 
+    // Words that are already saved with the exact target status and already
+    // have a context sentence need no API call at all -- skip them and
+    // report them separately instead of re-sending an unchanged PATCH.
+    const toPersist = targets.filter((target) => !target.alreadySaved);
+    const skipped = targets.filter((target) => target.alreadySaved);
+
     setIsSavingReadingBatch(true);
     setReadingMessage("");
 
     const deckIdNumber = Number(readingSelectedDeckId);
     const results = await Promise.allSettled(
-      targets.map(({ token, targetStatus }) =>
+      toPersist.map(({ token, targetStatus }) =>
         persistReadingToken(
           token,
           deckIdNumber,
@@ -1032,38 +1038,55 @@ export default function HomePage() {
     let failureCount = 0;
     results.forEach((result, resultIndex) => {
       if (result.status === "fulfilled") {
-        succeeded.push({ index: targets[resultIndex].index, item: result.value });
+        succeeded.push({ index: toPersist[resultIndex].index, item: result.value });
       } else {
         failureCount += 1;
       }
     });
 
-    if (succeeded.length > 0) {
+    if (succeeded.length > 0 || skipped.length > 0) {
+      const skippedIndexes = new Set(skipped.map((target) => target.index));
       const statusByIndex = new Map(
         succeeded.map(({ index, item }) => [index, item.status] as const),
       );
       setReadingTokens((current) =>
         current.map((item, itemIndex) => {
           const newStatus = statusByIndex.get(itemIndex);
-          return newStatus
-            ? { ...item, status: newStatus, isClassified: true }
+          if (newStatus) {
+            return { ...item, status: newStatus, isClassified: true };
+          }
+          return skippedIndexes.has(itemIndex)
+            ? { ...item, isClassified: true }
             : item;
         }),
       );
-      setReadingDeckVocabItems((current) => {
-        const byId = new Map(current.map((item) => [item.id, item]));
-        succeeded.forEach(({ item }) => byId.set(item.id, item));
-        return Array.from(byId.values());
-      });
-      setRecentlySavedVocabItemIds(succeeded.map(({ item }) => item.id));
+      if (succeeded.length > 0) {
+        setReadingDeckVocabItems((current) => {
+          const byId = new Map(current.map((item) => [item.id, item]));
+          succeeded.forEach(({ item }) => byId.set(item.id, item));
+          return Array.from(byId.values());
+        });
+      }
+      // "바로 학습"은 방금 새로 저장한 단어뿐 아니라, 이미 저장되어 있어
+      // 건너뛴 단어도 이번 텍스트의 학습 대상으로 함께 포함한다.
+      const skippedIds = skipped
+        .map((target) => target.existingItemId)
+        .filter((id): id is number => id !== null);
+      setRecentlySavedVocabItemIds([
+        ...succeeded.map(({ item }) => item.id),
+        ...skippedIds,
+      ]);
     }
 
     setIsSavingReadingBatch(false);
-    setReadingMessage(
-      failureCount > 0
-        ? `${succeeded.length}개 저장 완료, ${failureCount}개 저장 실패했습니다.`
-        : `${succeeded.length}개 단어를 저장했습니다.`,
-    );
+    const parts = [`${succeeded.length}개 저장 완료`];
+    if (skipped.length > 0) {
+      parts.push(`${skipped.length}개는 이미 저장되어 있어 건너뜀`);
+    }
+    if (failureCount > 0) {
+      parts.push(`${failureCount}개 저장 실패`);
+    }
+    setReadingMessage(`${parts.join(", ")}.`);
   }
 
   // 저장된 단어로 바로 학습 시작: 학습 탭으로 이동하고 방금 저장한 단어
