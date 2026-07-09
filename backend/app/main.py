@@ -48,6 +48,7 @@ from app.repositories.deck_repository import (
     list_decks,
     update_deck,
 )
+from app.repositories.feedback_repository import create_meaning_feedback
 from app.repositories.shared_deck_repository import (
     delete_shared_deck,
     get_shared_deck as get_shared_deck_data,
@@ -94,6 +95,9 @@ from app.schemas import (
     DeckResponse,
     DecksResponse,
     DeckUpdate,
+    MAX_FEEDBACK_FIELD_LENGTH,
+    MeaningFeedbackRequest,
+    MeaningFeedbackResponse,
     SharedDeckDeleteResponse,
     SharedDeckDetailResponse,
     SharedDeckImportResponse,
@@ -712,6 +716,47 @@ def patch_vocab_item(
     if not updated_item:
         raise HTTPException(status_code=404, detail="vocab item not found")
     return VocabItemResponse(**updated_item)
+
+
+@app.post("/feedback/meaning", response_model=MeaningFeedbackResponse)
+def post_meaning_feedback(
+    payload: MeaningFeedbackRequest, http_request: Request
+) -> MeaningFeedbackResponse:
+    user_id = current_user_id(http_request)
+
+    if not payload.surface.strip() and not payload.base_form.strip():
+        raise HTTPException(
+            status_code=400, detail="surface or base_form must not be blank"
+        )
+
+    for field_value in (
+        payload.current_meaning_ko,
+        payload.suggested_meaning_ko,
+        payload.reason,
+    ):
+        if len(field_value) > MAX_FEEDBACK_FIELD_LENGTH:
+            raise HTTPException(status_code=400, detail="feedback text is too long")
+
+    # vocabulary_id is only ever a hint from the client -- confirm it
+    # actually belongs to this user before storing it (same ownership check
+    # already used by every other vocab-item lookup), otherwise drop it
+    # rather than reject the whole report.
+    vocabulary_id = payload.vocabulary_id
+    if vocabulary_id is not None and not get_vocab_item(user_id, vocabulary_id):
+        vocabulary_id = None
+
+    create_meaning_feedback(
+        user_id=user_id,
+        vocabulary_id=vocabulary_id,
+        surface=payload.surface.strip(),
+        base_form=payload.base_form.strip(),
+        reading=payload.reading.strip(),
+        current_meaning_ko=payload.current_meaning_ko.strip(),
+        suggested_meaning_ko=payload.suggested_meaning_ko.strip(),
+        reason=payload.reason.strip(),
+        source=payload.source.strip(),
+    )
+    return MeaningFeedbackResponse(ok=True, message="신고가 접수되었습니다.")
 
 
 @app.post("/vocab-items/{item_id}/explain", response_model=VocabItemResponse)

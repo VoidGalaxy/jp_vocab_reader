@@ -9,6 +9,7 @@ import {
 } from "../components/coverageUtils";
 import type { ReadingSaveMode } from "../components/coverageUtils";
 import { InfoSection } from "../components/InfoSection";
+import { MeaningFeedbackModal } from "../components/MeaningFeedbackModal";
 import { ReadingTab } from "../components/ReadingTab";
 import { SharedDeckSection } from "../components/SharedDeckSection";
 import { withObjectParticle } from "../components/shared";
@@ -17,6 +18,7 @@ import { VocabSection } from "../components/VocabSection";
 import type {
   ReviewResult,
   Deck,
+  MeaningFeedbackTarget,
   QualityTag,
   SessionReviewCounts,
   StudyMode,
@@ -329,6 +331,7 @@ function parseClassificationDraft(value: string | null): ClassificationDraft | n
 // live server rather than a possibly-stale local copy.
 const READING_SESSION_KEY = "jp-vocab-reader:reading-session-v1";
 const MAX_READING_SESSION_TEXT_LENGTH = 20000;
+const MAX_MEANING_KO_LENGTH = 200;
 
 type ReadingSession = {
   version: 1;
@@ -498,6 +501,8 @@ function deriveReadingTokens(
       status,
       isClassified: status !== "unclassified",
       savedExampleSentence: savedItem?.example_sentence || null,
+      savedMeaningKo: savedItem?.meaning_ko || null,
+      savedVocabItemId: savedItem?.id ?? null,
     };
   });
 }
@@ -576,6 +581,25 @@ export default function HomePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingVocab, setIsAddingVocab] = useState(false);
   const [isUpdatingVocab, setIsUpdatingVocab] = useState(false);
+  // Lightweight "내 단어장 뜻 수정" -- separate from the full editingItemId/
+  // editVocabForm flow above so a quick meaning-only fix (from the vocab
+  // list, reading tab, or study card) never risks touching surface/
+  // base_form/reading/status/example_sentence via a stale full-form payload.
+  const [meaningEditItemId, setMeaningEditItemId] = useState<number | null>(
+    null,
+  );
+  const [meaningEditDraft, setMeaningEditDraft] = useState("");
+  const [isSavingMeaningEdit, setIsSavingMeaningEdit] = useState(false);
+  const [meaningEditMessage, setMeaningEditMessage] = useState("");
+  // "뜻 오류 신고" -- one shared modal, openable from any of the same three
+  // places, tracked centrally so only one report can be in progress at once.
+  const [meaningFeedbackTarget, setMeaningFeedbackTarget] =
+    useState<MeaningFeedbackTarget | null>(null);
+  const [feedbackSuggestedMeaning, setFeedbackSuggestedMeaning] =
+    useState("");
+  const [feedbackReason, setFeedbackReason] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
   const [isLoadingVocab, setIsLoadingVocab] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isExportingDeckPackage, setIsExportingDeckPackage] = useState(false);
@@ -1897,6 +1921,114 @@ export default function HomePage() {
     }
   }
 
+  function startMeaningEdit(itemId: number, currentMeaning: string) {
+    setMeaningEditItemId(itemId);
+    setMeaningEditDraft(currentMeaning);
+    setMeaningEditMessage("");
+  }
+
+  function cancelMeaningEdit() {
+    setMeaningEditItemId(null);
+    setMeaningEditDraft("");
+    setMeaningEditMessage("");
+  }
+
+  // Applies a fresh meaning_ko everywhere this vocab item might already be
+  // cached across tabs, so the edit shows up immediately without needing a
+  // full reload of each tab's own data.
+  function applyUpdatedVocabItemEverywhere(updated: VocabItem) {
+    const replaceIfMatch = (item: VocabItem) =>
+      item.id === updated.id ? updated : item;
+    setVocabItems((current) => current.map(replaceIfMatch));
+    setDeckVocabItems((current) => current.map(replaceIfMatch));
+    setReadingDeckVocabItems((current) => current.map(replaceIfMatch));
+    setStudyItems((current) => current.map(replaceIfMatch));
+    setReadingTokens((current) =>
+      current.map((token) =>
+        token.savedVocabItemId === updated.id
+          ? { ...token, savedMeaningKo: updated.meaning_ko }
+          : token,
+      ),
+    );
+  }
+
+  async function saveMeaningEdit() {
+    if (meaningEditItemId === null || isSavingMeaningEdit) {
+      return;
+    }
+    const trimmed = meaningEditDraft.trim();
+    if (!trimmed) {
+      setMeaningEditMessage("뜻을 입력해 주세요.");
+      return;
+    }
+    if (trimmed.length > MAX_MEANING_KO_LENGTH) {
+      setMeaningEditMessage(`뜻은 ${MAX_MEANING_KO_LENGTH}자 이내로 입력해 주세요.`);
+      return;
+    }
+
+    setIsSavingMeaningEdit(true);
+    setMeaningEditMessage("");
+
+    try {
+      const updated = await requestJson<VocabItem>(
+        `/vocab-items/${meaningEditItemId}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ meaning_ko: trimmed }),
+        },
+      );
+      applyUpdatedVocabItemEverywhere(updated);
+      setMeaningEditItemId(null);
+      setMeaningEditDraft("");
+      setMeaningEditMessage("");
+    } catch (error) {
+      setMeaningEditMessage(getErrorMessage(error, "뜻 수정에 실패했습니다."));
+    } finally {
+      setIsSavingMeaningEdit(false);
+    }
+  }
+
+  function openMeaningFeedback(target: MeaningFeedbackTarget) {
+    setMeaningFeedbackTarget(target);
+    setFeedbackSuggestedMeaning("");
+    setFeedbackReason("");
+    setFeedbackMessage("");
+  }
+
+  function closeMeaningFeedback() {
+    setMeaningFeedbackTarget(null);
+  }
+
+  async function submitMeaningFeedback() {
+    if (!meaningFeedbackTarget || isSubmittingFeedback) {
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+    setFeedbackMessage("");
+
+    try {
+      await requestJson("/feedback/meaning", {
+        method: "POST",
+        body: JSON.stringify({
+          vocabulary_id: meaningFeedbackTarget.vocabularyId,
+          surface: meaningFeedbackTarget.surface,
+          base_form: meaningFeedbackTarget.baseForm,
+          reading: meaningFeedbackTarget.reading,
+          current_meaning_ko: meaningFeedbackTarget.currentMeaningKo,
+          suggested_meaning_ko: feedbackSuggestedMeaning.trim(),
+          reason: feedbackReason.trim(),
+          source: meaningFeedbackTarget.source,
+        }),
+      });
+      setFeedbackMessage("신고가 접수되었습니다. 사전 품질 개선에 참고됩니다.");
+    } catch (error) {
+      setFeedbackMessage(getErrorMessage(error, "신고 접수에 실패했습니다."));
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  }
+
   function updateTokenStatus(index: number, status: TokenStatus) {
     setTokens((currentTokens) =>
       currentTokens.map((token, tokenIndex) =>
@@ -2489,6 +2621,24 @@ export default function HomePage() {
             onSelectedTokenKeyChange={handleReadingSelectedTokenKeyChange}
             onDismissRestoredNotice={dismissRestoredReadingNotice}
             onResetSession={resetReadingSession}
+            meaningEditItemId={meaningEditItemId}
+            meaningEditDraft={meaningEditDraft}
+            isSavingMeaningEdit={isSavingMeaningEdit}
+            meaningEditMessage={meaningEditMessage}
+            onStartMeaningEdit={startMeaningEdit}
+            onMeaningEditDraftChange={setMeaningEditDraft}
+            onSaveMeaningEdit={() => void saveMeaningEdit()}
+            onCancelMeaningEdit={cancelMeaningEdit}
+            onReportMeaning={(token) =>
+              openMeaningFeedback({
+                vocabularyId: token.savedVocabItemId ?? null,
+                surface: token.surface,
+                baseForm: token.base_form,
+                reading: token.reading,
+                currentMeaningKo: token.savedMeaningKo || token.meaning_ko,
+                source: "reading",
+              })
+            }
           />
         ) : null}
 
@@ -2551,6 +2701,24 @@ export default function HomePage() {
             onStartEdit={startEditingVocabItem}
             onSaveEdit={() => void saveEditedVocabItem()}
             onCancelEdit={cancelEditingVocabItem}
+            meaningEditItemId={meaningEditItemId}
+            meaningEditDraft={meaningEditDraft}
+            isSavingMeaningEdit={isSavingMeaningEdit}
+            meaningEditMessage={meaningEditMessage}
+            onStartMeaningEdit={startMeaningEdit}
+            onMeaningEditDraftChange={setMeaningEditDraft}
+            onSaveMeaningEdit={() => void saveMeaningEdit()}
+            onCancelMeaningEdit={cancelMeaningEdit}
+            onReportMeaning={(item) =>
+              openMeaningFeedback({
+                vocabularyId: item.id,
+                surface: item.surface,
+                baseForm: item.base_form,
+                reading: item.reading,
+                currentMeaningKo: item.meaning_ko,
+                source: "vocab",
+              })
+            }
             onRefresh={() => void loadVocabItems(selectedVocabDeckId)}
             onDownloadCsv={() => void downloadCsv()}
             onExportDeckPackage={() => void exportDeckPackage()}
@@ -2607,6 +2775,24 @@ export default function HomePage() {
             selectedDeckName={getDeckDisplayName(selectedStudyDeckId)}
             studyMode={studyMode}
             hasStarted={hasStartedStudy}
+            meaningEditItemId={meaningEditItemId}
+            meaningEditDraft={meaningEditDraft}
+            isSavingMeaningEdit={isSavingMeaningEdit}
+            meaningEditMessage={meaningEditMessage}
+            onStartMeaningEdit={startMeaningEdit}
+            onMeaningEditDraftChange={setMeaningEditDraft}
+            onSaveMeaningEdit={() => void saveMeaningEdit()}
+            onCancelMeaningEdit={cancelMeaningEdit}
+            onReportMeaning={(item) =>
+              openMeaningFeedback({
+                vocabularyId: item.id,
+                surface: item.surface,
+                baseForm: item.base_form,
+                reading: item.reading,
+                currentMeaningKo: item.meaning_ko,
+                source: "review",
+              })
+            }
             onSelectedDeckChange={changeStudyDeck}
             onStudyModeChange={changeStudyMode}
             onQuickStart={quickStartStudy}
@@ -2630,6 +2816,20 @@ export default function HomePage() {
           />
         ) : null}
       </section>
+
+      {meaningFeedbackTarget ? (
+        <MeaningFeedbackModal
+          target={meaningFeedbackTarget}
+          suggestedMeaning={feedbackSuggestedMeaning}
+          reason={feedbackReason}
+          isSubmitting={isSubmittingFeedback}
+          message={feedbackMessage}
+          onSuggestedMeaningChange={setFeedbackSuggestedMeaning}
+          onReasonChange={setFeedbackReason}
+          onSubmit={() => void submitMeaningFeedback()}
+          onClose={closeMeaningFeedback}
+        />
+      ) : null}
     </main>
   );
 }

@@ -355,3 +355,26 @@ class CustomTermResponse(BaseModel):
 
 class CustomTermsResponse(BaseModel):
     items: list[CustomTermResponse]
+
+
+MAX_FEEDBACK_FIELD_LENGTH = 500
+VALID_FEEDBACK_SOURCES = {"reading", "vocab", "review", "shared_deck"}
+
+
+class MeaningFeedbackRequest(BaseModel):
+    # vocabulary_id is only a hint -- the endpoint re-checks it belongs to
+    # the requesting user before storing it, same as user_id is always taken
+    # from the auth token rather than trusted from the client body.
+    vocabulary_id: int | None = None
+    surface: str = ""
+    base_form: str = ""
+    reading: str = ""
+    current_meaning_ko: str = ""
+    suggested_meaning_ko: str = ""
+    reason: str = ""
+    source: str = ""
+
+
+class MeaningFeedbackResponse(BaseModel):
+    ok: bool = True
+    message: str

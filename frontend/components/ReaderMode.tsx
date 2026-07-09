@@ -13,6 +13,15 @@ type ReaderModeProps = {
   onStatusChange: (index: number, status: TokenStatus) => void;
   initialSelectedTokenKey?: string | null;
   onSelectedTokenKeyChange?: (key: string | null) => void;
+  meaningEditItemId: number | null;
+  meaningEditDraft: string;
+  isSavingMeaningEdit: boolean;
+  meaningEditMessage: string;
+  onStartMeaningEdit: (itemId: number, currentMeaning: string) => void;
+  onMeaningEditDraftChange: (value: string) => void;
+  onSaveMeaningEdit: () => void;
+  onCancelMeaningEdit: () => void;
+  onReportMeaning: (token: TokenWithStatus) => void;
 };
 
 export function ReaderMode({
@@ -21,6 +30,15 @@ export function ReaderMode({
   onStatusChange,
   initialSelectedTokenKey = null,
   onSelectedTokenKeyChange,
+  meaningEditItemId,
+  meaningEditDraft,
+  isSavingMeaningEdit,
+  meaningEditMessage,
+  onStartMeaningEdit,
+  onMeaningEditDraftChange,
+  onSaveMeaningEdit,
+  onCancelMeaningEdit,
+  onReportMeaning,
 }: ReaderModeProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [focusMode, setFocusMode] = useState(false);
@@ -162,6 +180,15 @@ export function ReaderMode({
               onStatusChange(activeIndex, status);
             }
           }}
+          meaningEditItemId={meaningEditItemId}
+          meaningEditDraft={meaningEditDraft}
+          isSavingMeaningEdit={isSavingMeaningEdit}
+          meaningEditMessage={meaningEditMessage}
+          onStartMeaningEdit={onStartMeaningEdit}
+          onMeaningEditDraftChange={onMeaningEditDraftChange}
+          onSaveMeaningEdit={onSaveMeaningEdit}
+          onCancelMeaningEdit={onCancelMeaningEdit}
+          onReportMeaning={onReportMeaning}
         />
       ) : null}
     </div>

@@ -30,6 +30,15 @@ type ReadingTabProps = {
   onSelectedTokenKeyChange: (key: string | null) => void;
   onDismissRestoredNotice: () => void;
   onResetSession: () => void;
+  meaningEditItemId: number | null;
+  meaningEditDraft: string;
+  isSavingMeaningEdit: boolean;
+  meaningEditMessage: string;
+  onStartMeaningEdit: (itemId: number, currentMeaning: string) => void;
+  onMeaningEditDraftChange: (value: string) => void;
+  onSaveMeaningEdit: () => void;
+  onCancelMeaningEdit: () => void;
+  onReportMeaning: (token: TokenWithStatus) => void;
 };
 
 const saveButtons: Array<{
@@ -82,6 +91,15 @@ export function ReadingTab({
   onSelectedTokenKeyChange,
   onDismissRestoredNotice,
   onResetSession,
+  meaningEditItemId,
+  meaningEditDraft,
+  isSavingMeaningEdit,
+  meaningEditMessage,
+  onStartMeaningEdit,
+  onMeaningEditDraftChange,
+  onSaveMeaningEdit,
+  onCancelMeaningEdit,
+  onReportMeaning,
 }: ReadingTabProps) {
   const hasResult = tokens.length > 0;
   const showForm = !hasResult || !isTextCollapsed;
@@ -260,6 +278,15 @@ export function ReadingTab({
           onStatusChange={onStatusChange}
           initialSelectedTokenKey={selectedTokenKey}
           onSelectedTokenKeyChange={onSelectedTokenKeyChange}
+          meaningEditItemId={meaningEditItemId}
+          meaningEditDraft={meaningEditDraft}
+          isSavingMeaningEdit={isSavingMeaningEdit}
+          meaningEditMessage={meaningEditMessage}
+          onStartMeaningEdit={onStartMeaningEdit}
+          onMeaningEditDraftChange={onMeaningEditDraftChange}
+          onSaveMeaningEdit={onSaveMeaningEdit}
+          onCancelMeaningEdit={onCancelMeaningEdit}
+          onReportMeaning={onReportMeaning}
         />
       ) : !isAnalyzing ? (
         <p className="empty">

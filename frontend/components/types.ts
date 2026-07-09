@@ -25,6 +25,11 @@ export type TokenWithStatus = Token & {
   status: TokenStatus;
   isClassified?: boolean;
   savedExampleSentence?: string | null;
+  // Present when this token matches a word already saved in the current
+  // deck -- lets the Reading tab show/edit the user's own saved meaning
+  // instead of (or alongside) the fresh dictionary lookup from /analyze.
+  savedMeaningKo?: string | null;
+  savedVocabItemId?: number | null;
 };
 
 export type VocabItem = TokenWithStatus & {
@@ -53,6 +58,17 @@ export type VocabFormData = {
   context_explanation_ko: string;
   status: TokenStatus;
   deck_id: string;
+};
+
+export type MeaningFeedbackSource = "reading" | "vocab" | "review";
+
+export type MeaningFeedbackTarget = {
+  vocabularyId: number | null;
+  surface: string;
+  baseForm: string;
+  reading: string;
+  currentMeaningKo: string;
+  source: MeaningFeedbackSource;
 };
 
 export type ReviewResult = "again" | "hard" | "good" | "easy";

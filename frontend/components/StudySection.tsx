@@ -11,6 +11,7 @@ import type { StudyStats } from "./types";
 import { StatsPanel } from "./StatsPanel";
 import { formatNextReview } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
+import { MeaningQuickEdit } from "./MeaningQuickEdit";
 
 type StudySectionProps = {
   items: VocabItem[];
@@ -31,6 +32,15 @@ type StudySectionProps = {
   selectedDeckId: string;
   selectedDeckName: string;
   studyMode: StudyMode;
+  meaningEditItemId: number | null;
+  meaningEditDraft: string;
+  isSavingMeaningEdit: boolean;
+  meaningEditMessage: string;
+  onStartMeaningEdit: (itemId: number, currentMeaning: string) => void;
+  onMeaningEditDraftChange: (value: string) => void;
+  onSaveMeaningEdit: () => void;
+  onCancelMeaningEdit: () => void;
+  onReportMeaning: (item: VocabItem) => void;
   onSelectedDeckChange: (deckId: string) => void;
   onStudyModeChange: (mode: StudyMode) => void;
   onQuickStart: (mode: StudyMode) => void;
@@ -185,6 +195,15 @@ export function StudySection({
   selectedDeckId,
   selectedDeckName,
   studyMode,
+  meaningEditItemId,
+  meaningEditDraft,
+  isSavingMeaningEdit,
+  meaningEditMessage,
+  onStartMeaningEdit,
+  onMeaningEditDraftChange,
+  onSaveMeaningEdit,
+  onCancelMeaningEdit,
+  onReportMeaning,
   onSelectedDeckChange,
   onStudyModeChange,
   onQuickStart,
@@ -332,6 +351,33 @@ export function StudySection({
                   <dd>{currentItem.base_form}</dd>
                 </div>
               </dl>
+              <div className="meaning-actions-row">
+                <MeaningQuickEdit
+                  isEditing={meaningEditItemId === currentItem.id}
+                  draftValue={meaningEditDraft}
+                  isSaving={isSavingMeaningEdit}
+                  message={
+                    meaningEditItemId === currentItem.id
+                      ? meaningEditMessage
+                      : ""
+                  }
+                  onStartEdit={() =>
+                    onStartMeaningEdit(currentItem.id, currentItem.meaning_ko)
+                  }
+                  onDraftChange={onMeaningEditDraftChange}
+                  onSave={onSaveMeaningEdit}
+                  onCancel={onCancelMeaningEdit}
+                />
+                {meaningEditItemId !== currentItem.id ? (
+                  <button
+                    type="button"
+                    className="ghost-button compact-button"
+                    onClick={() => onReportMeaning(currentItem)}
+                  >
+                    뜻 오류 신고
+                  </button>
+                ) : null}
+              </div>
               {currentItem.example_sentence ? (
                 <div className="study-example-callout">
                   <span className="study-example-label">문맥 예문</span>

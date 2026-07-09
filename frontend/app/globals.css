@@ -329,6 +329,16 @@ button {
 }
 
 @media (max-width: 640px) {
+  .meaning-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .meaning-quick-edit-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .landing-hero {
     gap: 16px;
     padding: 16px;
@@ -536,6 +546,48 @@ button:disabled {
   color: #1e3a8a;
   background: #eff6ff;
   font-weight: 700;
+}
+
+.compact-message {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+/* Shared "내 단어장 뜻 수정" / "뜻 오류 신고" row -- used in the vocab list,
+   the reading-tab word detail sheet, and the study card back side. */
+.meaning-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.meaning-quick-edit-trigger {
+  align-self: flex-start;
+}
+
+.meaning-quick-edit {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.meaning-quick-edit-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.meaning-quick-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meaning-feedback-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .draft-panel {

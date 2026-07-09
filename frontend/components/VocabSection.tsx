@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { HighlightedExample } from "./HighlightedExample";
+import { MeaningQuickEdit } from "./MeaningQuickEdit";
 import { formatDateTime, formatNextReview, StatusSelect } from "./shared";
 import type {
   Deck,
@@ -78,6 +79,15 @@ type VocabSectionProps = {
   onStartEdit: (item: VocabItem) => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
+  meaningEditItemId: number | null;
+  meaningEditDraft: string;
+  isSavingMeaningEdit: boolean;
+  meaningEditMessage: string;
+  onStartMeaningEdit: (itemId: number, currentMeaning: string) => void;
+  onMeaningEditDraftChange: (value: string) => void;
+  onSaveMeaningEdit: () => void;
+  onCancelMeaningEdit: () => void;
+  onReportMeaning: (item: VocabItem) => void;
   onRefresh: () => void;
   onDownloadCsv: () => void;
   onExportDeckPackage: () => void;
@@ -149,6 +159,15 @@ export function VocabSection({
   onStartEdit,
   onSaveEdit,
   onCancelEdit,
+  meaningEditItemId,
+  meaningEditDraft,
+  isSavingMeaningEdit,
+  meaningEditMessage,
+  onStartMeaningEdit,
+  onMeaningEditDraftChange,
+  onSaveMeaningEdit,
+  onCancelMeaningEdit,
+  onReportMeaning,
   onRefresh,
   onDownloadCsv,
   onExportDeckPackage,
@@ -636,6 +655,20 @@ export function VocabSection({
                     <td>{item.part_of_speech}</td>
                     <td>
                       <div>{item.meaning_ko || "-"}</div>
+                      <MeaningQuickEdit
+                        isEditing={meaningEditItemId === item.id}
+                        draftValue={meaningEditDraft}
+                        isSaving={isSavingMeaningEdit}
+                        message={
+                          meaningEditItemId === item.id ? meaningEditMessage : ""
+                        }
+                        onStartEdit={() =>
+                          onStartMeaningEdit(item.id, item.meaning_ko)
+                        }
+                        onDraftChange={onMeaningEditDraftChange}
+                        onSave={onSaveMeaningEdit}
+                        onCancel={onCancelMeaningEdit}
+                      />
                     </td>
                     <td>
                       <span className="example-text">
@@ -667,6 +700,13 @@ export function VocabSection({
                           onClick={() => onStartEdit(item)}
                         >
                           수정
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost-button compact-button"
+                          onClick={() => onReportMeaning(item)}
+                        >
+                          뜻 오류 신고
                         </button>
                         <button
                           type="button"
