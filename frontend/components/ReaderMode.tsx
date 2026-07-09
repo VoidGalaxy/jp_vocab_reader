@@ -1,51 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet } from "./TokenDetailSheet";
+import { buildReaderLayout } from "./readerLayout";
 
 type ReaderModeProps = {
+  originalText: string;
   tokens: TokenWithStatus[];
   onStatusChange: (index: number, status: TokenStatus) => void;
 };
 
-type SentenceGroup = {
-  sentence: string;
-  items: { token: TokenWithStatus; index: number }[];
-};
-
-// Tokens don't carry original character offsets (analyze_with_raw already
-// dedupes by base_form and drops particles/punctuation before the frontend
-// ever sees them), so exact original-text reconstruction isn't possible
-// without a backend change. Instead, consecutive tokens that share the same
-// example_sentence (already computed per-token on the backend) are grouped
-// into one line -- a reasonably natural sentence-by-sentence read without
-// needing new backend fields.
-function groupTokensBySentence(tokens: TokenWithStatus[]): SentenceGroup[] {
-  const groups: SentenceGroup[] = [];
-  tokens.forEach((token, index) => {
-    const sentence = token.example_sentence || "";
-    const last = groups[groups.length - 1];
-    if (last && last.sentence === sentence) {
-      last.items.push({ token, index });
-    } else {
-      groups.push({ sentence, items: [{ token, index }] });
-    }
-  });
-  return groups;
-}
-
-export function ReaderMode({ tokens, onStatusChange }: ReaderModeProps) {
+export function ReaderMode({ originalText, tokens, onStatusChange }: ReaderModeProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [showJlptTags, setShowJlptTags] = useState(true);
+
+  const layout = useMemo(
+    () => buildReaderLayout(originalText, tokens),
+    [originalText, tokens],
+  );
 
   if (tokens.length === 0) {
     return null;
   }
 
-  const groups = groupTokensBySentence(tokens);
   const activeToken = activeIndex !== null ? tokens[activeIndex] : null;
 
   return (
@@ -78,24 +58,46 @@ export function ReaderMode({ tokens, onStatusChange }: ReaderModeProps) {
         </div>
       </div>
       <div className="reader-text">
-        {groups.map((group, groupIndex) => (
-          <p
-            className="reader-sentence"
-            key={`sentence-${groupIndex}-${group.items[0]?.index ?? groupIndex}`}
-          >
-            {group.items.map(({ token, index }) => (
-              <TokenChip
-                key={`${token.base_form}-${token.reading}-${index}`}
-                token={token}
-                isActive={activeIndex === index}
-                focusMode={focusMode}
-                showJlptTags={showJlptTags}
-                onSelect={() => setActiveIndex(index)}
-              />
-            ))}
+        {layout.lines.map((line, lineIndex) => (
+          <p className="reader-line" key={`line-${lineIndex}`}>
+            {line.length > 0
+              ? line.map((segment) =>
+                  segment.type === "token" ? (
+                    <TokenChip
+                      key={segment.key}
+                      token={tokens[segment.tokenIndex]}
+                      isActive={activeIndex === segment.tokenIndex}
+                      focusMode={focusMode}
+                      showJlptTags={showJlptTags}
+                      onSelect={() => setActiveIndex(segment.tokenIndex)}
+                    />
+                  ) : (
+                    <span key={segment.key}>{segment.content}</span>
+                  ),
+                )
+              : " "}
           </p>
         ))}
       </div>
+      {layout.unmatchedTokenIndexes.length > 0 ? (
+        <div className="reader-unmatched-row">
+          <span className="reader-unmatched-label">
+            원문 위치를 찾지 못한 단어
+          </span>
+          <div className="reader-unmatched-chips">
+            {layout.unmatchedTokenIndexes.map((tokenIndex) => (
+              <TokenChip
+                key={`unmatched-${tokenIndex}`}
+                token={tokens[tokenIndex]}
+                isActive={activeIndex === tokenIndex}
+                focusMode={focusMode}
+                showJlptTags={showJlptTags}
+                onSelect={() => setActiveIndex(tokenIndex)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="reader-legend">
         <span className="legend-item">
           <span className="legend-swatch token-chip-known" /> 아는 단어

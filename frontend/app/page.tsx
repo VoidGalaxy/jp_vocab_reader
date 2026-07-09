@@ -366,6 +366,12 @@ export default function HomePage() {
   const [ignoredTokenCount, setIgnoredTokenCount] = useState(0);
   const [deckVocabItems, setDeckVocabItems] = useState<VocabItem[]>([]);
   const [readingText, setReadingText] = useState("");
+  // Snapshot of the exact text that produced readingTokens -- kept separate
+  // from readingText (the live textarea value) so the original-layout
+  // reconstruction stays stable even if the user edits the textarea again
+  // after analyzing without re-analyzing. Lives only in this in-memory
+  // component state; never sent anywhere beyond the one /analyze call.
+  const [analyzedReadingText, setAnalyzedReadingText] = useState("");
   const [readingSelectedDeckId, setReadingSelectedDeckId] = useState("");
   const [readingTokens, setReadingTokens] = useState<TokenWithStatus[]>([]);
   const [readingDeckVocabItems, setReadingDeckVocabItems] = useState<VocabItem[]>(
@@ -930,6 +936,7 @@ export default function HomePage() {
 
       setReadingTokens(derivedTokens);
       setReadingDeckVocabItems(deckItems);
+      setAnalyzedReadingText(analyzeText);
       setIsReadingTextCollapsed(true);
     } catch (error) {
       setReadingMessage(
@@ -2093,6 +2100,7 @@ export default function HomePage() {
         {activeTab === "reading" ? (
           <ReadingTab
             text={readingText}
+            analyzedText={analyzedReadingText}
             tokens={readingTokens}
             vocabItems={readingDeckVocabItems}
             decks={decks}

@@ -8,6 +8,7 @@ import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 
 type ReadingTabProps = {
   text: string;
+  analyzedText: string;
   tokens: TokenWithStatus[];
   vocabItems: VocabItem[];
   decks: Deck[];
@@ -46,6 +47,7 @@ const saveButtons: Array<{
 
 export function ReadingTab({
   text,
+  analyzedText,
   tokens,
   vocabItems,
   decks,
@@ -119,9 +121,9 @@ export function ReadingTab({
       </form>
 
       <p className="muted-text copyright-note">
-        입력한 원문은 본인 학습용으로 사용하세요. 원문 전체는 서버에 자동
-        저장되지 않으며 공유 덱에 포함되지 않습니다. 단어 저장 시 해당
-        단어가 포함된 짧은 문장만 예문으로 저장됩니다.
+        입력한 원문은 분석에만 사용되며, 원문 전체는 서버에 저장되지 않고
+        공유 덱에도 포함되지 않습니다. 단어 저장 시 해당 단어가 포함된 짧은
+        문장만 예문으로 저장됩니다.
       </p>
 
       {message ? <p className="message">{message}</p> : null}
@@ -181,7 +183,11 @@ export function ReadingTab({
       ) : null}
 
       {hasResult ? (
-        <ReaderMode tokens={tokens} onStatusChange={onStatusChange} />
+        <ReaderMode
+          originalText={analyzedText}
+          tokens={tokens}
+          onStatusChange={onStatusChange}
+        />
       ) : !isAnalyzing ? (
         <p className="empty">
           덱을 선택하고 원문을 입력한 뒤 읽기 분석을 눌러주세요.
