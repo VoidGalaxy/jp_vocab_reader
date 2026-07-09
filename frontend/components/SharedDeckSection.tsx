@@ -1,5 +1,17 @@
-import { formatDateTime } from "./shared";
+import {
+  formatDateTime,
+  getJlptLevel,
+  sortSharedDecksByJlptLevel,
+} from "./shared";
 import type { SharedDeckDetail, SharedDeckSummary } from "./types";
+
+function JlptLevelTag({ level }: { level: string }) {
+  return (
+    <span className={`jlpt-level-tag jlpt-level-${level.toLowerCase()}`}>
+      {level}
+    </span>
+  );
+}
 
 type SharedDeckSectionProps = {
   decks: SharedDeckSummary[];
@@ -36,6 +48,9 @@ export function SharedDeckSection({
   onUnpublishDeck,
   onGoToVocab,
 }: SharedDeckSectionProps) {
+  const sortedDecks = sortSharedDecksByJlptLevel(decks);
+  const hasJlptDeck = sortedDecks.some((deck) => getJlptLevel(deck.title));
+
   return (
     <section className="tab-panel shared-deck-section" aria-live="polite">
       <div className="result-heading">
@@ -55,6 +70,13 @@ export function SharedDeckSection({
         </div>
       </div>
 
+      {hasJlptDeck ? (
+        <p className="shared-deck-disclaimer">
+          JLPT 추천 어휘 덱은 공식 JLPT 어휘 목록이 아니라, 공개 학습 자료와
+          내부 사전 데이터를 바탕으로 구성한 학습용 추천 덱입니다.
+        </p>
+      ) : null}
+
       {message ? (
         <div className="shared-deck-message">
           <p className="message">{message}</p>
@@ -68,13 +90,15 @@ export function SharedDeckSection({
         </div>
       ) : null}
 
-      {decks.length > 0 ? (
+      {sortedDecks.length > 0 ? (
         <div className="shared-deck-grid">
-          {decks.map((deck) => {
+          {sortedDecks.map((deck) => {
             const isSelected = selectedDeckId === deck.id;
             const isImporting = importingDeckId === deck.id;
             const isImported = importedDeckId === deck.id;
             const isUnpublishing = unpublishingDeckId === deck.id;
+            const level = getJlptLevel(deck.title);
+            const totalWordCount = deck.vocab_count + deck.custom_term_count;
             return (
               <article
                 key={deck.id}
@@ -85,7 +109,13 @@ export function SharedDeckSection({
                 }
               >
                 <div>
-                  <h3>{deck.title}</h3>
+                  <div className="shared-deck-title-row">
+                    <h3>{deck.title}</h3>
+                    {level ? <JlptLevelTag level={level} /> : null}
+                    <span className="shared-deck-word-count-badge">
+                      단어 {totalWordCount}개
+                    </span>
+                  </div>
                   <p className="muted-text">
                     {deck.description || "설명이 없습니다."}
                   </p>
@@ -173,7 +203,12 @@ export function SharedDeckSection({
         <section className="shared-deck-detail">
           <div className="result-heading compact-heading">
             <div>
-              <h2>{selectedDeck.title}</h2>
+              <div className="shared-deck-title-row">
+                <h2>{selectedDeck.title}</h2>
+                {getJlptLevel(selectedDeck.title) ? (
+                  <JlptLevelTag level={getJlptLevel(selectedDeck.title)!} />
+                ) : null}
+              </div>
               <span>
                 단어 수 {selectedDeck.vocab_count}개 · 용어 수{" "}
                 {selectedDeck.custom_term_count}개 · 공유된 횟수{" "}
@@ -216,6 +251,12 @@ export function SharedDeckSection({
           <p className="muted-text">
             {selectedDeck.description || "설명이 없습니다."}
           </p>
+          {getJlptLevel(selectedDeck.title) ? (
+            <p className="shared-deck-disclaimer">
+              JLPT 추천 어휘 덱은 공식 JLPT 어휘 목록이 아니라, 공개 학습
+              자료와 내부 사전 데이터를 바탕으로 구성한 학습용 추천 덱입니다.
+            </p>
+          ) : null}
           {selectedDeck.is_owner ? (
             <p className="muted-text shared-deck-owner-hint">
               공유 취소하면 공유 목록에서만 내려가며, 이미 가져간 개인 덱은
@@ -225,10 +266,10 @@ export function SharedDeckSection({
 
           <div className="shared-detail-columns">
             <div>
-              <h3>단어 미리보기</h3>
+              <h3>단어 미리보기 (최대 20개)</h3>
               {selectedDeck.items.length > 0 ? (
                 <div className="shared-preview-list">
-                  {selectedDeck.items.slice(0, 30).map((item) => (
+                  {selectedDeck.items.slice(0, 20).map((item) => (
                     <div key={item.id} className="shared-preview-row">
                       <strong>{item.surface || item.base_form || "-"}</strong>
                       <span>{item.reading || "-"}</span>

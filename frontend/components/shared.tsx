@@ -58,3 +58,48 @@ export function formatNextReview(value: string | null) {
     day: "2-digit",
   })}`;
 }
+
+const JLPT_LEVEL_PATTERN = /^JLPT\s*(N[1-5])\s*추천\s*어휘/;
+const JLPT_LEVEL_ORDER: Record<string, number> = {
+  N5: 0,
+  N4: 1,
+  N3: 2,
+  N2: 3,
+  N1: 4,
+};
+
+export function getJlptLevel(title: string): string | null {
+  const match = title.match(JLPT_LEVEL_PATTERN);
+  return match ? match[1] : null;
+}
+
+export function sortSharedDecksByJlptLevel<T extends { title: string }>(
+  decks: T[],
+): T[] {
+  return [...decks].sort((a, b) => {
+    const levelA = getJlptLevel(a.title);
+    const levelB = getJlptLevel(b.title);
+    if (levelA && levelB) {
+      return JLPT_LEVEL_ORDER[levelA] - JLPT_LEVEL_ORDER[levelB];
+    }
+    if (levelA && !levelB) {
+      return -1;
+    }
+    if (!levelA && levelB) {
+      return 1;
+    }
+    return 0;
+  });
+}
+
+const KOREAN_SYLLABLE_START = 0xac00;
+const KOREAN_SYLLABLE_END = 0xd7a3;
+
+export function withObjectParticle(word: string) {
+  const lastChar = word.charCodeAt(word.length - 1);
+  const hasBatchim =
+    lastChar >= KOREAN_SYLLABLE_START &&
+    lastChar <= KOREAN_SYLLABLE_END &&
+    (lastChar - KOREAN_SYLLABLE_START) % 28 !== 0;
+  return `${word}${hasBatchim ? "을" : "를"}`;
+}

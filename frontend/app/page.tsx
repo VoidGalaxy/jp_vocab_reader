@@ -6,6 +6,7 @@ import { getTokenGroupKey, getTokenStatus } from "../components/coverageUtils";
 import { InfoSection } from "../components/InfoSection";
 import { ReadingTab } from "../components/ReadingTab";
 import { SharedDeckSection } from "../components/SharedDeckSection";
+import { withObjectParticle } from "../components/shared";
 import { StudySection } from "../components/StudySection";
 import { VocabSection } from "../components/VocabSection";
 import type {
@@ -1085,6 +1086,12 @@ export default function HomePage() {
   }
 
   async function importSharedDeckToMyDeck(sharedDeckId: number) {
+    if (importingSharedDeckId !== null) {
+      return;
+    }
+
+    const sourceDeck = sharedDecks.find((deck) => deck.id === sharedDeckId);
+
     setImportingSharedDeckId(sharedDeckId);
     setImportedSharedDeckId(null);
     setSharedDeckMessage("");
@@ -1094,8 +1101,11 @@ export default function HomePage() {
         `/shared-decks/${sharedDeckId}/import`,
         { method: "POST" },
       );
+      const sourceTitle = sourceDeck?.title ?? result.deck_name;
+      const totalImportedCount =
+        result.imported_vocab_count + result.imported_custom_term_count;
       setSharedDeckMessage(
-        `내 단어장으로 가져왔습니다. 단어장 탭에서 확인할 수 있습니다. 단어 수 ${result.imported_vocab_count}개, 용어 수 ${result.imported_custom_term_count}개를 복사했습니다.`,
+        `${withObjectParticle(sourceTitle)} 내 단어장으로 가져왔습니다. 단어 ${totalImportedCount}개를 담았습니다. 단어장 탭에서 확인할 수 있습니다.`,
       );
       setImportedSharedDeckId(sharedDeckId);
       const importedDeckId = String(result.deck_id);
@@ -1105,9 +1115,9 @@ export default function HomePage() {
       await loadVocabItems(importedDeckId);
       await loadCustomTerms(importedDeckId);
       await loadSharedDecks();
-    } catch (error) {
+    } catch {
       setSharedDeckMessage(
-        getErrorMessage(error, "공유 덱을 가져오지 못했습니다."),
+        "공유덱 가져오기에 실패했습니다. 잠시 후 다시 시도해주세요.",
       );
     } finally {
       setImportingSharedDeckId(null);
