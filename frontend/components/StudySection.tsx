@@ -1,6 +1,12 @@
 "use client";
 
-import type { Deck, ReviewResult, StudyMode, VocabItem } from "./types";
+import type {
+  Deck,
+  ReviewResult,
+  SessionReviewCounts,
+  StudyMode,
+  VocabItem,
+} from "./types";
 import type { StudyStats } from "./types";
 import { StatsPanel } from "./StatsPanel";
 
@@ -17,8 +23,7 @@ type StudySectionProps = {
   stats: StudyStats | null;
   isStatsLoading: boolean;
   statsMessage: string;
-  correctCount: number;
-  wrongCount: number;
+  sessionCounts: SessionReviewCounts;
   decks: Deck[];
   selectedDeckId: string;
   selectedDeckName: string;
@@ -47,6 +52,44 @@ const emptyMessages: Record<StudyMode, string> = {
   all: "학습할 모르는 단어와 헷갈리는 단어가 없습니다.",
 };
 
+const ratingButtons: Array<{
+  result: ReviewResult;
+  label: string;
+  hint: string;
+  className: string;
+}> = [
+  { result: "again", label: "다시", hint: "오늘 다시 보기", className: "rating-again" },
+  { result: "hard", label: "어려움", hint: "짧게 복습", className: "rating-hard" },
+  { result: "good", label: "보통", hint: "예정 간격 증가", className: "rating-good" },
+  { result: "easy", label: "쉬움", hint: "더 길게 미루기", className: "rating-easy" },
+];
+
+function TodayDashboard({ stats }: { stats: StudyStats | null }) {
+  if (!stats) {
+    return null;
+  }
+  return (
+    <div className="today-dashboard" role="group" aria-label="오늘 학습 대시보드">
+      <div className="today-dashboard-card">
+        <span>오늘 복습</span>
+        <strong>{stats.due_today_count}개</strong>
+      </div>
+      <div className="today-dashboard-card">
+        <span>오늘 완료</span>
+        <strong>{stats.reviewed_today_count}개</strong>
+      </div>
+      <div className="today-dashboard-card">
+        <span>어려운 단어</span>
+        <strong>{stats.hard_count}개</strong>
+      </div>
+      <div className="today-dashboard-card">
+        <span>새 단어</span>
+        <strong>{stats.new_count}개</strong>
+      </div>
+    </div>
+  );
+}
+
 export function StudySection({
   items,
   currentItem,
@@ -60,8 +103,7 @@ export function StudySection({
   stats,
   isStatsLoading,
   statsMessage,
-  correctCount,
-  wrongCount,
+  sessionCounts,
   decks,
   selectedDeckId,
   selectedDeckName,
@@ -75,7 +117,8 @@ export function StudySection({
   onShowAnswer,
   onReview,
 }: StudySectionProps) {
-  const totalStudied = correctCount + wrongCount;
+  const totalStudied =
+    sessionCounts.again + sessionCounts.hard + sessionCounts.good + sessionCounts.easy;
   const modeLabel = studyModeLabels[studyMode];
   const dueCount = stats?.due_today_count ?? 0;
   const uncertainCount = stats?.uncertain_count ?? 0;
@@ -86,6 +129,8 @@ export function StudySection({
 
   return (
     <section className="tab-panel" aria-live="polite">
+      <TodayDashboard stats={stats} />
+
       <StatsPanel
         title="학습 현황"
         stats={stats}
@@ -211,23 +256,19 @@ export function StudySection({
                   <dd>{currentItem.example_sentence || "-"}</dd>
                 </div>
               </dl>
-              <div className="study-actions">
-                <button
-                  type="button"
-                  className="success-button"
-                  onClick={() => onReview("correct")}
-                  disabled={isReviewing}
-                >
-                  맞음
-                </button>
-                <button
-                  type="button"
-                  className="danger-button"
-                  onClick={() => onReview("wrong")}
-                  disabled={isReviewing}
-                >
-                  틀림
-                </button>
+              <div className="study-rating-grid" role="group" aria-label="복습 평가">
+                {ratingButtons.map(({ result, label, hint, className }) => (
+                  <button
+                    key={result}
+                    type="button"
+                    className={`rating-button ${className}`}
+                    onClick={() => onReview(result)}
+                    disabled={isReviewing}
+                  >
+                    <span className="rating-label">{label}</span>
+                    <span className="rating-hint">{hint}</span>
+                  </button>
+                ))}
               </div>
             </>
           ) : (
@@ -244,8 +285,10 @@ export function StudySection({
         <div className="study-card complete-card">
           <h3>학습 완료</h3>
           <div className="study-complete-stats">
-            <span>맞음 {correctCount}개</span>
-            <span>틀림 {wrongCount}개</span>
+            <span>다시 {sessionCounts.again}개</span>
+            <span>어려움 {sessionCounts.hard}개</span>
+            <span>보통 {sessionCounts.good}개</span>
+            <span>쉬움 {sessionCounts.easy}개</span>
             <span>총 학습 {totalStudied}개</span>
           </div>
           <p>이번 세션을 완료했습니다. 다음 학습 흐름을 바로 이어갈 수 있습니다.</p>

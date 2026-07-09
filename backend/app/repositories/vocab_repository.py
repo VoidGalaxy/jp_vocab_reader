@@ -5,8 +5,8 @@ from typing import Any
 from app.database import (
     DEFAULT_DECK_NAME,
     VOCAB_ITEM_FIELDS,
+    compute_review_schedule,
     get_connection,
-    next_review_for_correct,
     now_iso,
     now_utc,
     row_to_dict,
@@ -393,13 +393,18 @@ def list_study_items(user_id: int, deck_id: int | None = None) -> list[dict[str,
     return [row_to_dict(row) for row in rows]
 
 
-def record_review(user_id: int, item_id: int, result: str) -> dict[str, Any] | None:
+def record_review(
+    user_id: int,
+    item_id: int,
+    rating: str,
+    response_time_ms: int | None = None,
+) -> dict[str, Any] | None:
     reviewed_at = now_utc()
     timestamp = reviewed_at.isoformat()
     with get_connection() as connection:
         existing = connection.execute(
             """
-            SELECT review_level
+            SELECT review_level, next_review_at, deck_id
             FROM vocab_items
             WHERE id = ?
               AND user_id = ?
@@ -410,36 +415,52 @@ def record_review(user_id: int, item_id: int, result: str) -> dict[str, Any] | N
             return None
 
         current_level = int(existing["review_level"])
-        if result == "correct":
-            next_level = min(current_level + 1, 4)
-            next_review_at = next_review_for_correct(current_level, reviewed_at)
-            connection.execute(
-                """
-                UPDATE vocab_items
-                SET correct_count = correct_count + 1,
-                    review_level = ?,
-                    next_review_at = ?,
-                    last_reviewed_at = ?,
-                    updated_at = ?
-                WHERE id = ?
-                  AND user_id = ?
-                """,
-                (next_level, next_review_at, timestamp, timestamp, item_id, user_id),
+        previous_next_review_at = existing["next_review_at"]
+        deck_id = existing["deck_id"]
+
+        next_level, next_review_at = compute_review_schedule(
+            rating, current_level, reviewed_at
+        )
+        # "again" is the only rating that represents a failed recall; hard/good/easy
+        # all mean the word was remembered (just with varying ease), so they all
+        # count toward correct_count to keep that legacy counter meaningful.
+        count_column = "wrong_count" if rating == "again" else "correct_count"
+        connection.execute(
+            f"""
+            UPDATE vocab_items
+            SET {count_column} = {count_column} + 1,
+                review_level = ?,
+                next_review_at = ?,
+                last_reviewed_at = ?,
+                updated_at = ?
+            WHERE id = ?
+              AND user_id = ?
+            """,
+            (next_level, next_review_at, timestamp, timestamp, item_id, user_id),
+        )
+
+        connection.execute(
+            """
+            INSERT INTO review_logs (
+                user_id, vocab_item_id, deck_id, rating, reviewed_at,
+                previous_review_level, next_review_level,
+                previous_next_review_at, next_review_at, response_time_ms
             )
-        else:
-            connection.execute(
-                """
-                UPDATE vocab_items
-                SET wrong_count = wrong_count + 1,
-                    review_level = 0,
-                    next_review_at = ?,
-                    last_reviewed_at = ?,
-                    updated_at = ?
-                WHERE id = ?
-                  AND user_id = ?
-                """,
-                (timestamp, timestamp, timestamp, item_id, user_id),
-            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                item_id,
+                deck_id,
+                rating,
+                timestamp,
+                current_level,
+                next_level,
+                previous_next_review_at,
+                next_review_at,
+                response_time_ms,
+            ),
+        )
 
         row = connection.execute(
             f"""

@@ -3,6 +3,10 @@ from pydantic import BaseModel, Field
 
 VALID_STATUSES = {"unknown", "uncertain", "known", "unclassified"}
 VALID_REVIEW_RESULTS = {"correct", "wrong"}
+VALID_REVIEW_RATINGS = {"again", "hard", "good", "easy"}
+# Legacy correct/wrong clients keep working by mapping onto the new 4-way
+# rating scale: a plain "got it right" becomes "good", a miss becomes "again".
+RESULT_TO_RATING = {"correct": "good", "wrong": "again"}
 
 
 class UserResponse(BaseModel):
@@ -118,7 +122,9 @@ class StudyItemsResponse(BaseModel):
 
 
 class StudyReviewRequest(BaseModel):
-    result: str
+    result: str | None = None
+    rating: str | None = None
+    response_time_ms: int | None = None
 
 
 class DeckStatsResponse(BaseModel):
@@ -154,6 +160,14 @@ class StatsResponse(BaseModel):
     learned_rate: float
     deck_stats: list[DeckStatsResponse] = []
     review_level_counts: list[ReviewLevelCountResponse] = []
+    new_count: int = 0
+    hard_count: int = 0
+    reviewed_today_count: int = 0
+    today_again_count: int = 0
+    today_hard_count: int = 0
+    today_good_count: int = 0
+    today_easy_count: int = 0
+    streak_days: int = 0
 
 
 class DeckCreate(BaseModel):

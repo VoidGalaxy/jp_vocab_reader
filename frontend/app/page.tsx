@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { AnalyzeSection } from "../components/AnalyzeSection";
 import { getTokenGroupKey, getTokenStatus } from "../components/coverageUtils";
 import { InfoSection } from "../components/InfoSection";
@@ -13,6 +13,7 @@ import type {
   ReviewResult,
   Deck,
   QualityTag,
+  SessionReviewCounts,
   StudyMode,
   Token,
   TokenStatus,
@@ -128,6 +129,10 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: "shared", label: "공유" },
   { key: "info", label: "정보" },
 ];
+
+function createEmptySessionCounts(): SessionReviewCounts {
+  return { again: 0, hard: 0, good: 0, easy: 0 };
+}
 
 function createBlankVocabForm(deckId = ""): VocabFormData {
   return {
@@ -351,8 +356,10 @@ export default function HomePage() {
   const [infoStats, setInfoStats] = useState<StudyStats | null>(null);
   const [currentStudyIndex, setCurrentStudyIndex] = useState(0);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
-  const [sessionCorrectCount, setSessionCorrectCount] = useState(0);
-  const [sessionWrongCount, setSessionWrongCount] = useState(0);
+  const [sessionCounts, setSessionCounts] = useState<SessionReviewCounts>(
+    createEmptySessionCounts(),
+  );
+  const answerShownAtRef = useRef<number | null>(null);
   const [hasStartedStudy, setHasStartedStudy] = useState(false);
   const [isLoadingStudyStats, setIsLoadingStudyStats] = useState(false);
   const [isLoadingInfoStats, setIsLoadingInfoStats] = useState(false);
@@ -393,8 +400,8 @@ export default function HomePage() {
     setHasStartedStudy(false);
     setIsAnswerVisible(false);
     setStudyMessage("");
-    setSessionCorrectCount(0);
-    setSessionWrongCount(0);
+    setSessionCounts(createEmptySessionCounts());
+    answerShownAtRef.current = null;
   }
 
   useEffect(() => {
@@ -1710,8 +1717,8 @@ export default function HomePage() {
     setStudyItems([]);
     setCurrentStudyIndex(0);
     setIsAnswerVisible(false);
-    setSessionCorrectCount(0);
-    setSessionWrongCount(0);
+    setSessionCounts(createEmptySessionCounts());
+    answerShownAtRef.current = null;
     setHasStartedStudy(false);
 
     try {
@@ -1772,11 +1779,15 @@ export default function HomePage() {
     setActiveTab("analyze");
   }
 
-  async function submitStudyReview(result: ReviewResult) {
+  async function submitStudyReview(rating: ReviewResult) {
     const currentItem = studyItems[currentStudyIndex];
     if (!currentItem) {
       return;
     }
+
+    const responseTimeMs = answerShownAtRef.current
+      ? Date.now() - answerShownAtRef.current
+      : null;
 
     setIsReviewing(true);
     setStudyMessage("");
@@ -1786,7 +1797,7 @@ export default function HomePage() {
         `/study-items/${currentItem.id}/review`,
         {
           method: "POST",
-          body: JSON.stringify({ result }),
+          body: JSON.stringify({ rating, response_time_ms: responseTimeMs }),
         },
       );
       setVocabItems((currentItems) =>
@@ -1794,13 +1805,13 @@ export default function HomePage() {
           item.id === updatedItem.id ? updatedItem : item,
         ),
       );
-      if (result === "correct") {
-        setSessionCorrectCount((count) => count + 1);
-      } else {
-        setSessionWrongCount((count) => count + 1);
-      }
+      setSessionCounts((counts) => ({
+        ...counts,
+        [rating]: counts[rating] + 1,
+      }));
       setCurrentStudyIndex((index) => index + 1);
       setIsAnswerVisible(false);
+      answerShownAtRef.current = null;
       void loadStudyStats(selectedStudyDeckId);
       if (activeTab === "info") {
         void loadInfoStats();
@@ -2012,8 +2023,7 @@ export default function HomePage() {
             stats={studyStats}
             isStatsLoading={isLoadingStudyStats}
             statsMessage={studyStatsMessage}
-            correctCount={sessionCorrectCount}
-            wrongCount={sessionWrongCount}
+            sessionCounts={sessionCounts}
             decks={decks}
             selectedDeckId={selectedStudyDeckId}
             selectedDeckName={getDeckDisplayName(selectedStudyDeckId)}
@@ -2025,7 +2035,10 @@ export default function HomePage() {
             onRestart={() => void startStudy()}
             onGoToVocab={goToVocabFromStudy}
             onGoToAnalyze={goToAnalyzeFromStudy}
-            onShowAnswer={() => setIsAnswerVisible(true)}
+            onShowAnswer={() => {
+              answerShownAtRef.current = Date.now();
+              setIsAnswerVisible(true);
+            }}
             onReview={(result) => void submitStudyReview(result)}
           />
         ) : null}

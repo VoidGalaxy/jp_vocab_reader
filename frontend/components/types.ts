@@ -54,8 +54,10 @@ export type VocabFormData = {
   deck_id: string;
 };
 
-export type ReviewResult = "correct" | "wrong";
+export type ReviewResult = "again" | "hard" | "good" | "easy";
 export type StudyMode = "today" | "uncertain" | "unknown" | "all";
+
+export type SessionReviewCounts = Record<ReviewResult, number>;
 
 export type DeckStats = {
   deck_id: number;
@@ -90,6 +92,14 @@ export type StudyStats = {
   learned_rate: number;
   deck_stats: DeckStats[];
   review_level_counts: ReviewLevelCount[];
+  new_count: number;
+  hard_count: number;
+  reviewed_today_count: number;
+  today_again_count: number;
+  today_hard_count: number;
+  today_good_count: number;
+  today_easy_count: number;
+  streak_days: number;
 };
 
 export type VocabSort =

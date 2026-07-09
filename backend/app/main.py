@@ -101,7 +101,8 @@ from app.schemas import (
     StatsResponse,
     StudyItemsResponse,
     StudyReviewRequest,
-    VALID_REVIEW_RESULTS,
+    RESULT_TO_RATING,
+    VALID_REVIEW_RATINGS,
     VALID_STATUSES,
     UserResponse,
     VocabItemCreate,
@@ -622,10 +623,16 @@ def get_learning_stats(
 def post_study_review(
     item_id: int, review: StudyReviewRequest, http_request: Request
 ) -> VocabItemResponse:
-    if review.result not in VALID_REVIEW_RESULTS:
-        raise HTTPException(status_code=400, detail="invalid review result")
+    rating = review.rating or RESULT_TO_RATING.get(review.result or "")
+    if rating not in VALID_REVIEW_RATINGS:
+        raise HTTPException(status_code=400, detail="invalid review rating")
 
-    updated_item = record_review(current_user_id(http_request), item_id, review.result)
+    updated_item = record_review(
+        current_user_id(http_request),
+        item_id,
+        rating,
+        response_time_ms=review.response_time_ms,
+    )
     if not updated_item:
         raise HTTPException(status_code=404, detail="vocab item not found")
     return VocabItemResponse(**updated_item)
