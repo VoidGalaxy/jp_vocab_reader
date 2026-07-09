@@ -10,6 +10,7 @@ import type {
 import type { StudyStats } from "./types";
 import { StatsPanel } from "./StatsPanel";
 import { formatNextReview } from "./shared";
+import { HighlightedExample } from "./HighlightedExample";
 
 type StudySectionProps = {
   items: VocabItem[];
@@ -327,11 +328,20 @@ export function StudySection({
                   <dt>기본형</dt>
                   <dd>{currentItem.base_form}</dd>
                 </div>
-                <div className="answer-example">
-                  <dt>예문</dt>
-                  <dd>{currentItem.example_sentence || "-"}</dd>
-                </div>
               </dl>
+              {currentItem.example_sentence ? (
+                <div className="study-example-callout">
+                  <span className="study-example-label">문맥 예문</span>
+                  <p className="study-example-text">
+                    <HighlightedExample
+                      sentence={currentItem.example_sentence}
+                      surface={currentItem.surface}
+                      baseForm={currentItem.base_form}
+                      normalizedForm={currentItem.normalized_form}
+                    />
+                  </p>
+                </div>
+              ) : null}
               <div className="study-rating-grid" role="group" aria-label="복습 평가">
                 {ratingButtons.map(({ result, label, hint, className }) => (
                   <button

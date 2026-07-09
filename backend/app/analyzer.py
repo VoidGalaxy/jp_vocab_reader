@@ -6,6 +6,14 @@ from app.dictionary_service import lookup_dictionary_gloss, lookup_meaning
 
 
 SENTENCE_ENDINGS = {"。", "！", "？", "!", "?"}
+# Sentences are typically already short once split on punctuation, but a
+# passage with sparse/no punctuation can otherwise turn into one long
+# "sentence". Cap what gets stored as example_sentence and, when over the
+# cap, keep only the context immediately around the token instead of the
+# whole passage -- this is what keeps example_sentence from ever becoming a
+# copy of large chunks of the user's pasted text.
+MAX_EXAMPLE_SENTENCE_LENGTH = 160
+EXAMPLE_SENTENCE_CONTEXT_CHARS = 60
 EXCLUDED_POS = {"助詞", "助動詞", "補助記号", "記号", "空白"}
 POS_LABELS = {
     "名詞": "명사",
@@ -56,12 +64,36 @@ def split_sentences(text: str) -> list[tuple[int, int, str]]:
 
 
 def find_example_sentence(
-    sentences: list[tuple[int, int, str]], token_start: int
+    sentences: list[tuple[int, int, str]],
+    token_start: int,
+    token_end: int | None = None,
 ) -> str:
     for start, end, sentence in sentences:
         if start <= token_start < end:
-            return sentence
+            token_offset = token_start - start
+            token_end_offset = (token_end - start) if token_end is not None else None
+            return truncate_example_sentence(sentence, token_offset, token_end_offset)
     return ""
+
+
+def truncate_example_sentence(
+    sentence: str, token_offset: int, token_end_offset: int | None
+) -> str:
+    if len(sentence) <= MAX_EXAMPLE_SENTENCE_LENGTH:
+        return sentence
+
+    token_offset = max(0, min(token_offset, len(sentence)))
+    token_end_offset = (
+        max(token_offset, min(token_end_offset, len(sentence)))
+        if token_end_offset is not None
+        else token_offset
+    )
+    window_start = max(0, token_offset - EXAMPLE_SENTENCE_CONTEXT_CHARS)
+    window_end = min(len(sentence), token_end_offset + EXAMPLE_SENTENCE_CONTEXT_CHARS)
+    snippet = sentence[window_start:window_end].strip()
+    prefix = "…" if window_start > 0 else ""
+    suffix = "…" if window_end < len(sentence) else ""
+    return f"{prefix}{snippet}{suffix}"
 
 
 class JapaneseAnalyzer:
@@ -140,7 +172,9 @@ class JapaneseAnalyzer:
                         deck_id=deck_id,
                     ),
                     "example_sentence": find_example_sentence(
-                        sentences, token_start
+                        sentences,
+                        token_start,
+                        token_start + len(surface) if token_start != -1 else None,
                     ),
                     "is_custom_term": False,
                     "quality_tag": "normal",

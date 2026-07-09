@@ -708,8 +708,28 @@ select {
   font-size: 16px;
 }
 
-.study-answer .answer-example {
-  grid-column: 1 / -1;
+.study-example-callout {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #dbe5ef;
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--soft-bg);
+}
+
+.study-example-label {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.study-example-text {
+  margin: 0;
+  color: #111827;
+  font-size: 16px;
+  line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 .study-actions {
@@ -1682,6 +1702,11 @@ select {
     padding: 10px;
   }
 
+  .study-example-callout,
+  .context-example-block {
+    padding: 10px;
+  }
+
   .classification-summary {
     gap: 6px;
   }
@@ -2217,6 +2242,38 @@ select {
 .token-sheet-status {
   margin: 14px 0 10px;
   color: var(--text);
+}
+
+.context-example-block {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  border: 1px solid #dbe5ef;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--soft-bg);
+}
+
+.context-example-label {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.context-example-text {
+  margin: 0;
+  color: #111827;
+  font-size: 15px;
+  line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.context-example-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .example-highlight {

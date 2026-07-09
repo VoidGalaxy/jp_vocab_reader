@@ -870,7 +870,16 @@ export default function HomePage() {
           isClassified: false,
         };
         const status = getTokenStatus(base, deckItems, deckId);
-        return { ...base, status, isClassified: status !== "unclassified" };
+        const key = getTokenGroupKey(base);
+        const savedItem = deckItems.find(
+          (item) => getTokenGroupKey(item) === key,
+        );
+        return {
+          ...base,
+          status,
+          isClassified: status !== "unclassified",
+          savedExampleSentence: savedItem?.example_sentence || null,
+        };
       });
 
       setReadingTokens(derivedTokens);
@@ -929,11 +938,19 @@ export default function HomePage() {
 
     try {
       if (existing) {
+        const patchBody: { status: TokenStatus; example_sentence?: string } = {
+          status,
+        };
+        // Fill in the context sentence only if this word doesn't already
+        // have one saved -- never overwrite an existing example_sentence.
+        if (!existing.example_sentence && token.example_sentence) {
+          patchBody.example_sentence = token.example_sentence;
+        }
         const updated = await requestJson<VocabItem>(
           `/vocab-items/${existing.id}`,
           {
             method: "PATCH",
-            body: JSON.stringify({ status }),
+            body: JSON.stringify(patchBody),
           },
         );
         setReadingDeckVocabItems((current) =>

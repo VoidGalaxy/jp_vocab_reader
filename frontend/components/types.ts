@@ -24,6 +24,7 @@ export type Token = {
 export type TokenWithStatus = Token & {
   status: TokenStatus;
   isClassified?: boolean;
+  savedExampleSentence?: string | null;
 };
 
 export type VocabItem = TokenWithStatus & {

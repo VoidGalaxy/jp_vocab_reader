@@ -2,6 +2,7 @@
 
 import type { TokenStatus, TokenWithStatus } from "./types";
 import { statusLabels } from "./shared";
+import { HighlightedExample } from "./HighlightedExample";
 
 type TokenDetailSheetProps = {
   token: TokenWithStatus;
@@ -70,6 +71,37 @@ export function TokenDetailSheet({
             </dd>
           </div>
         </dl>
+        <div className="context-example-block">
+          <p className="context-example-label">문맥 예문</p>
+          {token.savedExampleSentence ? (
+            <p className="context-example-text">
+              <HighlightedExample
+                sentence={token.savedExampleSentence}
+                surface={token.surface}
+                baseForm={token.base_form}
+                normalizedForm={token.normalized_form}
+              />
+            </p>
+          ) : token.example_sentence ? (
+            <>
+              <p className="context-example-text">
+                <HighlightedExample
+                  sentence={token.example_sentence}
+                  surface={token.surface}
+                  baseForm={token.base_form}
+                  normalizedForm={token.normalized_form}
+                />
+              </p>
+              <p className="context-example-hint">
+                이 단어가 나온 문장을 복습 카드에 함께 저장합니다.
+              </p>
+            </>
+          ) : (
+            <p className="context-example-hint">
+              이 단어가 포함된 문장을 찾지 못했습니다.
+            </p>
+          )}
+        </div>
         <p className="token-sheet-status">
           현재 상태: <strong>{statusLabels[token.status]}</strong>
         </p>

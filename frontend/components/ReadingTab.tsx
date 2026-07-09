@@ -87,7 +87,8 @@ export function ReadingTab({
 
       <p className="muted-text copyright-note">
         입력한 원문은 본인 학습용으로 사용하세요. 원문 전체는 서버에 자동
-        저장되지 않으며 공유 덱에 포함되지 않습니다.
+        저장되지 않으며 공유 덱에 포함되지 않습니다. 단어 저장 시 해당
+        단어가 포함된 짧은 문장만 예문으로 저장됩니다.
       </p>
 
       {message ? <p className="message">{message}</p> : null}

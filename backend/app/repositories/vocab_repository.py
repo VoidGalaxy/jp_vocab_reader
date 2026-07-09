@@ -181,6 +181,43 @@ def get_vocab_item(user_id: int, item_id: int) -> dict[str, Any] | None:
     return row_to_dict(row) if row else None
 
 
+def _fill_blank_example_sentence(
+    connection,
+    user_id: int,
+    existing_row,
+    incoming_example_sentence: str,
+    timestamp: str,
+) -> dict[str, Any]:
+    existing = row_to_dict(existing_row)
+    # A word can be re-saved from a different passage than the one it was
+    # first added from. Never overwrite an example_sentence the user (or an
+    # earlier save) already has -- only fill it in if it's still blank.
+    if (existing.get("example_sentence") or "").strip():
+        return existing
+    if not (incoming_example_sentence or "").strip():
+        return existing
+
+    connection.execute(
+        """
+        UPDATE vocab_items
+        SET example_sentence = ?, updated_at = ?
+        WHERE id = ?
+          AND user_id = ?
+        """,
+        (incoming_example_sentence, timestamp, existing["id"], user_id),
+    )
+    row = connection.execute(
+        f"""
+        SELECT {VOCAB_ITEM_FIELDS}
+        FROM vocab_items
+        LEFT JOIN decks ON decks.id = vocab_items.deck_id
+        WHERE vocab_items.id = ?
+        """,
+        (existing["id"],),
+    ).fetchone()
+    return row_to_dict(row)
+
+
 def create_or_update_vocab_item(
     user_id: int, item: VocabItemCreate
 ) -> tuple[dict[str, Any], bool]:
@@ -201,7 +238,16 @@ def create_or_update_vocab_item(
             (user_id, normalized["base_form"], normalized["reading"], deck_id),
         ).fetchone()
         if existing:
-            return row_to_dict(existing), False
+            return (
+                _fill_blank_example_sentence(
+                    connection,
+                    user_id,
+                    existing,
+                    normalized["example_sentence"],
+                    timestamp,
+                ),
+                False,
+            )
 
         cursor = connection.execute(
             """
@@ -244,7 +290,16 @@ def create_or_update_vocab_item(
                 """,
                 (user_id, normalized["base_form"], normalized["reading"], deck_id),
             ).fetchone()
-            return row_to_dict(existing), False
+            return (
+                _fill_blank_example_sentence(
+                    connection,
+                    user_id,
+                    existing,
+                    normalized["example_sentence"],
+                    timestamp,
+                ),
+                False,
+            )
 
         row = connection.execute(
             f"""
