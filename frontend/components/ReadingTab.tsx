@@ -2,39 +2,72 @@
 
 import type { FormEvent } from "react";
 import { ReaderMode } from "./ReaderMode";
-import type { Deck, TokenStatus, TokenWithStatus } from "./types";
+import { computeReadingSaveSummary } from "./coverageUtils";
+import type { ReadingSaveMode } from "./coverageUtils";
+import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 
 type ReadingTabProps = {
   text: string;
   tokens: TokenWithStatus[];
+  vocabItems: VocabItem[];
   decks: Deck[];
   selectedDeckId: string;
   isAnalyzing: boolean;
   message: string;
   isTextCollapsed: boolean;
+  isSavingBatch: boolean;
+  canStartFromSaved: boolean;
   onTextChange: (text: string) => void;
   onSelectedDeckChange: (deckId: string) => void;
   onAnalyze: (event: FormEvent<HTMLFormElement>) => void;
   onStatusChange: (index: number, status: TokenStatus) => void;
   onToggleTextCollapsed: () => void;
+  onSaveBatch: (mode: ReadingSaveMode) => void;
+  onStartStudyFromSaved: () => void;
 };
+
+const saveButtons: Array<{
+  mode: ReadingSaveMode;
+  label: string;
+  hint: string;
+}> = [
+  { mode: "unknown_only", label: "모르는 단어 저장", hint: "unknown 상태 후보만 저장" },
+  {
+    mode: "unknown_uncertain",
+    label: "모르는+헷갈리는 단어 저장",
+    hint: "unknown + uncertain 저장",
+  },
+  {
+    mode: "all_unclassified",
+    label: "미분류까지 저장",
+    hint: "unknown + uncertain + unclassified 저장",
+  },
+];
 
 export function ReadingTab({
   text,
   tokens,
+  vocabItems,
   decks,
   selectedDeckId,
   isAnalyzing,
   message,
   isTextCollapsed,
+  isSavingBatch,
+  canStartFromSaved,
   onTextChange,
   onSelectedDeckChange,
   onAnalyze,
   onStatusChange,
   onToggleTextCollapsed,
+  onSaveBatch,
+  onStartStudyFromSaved,
 }: ReadingTabProps) {
   const hasResult = tokens.length > 0;
   const showForm = !hasResult || !isTextCollapsed;
+  const summary = hasResult
+    ? computeReadingSaveSummary(tokens, vocabItems, selectedDeckId)
+    : null;
 
   return (
     <section className="tab-panel" aria-live="polite">
@@ -92,6 +125,60 @@ export function ReadingTab({
       </p>
 
       {message ? <p className="message">{message}</p> : null}
+
+      {summary ? (
+        <section className="reading-summary-panel">
+          <div className="result-heading compact-heading">
+            <div>
+              <h2>이 텍스트 학습 요약</h2>
+              <span>저장 가능 단어 {summary.saveableCount}개</span>
+            </div>
+          </div>
+          <div className="reading-summary-grid" role="group" aria-label="이 텍스트 학습 요약">
+            <div className="reading-summary-card">
+              <span>새 단어</span>
+              <strong>{summary.newCount}개</strong>
+            </div>
+            <div className="reading-summary-card">
+              <span>모르는 단어</span>
+              <strong>{summary.unknownCount}개</strong>
+            </div>
+            <div className="reading-summary-card">
+              <span>헷갈리는 단어</span>
+              <strong>{summary.uncertainCount}개</strong>
+            </div>
+            <div className="reading-summary-card">
+              <span>이미 아는 단어</span>
+              <strong>{summary.knownCount}개</strong>
+            </div>
+            <div className="reading-summary-card">
+              <span>미분류 단어</span>
+              <strong>{summary.unclassifiedCount}개</strong>
+            </div>
+          </div>
+          <div className="reading-summary-actions">
+            {saveButtons.map(({ mode, label, hint }) => (
+              <button
+                key={mode}
+                type="button"
+                className="secondary-button reading-summary-save-button"
+                onClick={() => onSaveBatch(mode)}
+                disabled={isSavingBatch || summary.saveableCount === 0}
+                title={hint}
+              >
+                {isSavingBatch ? "저장 중..." : label}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={onStartStudyFromSaved}
+              disabled={!canStartFromSaved}
+            >
+              저장한 단어로 바로 학습
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       {hasResult ? (
         <ReaderMode tokens={tokens} onStatusChange={onStatusChange} />

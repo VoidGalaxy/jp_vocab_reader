@@ -16,7 +16,7 @@ export function getTokenGroupKey(token: {
 }
 
 function findMatchingVocabItem(
-  token: TokenWithStatus,
+  token: { base_form: string; normalized_form: string; surface: string },
   vocabItems: VocabItem[],
   deckId: string,
 ): VocabItem | undefined {
@@ -45,6 +45,119 @@ export function getTokenStatus(
   }
   const match = findMatchingVocabItem(token, vocabItems, deckId);
   return match ? match.status : "unclassified";
+}
+
+// getTokenStatus alone can't tell a never-saved word apart from one that's
+// saved with status "unclassified" (both read as "unclassified") -- this
+// checks deck membership directly so callers can tell "new" from "saved".
+export function isTokenSavedInDeck(
+  token: { base_form: string; normalized_form: string; surface: string },
+  vocabItems: VocabItem[],
+  deckId: string,
+): boolean {
+  return Boolean(findMatchingVocabItem(token, vocabItems, deckId));
+}
+
+export type ReadingSaveSummary = {
+  newCount: number;
+  unknownCount: number;
+  uncertainCount: number;
+  knownCount: number;
+  unclassifiedCount: number;
+  saveableCount: number;
+};
+
+// "이 텍스트 학습 요약" panel counts: known words are set aside, everything
+// else (never-saved "new" words plus already-saved unknown/uncertain/
+// unclassified ones) is a save/study candidate.
+export function computeReadingSaveSummary(
+  tokens: TokenWithStatus[],
+  vocabItems: VocabItem[],
+  deckId: string,
+): ReadingSaveSummary {
+  let newCount = 0;
+  let unknownCount = 0;
+  let uncertainCount = 0;
+  let knownCount = 0;
+  let unclassifiedCount = 0;
+
+  for (const token of tokens) {
+    const status = getTokenStatus(token, vocabItems, deckId);
+    if (status === "unclassified" && !isTokenSavedInDeck(token, vocabItems, deckId)) {
+      newCount += 1;
+      continue;
+    }
+    if (status === "known") {
+      knownCount += 1;
+    } else if (status === "uncertain") {
+      uncertainCount += 1;
+    } else if (status === "unknown") {
+      unknownCount += 1;
+    } else {
+      unclassifiedCount += 1;
+    }
+  }
+
+  return {
+    newCount,
+    unknownCount,
+    uncertainCount,
+    knownCount,
+    unclassifiedCount,
+    saveableCount: newCount + unknownCount + uncertainCount + unclassifiedCount,
+  };
+}
+
+export type ReadingSaveMode = "unknown_only" | "unknown_uncertain" | "all_unclassified";
+
+export type ReadingSaveTarget = {
+  index: number;
+  token: TokenWithStatus;
+  targetStatus: TokenStatus;
+};
+
+// Resolves which tokens each bulk-save button should act on, and what
+// status to save them as. A never-saved ("new") word defaults to "unknown"
+// since there's no earlier classification to preserve; an already-saved
+// word keeps whatever status it already has. "known" words are never
+// touched by these buttons.
+export function resolveReadingSaveTargets(
+  tokens: TokenWithStatus[],
+  vocabItems: VocabItem[],
+  deckId: string,
+  mode: ReadingSaveMode,
+): ReadingSaveTarget[] {
+  const targets: ReadingSaveTarget[] = [];
+
+  tokens.forEach((token, index) => {
+    const status = getTokenStatus(token, vocabItems, deckId);
+    const isSaved = isTokenSavedInDeck(token, vocabItems, deckId);
+    const bucket: TokenStatus | "new" =
+      status === "unclassified" && !isSaved ? "new" : status;
+
+    if (bucket === "known") {
+      return;
+    }
+
+    const included =
+      mode === "unknown_only"
+        ? bucket === "new" || bucket === "unknown"
+        : mode === "unknown_uncertain"
+          ? bucket === "new" || bucket === "unknown" || bucket === "uncertain"
+          : true;
+
+    if (!included) {
+      return;
+    }
+
+    targets.push({
+      index,
+      token,
+      targetStatus: bucket === "new" ? "unknown" : bucket,
+    });
+  });
+
+  return targets;
 }
 
 export function computeCoverageStats(

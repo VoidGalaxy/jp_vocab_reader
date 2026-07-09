@@ -2,7 +2,12 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AnalyzeSection } from "../components/AnalyzeSection";
-import { getTokenGroupKey, getTokenStatus } from "../components/coverageUtils";
+import {
+  getTokenGroupKey,
+  getTokenStatus,
+  resolveReadingSaveTargets,
+} from "../components/coverageUtils";
+import type { ReadingSaveMode } from "../components/coverageUtils";
 import { InfoSection } from "../components/InfoSection";
 import { ReadingTab } from "../components/ReadingTab";
 import { SharedDeckSection } from "../components/SharedDeckSection";
@@ -132,6 +137,42 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 
 function createEmptySessionCounts(): SessionReviewCounts {
   return { again: 0, hard: 0, good: 0, easy: 0 };
+}
+
+// Shared by the single-word status click and the reading-tab bulk-save
+// buttons: update the matching vocab item if the word is already saved in
+// this deck, otherwise create it -- reusing the same base_form ->
+// normalized_form -> surface matching policy as the coverage dashboard.
+// example_sentence is only ever filled in when the existing item's is
+// blank, never overwritten.
+async function persistReadingToken(
+  token: TokenWithStatus,
+  deckIdNumber: number,
+  status: TokenStatus,
+  existingItems: VocabItem[],
+): Promise<VocabItem> {
+  const key = getTokenGroupKey(token);
+  const existing = existingItems.find(
+    (item) => item.deck_id === deckIdNumber && getTokenGroupKey(item) === key,
+  );
+
+  if (existing) {
+    const patchBody: { status: TokenStatus; example_sentence?: string } = {
+      status,
+    };
+    if (!existing.example_sentence && token.example_sentence) {
+      patchBody.example_sentence = token.example_sentence;
+    }
+    return requestJson<VocabItem>(`/vocab-items/${existing.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(patchBody),
+    });
+  }
+
+  return requestJson<VocabItem>("/vocab-items", {
+    method: "POST",
+    body: JSON.stringify({ ...token, status, deck_id: deckIdNumber }),
+  });
 }
 
 function createBlankVocabForm(deckId = ""): VocabFormData {
@@ -333,6 +374,10 @@ export default function HomePage() {
   const [isReadingAnalyzing, setIsReadingAnalyzing] = useState(false);
   const [readingMessage, setReadingMessage] = useState("");
   const [isReadingTextCollapsed, setIsReadingTextCollapsed] = useState(false);
+  const [isSavingReadingBatch, setIsSavingReadingBatch] = useState(false);
+  const [recentlySavedVocabItemIds, setRecentlySavedVocabItemIds] = useState<
+    number[]
+  >([]);
   const [vocabItems, setVocabItems] = useState<VocabItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -840,6 +885,7 @@ export default function HomePage() {
 
     setIsReadingAnalyzing(true);
     setReadingMessage("");
+    setRecentlySavedVocabItemIds([]);
 
     try {
       const [analyzeResponse, deckVocabResponse] = await Promise.all([
@@ -914,10 +960,7 @@ export default function HomePage() {
     void performReadingAnalyze(text, selectedSaveDeckId);
   }
 
-  // Reading tab persists status changes immediately (no separate save step):
-  // update the matching vocab item if the word is already saved in this
-  // deck, otherwise create a new one -- reusing the same base_form ->
-  // normalized_form -> surface matching policy as the coverage dashboard.
+  // Reading tab persists status changes immediately (no separate save step).
   async function handleReadingStatusChange(index: number, status: TokenStatus) {
     const token = readingTokens[index];
     if (!token || !readingSelectedDeckId) {
@@ -930,48 +973,108 @@ export default function HomePage() {
       ),
     );
 
-    const deckIdNumber = Number(readingSelectedDeckId);
-    const key = getTokenGroupKey(token);
-    const existing = readingDeckVocabItems.find(
-      (item) => item.deck_id === deckIdNumber && getTokenGroupKey(item) === key,
-    );
-
     try {
-      if (existing) {
-        const patchBody: { status: TokenStatus; example_sentence?: string } = {
-          status,
-        };
-        // Fill in the context sentence only if this word doesn't already
-        // have one saved -- never overwrite an existing example_sentence.
-        if (!existing.example_sentence && token.example_sentence) {
-          patchBody.example_sentence = token.example_sentence;
-        }
-        const updated = await requestJson<VocabItem>(
-          `/vocab-items/${existing.id}`,
-          {
-            method: "PATCH",
-            body: JSON.stringify(patchBody),
-          },
-        );
-        setReadingDeckVocabItems((current) =>
-          current.map((item) => (item.id === updated.id ? updated : item)),
-        );
-      } else {
-        const created = await requestJson<VocabItem>("/vocab-items", {
-          method: "POST",
-          body: JSON.stringify({
-            ...token,
-            status,
-            deck_id: deckIdNumber,
-          }),
-        });
-        setReadingDeckVocabItems((current) => [...current, created]);
-      }
+      const saved = await persistReadingToken(
+        token,
+        Number(readingSelectedDeckId),
+        status,
+        readingDeckVocabItems,
+      );
+      setReadingDeckVocabItems((current) => {
+        const exists = current.some((item) => item.id === saved.id);
+        return exists
+          ? current.map((item) => (item.id === saved.id ? saved : item))
+          : [...current, saved];
+      });
     } catch (error) {
       setReadingMessage(
         getErrorMessage(error, "단어 상태 저장에 실패했습니다."),
       );
     }
+  }
+
+  // "이 텍스트 학습 요약" 패널의 일괄 저장 버튼들. 대상 단어 목록/저장할
+  // status는 resolveReadingSaveTargets가 결정하고, 여기서는 병렬로 저장한
+  // 뒤 성공/실패 개수를 메시지로 보여준다.
+  async function saveReadingTokensBatch(mode: ReadingSaveMode) {
+    if (!readingSelectedDeckId || isSavingReadingBatch) {
+      return;
+    }
+
+    const targets = resolveReadingSaveTargets(
+      readingTokens,
+      readingDeckVocabItems,
+      readingSelectedDeckId,
+      mode,
+    );
+
+    if (targets.length === 0) {
+      setReadingMessage("저장할 단어가 없습니다.");
+      return;
+    }
+
+    setIsSavingReadingBatch(true);
+    setReadingMessage("");
+
+    const deckIdNumber = Number(readingSelectedDeckId);
+    const results = await Promise.allSettled(
+      targets.map(({ token, targetStatus }) =>
+        persistReadingToken(
+          token,
+          deckIdNumber,
+          targetStatus,
+          readingDeckVocabItems,
+        ),
+      ),
+    );
+
+    const succeeded: { index: number; item: VocabItem }[] = [];
+    let failureCount = 0;
+    results.forEach((result, resultIndex) => {
+      if (result.status === "fulfilled") {
+        succeeded.push({ index: targets[resultIndex].index, item: result.value });
+      } else {
+        failureCount += 1;
+      }
+    });
+
+    if (succeeded.length > 0) {
+      const statusByIndex = new Map(
+        succeeded.map(({ index, item }) => [index, item.status] as const),
+      );
+      setReadingTokens((current) =>
+        current.map((item, itemIndex) => {
+          const newStatus = statusByIndex.get(itemIndex);
+          return newStatus
+            ? { ...item, status: newStatus, isClassified: true }
+            : item;
+        }),
+      );
+      setReadingDeckVocabItems((current) => {
+        const byId = new Map(current.map((item) => [item.id, item]));
+        succeeded.forEach(({ item }) => byId.set(item.id, item));
+        return Array.from(byId.values());
+      });
+      setRecentlySavedVocabItemIds(succeeded.map(({ item }) => item.id));
+    }
+
+    setIsSavingReadingBatch(false);
+    setReadingMessage(
+      failureCount > 0
+        ? `${succeeded.length}개 저장 완료, ${failureCount}개 저장 실패했습니다.`
+        : `${succeeded.length}개 단어를 저장했습니다.`,
+    );
+  }
+
+  // 저장된 단어로 바로 학습 시작: 학습 탭으로 이동하고 방금 저장한 단어
+  // id 목록만 대상으로 하는 "recent" 모드를 자동 시작한다.
+  function startStudyFromRecentlySaved() {
+    if (recentlySavedVocabItemIds.length === 0) {
+      return;
+    }
+    setActiveTab("study");
+    void loadStudyStats(readingSelectedDeckId);
+    quickStartStudy("recent", readingSelectedDeckId);
   }
 
   async function loadCustomTerms(deckId: string = selectedVocabDeckId) {
@@ -1714,6 +1817,17 @@ export default function HomePage() {
       return data.items.filter((item) => !item.last_reviewed_at);
     }
 
+    if (mode === "recent") {
+      if (recentlySavedVocabItemIds.length === 0) {
+        return [];
+      }
+      const data = await requestJson<VocabItemsResponse>(
+        `/vocab-items?${baseParams.toString()}`,
+      );
+      const recentIds = new Set(recentlySavedVocabItemIds);
+      return data.items.filter((item) => recentIds.has(item.id));
+    }
+
     const params = new URLSearchParams(baseParams);
     params.set("status", mode);
     params.set("sort", "next_review_asc");
@@ -1736,6 +1850,9 @@ export default function HomePage() {
     }
     if (mode === "new") {
       return "새로 학습할 단어가 없습니다.";
+    }
+    if (mode === "recent") {
+      return "방금 저장한 단어를 찾을 수 없습니다.";
     }
     return `${deckName}에 학습할 모르는 단어와 헷갈리는 단어가 없습니다.`;
   }
@@ -1780,9 +1897,15 @@ export default function HomePage() {
     }
   }
 
-  function quickStartStudy(mode: StudyMode) {
+  function quickStartStudy(mode: StudyMode, deckId?: string) {
     setStudyMode(mode);
-    void startStudy({ mode });
+    if (deckId !== undefined) {
+      setSelectedStudyDeckId(deckId);
+    }
+    // Pass deckId through explicitly rather than relying on
+    // selectedStudyDeckId state -- setSelectedStudyDeckId above hasn't
+    // committed yet by the time startStudy's closure would read it.
+    void startStudy({ mode, deckId });
   }
 
   function changeStudyDeck(deckId: string) {
@@ -1948,11 +2071,14 @@ export default function HomePage() {
           <ReadingTab
             text={readingText}
             tokens={readingTokens}
+            vocabItems={readingDeckVocabItems}
             decks={decks}
             selectedDeckId={readingSelectedDeckId}
             isAnalyzing={isReadingAnalyzing}
             message={readingMessage}
             isTextCollapsed={isReadingTextCollapsed}
+            isSavingBatch={isSavingReadingBatch}
+            canStartFromSaved={recentlySavedVocabItemIds.length > 0}
             onTextChange={setReadingText}
             onSelectedDeckChange={setReadingSelectedDeckId}
             onAnalyze={handleReadingAnalyze}
@@ -1960,6 +2086,8 @@ export default function HomePage() {
               void handleReadingStatusChange(index, status)
             }
             onToggleTextCollapsed={toggleReadingTextCollapsed}
+            onSaveBatch={(mode) => void saveReadingTokensBatch(mode)}
+            onStartStudyFromSaved={startStudyFromRecentlySaved}
           />
         ) : null}
 

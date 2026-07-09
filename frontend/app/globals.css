@@ -859,6 +859,52 @@ select {
   gap: 8px;
 }
 
+.reading-summary-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.reading-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.reading-summary-card {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #e7edf4;
+  border-radius: 8px;
+  padding: 12px 10px;
+  background: var(--soft-bg);
+  text-align: center;
+}
+
+.reading-summary-card span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.reading-summary-card strong {
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.reading-summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reading-summary-save-button {
+  flex: 1 1 200px;
+}
+
 .gloss-text {
   margin-top: 4px;
   color: #64748b;
@@ -1776,6 +1822,19 @@ select {
 
   .study-cta-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reading-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reading-summary-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reading-summary-save-button {
+    flex: 1 1 auto;
   }
 
   .today-progress-label {

@@ -56,7 +56,13 @@ export type VocabFormData = {
 };
 
 export type ReviewResult = "again" | "hard" | "good" | "easy";
-export type StudyMode = "today" | "uncertain" | "unknown" | "all" | "new";
+export type StudyMode =
+  | "today"
+  | "uncertain"
+  | "unknown"
+  | "all"
+  | "new"
+  | "recent";
 
 export type SessionReviewCounts = Record<ReviewResult, number>;
 

@@ -48,6 +48,7 @@ const studyModeLabels: Record<StudyMode, string> = {
   unknown: "모르는 단어",
   all: "전체 학습",
   new: "새 단어 학습",
+  recent: "방금 저장한 단어",
 };
 
 const emptyMessages: Record<StudyMode, string> = {
@@ -56,6 +57,7 @@ const emptyMessages: Record<StudyMode, string> = {
   unknown: "모르는 단어가 없습니다.",
   all: "학습할 모르는 단어와 헷갈리는 단어가 없습니다.",
   new: "새로 학습할 단어가 없습니다.",
+  recent: "방금 저장한 단어를 찾을 수 없습니다.",
 };
 
 const emptySecondaryMessages: Record<StudyMode, string> = {
@@ -64,6 +66,7 @@ const emptySecondaryMessages: Record<StudyMode, string> = {
   unknown: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
   all: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
   new: "읽기나 분석 탭에서 단어를 저장하면 이곳에서 바로 학습할 수 있습니다.",
+  recent: "읽기 탭에서 단어를 다시 저장해 보세요.",
 };
 
 const quickStartCta: Array<{
