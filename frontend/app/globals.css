@@ -13,6 +13,12 @@
   --danger: #dc2626;
   --success: #15803d;
   --warning: #facc15;
+  /* Warm "paper" tones used specifically by the reading tab -- kept
+     separate from the app's default cool palette above so the rest of the
+     app (vocab/study/shared tabs) is unaffected. */
+  --paper-bg: #fdfbf4;
+  --paper-border: #e8dfc4;
+  --paper-shadow: rgba(120, 98, 40, 0.08);
   font-family:
     Arial,
     "Hiragino Sans",
@@ -200,6 +206,59 @@ button {
   gap: 18px;
 }
 
+/* Generic reusable card frame -- introduced for the reading tab's polish
+   pass so its sections (input, summary) share one consistent card look
+   instead of each redefining border/radius/padding/shadow. Existing cards
+   elsewhere (.study-card, .stats-panel, etc.) are left as they are; this is
+   additive, not a retrofit. */
+.panel-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  background: var(--panel-bg);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.panel-card-header {
+  display: grid;
+  gap: 4px;
+}
+
+.panel-card-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.panel-card-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.reading-hero {
+  display: grid;
+  gap: 4px;
+  padding: 2px 2px 4px;
+}
+
+.reading-hero-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.reading-hero-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .analyze-form {
   display: grid;
   gap: 14px;
@@ -301,6 +360,26 @@ button:disabled {
 .warning-button {
   color: #111827;
   background: var(--warning);
+}
+
+/* Ghost/subtle: lowest-emphasis actions (e.g. "미분류까지 저장", collapse
+   toggles) that should read as optional rather than a primary next step. */
+.ghost-button {
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.ghost-button:not(:disabled):hover {
+  background: var(--soft-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.ghost-button:disabled {
+  background: transparent;
+  color: #b7c0cc;
+  border-color: var(--border);
 }
 
 .message {
@@ -859,13 +938,39 @@ select {
   gap: 8px;
 }
 
-.reading-summary-panel {
-  display: grid;
-  gap: 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
-  background: #ffffff;
+/* Scoped overrides so the reading tab's input form sits inside one
+   .panel-card shell (title + description + form + notice) instead of
+   nesting two card borders. .analyze-form itself is untouched -- the
+   Analyze tab uses the same class and keeps its own card look. */
+.reading-input-card .analyze-form {
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  background: transparent;
+}
+
+.reading-input-card .copyright-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--paper-border);
+  border-radius: 8px;
+  background: var(--paper-bg);
+  color: #6b5f3f;
+  font-size: 12px;
+}
+
+
+.reading-summary-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .reading-summary-grid {
@@ -882,6 +987,34 @@ select {
   padding: 12px 10px;
   background: var(--soft-bg);
   text-align: center;
+}
+
+/* Per-status tint, matching the same palette used by .token-chip-* so the
+   text highlight, this summary grid, and the legend all read as one
+   consistent color system rather than three independent choices. */
+.reading-summary-card-new {
+  border-color: #dbe2ec;
+  background: #f4f7fb;
+}
+
+.reading-summary-card-unknown {
+  border-color: #f3cdd1;
+  background: #fdf1f2;
+}
+
+.reading-summary-card-uncertain {
+  border-color: #ecdba9;
+  background: #fdf6e6;
+}
+
+.reading-summary-card-known {
+  border-color: #bfe3cc;
+  background: #f1faf4;
+}
+
+.reading-summary-card-unclassified {
+  border-color: #c9d0ec;
+  background: #f2f4fc;
 }
 
 .reading-summary-card span {
@@ -903,6 +1036,14 @@ select {
 
 .reading-summary-save-button {
   flex: 1 1 200px;
+}
+
+.reading-summary-cta-button {
+  flex: 1 1 100%;
+}
+
+.reading-summary-message {
+  margin: 0;
 }
 
 .gloss-text {
@@ -1602,8 +1743,13 @@ select {
   .shared-deck-detail,
   .vocab-form-panel,
   .management-card,
-  .custom-term-section {
+  .custom-term-section,
+  .panel-card {
     padding: 14px;
+  }
+
+  .reading-hero-title {
+    font-size: 18px;
   }
 
   textarea {
@@ -2095,10 +2241,11 @@ select {
 /* Reader mode */
 
 .reader-mode {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
-  background: #ffffff;
+  border: 1px solid var(--paper-border);
+  border-radius: 12px;
+  padding: 22px;
+  background: var(--paper-bg);
+  box-shadow: 0 10px 26px var(--paper-shadow);
 }
 
 .reader-mode-header-row {
@@ -2142,8 +2289,9 @@ select {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 17px;
-  line-height: 2.1;
+  color: #2b2620;
+  font-size: 18px;
+  line-height: 2.2;
 }
 
 .reader-line {
@@ -2195,7 +2343,24 @@ select {
   cursor: pointer;
   transition:
     background-color 0.12s ease,
-    box-shadow 0.12s ease;
+    box-shadow 0.12s ease,
+    filter 0.12s ease;
+}
+
+/* Override the generic button hover lift -- an individual word floating up
+   mid-sentence would look glitchy in running prose. box-shadow is left
+   alone so .token-chip-active's selection ring survives being hovered. */
+.token-chip:not(:disabled):hover {
+  transform: none;
+}
+
+.token-chip:not(.token-chip-muted):hover {
+  filter: brightness(0.96);
+}
+
+.token-chip:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* Known/plain words stay close to normal reading text -- only a faint tint,

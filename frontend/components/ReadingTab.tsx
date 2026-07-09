@@ -31,17 +31,25 @@ const saveButtons: Array<{
   mode: ReadingSaveMode;
   label: string;
   hint: string;
+  variant: "secondary" | "ghost";
 }> = [
-  { mode: "unknown_only", label: "모르는 단어 저장", hint: "unknown 상태 후보만 저장" },
+  {
+    mode: "unknown_only",
+    label: "모르는 단어 저장",
+    hint: "unknown 상태 후보만 저장",
+    variant: "secondary",
+  },
   {
     mode: "unknown_uncertain",
     label: "모르는+헷갈리는 단어 저장",
     hint: "unknown + uncertain 저장",
+    variant: "secondary",
   },
   {
     mode: "all_unclassified",
     label: "미분류까지 저장",
     hint: "unknown + uncertain + unclassified 저장",
+    variant: "ghost",
   },
 ];
 
@@ -73,97 +81,117 @@ export function ReadingTab({
 
   return (
     <section className="tab-panel" aria-live="polite">
-      <form className="analyze-form" onSubmit={onAnalyze}>
-        <div className="reading-input-header">
-          <label htmlFor="reading-source-text">원문</label>
-          {hasResult ? (
-            <button
-              type="button"
-              className="secondary-button compact-button"
-              onClick={onToggleTextCollapsed}
-            >
-              {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
-            </button>
-          ) : null}
+      <div className="reading-hero">
+        <h2 className="reading-hero-title">원문으로 읽고 바로 단어장에 담기</h2>
+        <p className="reading-hero-subtitle">
+          일본어 원문을 붙여넣고 분석하면 모르는 단어만 골라 문맥 예문과
+          함께 저장하고, 바로 복습으로 이어갈 수 있습니다.
+        </p>
+      </div>
+
+      <section className="panel-card reading-input-card">
+        <div className="panel-card-header">
+          <h3 className="panel-card-title">원문 입력</h3>
+          <p className="panel-card-description">
+            읽고 싶은 일본어 문장을 붙여넣으세요.
+          </p>
         </div>
-
-        {showForm ? (
-          <>
-            <textarea
-              id="reading-source-text"
-              value={text}
-              onChange={(event) => onTextChange(event.target.value)}
-              placeholder="彼は怠惰であることを自覚していた。"
-              rows={6}
-            />
-            <div className="analyze-options">
-              <label className="inline-field">
-                읽기 덱
-                <select
-                  value={selectedDeckId}
-                  onChange={(event) => onSelectedDeckChange(event.target.value)}
-                >
-                  {decks.map((deck) => (
-                    <option key={deck.id} value={String(deck.id)}>
-                      {deck.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="actions">
-              <button type="submit" disabled={isAnalyzing || !selectedDeckId}>
-                {isAnalyzing ? "분석 중..." : "읽기 분석"}
+        <form className="analyze-form" onSubmit={onAnalyze}>
+          <div className="reading-input-header">
+            <label htmlFor="reading-source-text">원문</label>
+            {hasResult ? (
+              <button
+                type="button"
+                className="ghost-button compact-button"
+                onClick={onToggleTextCollapsed}
+              >
+                {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
               </button>
-            </div>
-          </>
-        ) : null}
-      </form>
+            ) : null}
+          </div>
 
-      <p className="muted-text copyright-note">
-        입력한 원문은 분석에만 사용되며, 원문 전체는 서버에 저장되지 않고
-        공유 덱에도 포함되지 않습니다. 단어 저장 시 해당 단어가 포함된 짧은
-        문장만 예문으로 저장됩니다.
-      </p>
+          {showForm ? (
+            <>
+              <textarea
+                id="reading-source-text"
+                value={text}
+                onChange={(event) => onTextChange(event.target.value)}
+                placeholder="彼は闇の中で声を聞いた。少女は約束を思い出した。"
+                rows={6}
+              />
+              <div className="analyze-options">
+                <label className="inline-field">
+                  읽기 덱
+                  <select
+                    value={selectedDeckId}
+                    onChange={(event) => onSelectedDeckChange(event.target.value)}
+                  >
+                    {decks.map((deck) => (
+                      <option key={deck.id} value={String(deck.id)}>
+                        {deck.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="actions">
+                <button type="submit" disabled={isAnalyzing || !selectedDeckId}>
+                  {isAnalyzing ? "분석 중..." : "읽기 분석"}
+                </button>
+              </div>
+            </>
+          ) : null}
+        </form>
 
-      {message ? <p className="message">{message}</p> : null}
+        <p className="muted-text copyright-note">
+          입력한 원문은 분석에만 사용되며, 원문 전체는 서버에 저장되지 않고
+          공유 덱에도 포함되지 않습니다. 단어 저장 시 해당 단어가 포함된 짧은
+          문장만 예문으로 저장됩니다.
+        </p>
+      </section>
+
+      {!summary && message ? <p className="message">{message}</p> : null}
 
       {summary ? (
-        <section className="reading-summary-panel">
-          <div className="result-heading compact-heading">
-            <div>
-              <h2>이 텍스트 학습 요약</h2>
-              <span>저장 가능 단어 {summary.saveableCount}개</span>
-            </div>
+        <section className="panel-card reading-summary-panel">
+          <div className="panel-card-header">
+            <h3 className="panel-card-title">이 텍스트 학습 요약</h3>
+            <p className="panel-card-description">
+              상태별 단어 수를 확인하고, 원하는 범위만 골라 단어장에
+              저장하세요.
+            </p>
+            <span className="reading-summary-highlight">
+              저장 가능 단어 {summary.saveableCount}개
+            </span>
           </div>
           <div className="reading-summary-grid" role="group" aria-label="이 텍스트 학습 요약">
-            <div className="reading-summary-card">
+            <div className="reading-summary-card reading-summary-card-new">
               <span>새 단어</span>
               <strong>{summary.newCount}개</strong>
             </div>
-            <div className="reading-summary-card">
+            <div className="reading-summary-card reading-summary-card-unknown">
               <span>모르는 단어</span>
               <strong>{summary.unknownCount}개</strong>
             </div>
-            <div className="reading-summary-card">
+            <div className="reading-summary-card reading-summary-card-uncertain">
               <span>헷갈리는 단어</span>
               <strong>{summary.uncertainCount}개</strong>
             </div>
-            <div className="reading-summary-card">
+            <div className="reading-summary-card reading-summary-card-known">
               <span>이미 아는 단어</span>
               <strong>{summary.knownCount}개</strong>
             </div>
-            <div className="reading-summary-card">
+            <div className="reading-summary-card reading-summary-card-unclassified">
               <span>미분류 단어</span>
               <strong>{summary.unclassifiedCount}개</strong>
             </div>
           </div>
           <div className="reading-summary-actions">
-            {saveButtons.map(({ mode, label, hint }) => (
+            {saveButtons.map(({ mode, label, hint, variant }) => (
               <button
                 key={mode}
                 type="button"
-                className="secondary-button reading-summary-save-button"
+                className={`${variant === "ghost" ? "ghost-button" : "secondary-button"} reading-summary-save-button`}
                 onClick={() => onSaveBatch(mode)}
                 disabled={isSavingBatch || summary.saveableCount === 0}
                 title={hint}
@@ -173,12 +201,16 @@ export function ReadingTab({
             ))}
             <button
               type="button"
+              className="reading-summary-cta-button"
               onClick={onStartStudyFromSaved}
               disabled={!canStartFromSaved}
             >
               저장한 단어로 바로 학습
             </button>
           </div>
+          {message ? (
+            <p className="message reading-summary-message">{message}</p>
+          ) : null}
         </section>
       ) : null}
 
