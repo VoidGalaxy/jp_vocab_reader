@@ -1193,7 +1193,7 @@ export default function HomePage() {
       setIsReadingTextCollapsed(true);
     } catch (error) {
       setReadingMessage(
-        getErrorMessage(error, "분석 중 알 수 없는 오류가 발생했습니다."),
+        `분석에 실패했습니다. 잠시 후 다시 시도해주세요. (${getErrorMessage(error, "알 수 없는 오류")})`,
       );
       setReadingTokens([]);
     } finally {
@@ -1251,7 +1251,7 @@ export default function HomePage() {
     setAnalyzedReadingText("");
     setReadingTokens([]);
     setReadingDeckVocabItems([]);
-    setReadingMessage("");
+    setReadingMessage("현재 읽기 작업을 초기화했습니다.");
     setIsReadingTextCollapsed(false);
     setRecentlySavedVocabItemIds([]);
     setCurrentSelectedTokenKey(null);
@@ -1297,7 +1297,10 @@ export default function HomePage() {
       });
     } catch (error) {
       setReadingMessage(
-        getErrorMessage(error, "단어 상태 저장에 실패했습니다."),
+        getErrorMessage(
+          error,
+          "단어 상태 저장에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        ),
       );
     }
   }
@@ -1318,7 +1321,9 @@ export default function HomePage() {
     );
 
     if (targets.length === 0) {
-      setReadingMessage("저장할 단어가 없습니다.");
+      setReadingMessage(
+        "저장 가능한 단어가 없습니다. 이미 학습 중인 단어일 수 있습니다.",
+      );
       return;
     }
 
@@ -1388,14 +1393,20 @@ export default function HomePage() {
     }
 
     setIsSavingReadingBatch(false);
-    const parts = [`${succeeded.length}개 저장 완료`];
+    const parts: string[] = [];
+    if (succeeded.length > 0) {
+      parts.push(`단어 ${succeeded.length}개를 저장했습니다`);
+    }
     if (skipped.length > 0) {
-      parts.push(`${skipped.length}개는 이미 저장되어 있어 건너뜀`);
+      parts.push(`이미 저장된 단어 ${skipped.length}개는 건너뛰었습니다`);
     }
     if (failureCount > 0) {
-      parts.push(`${failureCount}개 저장 실패`);
+      parts.push(`${failureCount}개는 저장하지 못했습니다. 잠시 후 다시 시도해주세요`);
     }
-    setReadingMessage(`${parts.join(", ")}.`);
+    if (parts.length === 0) {
+      parts.push("저장할 단어가 없습니다");
+    }
+    setReadingMessage(`${parts.join(". ")}.`);
   }
 
   // 저장된 단어로 바로 학습 시작: 학습 탭으로 이동하고 방금 저장한 단어
@@ -1407,6 +1418,16 @@ export default function HomePage() {
     setActiveTab("study");
     void loadStudyStats(readingSelectedDeckId);
     quickStartStudy("recent", readingSelectedDeckId);
+  }
+
+  // 읽기 탭에서 방금 저장한 단어를 단어장 탭에서 바로 확인할 수 있도록
+  // 같은 덱을 선택한 채로 이동한다.
+  function goToVocabFromReading() {
+    setSelectedVocabDeckId(readingSelectedDeckId);
+    setActiveTab("vocab");
+    setHasLoadedVocab(true);
+    void loadVocabItems(readingSelectedDeckId);
+    void loadCustomTerms(readingSelectedDeckId);
   }
 
   async function loadCustomTerms(deckId: string = selectedVocabDeckId) {
@@ -2618,6 +2639,7 @@ export default function HomePage() {
             onToggleTextCollapsed={toggleReadingTextCollapsed}
             onSaveBatch={(mode) => void saveReadingTokensBatch(mode)}
             onStartStudyFromSaved={startStudyFromRecentlySaved}
+            onGoToVocab={goToVocabFromReading}
             onSelectedTokenKeyChange={handleReadingSelectedTokenKeyChange}
             onDismissRestoredNotice={dismissRestoredReadingNotice}
             onResetSession={resetReadingSession}
@@ -2732,6 +2754,7 @@ export default function HomePage() {
               void updateVocabStatus(itemId, status)
             }
             onDelete={(itemId) => void deleteVocabItem(itemId)}
+            onGoToReading={() => setActiveTab("reading")}
           />
         ) : null}
 

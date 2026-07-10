@@ -548,6 +548,18 @@ button:disabled {
   font-weight: 700;
 }
 
+.message--success {
+  border-color: #bbe6c9;
+  color: #14532d;
+  background: #eefaf1;
+}
+
+.message--error {
+  border-color: #f3c6cb;
+  color: #7f1d24;
+  background: #fdf1f2;
+}
+
 .compact-message {
   padding: 8px 10px;
   font-size: 12px;
@@ -740,6 +752,18 @@ td .term-badge {
   padding: 11px 10px;
 }
 
+/* Marks the button matching the word's current status -- a shape/weight
+   cue (ring + bold), not color alone, so status is still legible without
+   relying on color perception. */
+.classify-actions button[data-active="true"] {
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.28) inset;
+  font-weight: 900;
+}
+
+.classify-actions button[data-active="true"]::after {
+  content: " ✓";
+}
+
 .card-navigation {
   display: flex;
   justify-content: flex-start;
@@ -859,6 +883,27 @@ select {
   color: #64748b;
   background: #ffffff;
   text-align: center;
+}
+
+/* Empty state that also points at a next action (a button), as opposed to
+   .empty's plain informational text. */
+.empty-guide {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  padding: 24px;
+  background: #ffffff;
+  text-align: center;
+}
+
+.empty-guide p {
+  margin: 0;
+}
+
+.empty-guide button {
+  margin-top: 6px;
 }
 
 .study-control-panel {
@@ -1142,6 +1187,45 @@ select {
   gap: 8px;
 }
 
+/* First-time / empty guidance shown above the textarea before any text is
+   entered -- points at the next action instead of leaving blank space. */
+.reading-empty-guide {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding: 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  background: var(--soft-bg);
+}
+
+.reading-empty-guide p {
+  margin: 0;
+}
+
+.reading-empty-guide button {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+.actions-with-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.action-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reading-loading-hint {
+  color: var(--muted);
+}
+
 .reading-restored-banner {
   display: flex;
   flex-wrap: wrap;
@@ -1257,8 +1341,25 @@ select {
   flex: 1 1 200px;
 }
 
+.reading-summary-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+/* Save-success next steps ("저장한 단어로 바로 학습" / "단어장 보기") --
+   set apart from the save buttons above so the natural next action reads
+   clearly once saving is done. */
+.reading-summary-next-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
 .reading-summary-cta-button {
-  flex: 1 1 100%;
+  flex: 1 1 200px;
 }
 
 .reading-summary-message {
@@ -2206,13 +2307,17 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .reading-summary-actions {
+  .reading-summary-actions,
+  .reading-summary-next-actions {
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
   }
 
-  .reading-summary-save-button {
-    flex: 1 1 auto;
+  .reading-summary-save-button,
+  .reading-summary-cta-button {
+    flex: 0 0 auto;
+    width: 100%;
   }
 
   .today-progress-label {
@@ -2663,10 +2768,20 @@ select {
 .reader-legend {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 12px;
-  margin-top: 14px;
+  margin: 10px 0 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--soft-bg);
   color: var(--muted);
   font-size: 12px;
+}
+
+.legend-title {
+  color: var(--text);
+  font-weight: 700;
 }
 
 .legend-item {
@@ -2707,18 +2822,42 @@ select {
 
 .token-sheet-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 10px;
   margin-bottom: 14px;
+}
+
+.token-sheet-title-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
 }
 
 .token-sheet-word {
   color: #0f172a;
   font-size: 26px;
   font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.token-sheet-position-badge {
+  flex: 0 0 auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--soft-bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .token-sheet-close {
+  flex: 0 0 auto;
+  width: auto;
   min-width: auto;
   padding: 8px 14px;
 }
@@ -2728,25 +2867,29 @@ select {
   color: var(--text);
 }
 
+/* Secondary-actions footer: word navigation and meaning edit/report read
+   as supporting actions, not primary ones -- set apart with a divider and
+   muted background so they don't compete with the status buttons above. */
+.token-sheet-secondary-actions {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
 .token-sheet-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 14px;
 }
 
 .token-sheet-nav-button {
-  flex: 0 0 auto;
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
   white-space: nowrap;
-}
-
-.token-sheet-nav-position {
-  flex: 1 1 auto;
-  text-align: center;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
 }
 
 .context-example-block {
@@ -2831,7 +2974,7 @@ select {
   }
 
   .token-chip {
-    padding: 4px 3px;
+    padding: 7px 4px;
   }
 
   .reader-mode-toggles {
@@ -2841,5 +2984,17 @@ select {
 
   .token-sheet-word {
     font-size: 22px;
+  }
+
+  .token-sheet {
+    padding: 16px;
+  }
+
+  .token-sheet-title-group {
+    gap: 6px;
+  }
+
+  .classify-actions {
+    gap: 8px;
   }
 }

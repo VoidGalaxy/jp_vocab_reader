@@ -186,6 +186,21 @@ export function ReaderMode({
           </label>
         </div>
       </div>
+      <div className="reader-legend">
+        <span className="legend-title">단어 상태 색상</span>
+        <span className="legend-item">
+          <span className="legend-swatch token-chip-known" /> 아는 단어
+        </span>
+        <span className="legend-item">
+          <span className="legend-swatch token-chip-uncertain" /> 헷갈리는 단어
+        </span>
+        <span className="legend-item">
+          <span className="legend-swatch token-chip-unknown" /> 모르는 단어
+        </span>
+        <span className="legend-item">
+          <span className="legend-swatch token-chip-unclassified" /> 미분류
+        </span>
+      </div>
       <div className="reader-text" ref={readerTextRef}>
         {layout.lines.map((line, lineIndex) => (
           <p className="reader-line" key={`line-${lineIndex}`}>
@@ -229,20 +244,6 @@ export function ReaderMode({
           </div>
         </div>
       ) : null}
-      <div className="reader-legend">
-        <span className="legend-item">
-          <span className="legend-swatch token-chip-known" /> 아는 단어
-        </span>
-        <span className="legend-item">
-          <span className="legend-swatch token-chip-uncertain" /> 헷갈리는 단어
-        </span>
-        <span className="legend-item">
-          <span className="legend-swatch token-chip-unknown" /> 모르는 단어
-        </span>
-        <span className="legend-item">
-          <span className="legend-swatch token-chip-unclassified" /> 미분류
-        </span>
-      </div>
       {activeToken ? (
         <TokenDetailSheet
           token={activeToken}

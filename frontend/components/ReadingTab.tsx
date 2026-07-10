@@ -2,9 +2,14 @@
 
 import type { FormEvent } from "react";
 import { ReaderMode } from "./ReaderMode";
-import { computeReadingSaveSummary } from "./coverageUtils";
+import { classifyMessageTone, computeReadingSaveSummary } from "./coverageUtils";
 import type { ReadingSaveMode } from "./coverageUtils";
 import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
+
+// Copyright-safe, hand-written sample so first-time users can try the flow
+// without pasting their own text first.
+const SAMPLE_TEXT =
+  "彼は闇の中で声を聞いた。少女は約束を思い出した。騎士は剣を握り、敵から王を守った。";
 
 type ReadingTabProps = {
   text: string;
@@ -27,6 +32,7 @@ type ReadingTabProps = {
   onToggleTextCollapsed: () => void;
   onSaveBatch: (mode: ReadingSaveMode) => void;
   onStartStudyFromSaved: () => void;
+  onGoToVocab: () => void;
   onSelectedTokenKeyChange: (key: string | null) => void;
   onDismissRestoredNotice: () => void;
   onResetSession: () => void;
@@ -88,6 +94,7 @@ export function ReadingTab({
   onToggleTextCollapsed,
   onSaveBatch,
   onStartStudyFromSaved,
+  onGoToVocab,
   onSelectedTokenKeyChange,
   onDismissRestoredNotice,
   onResetSession,
@@ -106,6 +113,14 @@ export function ReadingTab({
   const summary = hasResult
     ? computeReadingSaveSummary(tokens, vocabItems, selectedDeckId)
     : null;
+  const analyzeHint = !text.trim()
+    ? "원문을 입력하면 분석할 수 있습니다."
+    : !selectedDeckId
+      ? "읽기 덱을 선택하면 분석할 수 있습니다."
+      : isAnalyzing
+        ? "분석 중입니다. 잠시만 기다려주세요..."
+        : null;
+  const messageTone = classifyMessageTone(message);
 
   return (
     <section className="tab-panel" aria-live="polite">
@@ -167,6 +182,21 @@ export function ReadingTab({
 
           {showForm ? (
             <>
+              {!hasResult && !text.trim() ? (
+                <div className="reading-empty-guide">
+                  <p>읽고 싶은 일본어 문장을 붙여넣고 분석해보세요.</p>
+                  <p className="muted-text">
+                    모르는 단어를 클릭해 뜻과 읽기를 확인할 수 있습니다.
+                  </p>
+                  <button
+                    type="button"
+                    className="ghost-button compact-button"
+                    onClick={() => onTextChange(SAMPLE_TEXT)}
+                  >
+                    샘플 문장으로 체험
+                  </button>
+                </div>
+              ) : null}
               <textarea
                 id="reading-source-text"
                 value={text}
@@ -189,10 +219,14 @@ export function ReadingTab({
                   </select>
                 </label>
               </div>
-              <div className="actions">
-                <button type="submit" disabled={isAnalyzing || !selectedDeckId}>
+              <div className="actions actions-with-hint">
+                <button
+                  type="submit"
+                  disabled={isAnalyzing || !selectedDeckId || !text.trim()}
+                >
                   {isAnalyzing ? "분석 중..." : "읽기 분석"}
                 </button>
+                {analyzeHint ? <p className="action-hint">{analyzeHint}</p> : null}
               </div>
             </>
           ) : null}
@@ -207,7 +241,9 @@ export function ReadingTab({
         </p>
       </section>
 
-      {!summary && message ? <p className="message">{message}</p> : null}
+      {!summary && message ? (
+        <p className={`message message--${messageTone}`}>{message}</p>
+      ) : null}
 
       {summary ? (
         <section className="panel-card reading-summary-panel">
@@ -256,18 +292,41 @@ export function ReadingTab({
                 {isSavingBatch ? "저장 중..." : label}
               </button>
             ))}
+          </div>
+          {summary.saveableCount === 0 ? (
+            <p className="muted-text reading-summary-hint">
+              저장 가능한 단어가 없어요. 이미 학습 중인 단어일 수 있습니다.
+            </p>
+          ) : isSavingBatch ? (
+            <p className="muted-text reading-summary-hint">저장 중입니다...</p>
+          ) : null}
+          {message ? (
+            <p className={`message message--${messageTone} reading-summary-message`}>
+              {message}
+            </p>
+          ) : null}
+          <div className="reading-summary-next-actions">
             <button
               type="button"
               className="reading-summary-cta-button"
               onClick={onStartStudyFromSaved}
               disabled={!canStartFromSaved}
+              title={
+                canStartFromSaved
+                  ? undefined
+                  : "먼저 단어를 저장하면 바로 학습으로 이동할 수 있습니다."
+              }
             >
               저장한 단어로 바로 학습
             </button>
+            <button
+              type="button"
+              className="secondary-button reading-summary-cta-button"
+              onClick={onGoToVocab}
+            >
+              단어장 보기
+            </button>
           </div>
-          {message ? (
-            <p className="message reading-summary-message">{message}</p>
-          ) : null}
         </section>
       ) : null}
 
@@ -288,11 +347,15 @@ export function ReadingTab({
           onCancelMeaningEdit={onCancelMeaningEdit}
           onReportMeaning={onReportMeaning}
         />
-      ) : !isAnalyzing ? (
+      ) : isAnalyzing ? (
+        <p className="empty reading-loading-hint" role="status">
+          분석 중입니다. 잠시만 기다려주세요...
+        </p>
+      ) : (
         <p className="empty">
           덱을 선택하고 원문을 입력한 뒤 읽기 분석을 눌러주세요.
         </p>
-      ) : null}
+      )}
     </section>
   );
 }

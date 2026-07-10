@@ -99,6 +99,7 @@ type VocabSectionProps = {
   onStudySelectedDeck: () => void;
   onStatusChange: (itemId: number, status: TokenStatus) => void;
   onDelete: (itemId: number) => void;
+  onGoToReading: () => void;
 };
 
 export function VocabSection({
@@ -179,9 +180,12 @@ export function VocabSection({
   onStudySelectedDeck,
   onStatusChange,
   onDelete,
+  onGoToReading,
 }: VocabSectionProps) {
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [isCustomTermManagerOpen, setIsCustomTermManagerOpen] = useState(false);
+  const hasActiveFilter =
+    searchText.trim() !== "" || statusFilter !== "all" || dueOnly;
   const [isBackupToolsOpen, setIsBackupToolsOpen] = useState(false);
 
   return (
@@ -756,11 +760,26 @@ export function VocabSection({
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : hasActiveFilter ? (
         <p className="empty">
-          표시할 단어가 없습니다. 검색어와 필터를 바꾸거나 단어를 직접
-          추가해 보세요.
+          검색/필터 조건에 맞는 단어가 없습니다. 검색어와 필터를 바꾸거나
+          단어를 직접 추가해 보세요.
         </p>
+      ) : (
+        <div className="empty-guide">
+          <p>아직 저장된 단어가 없습니다.</p>
+          <p className="muted-text">
+            읽기 탭에서 원문을 분석하고 모르는 단어를 저장하면 이곳에
+            쌓입니다.
+          </p>
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={onGoToReading}
+          >
+            읽기 탭에서 단어 저장하기
+          </button>
+        </div>
       )}
     </section>
   );

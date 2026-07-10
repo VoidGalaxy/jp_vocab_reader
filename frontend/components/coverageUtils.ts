@@ -15,6 +15,28 @@ export function getTokenGroupKey(token: {
   return token.base_form || token.normalized_form || token.surface || "";
 }
 
+export type MessageTone = "info" | "success" | "error";
+
+// Reading-tab status/result messages are all authored in page.tsx as plain
+// strings (no separate tone field) -- this keeps a single visual language
+// (success/error/info) without threading a second piece of state through
+// every setReadingMessage call site.
+const ERROR_MESSAGE_PATTERN = /(실패|오류|찾지 못)/;
+const SUCCESS_MESSAGE_PATTERN = /(저장했습니다|건너뛰었습니다|복원했습니다|초기화했습니다)/;
+
+export function classifyMessageTone(message: string): MessageTone {
+  if (!message) {
+    return "info";
+  }
+  if (ERROR_MESSAGE_PATTERN.test(message)) {
+    return "error";
+  }
+  if (SUCCESS_MESSAGE_PATTERN.test(message)) {
+    return "success";
+  }
+  return "info";
+}
+
 function findMatchingVocabItem(
   token: { base_form: string; normalized_form: string; surface: string },
   vocabItems: VocabItem[],

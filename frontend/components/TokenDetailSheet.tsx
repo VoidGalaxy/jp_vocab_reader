@@ -64,34 +64,21 @@ export function TokenDetailSheet({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="token-sheet-header">
-          <span className="token-sheet-word">{label}</span>
+          <div className="token-sheet-title-group">
+            <span className="token-sheet-word">{label}</span>
+            {positionLabel ? (
+              <span className="token-sheet-position-badge">
+                {positionLabel}
+              </span>
+            ) : null}
+          </div>
           <button
             type="button"
             className="secondary-button token-sheet-close"
             onClick={onClose}
+            aria-label="단어 카드 닫기"
           >
             닫기
-          </button>
-        </div>
-        <div className="token-sheet-nav" role="group" aria-label="단어 이동">
-          <button
-            type="button"
-            className="ghost-button compact-button token-sheet-nav-button"
-            onClick={onPrevious}
-            disabled={!canGoPrevious}
-          >
-            ← 이전
-          </button>
-          {positionLabel ? (
-            <span className="token-sheet-nav-position">{positionLabel}</span>
-          ) : null}
-          <button
-            type="button"
-            className="ghost-button compact-button token-sheet-nav-button"
-            onClick={onNext}
-            disabled={!canGoNext}
-          >
-            다음 →
           </button>
         </div>
         <dl className="classify-details">
@@ -129,30 +116,46 @@ export function TokenDetailSheet({
             </dd>
           </div>
         </dl>
-        <div className="meaning-actions-row">
-          {vocabItemId !== null ? (
-            <MeaningQuickEdit
-              isEditing={isEditingMeaning}
-              draftValue={meaningEditDraft}
-              isSaving={isSavingMeaningEdit}
-              message={isEditingMeaning ? meaningEditMessage : ""}
-              onStartEdit={() =>
-                onStartMeaningEdit(vocabItemId, displayedMeaning)
-              }
-              onDraftChange={onMeaningEditDraftChange}
-              onSave={onSaveMeaningEdit}
-              onCancel={onCancelMeaningEdit}
-            />
-          ) : null}
-          {!isEditingMeaning ? (
-            <button
-              type="button"
-              className="ghost-button compact-button"
-              onClick={() => onReportMeaning(token)}
-            >
-              뜻 오류 신고
-            </button>
-          ) : null}
+        <p className="token-sheet-status">
+          현재 상태: <strong>{statusLabels[token.status]}</strong>
+        </p>
+        <div className="classify-actions" role="group" aria-label="단어 상태 변경">
+          <button
+            type="button"
+            className="success-button"
+            aria-pressed={token.status === "known"}
+            data-active={token.status === "known"}
+            onClick={() => onStatusChange("known")}
+          >
+            {statusLabels.known}
+          </button>
+          <button
+            type="button"
+            className="warning-button"
+            aria-pressed={token.status === "uncertain"}
+            data-active={token.status === "uncertain"}
+            onClick={() => onStatusChange("uncertain")}
+          >
+            {statusLabels.uncertain}
+          </button>
+          <button
+            type="button"
+            className="danger-button"
+            aria-pressed={token.status === "unknown"}
+            data-active={token.status === "unknown"}
+            onClick={() => onStatusChange("unknown")}
+          >
+            {statusLabels.unknown}
+          </button>
+          <button
+            type="button"
+            className="secondary-button"
+            aria-pressed={token.status === "unclassified"}
+            data-active={token.status === "unclassified"}
+            onClick={() => onStatusChange("unclassified")}
+          >
+            미분류 / 건너뛰기
+          </button>
         </div>
         <div className="context-example-block">
           <p className="context-example-label">문맥 예문</p>
@@ -185,38 +188,50 @@ export function TokenDetailSheet({
             </p>
           )}
         </div>
-        <p className="token-sheet-status">
-          현재 상태: <strong>{statusLabels[token.status]}</strong>
-        </p>
-        <div className="classify-actions">
-          <button
-            type="button"
-            className="success-button"
-            onClick={() => onStatusChange("known")}
-          >
-            {statusLabels.known}
-          </button>
-          <button
-            type="button"
-            className="warning-button"
-            onClick={() => onStatusChange("uncertain")}
-          >
-            {statusLabels.uncertain}
-          </button>
-          <button
-            type="button"
-            className="danger-button"
-            onClick={() => onStatusChange("unknown")}
-          >
-            {statusLabels.unknown}
-          </button>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => onStatusChange("unclassified")}
-          >
-            미분류 / 건너뛰기
-          </button>
+        <div className="token-sheet-secondary-actions">
+          <div className="token-sheet-nav" role="group" aria-label="단어 이동">
+            <button
+              type="button"
+              className="ghost-button compact-button token-sheet-nav-button"
+              onClick={onPrevious}
+              disabled={!canGoPrevious}
+            >
+              ← 이전
+            </button>
+            <button
+              type="button"
+              className="ghost-button compact-button token-sheet-nav-button"
+              onClick={onNext}
+              disabled={!canGoNext}
+            >
+              다음 →
+            </button>
+          </div>
+          <div className="meaning-actions-row">
+            {vocabItemId !== null ? (
+              <MeaningQuickEdit
+                isEditing={isEditingMeaning}
+                draftValue={meaningEditDraft}
+                isSaving={isSavingMeaningEdit}
+                message={isEditingMeaning ? meaningEditMessage : ""}
+                onStartEdit={() =>
+                  onStartMeaningEdit(vocabItemId, displayedMeaning)
+                }
+                onDraftChange={onMeaningEditDraftChange}
+                onSave={onSaveMeaningEdit}
+                onCancel={onCancelMeaningEdit}
+              />
+            ) : null}
+            {!isEditingMeaning ? (
+              <button
+                type="button"
+                className="ghost-button compact-button"
+                onClick={() => onReportMeaning(token)}
+              >
+                뜻 오류 신고
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
