@@ -9,6 +9,11 @@ type TokenDetailSheetProps = {
   token: TokenWithStatus;
   onClose: () => void;
   onStatusChange: (status: TokenStatus) => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  canGoPrevious: boolean;
+  canGoNext: boolean;
+  positionLabel: string | null;
   meaningEditItemId: number | null;
   meaningEditDraft: string;
   isSavingMeaningEdit: boolean;
@@ -24,6 +29,11 @@ export function TokenDetailSheet({
   token,
   onClose,
   onStatusChange,
+  onPrevious,
+  onNext,
+  canGoPrevious,
+  canGoNext,
+  positionLabel,
   meaningEditItemId,
   meaningEditDraft,
   isSavingMeaningEdit,
@@ -61,6 +71,27 @@ export function TokenDetailSheet({
             onClick={onClose}
           >
             닫기
+          </button>
+        </div>
+        <div className="token-sheet-nav" role="group" aria-label="단어 이동">
+          <button
+            type="button"
+            className="ghost-button compact-button token-sheet-nav-button"
+            onClick={onPrevious}
+            disabled={!canGoPrevious}
+          >
+            ← 이전
+          </button>
+          {positionLabel ? (
+            <span className="token-sheet-nav-position">{positionLabel}</span>
+          ) : null}
+          <button
+            type="button"
+            className="ghost-button compact-button token-sheet-nav-button"
+            onClick={onNext}
+            disabled={!canGoNext}
+          >
+            다음 →
           </button>
         </div>
         <dl className="classify-details">

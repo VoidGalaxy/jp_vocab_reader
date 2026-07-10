@@ -2728,6 +2728,27 @@ select {
   color: var(--text);
 }
 
+.token-sheet-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.token-sheet-nav-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.token-sheet-nav-position {
+  flex: 1 1 auto;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .context-example-block {
   display: grid;
   gap: 6px;

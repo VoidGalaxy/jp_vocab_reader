@@ -22,6 +22,7 @@ export function isMutedToken(token: Pick<TokenWithStatus, "part_of_speech">): bo
 
 type TokenChipProps = {
   token: TokenWithStatus;
+  tokenIndex: number;
   isActive: boolean;
   focusMode: boolean;
   showJlptTags: boolean;
@@ -30,6 +31,7 @@ type TokenChipProps = {
 
 export function TokenChip({
   token,
+  tokenIndex,
   isActive,
   focusMode,
   showJlptTags,
@@ -67,6 +69,7 @@ export function TokenChip({
     <button
       type="button"
       className={classNames.join(" ")}
+      data-token-index={tokenIndex}
       onClick={onSelect}
       title={
         jlptLevel ? `${title} · JLPT 추천 레벨: ${jlptLevel}` : title

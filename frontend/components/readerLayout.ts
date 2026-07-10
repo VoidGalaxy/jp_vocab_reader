@@ -2,6 +2,40 @@ import type { TokenWithStatus } from "./types";
 
 const SENTENCE_ENDING_CHARS = new Set(["。", "！", "？", "!", "?"]);
 
+// Every token that reaches the frontend is already clickable in reader mode
+// (particles/aux-verbs/punctuation/whitespace are filtered out server-side,
+// see backend EXCLUDED_POS) -- but symbol-class tokens ("기호") still slip
+// through as low-value nav targets (TokenChip renders them muted for the
+// same reason). Previous/next word navigation reuses that existing
+// clickable set, only narrowing it to skip symbols, so it stays in sync
+// with whatever is actually clickable instead of inventing a new filter.
+const NON_NAVIGABLE_POS = new Set(["기호"]);
+
+export function isNavigableToken(
+  token: Pick<TokenWithStatus, "surface" | "base_form" | "part_of_speech">,
+): boolean {
+  const label = (token.surface || token.base_form || "").trim();
+  if (!label) {
+    return false;
+  }
+  return !NON_NAVIGABLE_POS.has(token.part_of_speech);
+}
+
+// tokens[] is already ordered by first-occurrence position in the original
+// text (the backend dedupes by base_form at tokenize time, appending each
+// token the first time its base_form is seen), so previous/next navigation
+// can walk this array directly without re-deriving order from the rendered
+// layout.
+export function getNavigableTokenIndexes(tokens: TokenWithStatus[]): number[] {
+  const indexes: number[] = [];
+  tokens.forEach((token, index) => {
+    if (isNavigableToken(token)) {
+      indexes.push(index);
+    }
+  });
+  return indexes;
+}
+
 export type ReaderInlineSegment =
   | { type: "text"; key: string; content: string }
   | { type: "token"; key: string; tokenIndex: number };
