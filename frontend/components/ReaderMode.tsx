@@ -50,6 +50,12 @@ type ReaderModeProps = {
   // off last time, not at wherever they've scrolled to just now.
   initialScrollFraction?: number | null;
   onScrollProgressChange?: (fraction: number) => void;
+  // Imperative "select this token" channel for triggers outside the reader
+  // itself (currently: the word-list panel). requestId must increment on
+  // every request, including repeat clicks on the same tokenIndex, so the
+  // effect below can tell "new click" apart from "unrelated re-render with
+  // the same prop value" -- a plain tokenIndex-only prop couldn't do that.
+  externalSelectRequest?: { tokenIndex: number; requestId: number } | null;
   meaningEditItemId: number | null;
   meaningEditDraft: string;
   isSavingMeaningEdit: boolean;
@@ -69,6 +75,7 @@ export function ReaderMode({
   onSelectedTokenKeyChange,
   initialScrollFraction = null,
   onScrollProgressChange,
+  externalSelectRequest = null,
   meaningEditItemId,
   meaningEditDraft,
   isSavingMeaningEdit,
@@ -103,6 +110,11 @@ export function ReaderMode({
   const bookmarkScrollFractionRef = useRef<number | null>(
     initialScrollFraction,
   );
+  // Tracks the last externalSelectRequest.requestId actually applied, so a
+  // repeat click on the same word (same tokenIndex, new requestId) still
+  // re-triggers the select+scroll, while an unrelated re-render that just
+  // echoes the same request object back doesn't reapply it forever.
+  const lastHandledExternalRequestIdRef = useRef<number | null>(null);
 
   const scrollToFraction = useCallback(
     (fraction: number, behavior: ScrollBehavior) => {
@@ -151,6 +163,26 @@ export function ReaderMode({
     }
     setHasAppliedInitialSelection(true);
   }, [hasAppliedInitialSelection, initialSelectedTokenKey, tokens]);
+
+  // Handles an external "jump to this word" request (the word-list panel).
+  // Inlines the same select+notify steps selectToken does below rather than
+  // calling it directly, since that function is declared after the early
+  // tokens.length===0 return and hooks can't depend on post-return bindings.
+  useEffect(() => {
+    if (
+      !externalSelectRequest ||
+      lastHandledExternalRequestIdRef.current === externalSelectRequest.requestId
+    ) {
+      return;
+    }
+    lastHandledExternalRequestIdRef.current = externalSelectRequest.requestId;
+    const { tokenIndex } = externalSelectRequest;
+    if (tokenIndex < 0 || tokenIndex >= tokens.length) {
+      return;
+    }
+    setActiveIndex(tokenIndex);
+    onSelectedTokenKeyChange?.(getTokenGroupKey(tokens[tokenIndex]));
+  }, [externalSelectRequest, tokens, onSelectedTokenKeyChange]);
 
   // Restores scroll position on mount when there's no token bookmark to
   // restore to instead (the token-restore effect above already scrolls the

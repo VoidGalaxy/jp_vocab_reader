@@ -5,6 +5,7 @@ import type {
   TokenWithStatus,
   VocabItem,
 } from "./types";
+import { getNavigableTokenIndexes } from "./readerLayout";
 
 // base_form 우선, 없으면 normalized_form, 그다음 surface로 묶는다.
 export function getTokenGroupKey(token: {
@@ -315,4 +316,81 @@ export function buildPriorityStudyList(
     status,
     tokenIndex,
   }));
+}
+
+// tokens[] is already one entry per unique word (base_form/normalized_form/
+// surface deduped, both by the backend within a single /analyze call and by
+// the reading tab's chunk-merge step across chunks -- see
+// mergeAnalyzedTokens in readingChunkAnalyze.ts), with occurrence_count
+// already summed. So "grouping duplicate words" for the reading-tab word
+// list is just: reuse the same navigable-token filter the reader/nav
+// already use, and attach each entry's live status/save state -- no
+// separate re-grouping pass needed.
+export type ReadingVocabEntry = {
+  tokenIndex: number;
+  token: TokenWithStatus;
+  status: TokenStatus;
+  isSaved: boolean;
+  // Mirrors resolveReadingSaveTargets' bucket logic: everything except
+  // "known" is a save candidate (a never-saved word defaults to "unknown").
+  isSaveable: boolean;
+};
+
+export function computeReadingVocabEntries(
+  tokens: TokenWithStatus[],
+  vocabItems: VocabItem[],
+  deckId: string,
+): ReadingVocabEntry[] {
+  return getNavigableTokenIndexes(tokens).map((tokenIndex) => {
+    const token = tokens[tokenIndex];
+    const status = getTokenStatus(token, vocabItems, deckId);
+    const isSaved = isTokenSavedInDeck(token, vocabItems, deckId);
+    return {
+      tokenIndex,
+      token,
+      status,
+      isSaved,
+      isSaveable: status !== "known",
+    };
+  });
+}
+
+export type ReadingVocabFilter =
+  | "all"
+  | "unknown"
+  | "uncertain"
+  | "unclassified"
+  | "known"
+  | "saveable";
+
+export function filterReadingVocabEntries(
+  entries: ReadingVocabEntry[],
+  filter: ReadingVocabFilter,
+): ReadingVocabEntry[] {
+  if (filter === "all") {
+    return entries;
+  }
+  if (filter === "saveable") {
+    return entries.filter((entry) => entry.isSaveable);
+  }
+  return entries.filter((entry) => entry.status === filter);
+}
+
+export function searchReadingVocabEntries(
+  entries: ReadingVocabEntry[],
+  query: string,
+): ReadingVocabEntry[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) {
+    return entries;
+  }
+  return entries.filter(({ token }) => {
+    return (
+      token.surface.toLowerCase().includes(normalized) ||
+      token.base_form.toLowerCase().includes(normalized) ||
+      token.reading.toLowerCase().includes(normalized) ||
+      token.meaning_ko.toLowerCase().includes(normalized) ||
+      (token.savedMeaningKo || "").toLowerCase().includes(normalized)
+    );
+  });
 }

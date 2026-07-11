@@ -1,7 +1,8 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { ReaderMode } from "./ReaderMode";
+import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import { classifyMessageTone, computeReadingSaveSummary } from "./coverageUtils";
 import type { ReadingSaveMode } from "./coverageUtils";
 import type { ChunkAnalyzeProgress } from "./readingChunkAnalyze";
@@ -121,6 +122,24 @@ export function ReadingTab({
 }: ReadingTabProps) {
   const hasResult = tokens.length > 0;
   const showForm = !hasResult || !isTextCollapsed;
+  // Imperative "jump to this word" channel from the word-list panel to
+  // ReaderMode -- purely a UI wiring concern local to this tab, so it
+  // doesn't need to live in page.tsx or localStorage (the resulting
+  // selection/scroll gets persisted through the existing
+  // onSelectedTokenKeyChange/onScrollProgressChange pipes once applied).
+  const [externalSelectRequest, setExternalSelectRequest] = useState<{
+    tokenIndex: number;
+    requestId: number;
+  } | null>(null);
+  const externalSelectRequestIdRef = useRef(0);
+
+  function handleVocabPanelSelect(tokenIndex: number) {
+    externalSelectRequestIdRef.current += 1;
+    setExternalSelectRequest({
+      tokenIndex,
+      requestId: externalSelectRequestIdRef.current,
+    });
+  }
   const summary = hasResult
     ? computeReadingSaveSummary(tokens, vocabItems, selectedDeckId)
     : null;
@@ -383,6 +402,16 @@ export function ReadingTab({
       ) : null}
 
       {hasResult ? (
+        <ReadingVocabPanel
+          tokens={tokens}
+          vocabItems={vocabItems}
+          selectedDeckId={selectedDeckId}
+          selectedTokenKey={selectedTokenKey}
+          onSelectToken={handleVocabPanelSelect}
+        />
+      ) : null}
+
+      {hasResult ? (
         <ReaderMode
           originalText={analyzedText}
           tokens={tokens}
@@ -391,6 +420,7 @@ export function ReadingTab({
           onSelectedTokenKeyChange={onSelectedTokenKeyChange}
           initialScrollFraction={scrollFraction}
           onScrollProgressChange={onScrollProgressChange}
+          externalSelectRequest={externalSelectRequest}
           meaningEditItemId={meaningEditItemId}
           meaningEditDraft={meaningEditDraft}
           isSavingMeaningEdit={isSavingMeaningEdit}

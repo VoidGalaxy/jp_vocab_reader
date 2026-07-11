@@ -1323,6 +1323,156 @@ select {
   justify-self: start;
 }
 
+.reading-vocab-panel {
+  gap: 12px;
+}
+
+.reading-vocab-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.reading-vocab-search {
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.reading-vocab-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.reading-vocab-filter-button {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reading-vocab-filter-button:hover {
+  filter: brightness(0.97);
+}
+
+.reading-vocab-filter-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.reading-vocab-empty {
+  margin: 0;
+  font-size: 13px;
+}
+
+.reading-vocab-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  max-height: 360px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.reading-vocab-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #ffffff;
+  color: var(--text);
+  text-align: left;
+}
+
+.reading-vocab-item:hover {
+  border-color: var(--border-strong);
+  transform: none;
+}
+
+.reading-vocab-item-active {
+  border-color: #f6d675;
+  background: #fef3b8;
+}
+
+.reading-vocab-item-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.reading-vocab-item-word {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.reading-vocab-item-reading {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.reading-vocab-item-meaning {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reading-vocab-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.reading-vocab-status-badge {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reading-vocab-occurrence {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.reading-vocab-saved-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .reading-vocab-item {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .reading-vocab-item-meta {
+    justify-content: flex-start;
+  }
+}
+
 
 .reading-summary-highlight {
   display: inline-flex;
