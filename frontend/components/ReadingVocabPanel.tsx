@@ -230,7 +230,7 @@ export function ReadingVocabPanel({
         <div className="reading-vocab-save-selected-row">
           <button
             type="button"
-            className="secondary-button reading-vocab-save-selected-button"
+            className="reading-vocab-save-selected-button"
             onClick={() => void handleSaveSelected()}
             disabled={selectedCount === 0 || isSaving}
             title={
@@ -258,7 +258,12 @@ export function ReadingVocabPanel({
             const label = entry.token.surface || entry.token.base_form;
             const meaning = entry.token.savedMeaningKo || entry.token.meaning_ko;
             return (
-              <li key={`${key}-${entry.tokenIndex}`} className="reading-vocab-item-row">
+              <li
+                key={`${key}-${entry.tokenIndex}`}
+                className={`reading-vocab-item-row${
+                  isChecked ? " reading-vocab-item-row-checked" : ""
+                }`}
+              >
                 {entry.isSaveable ? (
                   <input
                     type="checkbox"

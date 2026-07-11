@@ -1470,15 +1470,15 @@ select {
 
 .reading-vocab-item-checkbox {
   flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   min-height: 0;
   accent-color: var(--primary);
 }
 
 .reading-vocab-item-checkbox-placeholder {
   flex: 0 0 auto;
-  width: 20px;
+  width: 22px;
 }
 
 .reading-vocab-item {
@@ -1494,11 +1494,20 @@ select {
   background: var(--panel-bg);
   color: var(--text);
   text-align: left;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease;
 }
 
 .reading-vocab-item:hover {
   border-color: var(--border-strong);
   transform: none;
+}
+
+/* Checkbox-selected row -- a quiet accent bar, independent of
+   .reading-vocab-item-active (the amber "currently open in reader" cue)
+   so both can combine without one overriding the other's meaning. */
+.reading-vocab-item-row-checked .reading-vocab-item {
+  border-color: var(--primary);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .reading-vocab-item-active {
@@ -1549,6 +1558,10 @@ select {
 }
 
 .reading-vocab-occurrence {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft-bg);
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
@@ -2911,8 +2924,8 @@ select {
 
 .reader-mode {
   border: 1px solid var(--paper-border);
-  border-radius: 12px;
-  padding: 22px;
+  border-radius: 14px;
+  padding: 28px;
   background: var(--paper-bg);
   box-shadow: 0 10px 26px var(--paper-shadow);
 }
@@ -3013,14 +3026,16 @@ select {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  color: #2b2620;
-  font-size: 18px;
+  max-width: 740px;
+  margin: 0 auto;
+  color: var(--text);
+  font-size: 19px;
   line-height: 2.2;
 }
 
 .reader-line {
   margin: 0;
-  padding: 4px 0;
+  padding: 6px 0;
   line-height: inherit;
   word-break: keep-all;
   /* Preserves any incidental runs of spaces from the pasted text (real
@@ -3057,9 +3072,9 @@ select {
   display: inline;
   min-width: 0;
   margin: 0;
-  padding: 3px 2px;
+  padding: 4px 3px;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   color: inherit;
   background: transparent;
   font-size: inherit;
@@ -3230,6 +3245,12 @@ select {
   overflow-wrap: anywhere;
 }
 
+.token-sheet-reading {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
 .token-sheet-position-badge {
   flex: 0 0 auto;
   padding: 2px 9px;
@@ -3283,15 +3304,16 @@ select {
   display: grid;
   gap: 6px;
   margin-top: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid #ecdfb8;
+  border-left: 4px solid #e8c25c;
   border-radius: 8px;
   padding: 12px 14px;
-  background: var(--soft-bg);
+  background: #fdf9ee;
 }
 
 .context-example-label {
   margin: 0;
-  color: var(--muted);
+  color: #8a6d1f;
   font-size: 12px;
   font-weight: 700;
 }
@@ -3300,7 +3322,7 @@ select {
   margin: 0;
   color: var(--text);
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.7;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }

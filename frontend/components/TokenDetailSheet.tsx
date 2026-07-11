@@ -66,6 +66,9 @@ export function TokenDetailSheet({
         <div className="token-sheet-header">
           <div className="token-sheet-title-group">
             <span className="token-sheet-word">{label}</span>
+            {token.reading && token.reading !== label ? (
+              <span className="token-sheet-reading">{token.reading}</span>
+            ) : null}
             {positionLabel ? (
               <span className="token-sheet-position-badge">
                 {positionLabel}
