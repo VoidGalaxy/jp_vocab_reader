@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { ReaderMode } from "./ReaderMode";
 import { classifyMessageTone, computeReadingSaveSummary } from "./coverageUtils";
 import type { ReadingSaveMode } from "./coverageUtils";
+import type { ChunkAnalyzeProgress } from "./readingChunkAnalyze";
 import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 
 // Copyright-safe, hand-written sample so first-time users can try the flow
@@ -19,7 +20,10 @@ type ReadingTabProps = {
   decks: Deck[];
   selectedDeckId: string;
   isAnalyzing: boolean;
+  analyzeProgress: ChunkAnalyzeProgress | null;
+  onCancelAnalyze: () => void;
   message: string;
+  storageWarning: string;
   isTextCollapsed: boolean;
   isSavingBatch: boolean;
   canStartFromSaved: boolean;
@@ -81,7 +85,10 @@ export function ReadingTab({
   decks,
   selectedDeckId,
   isAnalyzing,
+  analyzeProgress,
+  onCancelAnalyze,
   message,
+  storageWarning,
   isTextCollapsed,
   isSavingBatch,
   canStartFromSaved,
@@ -232,6 +239,44 @@ export function ReadingTab({
           ) : null}
         </form>
 
+        {isAnalyzing && analyzeProgress && analyzeProgress.total > 1 ? (
+          <div
+            className="reading-analyze-progress"
+            role="status"
+            aria-live="polite"
+          >
+            <p className="reading-analyze-progress-label">
+              긴 원문을 문단·문장 단위로 나눠 분석하고 있습니다.
+            </p>
+            <p className="reading-analyze-progress-count">
+              {analyzeProgress.current} / {analyzeProgress.total} 조각 분석 중
+            </p>
+            <div
+              className="reading-analyze-progress-bar"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={analyzeProgress.total}
+              aria-valuenow={analyzeProgress.current}
+            >
+              <div
+                className="reading-analyze-progress-bar-fill"
+                style={{
+                  width: `${Math.round(
+                    (analyzeProgress.current / analyzeProgress.total) * 100,
+                  )}%`,
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onCancelAnalyze}
+            >
+              분석 취소
+            </button>
+          </div>
+        ) : null}
+
         <p className="muted-text copyright-note">
           입력한 원문은 분석에만 사용되며, 원문 전체는 서버에 저장되지 않고
           공유 덱에도 포함되지 않습니다. 이어서 읽을 수 있도록 이 브라우저에만
@@ -239,6 +284,9 @@ export function ReadingTab({
           있습니다. 단어 저장 시 해당 단어가 포함된 짧은 문장만 예문으로
           저장됩니다.
         </p>
+        {storageWarning ? (
+          <p className="muted-text reading-storage-warning">{storageWarning}</p>
+        ) : null}
       </section>
 
       {!summary && message ? (
@@ -348,9 +396,11 @@ export function ReadingTab({
           onReportMeaning={onReportMeaning}
         />
       ) : isAnalyzing ? (
-        <p className="empty reading-loading-hint" role="status">
-          분석 중입니다. 잠시만 기다려주세요...
-        </p>
+        (!analyzeProgress || analyzeProgress.total <= 1) ? (
+          <p className="empty reading-loading-hint" role="status">
+            분석 중입니다. 잠시만 기다려주세요...
+          </p>
+        ) : null
       ) : (
         <p className="empty">
           덱을 선택하고 원문을 입력한 뒤 읽기 분석을 눌러주세요.

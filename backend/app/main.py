@@ -77,6 +77,7 @@ from app.repositories.vocab_repository import (
 from app.dictionary_service import lookup_meaning
 from app.settings import APP_NAME, get_cors_allow_origins
 from app.schemas import (
+    ANALYZE_TEXT_MAX_LENGTH,
     AnalyzeRequest,
     AnalyzeResponse,
     AuthLoginRequest,
@@ -359,6 +360,14 @@ def analyze(request: AnalyzeRequest, http_request: Request) -> AnalyzeResponse:
     user_id = current_user_id(http_request)
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="text must not be blank")
+    if len(request.text) > ANALYZE_TEXT_MAX_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "한 번에 분석할 수 있는 글자 수를 초과했습니다. "
+                "앱에서 자동 분할 분석 기능을 사용해주세요."
+            ),
+        )
 
     if request.deck_id is not None and not get_deck_by_id(user_id, request.deck_id):
         raise HTTPException(status_code=404, detail="deck not found")

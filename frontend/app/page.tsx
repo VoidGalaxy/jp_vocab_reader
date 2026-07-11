@@ -11,9 +11,14 @@ import {
 import type { ReadingSaveMode } from "../components/coverageUtils";
 import { InfoSection } from "../components/InfoSection";
 import { MeaningFeedbackModal } from "../components/MeaningFeedbackModal";
+import {
+  analyzeLongTextInChunks,
+  type ChunkAnalyzeProgress,
+} from "../components/readingChunkAnalyze";
 import { ReadingTab } from "../components/ReadingTab";
 import { SharedDeckSection } from "../components/SharedDeckSection";
 import { withObjectParticle } from "../components/shared";
+import { splitTextIntoChunks } from "../components/textChunking";
 import { StudySection } from "../components/StudySection";
 import { VocabSection } from "../components/VocabSection";
 import type {
@@ -332,7 +337,12 @@ function parseClassificationDraft(value: string | null): ClassificationDraft | n
 // fresh on restore so "already saved"/example-sentence state reflects the
 // live server rather than a possibly-stale local copy.
 const READING_SESSION_KEY = "jp-vocab-reader:reading-session-v1";
-const MAX_READING_SESSION_TEXT_LENGTH = 20000;
+// Long original texts (chunk-analyzed novels/web-novel excerpts) can now
+// legitimately run well past the old 20,000-char ceiling -- raised so a
+// full chunked read still gets to persist locally. Still bounded (and still
+// wrapped in try/catch below) so a truly enormous paste can't hang the tab
+// on a slow localStorage write or silently blow the origin's quota.
+const MAX_READING_SESSION_TEXT_LENGTH = 200000;
 const MAX_MEANING_KO_LENGTH = 200;
 
 type ReadingSession = {
@@ -437,11 +447,15 @@ function parseReadingSession(value: string | null): ReadingSession | null {
   }
 }
 
+// Returns whether the session was actually persisted (or intentionally
+// cleared because there was nothing to save) -- false means "skipped due to
+// size or a localStorage failure", which the caller surfaces as a soft
+// inline notice rather than silently losing the user's place.
 function persistReadingSession(
   session: Omit<ReadingSession, "version" | "updatedAt">,
-) {
+): boolean {
   if (typeof window === "undefined") {
-    return;
+    return true;
   }
   try {
     if (
@@ -452,11 +466,11 @@ function persistReadingSession(
       // than risk a slow/failing localStorage write, or restoring a huge
       // blob later. The user can still work with it in-memory this session.
       window.localStorage.removeItem(READING_SESSION_KEY);
-      return;
+      return false;
     }
     if (!session.originalText && session.tokens.length === 0) {
       window.localStorage.removeItem(READING_SESSION_KEY);
-      return;
+      return true;
     }
     const payload: ReadingSession = {
       version: 1,
@@ -464,9 +478,11 @@ function persistReadingSession(
       updatedAt: new Date().toISOString(),
     };
     window.localStorage.setItem(READING_SESSION_KEY, JSON.stringify(payload));
+    return true;
   } catch {
     // localStorage can throw (quota exceeded, disabled, private mode) --
     // never let persistence failures break the reading tab itself.
+    return false;
   }
 }
 
@@ -567,7 +583,16 @@ export default function HomePage() {
     [],
   );
   const [isReadingAnalyzing, setIsReadingAnalyzing] = useState(false);
+  // Non-null only while a multi-chunk analysis is in flight -- drives the
+  // "N / total 조각 분석 중" progress UI. Left null for the common short-text
+  // case (single chunk) so nothing changes there.
+  const [readingAnalyzeProgress, setReadingAnalyzeProgress] =
+    useState<ChunkAnalyzeProgress | null>(null);
+  const readingAnalyzeAbortRef = useRef<AbortController | null>(null);
   const [readingMessage, setReadingMessage] = useState("");
+  // Soft, separate notice for "couldn't persist to localStorage" -- kept out
+  // of readingMessage so it never clobbers the analyze/save result message.
+  const [readingStorageWarning, setReadingStorageWarning] = useState("");
   const [isReadingTextCollapsed, setIsReadingTextCollapsed] = useState(false);
   const [isSavingReadingBatch, setIsSavingReadingBatch] = useState(false);
   const [recentlySavedVocabItemIds, setRecentlySavedVocabItemIds] = useState<
@@ -723,7 +748,7 @@ export default function HomePage() {
   // typing from writing to localStorage on every keystroke.
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      persistReadingSession({
+      const persisted = persistReadingSession({
         originalText: readingText,
         analyzedText: analyzedReadingText,
         deckId: readingSelectedDeckId,
@@ -733,6 +758,11 @@ export default function HomePage() {
         isTextCollapsed: isReadingTextCollapsed,
         recentlySavedVocabItemIds,
       });
+      setReadingStorageWarning(
+        persisted
+          ? ""
+          : "브라우저 저장 공간이 부족해 이어읽기 저장은 생략되었습니다.",
+      );
     }, 600);
     return () => window.clearTimeout(timeoutId);
   }, [
@@ -1152,6 +1182,12 @@ export default function HomePage() {
   // colors match the deck the user picked. The original text only ever lives
   // in this component's React state (and the classification draft in
   // localStorage) -- it is never sent anywhere for server-side storage.
+  //
+  // Long text is split into chunks (splitTextIntoChunks) and each chunk is
+  // sent to /analyze one at a time (analyzeLongTextInChunks) -- never all at
+  // once -- with results merged back into a single deduped token list in
+  // original-text order. For ordinary short text this still runs the same
+  // path with exactly one chunk, so nothing changes there.
   async function performReadingAnalyze(analyzeText: string, deckId: string) {
     if (!analyzeText.trim()) {
       setReadingMessage("읽을 일본어 원문을 입력해 주세요.");
@@ -1162,45 +1198,91 @@ export default function HomePage() {
       setReadingMessage("읽기 덱을 선택해 주세요.");
       return;
     }
+    if (isReadingAnalyzing) {
+      return;
+    }
+
+    const chunks = splitTextIntoChunks(analyzeText);
+    if (chunks.length === 0) {
+      setReadingMessage("읽을 일본어 원문을 입력해 주세요.");
+      setReadingTokens([]);
+      return;
+    }
 
     setIsReadingAnalyzing(true);
     setReadingMessage("");
     setRecentlySavedVocabItemIds([]);
     setCurrentSelectedTokenKey(null);
     setIsReadingSessionRestored(false);
+    setReadingAnalyzeProgress({ current: 0, total: chunks.length });
+
+    const abortController = new AbortController();
+    readingAnalyzeAbortRef.current = abortController;
 
     try {
-      const [analyzeResponse, deckVocabResponse] = await Promise.all([
-        apiFetch("/analyze", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
+      const [outcome, deckVocabResponse] = await Promise.all([
+        analyzeLongTextInChunks(
+          chunks,
+          async (chunkText, signal) => {
+            const response = await apiFetch("/analyze", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                text: chunkText,
+                deck_id: Number(deckId),
+                include_known: true,
+              }),
+              signal,
+            });
+            if (!response.ok) {
+              throw new Error(`분석 요청에 실패했습니다. (${response.status})`);
+            }
+            return (await response.json()) as AnalyzeResponse;
           },
-          body: JSON.stringify({
-            text: analyzeText,
-            deck_id: Number(deckId),
-            include_known: true,
-          }),
-        }),
+          {
+            signal: abortController.signal,
+            onProgress: (progress) => setReadingAnalyzeProgress(progress),
+          },
+        ),
         requestJson<VocabItemsResponse>(`/vocab-items?deck_id=${deckId}`),
       ]);
 
-      if (!analyzeResponse.ok) {
-        throw new Error(`분석 요청에 실패했습니다. (${analyzeResponse.status})`);
+      if (outcome.cancelled) {
+        // A user-initiated cancel mid-analysis shouldn't wipe out whatever
+        // reading session (if any) was already on screen before this
+        // (re-)analysis started.
+        setReadingMessage("분석을 취소했습니다.");
+        return;
       }
 
-      const analyzeData = (await analyzeResponse.json()) as AnalyzeResponse;
       const deckItems = deckVocabResponse.items;
-      const derivedTokens = deriveReadingTokens(
-        analyzeData.tokens,
-        deckItems,
-        deckId,
-      );
+
+      if (outcome.tokens.length === 0 && outcome.failedChunkCount > 0) {
+        setReadingMessage(
+          `분석에 실패했습니다. 잠시 후 다시 시도해주세요. (${outcome.failedChunkCount}/${outcome.totalChunkCount} 조각 실패)`,
+        );
+        setReadingTokens([]);
+        return;
+      }
+
+      const derivedTokens = deriveReadingTokens(outcome.tokens, deckItems, deckId);
 
       setReadingTokens(derivedTokens);
       setReadingDeckVocabItems(deckItems);
       setAnalyzedReadingText(analyzeText);
       setIsReadingTextCollapsed(true);
+
+      if (outcome.failedChunkCount > 0) {
+        setReadingMessage(
+          `전체 ${outcome.totalChunkCount}조각 중 ${outcome.failedChunkCount}개 구간 분석에 실패했습니다. 나머지는 정상적으로 분석되었습니다. 실패한 구간은 다시 분석해 주세요.`,
+        );
+      } else if (chunks.length > 1) {
+        setReadingMessage(
+          `긴 원문을 ${chunks.length}조각으로 나눠 분석을 완료했습니다.`,
+        );
+      }
     } catch (error) {
       setReadingMessage(
         `분석에 실패했습니다. 잠시 후 다시 시도해주세요. (${getErrorMessage(error, "알 수 없는 오류")})`,
@@ -1208,12 +1290,18 @@ export default function HomePage() {
       setReadingTokens([]);
     } finally {
       setIsReadingAnalyzing(false);
+      setReadingAnalyzeProgress(null);
+      readingAnalyzeAbortRef.current = null;
     }
   }
 
   function handleReadingAnalyze(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void performReadingAnalyze(readingText, readingSelectedDeckId);
+  }
+
+  function cancelReadingAnalyze() {
+    readingAnalyzeAbortRef.current?.abort();
   }
 
   function toggleReadingTextCollapsed() {
@@ -1262,6 +1350,7 @@ export default function HomePage() {
     setReadingTokens([]);
     setReadingDeckVocabItems([]);
     setReadingMessage("현재 읽기 작업을 초기화했습니다.");
+    setReadingStorageWarning("");
     setIsReadingTextCollapsed(false);
     setRecentlySavedVocabItemIds([]);
     setCurrentSelectedTokenKey(null);
@@ -2689,7 +2778,10 @@ export default function HomePage() {
             decks={decks}
             selectedDeckId={readingSelectedDeckId}
             isAnalyzing={isReadingAnalyzing}
+            analyzeProgress={readingAnalyzeProgress}
+            onCancelAnalyze={cancelReadingAnalyze}
             message={readingMessage}
+            storageWarning={readingStorageWarning}
             isTextCollapsed={isReadingTextCollapsed}
             isSavingBatch={isSavingReadingBatch}
             canStartFromSaved={recentlySavedVocabItemIds.length > 0}

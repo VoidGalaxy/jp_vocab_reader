@@ -33,6 +33,14 @@ class AuthTokenResponse(BaseModel):
     user: UserResponse
 
 
+# Per-request safety ceiling for /analyze. The frontend reading tab never
+# hits this in normal use -- it splits long original text into chunks well
+# under this size before sending each request (see
+# frontend/components/textChunking.ts). This exists to bound abnormal/direct
+# API calls, not to cap how long a user's original text can be.
+ANALYZE_TEXT_MAX_LENGTH = 8000
+
+
 class AnalyzeRequest(BaseModel):
     text: str = Field(...)
     deck_id: int | None = None
