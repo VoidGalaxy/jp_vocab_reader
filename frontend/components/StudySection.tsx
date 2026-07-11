@@ -325,12 +325,41 @@ export function StudySection({
 
       {currentItem && !isComplete ? (
         <div className="study-card">
-          <div className="study-card-header">
+          <div
+            className={`study-card-header${
+              studyMode === "recent" ? " study-card-header-recent" : ""
+            }`}
+          >
             <span>{modeLabel}</span>
             <strong>{visibleProgress}</strong>
           </div>
+          <div
+            className="progress-bar study-card-progress"
+            role="progressbar"
+            aria-label="세션 진행률"
+            aria-valuemin={0}
+            aria-valuemax={items.length}
+            aria-valuenow={Math.min(currentIndex + 1, items.length)}
+          >
+            <div
+              style={{
+                width:
+                  items.length > 0
+                    ? `${Math.round(
+                        (Math.min(currentIndex + 1, items.length) / items.length) * 100,
+                      )}%`
+                    : "0%",
+              }}
+            />
+          </div>
           <div className="study-front">
-            <div>{currentItem.surface || currentItem.base_form}</div>
+            <div className="study-front-word">
+              {currentItem.surface || currentItem.base_form}
+            </div>
+            {currentItem.reading &&
+            currentItem.reading !== (currentItem.surface || currentItem.base_form) ? (
+              <div className="study-front-reading">{currentItem.reading}</div>
+            ) : null}
             <span>{currentItem.part_of_speech || "품사 없음"}</span>
           </div>
           {isAnswerVisible ? (
@@ -382,7 +411,12 @@ export function StudySection({
               </div>
               {currentItem.example_sentence ? (
                 <div className="study-example-callout">
-                  <span className="study-example-label">문맥 예문</span>
+                  <div className="study-example-heading">
+                    <span className="study-example-label">문맥 예문</span>
+                    <span className="study-example-sublabel">
+                      이 단어가 나온 문장
+                    </span>
+                  </div>
                   <p className="study-example-text">
                     <HighlightedExample
                       sentence={currentItem.example_sentence}
@@ -392,7 +426,9 @@ export function StudySection({
                     />
                   </p>
                 </div>
-              ) : null}
+              ) : (
+                <p className="study-example-empty">저장된 문맥 예문이 없습니다.</p>
+              )}
               <div className="study-rating-grid" role="group" aria-label="복습 평가">
                 {ratingButtons.map(({ result, label, hint, className }) => (
                   <button
@@ -407,6 +443,11 @@ export function StudySection({
                   </button>
                 ))}
               </div>
+              {isReviewing ? (
+                <p className="study-reviewing-hint" role="status" aria-live="polite">
+                  평가를 저장하는 중입니다...
+                </p>
+              ) : null}
             </>
           ) : (
             <div className="study-actions">
