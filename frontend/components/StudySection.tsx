@@ -48,6 +48,7 @@ type StudySectionProps = {
   onRestart: () => void;
   onGoToVocab: () => void;
   onGoToAnalyze: () => void;
+  onGoToReading: () => void;
   onShowAnswer: () => void;
   onReview: (result: ReviewResult) => void;
 };
@@ -211,6 +212,7 @@ export function StudySection({
   onRestart,
   onGoToVocab,
   onGoToAnalyze,
+  onGoToReading,
   onShowAnswer,
   onReview,
 }: StudySectionProps) {
@@ -418,7 +420,9 @@ export function StudySection({
 
       {isComplete ? (
         <div className="study-card complete-card">
-          <h3>오늘 학습 완료!</h3>
+          <h3>
+            {studyMode === "recent" ? "방금 저장한 단어 학습 완료!" : "오늘 학습 완료!"}
+          </h3>
           <div className="study-complete-stats">
             <span>다시 {sessionCounts.again}개</span>
             <span>어려움 {sessionCounts.hard}개</span>
@@ -438,6 +442,24 @@ export function StudySection({
             <button type="button" onClick={onRestart}>
               다시 학습하기
             </button>
+            {studyMode === "recent" ? (
+              <>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={onGoToReading}
+                >
+                  읽기 탭으로 돌아가기
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => onQuickStart("today")}
+                >
+                  오늘 복습 보기
+                </button>
+              </>
+            ) : null}
             <button type="button" className="secondary-button" onClick={onGoToVocab}>
               단어장으로 가기
             </button>

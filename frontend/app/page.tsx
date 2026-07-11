@@ -3062,6 +3062,7 @@ export default function HomePage() {
             onRestart={() => void startStudy()}
             onGoToVocab={goToVocabFromStudy}
             onGoToAnalyze={goToAnalyzeFromStudy}
+            onGoToReading={() => setActiveTab("reading")}
             onShowAnswer={() => {
               answerShownAtRef.current = Date.now();
               setIsAnswerVisible(true);
