@@ -145,6 +145,65 @@ export type ReadingSaveTarget = {
   existingItemId: number | null;
 };
 
+// Single-token resolution shared by resolveReadingSaveTargets (status-bucket
+// bulk-save buttons) and resolveSelectedReadingSaveTargets (word-list panel
+// checkbox selection) -- both need the exact same "what would saving this
+// token actually do" answer, just decided over a different set of tokens.
+type SaveTargetResolution = {
+  token: TokenWithStatus;
+  index: number;
+  status: TokenStatus;
+  // "new" marks a never-saved, unclassified word separately from a
+  // saved-but-unclassified one, since only the former defaults to
+  // "unknown" when saved -- the latter keeps its saved status.
+  bucket: TokenStatus | "new";
+  targetStatus: TokenStatus;
+  // True when the word is already saved with this exact status AND already
+  // has a context sentence -- nothing would actually change, so callers can
+  // skip the API call entirely and report it as "already saved" instead of
+  // "saved" or "failed".
+  alreadySaved: boolean;
+  existingItemId: number | null;
+};
+
+function resolveSaveTarget(
+  token: TokenWithStatus,
+  index: number,
+  vocabItems: VocabItem[],
+  deckId: string,
+): SaveTargetResolution {
+  const existingItem = findMatchingVocabItem(token, vocabItems, deckId);
+  const status = getTokenStatus(token, vocabItems, deckId);
+  const bucket: TokenStatus | "new" =
+    status === "unclassified" && !existingItem ? "new" : status;
+  const targetStatus: TokenStatus = bucket === "new" ? "unknown" : bucket;
+  const alreadySaved = Boolean(
+    existingItem &&
+      existingItem.status === targetStatus &&
+      existingItem.example_sentence,
+  );
+
+  return {
+    token,
+    index,
+    status,
+    bucket,
+    targetStatus,
+    alreadySaved,
+    existingItemId: existingItem ? existingItem.id : null,
+  };
+}
+
+function toSaveTarget(resolved: SaveTargetResolution): ReadingSaveTarget {
+  return {
+    index: resolved.index,
+    token: resolved.token,
+    targetStatus: resolved.targetStatus,
+    alreadySaved: resolved.alreadySaved,
+    existingItemId: resolved.existingItemId,
+  };
+}
+
 // Resolves which tokens each bulk-save button should act on, and what
 // status to save them as. A never-saved ("new") word defaults to "unknown"
 // since there's no earlier classification to preserve; an already-saved
@@ -159,41 +218,54 @@ export function resolveReadingSaveTargets(
   const targets: ReadingSaveTarget[] = [];
 
   tokens.forEach((token, index) => {
-    const existingItem = findMatchingVocabItem(token, vocabItems, deckId);
-    const status = getTokenStatus(token, vocabItems, deckId);
-    const bucket: TokenStatus | "new" =
-      status === "unclassified" && !existingItem ? "new" : status;
+    const resolved = resolveSaveTarget(token, index, vocabItems, deckId);
 
-    if (bucket === "known") {
+    if (resolved.bucket === "known") {
       return;
     }
 
     const included =
       mode === "unknown_only"
-        ? bucket === "new" || bucket === "unknown"
+        ? resolved.bucket === "new" || resolved.bucket === "unknown"
         : mode === "unknown_uncertain"
-          ? bucket === "new" || bucket === "unknown" || bucket === "uncertain"
+          ? resolved.bucket === "new" ||
+            resolved.bucket === "unknown" ||
+            resolved.bucket === "uncertain"
           : true;
 
     if (!included) {
       return;
     }
 
-    const targetStatus = bucket === "new" ? "unknown" : bucket;
-    const alreadySaved = Boolean(
-      existingItem &&
-        existingItem.status === targetStatus &&
-        existingItem.example_sentence,
-    );
-
-    targets.push({
-      index,
-      token,
-      targetStatus,
-      alreadySaved,
-      existingItemId: existingItem ? existingItem.id : null,
-    });
+    targets.push(toSaveTarget(resolved));
   });
+
+  return targets;
+}
+
+// Word-list panel counterpart to resolveReadingSaveTargets above: instead of
+// a status-bucket mode applied to every token, the caller hands in exactly
+// which tokenIndexes the user checked. "known" words are still excluded
+// defensively even though the panel never renders a checkbox for one.
+export function resolveSelectedReadingSaveTargets(
+  tokens: TokenWithStatus[],
+  vocabItems: VocabItem[],
+  deckId: string,
+  selectedTokenIndexes: number[],
+): ReadingSaveTarget[] {
+  const targets: ReadingSaveTarget[] = [];
+
+  for (const index of selectedTokenIndexes) {
+    const token = tokens[index];
+    if (!token) {
+      continue;
+    }
+    const resolved = resolveSaveTarget(token, index, vocabItems, deckId);
+    if (resolved.bucket === "known") {
+      continue;
+    }
+    targets.push(toSaveTarget(resolved));
+  }
 
   return targets;
 }
@@ -330,6 +402,12 @@ export type ReadingVocabEntry = {
   tokenIndex: number;
   token: TokenWithStatus;
   status: TokenStatus;
+  // Same bucket resolveReadingSaveTargets/resolveSelectedReadingSaveTargets
+  // use to decide save eligibility -- the word-list panel's quick-select
+  // buttons filter on this (not `status`) so "모르는 단어 선택" picks up
+  // never-saved/unclassified words the same way "모르는 단어 저장" already
+  // treats them as save-as-unknown candidates.
+  bucket: TokenStatus | "new";
   isSaved: boolean;
   // Mirrors resolveReadingSaveTargets' bucket logic: everything except
   // "known" is a save candidate (a never-saved word defaults to "unknown").
@@ -343,14 +421,14 @@ export function computeReadingVocabEntries(
 ): ReadingVocabEntry[] {
   return getNavigableTokenIndexes(tokens).map((tokenIndex) => {
     const token = tokens[tokenIndex];
-    const status = getTokenStatus(token, vocabItems, deckId);
-    const isSaved = isTokenSavedInDeck(token, vocabItems, deckId);
+    const resolved = resolveSaveTarget(token, tokenIndex, vocabItems, deckId);
     return {
       tokenIndex,
       token,
-      status,
-      isSaved,
-      isSaveable: status !== "known",
+      status: resolved.status,
+      bucket: resolved.bucket,
+      isSaved: resolved.existingItemId !== null,
+      isSaveable: resolved.bucket !== "known",
     };
   });
 }
@@ -374,6 +452,32 @@ export function filterReadingVocabEntries(
     return entries.filter((entry) => entry.isSaveable);
   }
   return entries.filter((entry) => entry.status === filter);
+}
+
+// Quick-select buttons in the word-list panel reuse the exact same
+// unknown_only/unknown_uncertain/all_unclassified modes the bucket-save
+// buttons already use, so "모르는 단어 선택" always picks exactly the set
+// "모르는 단어 저장" would act on.
+export function selectReadingVocabEntriesByMode(
+  entries: ReadingVocabEntry[],
+  mode: ReadingSaveMode,
+): ReadingVocabEntry[] {
+  return entries.filter((entry) => {
+    if (entry.bucket === "known") {
+      return false;
+    }
+    if (mode === "unknown_only") {
+      return entry.bucket === "new" || entry.bucket === "unknown";
+    }
+    if (mode === "unknown_uncertain") {
+      return (
+        entry.bucket === "new" ||
+        entry.bucket === "unknown" ||
+        entry.bucket === "uncertain"
+      );
+    }
+    return true;
+  });
 }
 
 export function searchReadingVocabEntries(

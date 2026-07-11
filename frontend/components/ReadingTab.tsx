@@ -38,6 +38,7 @@ type ReadingTabProps = {
   onStatusChange: (index: number, status: TokenStatus) => void;
   onToggleTextCollapsed: () => void;
   onSaveBatch: (mode: ReadingSaveMode) => void;
+  onSaveSelected: (tokenIndexes: number[]) => Promise<number[]>;
   onStartStudyFromSaved: () => void;
   onGoToVocab: () => void;
   onSelectedTokenKeyChange: (key: string | null) => void;
@@ -105,6 +106,7 @@ export function ReadingTab({
   onStatusChange,
   onToggleTextCollapsed,
   onSaveBatch,
+  onSaveSelected,
   onStartStudyFromSaved,
   onGoToVocab,
   onSelectedTokenKeyChange,
@@ -408,6 +410,8 @@ export function ReadingTab({
           selectedDeckId={selectedDeckId}
           selectedTokenKey={selectedTokenKey}
           onSelectToken={handleVocabPanelSelect}
+          isSaving={isSavingBatch}
+          onSaveSelected={onSaveSelected}
         />
       ) : null}
 

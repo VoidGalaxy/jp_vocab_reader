@@ -1365,6 +1365,35 @@ select {
   color: #ffffff;
 }
 
+.reading-vocab-select-controls {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--soft-bg);
+}
+
+.reading-vocab-quick-select {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.reading-vocab-selection-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reading-vocab-save-selected-row {
+  display: flex;
+}
+
+.reading-vocab-save-selected-button {
+  flex: 0 1 auto;
+}
+
 .reading-vocab-empty {
   margin: 0;
   font-size: 13px;
@@ -1380,12 +1409,32 @@ select {
   list-style: none;
 }
 
+.reading-vocab-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reading-vocab-item-checkbox {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  min-height: 0;
+  accent-color: var(--primary);
+}
+
+.reading-vocab-item-checkbox-placeholder {
+  flex: 0 0 auto;
+  width: 20px;
+}
+
 .reading-vocab-item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
   align-items: center;
   gap: 6px 12px;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
@@ -1470,6 +1519,20 @@ select {
 
   .reading-vocab-item-meta {
     justify-content: flex-start;
+  }
+
+  .reading-vocab-item-checkbox,
+  .reading-vocab-item-checkbox-placeholder {
+    width: 24px;
+    height: 24px;
+  }
+
+  .reading-vocab-save-selected-row {
+    justify-content: stretch;
+  }
+
+  .reading-vocab-save-selected-button {
+    flex: 1 1 auto;
   }
 }
 

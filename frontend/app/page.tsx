@@ -7,8 +7,9 @@ import {
   getTokenGroupKey,
   getTokenStatus,
   resolveReadingSaveTargets,
+  resolveSelectedReadingSaveTargets,
 } from "../components/coverageUtils";
-import type { ReadingSaveMode } from "../components/coverageUtils";
+import type { ReadingSaveMode, ReadingSaveTarget } from "../components/coverageUtils";
 import { InfoSection } from "../components/InfoSection";
 import { MeaningFeedbackModal } from "../components/MeaningFeedbackModal";
 import {
@@ -1435,25 +1436,17 @@ export default function HomePage() {
   // "이 텍스트 학습 요약" 패널의 일괄 저장 버튼들. 대상 단어 목록/저장할
   // status는 resolveReadingSaveTargets가 결정하고, 여기서는 병렬로 저장한
   // 뒤 성공/실패 개수를 메시지로 보여준다.
-  async function saveReadingTokensBatch(mode: ReadingSaveMode) {
-    if (!readingSelectedDeckId || isSavingReadingBatch) {
-      return;
-    }
-
-    const targets = resolveReadingSaveTargets(
-      readingTokens,
-      readingDeckVocabItems,
-      readingSelectedDeckId,
-      mode,
-    );
-
-    if (targets.length === 0) {
-      setReadingMessage(
-        "저장 가능한 단어가 없습니다. 이미 학습 중인 단어일 수 있습니다.",
-      );
-      return;
-    }
-
+  // Shared by the status-bucket bulk-save buttons and the word-list panel's
+  // selective save: persists a resolved target list via persistReadingToken,
+  // merges results back into readingTokens/readingDeckVocabItems, and builds
+  // the success/skip/failure summary message. Returns which tokenIndexes
+  // actually ended up saved (fresh or already-saved) so a caller like the
+  // selective-save flow can react to exactly those (e.g. clear just those
+  // from a selection) without guessing from the message string.
+  async function persistReadingSaveTargets(
+    targets: ReadingSaveTarget[],
+    savedCountLabel: string,
+  ): Promise<number[]> {
     // Words that are already saved with the exact target status and already
     // have a context sentence need no API call at all -- skip them and
     // report them separately instead of re-sending an unchanged PATCH.
@@ -1522,7 +1515,7 @@ export default function HomePage() {
     setIsSavingReadingBatch(false);
     const parts: string[] = [];
     if (succeeded.length > 0) {
-      parts.push(`단어 ${succeeded.length}개를 저장했습니다`);
+      parts.push(`${savedCountLabel} ${succeeded.length}개를 저장했습니다`);
     }
     if (skipped.length > 0) {
       parts.push(`이미 저장된 단어 ${skipped.length}개는 건너뛰었습니다`);
@@ -1534,6 +1527,64 @@ export default function HomePage() {
       parts.push("저장할 단어가 없습니다");
     }
     setReadingMessage(`${parts.join(". ")}.`);
+
+    return [
+      ...succeeded.map(({ index }) => index),
+      ...skipped.map((target) => target.index),
+    ];
+  }
+
+  async function saveReadingTokensBatch(mode: ReadingSaveMode) {
+    if (!readingSelectedDeckId || isSavingReadingBatch) {
+      return;
+    }
+
+    const targets = resolveReadingSaveTargets(
+      readingTokens,
+      readingDeckVocabItems,
+      readingSelectedDeckId,
+      mode,
+    );
+
+    if (targets.length === 0) {
+      setReadingMessage(
+        "저장 가능한 단어가 없습니다. 이미 학습 중인 단어일 수 있습니다.",
+      );
+      return;
+    }
+
+    await persistReadingSaveTargets(targets, "단어");
+  }
+
+  // "선택한 단어 저장" -- same persist pipeline as the status-bucket
+  // buttons, just resolved from an explicit set of tokenIndexes the
+  // word-list panel's checkboxes picked instead of a status mode. Returns
+  // the saved tokenIndexes so the panel can drop exactly those from its
+  // selection.
+  async function saveSelectedReadingTokens(
+    selectedTokenIndexes: number[],
+  ): Promise<number[]> {
+    if (
+      !readingSelectedDeckId ||
+      isSavingReadingBatch ||
+      selectedTokenIndexes.length === 0
+    ) {
+      return [];
+    }
+
+    const targets = resolveSelectedReadingSaveTargets(
+      readingTokens,
+      readingDeckVocabItems,
+      readingSelectedDeckId,
+      selectedTokenIndexes,
+    );
+
+    if (targets.length === 0) {
+      setReadingMessage("선택한 단어 중 저장할 수 있는 단어가 없습니다.");
+      return [];
+    }
+
+    return persistReadingSaveTargets(targets, "선택한 단어");
   }
 
   // 저장된 단어로 바로 학습 시작: 학습 탭으로 이동하고 방금 저장한 단어
@@ -2825,6 +2876,7 @@ export default function HomePage() {
             }
             onToggleTextCollapsed={toggleReadingTextCollapsed}
             onSaveBatch={(mode) => void saveReadingTokensBatch(mode)}
+            onSaveSelected={saveSelectedReadingTokens}
             onStartStudyFromSaved={startStudyFromRecentlySaved}
             onGoToVocab={goToVocabFromReading}
             onSelectedTokenKeyChange={handleReadingSelectedTokenKeyChange}
