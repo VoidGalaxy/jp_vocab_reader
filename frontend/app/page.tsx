@@ -345,8 +345,14 @@ const READING_SESSION_KEY = "jp-vocab-reader:reading-session-v1";
 const MAX_READING_SESSION_TEXT_LENGTH = 200000;
 const MAX_MEANING_KO_LENGTH = 200;
 
+// v2 adds scrollFraction (last reading-progress bookmark) alongside the
+// existing selectedTokenKey. v1 payloads (written before this branch) are
+// still readable -- they just parse with scrollFraction: null, same as any
+// session that was never scrolled/saved under v2.
+const READING_SESSION_VERSION = 2;
+
 type ReadingSession = {
-  version: 1;
+  version: 1 | 2;
   originalText: string;
   analyzedText: string;
   deckId: string;
@@ -355,6 +361,9 @@ type ReadingSession = {
   message: string;
   isTextCollapsed: boolean;
   recentlySavedVocabItemIds: number[];
+  // 0..1 fraction of how far the user had scrolled through the reader text
+  // container -- null if never recorded (v1 session, or never scrolled).
+  scrollFraction: number | null;
   updatedAt: string;
 };
 
@@ -366,7 +375,7 @@ function parseReadingSession(value: string | null): ReadingSession | null {
   try {
     const parsed = JSON.parse(value) as Partial<ReadingSession>;
     if (
-      parsed.version !== 1 ||
+      (parsed.version !== 1 && parsed.version !== 2) ||
       typeof parsed.originalText !== "string" ||
       typeof parsed.analyzedText !== "string" ||
       typeof parsed.deckId !== "string" ||
@@ -427,8 +436,14 @@ function parseReadingSession(value: string | null): ReadingSession | null {
       (id): id is number => typeof id === "number",
     );
 
+    const scrollFraction =
+      typeof parsed.scrollFraction === "number" &&
+      Number.isFinite(parsed.scrollFraction)
+        ? Math.min(Math.max(parsed.scrollFraction, 0), 1)
+        : null;
+
     return {
-      version: 1,
+      version: parsed.version,
       originalText: parsed.originalText,
       analyzedText: parsed.analyzedText,
       deckId: parsed.deckId,
@@ -440,6 +455,7 @@ function parseReadingSession(value: string | null): ReadingSession | null {
       message: parsed.message,
       isTextCollapsed: parsed.isTextCollapsed,
       recentlySavedVocabItemIds,
+      scrollFraction,
       updatedAt: parsed.updatedAt,
     };
   } catch {
@@ -473,7 +489,7 @@ function persistReadingSession(
       return true;
     }
     const payload: ReadingSession = {
-      version: 1,
+      version: READING_SESSION_VERSION,
       ...session,
       updatedAt: new Date().toISOString(),
     };
@@ -600,6 +616,13 @@ export default function HomePage() {
   >([]);
   const [currentSelectedTokenKey, setCurrentSelectedTokenKey] = useState<
     string | null
+  >(null);
+  // Doubles as both the restore bookmark (passed down as
+  // ReaderMode's initialScrollFraction, applied once) and the live value
+  // ReaderMode echoes back up as the user scrolls (for persistence) --
+  // same pattern currentSelectedTokenKey already uses.
+  const [readingScrollFraction, setReadingScrollFraction] = useState<
+    number | null
   >(null);
   const [isReadingSessionRestored, setIsReadingSessionRestored] =
     useState(false);
@@ -729,6 +752,7 @@ export default function HomePage() {
       setIsReadingTextCollapsed(readingSession.isTextCollapsed);
       setRecentlySavedVocabItemIds(readingSession.recentlySavedVocabItemIds);
       setCurrentSelectedTokenKey(readingSession.selectedTokenKey);
+      setReadingScrollFraction(readingSession.scrollFraction);
       setIsReadingSessionRestored(true);
       if (readingSession.deckId && readingSession.tokens.length > 0) {
         void refreshReadingDeckVocabItems(
@@ -757,6 +781,7 @@ export default function HomePage() {
         message: readingMessage,
         isTextCollapsed: isReadingTextCollapsed,
         recentlySavedVocabItemIds,
+        scrollFraction: readingScrollFraction,
       });
       setReadingStorageWarning(
         persisted
@@ -774,6 +799,7 @@ export default function HomePage() {
     readingMessage,
     isReadingTextCollapsed,
     recentlySavedVocabItemIds,
+    readingScrollFraction,
   ]);
 
   async function initializeUserSession() {
@@ -1213,6 +1239,7 @@ export default function HomePage() {
     setReadingMessage("");
     setRecentlySavedVocabItemIds([]);
     setCurrentSelectedTokenKey(null);
+    setReadingScrollFraction(null);
     setIsReadingSessionRestored(false);
     setReadingAnalyzeProgress({ current: 0, total: chunks.length });
 
@@ -1354,6 +1381,7 @@ export default function HomePage() {
     setIsReadingTextCollapsed(false);
     setRecentlySavedVocabItemIds([]);
     setCurrentSelectedTokenKey(null);
+    setReadingScrollFraction(null);
     setIsReadingSessionRestored(false);
     clearReadingSession();
   }
@@ -2787,6 +2815,8 @@ export default function HomePage() {
             canStartFromSaved={recentlySavedVocabItemIds.length > 0}
             isSessionRestored={isReadingSessionRestored}
             selectedTokenKey={currentSelectedTokenKey}
+            scrollFraction={readingScrollFraction}
+            onScrollProgressChange={setReadingScrollFraction}
             onTextChange={setReadingText}
             onSelectedDeckChange={setReadingSelectedDeckId}
             onAnalyze={handleReadingAnalyze}

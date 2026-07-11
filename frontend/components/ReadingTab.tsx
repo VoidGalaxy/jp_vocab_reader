@@ -29,6 +29,8 @@ type ReadingTabProps = {
   canStartFromSaved: boolean;
   isSessionRestored: boolean;
   selectedTokenKey: string | null;
+  scrollFraction: number | null;
+  onScrollProgressChange: (fraction: number) => void;
   onTextChange: (text: string) => void;
   onSelectedDeckChange: (deckId: string) => void;
   onAnalyze: (event: FormEvent<HTMLFormElement>) => void;
@@ -94,6 +96,8 @@ export function ReadingTab({
   canStartFromSaved,
   isSessionRestored,
   selectedTokenKey,
+  scrollFraction,
+  onScrollProgressChange,
   onTextChange,
   onSelectedDeckChange,
   onAnalyze,
@@ -142,8 +146,8 @@ export function ReadingTab({
       {isSessionRestored && hasResult ? (
         <div className="reading-restored-banner">
           <span>
-            이전 작업이 복원되었습니다. 원문·분석 결과·선택한 단어를 이어서
-            볼 수 있습니다.
+            이전 작업이 복원되었습니다. 원문·분석 결과·선택한 단어와 마지막
+            읽던 위치를 이어서 볼 수 있습니다.
           </span>
           <button
             type="button"
@@ -385,6 +389,8 @@ export function ReadingTab({
           onStatusChange={onStatusChange}
           initialSelectedTokenKey={selectedTokenKey}
           onSelectedTokenKeyChange={onSelectedTokenKeyChange}
+          initialScrollFraction={scrollFraction}
+          onScrollProgressChange={onScrollProgressChange}
           meaningEditItemId={meaningEditItemId}
           meaningEditDraft={meaningEditDraft}
           isSavingMeaningEdit={isSavingMeaningEdit}

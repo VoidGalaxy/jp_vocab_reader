@@ -1,11 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet } from "./TokenDetailSheet";
 import { buildReaderLayout, getNavigableTokenIndexes } from "./readerLayout";
 import { getTokenGroupKey } from "./coverageUtils";
+
+// Reading-progress percentage is derived from how far the reader has
+// scrolled through the .reader-text container relative to the viewport,
+// not from selected-token position -- most reading happens without
+// clicking every word, so scroll position is the more meaningful signal.
+// 0 = container top just entered the viewport top, 1 = container bottom
+// has reached the viewport bottom. Deliberately approximate (see task
+// notes): the goal is a sense of "how far in", not a precise metric.
+function computeScrollProgress(container: HTMLElement | null): number {
+  if (!container || typeof window === "undefined") {
+    return 0;
+  }
+  const rect = container.getBoundingClientRect();
+  const viewportHeight = window.innerHeight || 1;
+  const total = Math.max(rect.height - viewportHeight, 1);
+  const scrolled = Math.min(Math.max(-rect.top, 0), total);
+  return scrolled / total;
+}
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -24,6 +42,14 @@ type ReaderModeProps = {
   onStatusChange: (index: number, status: TokenStatus) => void;
   initialSelectedTokenKey?: string | null;
   onSelectedTokenKeyChange?: (key: string | null) => void;
+  // Scroll-through-container fraction (0..1) restored from the last saved
+  // reading session, if any. Read once at mount (see bookmarkScrollFractionRef
+  // below) -- later prop updates (this same value gets echoed back up via
+  // onScrollProgressChange as the user scrolls) are intentionally ignored so
+  // the "마지막 위치로 이동" bookmark keeps pointing at where the user left
+  // off last time, not at wherever they've scrolled to just now.
+  initialScrollFraction?: number | null;
+  onScrollProgressChange?: (fraction: number) => void;
   meaningEditItemId: number | null;
   meaningEditDraft: string;
   isSavingMeaningEdit: boolean;
@@ -41,6 +67,8 @@ export function ReaderMode({
   onStatusChange,
   initialSelectedTokenKey = null,
   onSelectedTokenKeyChange,
+  initialScrollFraction = null,
+  onScrollProgressChange,
   meaningEditItemId,
   meaningEditDraft,
   isSavingMeaningEdit,
@@ -59,7 +87,41 @@ export function ReaderMode({
   // after a restore, then the user's own clicks take over.
   const [hasAppliedInitialSelection, setHasAppliedInitialSelection] =
     useState(false);
+  // Guards the one-time scroll-to-last-position restore the same way
+  // hasAppliedInitialSelection guards the token restore above.
+  const [hasAppliedInitialScroll, setHasAppliedInitialScroll] =
+    useState(false);
+  // Live 0..1 scroll-through-container fraction, recomputed as the user
+  // scrolls -- drives the progress bar/percent display.
+  const [scrollProgress, setScrollProgress] = useState(0);
   const readerTextRef = useRef<HTMLDivElement | null>(null);
+  const scrollProgressThrottleRef = useRef<number | null>(null);
+  // Frozen at mount: the "last read position" bookmark from the restored
+  // session, kept separate from the live scrollProgress state above (which
+  // this same value seeds in the parent and would otherwise immediately
+  // drift to "wherever the user is right now" the moment they scroll).
+  const bookmarkScrollFractionRef = useRef<number | null>(
+    initialScrollFraction,
+  );
+
+  const scrollToFraction = useCallback(
+    (fraction: number, behavior: ScrollBehavior) => {
+      const container = readerTextRef.current;
+      if (!container || typeof window === "undefined") {
+        return;
+      }
+      const rect = container.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || 1;
+      const total = Math.max(rect.height - viewportHeight, 1);
+      const containerTopAbsolute = window.scrollY + rect.top;
+      const targetScrollY = Math.max(
+        containerTopAbsolute + fraction * total,
+        0,
+      );
+      window.scrollTo({ top: targetScrollY, behavior });
+    },
+    [],
+  );
 
   const layout = useMemo(
     () => buildReaderLayout(originalText, tokens),
@@ -89,6 +151,87 @@ export function ReaderMode({
     }
     setHasAppliedInitialSelection(true);
   }, [hasAppliedInitialSelection, initialSelectedTokenKey, tokens]);
+
+  // Restores scroll position on mount when there's no token bookmark to
+  // restore to instead (the token-restore effect above already scrolls the
+  // selected word into view via the activeIndex effect below, which is more
+  // precise -- this is only the fallback for "was scroll-reading without
+  // selecting a word"). Runs after render so the container has real layout
+  // to measure -- a short setTimeout rather than requestAnimationFrame,
+  // since rAF isn't guaranteed to be serviced promptly in every context
+  // (see the scroll-tracking effect below for the same reasoning).
+  useEffect(() => {
+    if (
+      hasAppliedInitialScroll ||
+      initialScrollFraction === null ||
+      initialScrollFraction === undefined ||
+      tokens.length === 0
+    ) {
+      return;
+    }
+    if (initialSelectedTokenKey) {
+      const matchExists = tokens.some(
+        (token) => getTokenGroupKey(token) === initialSelectedTokenKey,
+      );
+      if (matchExists) {
+        setHasAppliedInitialScroll(true);
+        return;
+      }
+    }
+    const timeoutId = window.setTimeout(() => {
+      scrollToFraction(initialScrollFraction, "auto");
+    }, 50);
+    setHasAppliedInitialScroll(true);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    hasAppliedInitialScroll,
+    initialScrollFraction,
+    initialSelectedTokenKey,
+    tokens,
+    scrollToFraction,
+  ]);
+
+  // Tracks reading progress as the user scrolls. Throttled with a plain
+  // setTimeout rather than requestAnimationFrame -- rAF callbacks are tied
+  // to the compositor's paint loop and can silently stall (backgrounded/
+  // inactive tabs, some headless/low-power contexts), which would leave the
+  // progress bar stuck. A ~50ms timer is imperceptible for a position
+  // indicator and fires reliably regardless of paint state.
+  useEffect(() => {
+    function handleScroll() {
+      if (scrollProgressThrottleRef.current !== null) {
+        return;
+      }
+      scrollProgressThrottleRef.current = window.setTimeout(() => {
+        scrollProgressThrottleRef.current = null;
+        setScrollProgress(computeScrollProgress(readerTextRef.current));
+      }, 50) as unknown as number;
+    }
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+      if (scrollProgressThrottleRef.current !== null) {
+        window.clearTimeout(scrollProgressThrottleRef.current);
+      }
+    };
+  }, [layout]);
+
+  // Bubbles the live scroll fraction up to the parent (for localStorage
+  // persistence) on a trailing debounce, decoupled from the throttled local
+  // updates above so scrolling never writes to localStorage dozens of times
+  // per second.
+  useEffect(() => {
+    if (!onScrollProgressChange) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      onScrollProgressChange(scrollProgress);
+    }, 400);
+    return () => window.clearTimeout(timeoutId);
+  }, [scrollProgress, onScrollProgressChange]);
 
   // Keeps the selected word visible in the source text as prev/next moves
   // it around -- best-effort only, so a missing DOM match (e.g. the active
@@ -155,6 +298,38 @@ export function ReaderMode({
     }
   }
 
+  function scrollToTop() {
+    readerTextRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  const hasBookmarkScrollFraction =
+    bookmarkScrollFractionRef.current !== null &&
+    bookmarkScrollFractionRef.current !== undefined;
+  // Label (and target) depend on what's actually available to jump back
+  // to: a currently-selected word wins over the frozen scroll bookmark
+  // (it's the more precise target), and the button disappears entirely
+  // when neither exists.
+  const bookmarkButtonLabel =
+    activeIndex !== null
+      ? "선택 단어로 이동"
+      : hasBookmarkScrollFraction
+        ? "마지막 위치로 이동"
+        : null;
+
+  function scrollToBookmark() {
+    if (activeIndex !== null) {
+      const target = readerTextRef.current?.querySelector(
+        `[data-token-index="${activeIndex}"]`,
+      );
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    if (hasBookmarkScrollFraction) {
+      scrollToFraction(bookmarkScrollFractionRef.current as number, "smooth");
+    }
+  }
+
+  const progressPercent = Math.round(scrollProgress * 100);
   const activeToken = activeIndex !== null ? tokens[activeIndex] : null;
 
   return (
@@ -184,6 +359,49 @@ export function ReaderMode({
             />
             JLPT 태그 표시
           </label>
+        </div>
+      </div>
+      <div className="reader-progress-row">
+        <div className="reader-progress-info">
+          <span className="reader-progress-percent">
+            읽기 진행률 {progressPercent}%
+          </span>
+          {navPosition !== -1 ? (
+            <span className="reader-progress-token-count">
+              {navPosition + 1} / {navigableIndexes.length} 단어 확인 중
+            </span>
+          ) : null}
+        </div>
+        <div
+          className="reader-progress-bar"
+          role="progressbar"
+          aria-label="읽기 진행률"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progressPercent}
+        >
+          <div
+            className="reader-progress-bar-fill"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        <div className="reader-progress-actions">
+          {bookmarkButtonLabel ? (
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={scrollToBookmark}
+            >
+              {bookmarkButtonLabel}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={scrollToTop}
+          >
+            맨 위로
+          </button>
         </div>
       </div>
       <div className="reader-legend">
