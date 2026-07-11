@@ -378,3 +378,26 @@ class MeaningFeedbackRequest(BaseModel):
 class MeaningFeedbackResponse(BaseModel):
     ok: bool = True
     message: str
+
+
+# General in-app feedback (bug reports, UX complaints, feature requests --
+# anything that isn't a specific word's meaning, which stays on the
+# meaning_feedback table/endpoint above). Deliberately small: no free-form
+# long text, no original-text/context fields, so beta feedback can never
+# become a backdoor for storing the full reading-tab source text.
+APP_FEEDBACK_MESSAGE_MIN_LENGTH = 10
+APP_FEEDBACK_MESSAGE_MAX_LENGTH = 1000
+APP_FEEDBACK_META_MAX_LENGTH = 100
+VALID_APP_FEEDBACK_CATEGORIES = {"bug", "ux", "feature", "meaning", "other"}
+
+
+class AppFeedbackRequest(BaseModel):
+    category: str
+    message: str
+    screen: str = ""
+    path: str = ""
+
+
+class AppFeedbackResponse(BaseModel):
+    ok: bool = True
+    message: str

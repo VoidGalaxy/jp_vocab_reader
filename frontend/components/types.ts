@@ -71,6 +71,11 @@ export type MeaningFeedbackTarget = {
   source: MeaningFeedbackSource;
 };
 
+// General in-app feedback (bugs/UX/feature requests/etc) -- kept separate
+// from MeaningFeedbackTarget above, which is only for a specific word's
+// meaning and posts to a different endpoint/table.
+export type AppFeedbackCategory = "bug" | "ux" | "feature" | "meaning" | "other";
+
 export type ReviewResult = "again" | "hard" | "good" | "easy";
 export type StudyMode =
   | "today"

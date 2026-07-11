@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AnalyzeSection } from "../components/AnalyzeSection";
+import { GlobalFeedbackModal } from "../components/GlobalFeedbackModal";
 import {
   getTokenGroupKey,
   getTokenStatus,
@@ -17,6 +18,7 @@ import { StudySection } from "../components/StudySection";
 import { VocabSection } from "../components/VocabSection";
 import type {
   ReviewResult,
+  AppFeedbackCategory,
   Deck,
   MeaningFeedbackTarget,
   QualityTag,
@@ -600,6 +602,14 @@ export default function HomePage() {
   const [feedbackReason, setFeedbackReason] = useState("");
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  // App-wide "피드백" -- separate from the word-meaning report above; posts
+  // to /feedback/app instead of /feedback/meaning.
+  const [isAppFeedbackOpen, setIsAppFeedbackOpen] = useState(false);
+  const [appFeedbackCategory, setAppFeedbackCategory] =
+    useState<AppFeedbackCategory>("bug");
+  const [appFeedbackDraft, setAppFeedbackDraft] = useState("");
+  const [isSubmittingAppFeedback, setIsSubmittingAppFeedback] = useState(false);
+  const [appFeedbackResultMessage, setAppFeedbackResultMessage] = useState("");
   const [isLoadingVocab, setIsLoadingVocab] = useState(false);
   const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isExportingDeckPackage, setIsExportingDeckPackage] = useState(false);
@@ -2050,6 +2060,49 @@ export default function HomePage() {
     }
   }
 
+  function openAppFeedback() {
+    setIsAppFeedbackOpen(true);
+    setAppFeedbackCategory("bug");
+    setAppFeedbackDraft("");
+    setAppFeedbackResultMessage("");
+  }
+
+  function closeAppFeedback() {
+    setIsAppFeedbackOpen(false);
+  }
+
+  async function submitAppFeedback() {
+    const message = appFeedbackDraft.trim();
+    if (message.length < 10 || isSubmittingAppFeedback) {
+      return;
+    }
+
+    setIsSubmittingAppFeedback(true);
+    setAppFeedbackResultMessage("");
+
+    try {
+      await requestJson("/feedback/app", {
+        method: "POST",
+        body: JSON.stringify({
+          category: appFeedbackCategory,
+          message,
+          // Only the current tab name -- never the reading-tab's original
+          // text/localStorage session content.
+          screen: activeTab,
+          path: `/${activeTab}`,
+        }),
+      });
+      setAppFeedbackDraft("");
+      setAppFeedbackResultMessage("피드백이 접수되었습니다. 감사합니다.");
+    } catch (error) {
+      setAppFeedbackResultMessage(
+        getErrorMessage(error, "피드백 접수에 실패했습니다. 잠시 후 다시 시도해주세요."),
+      );
+    } finally {
+      setIsSubmittingAppFeedback(false);
+    }
+  }
+
   function updateTokenStatus(index: number, status: TokenStatus) {
     setTokens((currentTokens) =>
       currentTokens.map((token, tokenIndex) =>
@@ -2469,12 +2522,24 @@ export default function HomePage() {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  const currentScreenLabel =
+    tabs.find((tab) => tab.key === activeTab)?.label ?? activeTab;
+
   return (
     <main className="page">
       <section className="workspace">
         <header className="header">
-          <h1>일본어 단어 분석</h1>
-          <p>일본어 원문을 붙여넣고 학습할 단어 후보를 확인합니다.</p>
+          <div>
+            <h1>일본어 단어 분석</h1>
+            <p>일본어 원문을 붙여넣고 학습할 단어 후보를 확인합니다.</p>
+          </div>
+          <button
+            type="button"
+            className="secondary-button compact-button header-feedback-button"
+            onClick={openAppFeedback}
+          >
+            피드백
+          </button>
         </header>
 
         {activeTab === "analyze" ? (
@@ -2851,6 +2916,20 @@ export default function HomePage() {
           onReasonChange={setFeedbackReason}
           onSubmit={() => void submitMeaningFeedback()}
           onClose={closeMeaningFeedback}
+        />
+      ) : null}
+
+      {isAppFeedbackOpen ? (
+        <GlobalFeedbackModal
+          screenLabel={currentScreenLabel}
+          category={appFeedbackCategory}
+          message={appFeedbackDraft}
+          isSubmitting={isSubmittingAppFeedback}
+          resultMessage={appFeedbackResultMessage}
+          onCategoryChange={setAppFeedbackCategory}
+          onMessageChange={setAppFeedbackDraft}
+          onSubmit={() => void submitAppFeedback()}
+          onClose={closeAppFeedback}
         />
       ) : null}
     </main>

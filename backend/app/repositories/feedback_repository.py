@@ -59,3 +59,41 @@ def list_meaning_feedback(limit: int = 200) -> list[dict[str, Any]]:
             (limit,),
         ).fetchall()
     return [row_to_dict(row) for row in rows]
+
+
+def create_app_feedback(
+    *,
+    user_id: int | None,
+    category: str,
+    message: str,
+    screen: str,
+    path: str,
+) -> None:
+    timestamp = now_iso()
+    with get_connection() as connection:
+        connection.execute(
+            """
+            INSERT INTO app_feedback (
+                user_id, category, message, screen, path, status, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, 'open', ?)
+            """,
+            (user_id, category, message, screen, path, timestamp),
+        )
+
+
+def list_app_feedback(limit: int = 200) -> list[dict[str, Any]]:
+    """Read-only helper for the operator-facing listing script -- not
+    exposed via any API endpoint."""
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT id, user_id, category, message, screen, path, status,
+                   created_at
+            FROM app_feedback
+            ORDER BY created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+    return [row_to_dict(row) for row in rows]

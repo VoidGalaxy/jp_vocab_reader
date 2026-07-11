@@ -48,7 +48,7 @@ from app.repositories.deck_repository import (
     list_decks,
     update_deck,
 )
-from app.repositories.feedback_repository import create_meaning_feedback
+from app.repositories.feedback_repository import create_app_feedback, create_meaning_feedback
 from app.repositories.shared_deck_repository import (
     delete_shared_deck,
     get_shared_deck as get_shared_deck_data,
@@ -87,6 +87,11 @@ from app.schemas import (
     CustomTermsResponse,
     CustomTermUpdate,
     DeckCreate,
+    APP_FEEDBACK_MESSAGE_MAX_LENGTH,
+    APP_FEEDBACK_MESSAGE_MIN_LENGTH,
+    APP_FEEDBACK_META_MAX_LENGTH,
+    AppFeedbackRequest,
+    AppFeedbackResponse,
     DeckDeleteResponse,
     DeckPackage,
     DeckPackageImportResponse,
@@ -106,6 +111,7 @@ from app.schemas import (
     StudyItemsResponse,
     StudyReviewRequest,
     RESULT_TO_RATING,
+    VALID_APP_FEEDBACK_CATEGORIES,
     VALID_REVIEW_RATINGS,
     VALID_STATUSES,
     UserResponse,
@@ -757,6 +763,46 @@ def post_meaning_feedback(
         source=payload.source.strip(),
     )
     return MeaningFeedbackResponse(ok=True, message="신고가 접수되었습니다.")
+
+
+@app.post("/feedback/app", response_model=AppFeedbackResponse)
+def post_app_feedback(
+    payload: AppFeedbackRequest, http_request: Request
+) -> AppFeedbackResponse:
+    # General beta feedback (bugs/UX/feature requests/etc). Distinct from
+    # /feedback/meaning above: no vocabulary_id, no original reading-tab
+    # text -- just enough to triage, on purpose.
+    user_id = current_user_id(http_request)
+
+    category = payload.category.strip()
+    if category not in VALID_APP_FEEDBACK_CATEGORIES:
+        raise HTTPException(status_code=400, detail="invalid category")
+
+    message = payload.message.strip()
+    if len(message) < APP_FEEDBACK_MESSAGE_MIN_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"message must be at least {APP_FEEDBACK_MESSAGE_MIN_LENGTH} characters",
+        )
+    if len(message) > APP_FEEDBACK_MESSAGE_MAX_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"message must be at most {APP_FEEDBACK_MESSAGE_MAX_LENGTH} characters",
+        )
+
+    screen = payload.screen.strip()
+    path = payload.path.strip()
+    if len(screen) > APP_FEEDBACK_META_MAX_LENGTH or len(path) > APP_FEEDBACK_META_MAX_LENGTH:
+        raise HTTPException(status_code=400, detail="screen or path is too long")
+
+    create_app_feedback(
+        user_id=user_id,
+        category=category,
+        message=message,
+        screen=screen,
+        path=path,
+    )
+    return AppFeedbackResponse(ok=True, message="피드백이 접수되었습니다. 감사합니다.")
 
 
 @app.post("/vocab-items/{item_id}/explain", response_model=VocabItemResponse)
