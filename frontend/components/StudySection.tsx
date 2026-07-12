@@ -11,7 +11,15 @@ import type { StudyStats } from "./types";
 import { StatsPanel } from "./StatsPanel";
 import { formatNextReview } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
-import { BookIcon, CardsIcon, CheckCircleIcon, InboxIcon } from "./icons";
+import {
+  BookIcon,
+  CardsIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  InboxIcon,
+  RotateIcon,
+  ZapIcon,
+} from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 
 type StudySectionProps = {
@@ -60,7 +68,7 @@ const studyModeLabels: Record<StudyMode, string> = {
   unknown: "모르는 단어",
   all: "전체 학습",
   new: "새 단어 학습",
-  recent: "방금 저장한 단어",
+  recent: "방금 저장한 단어 복습",
 };
 
 const emptyMessages: Record<StudyMode, string> = {
@@ -97,11 +105,36 @@ const ratingButtons: Array<{
   label: string;
   hint: string;
   className: string;
+  icon: (props: { className?: string }) => JSX.Element;
 }> = [
-  { result: "again", label: "다시", hint: "오늘 다시 보기", className: "rating-again" },
-  { result: "hard", label: "어려움", hint: "짧게 복습", className: "rating-hard" },
-  { result: "good", label: "보통", hint: "예정 간격 증가", className: "rating-good" },
-  { result: "easy", label: "쉬움", hint: "더 길게 미루기", className: "rating-easy" },
+  {
+    result: "again",
+    label: "다시",
+    hint: "오늘 다시 보기",
+    className: "rating-again",
+    icon: RotateIcon,
+  },
+  {
+    result: "hard",
+    label: "어려움",
+    hint: "짧게 복습",
+    className: "rating-hard",
+    icon: ClockIcon,
+  },
+  {
+    result: "good",
+    label: "보통",
+    hint: "예정 간격 증가",
+    className: "rating-good",
+    icon: CheckCircleIcon,
+  },
+  {
+    result: "easy",
+    label: "쉬움",
+    hint: "더 길게 미루기",
+    className: "rating-easy",
+    icon: ZapIcon,
+  },
 ];
 
 function TodayDashboard({ stats }: { stats: StudyStats | null }) {
@@ -375,14 +408,16 @@ export function StudySection({
           </div>
           {isAnswerVisible ? (
             <>
+              <div className="study-meaning-hero">
+                <span className="study-meaning-label">뜻</span>
+                <p className="study-meaning-text">
+                  {currentItem.meaning_ko || "뜻 후보 없음"}
+                </p>
+              </div>
               <dl className="study-answer">
                 <div>
                   <dt>읽기</dt>
                   <dd>{currentItem.reading || "-"}</dd>
-                </div>
-                <div>
-                  <dt>뜻</dt>
-                  <dd>{currentItem.meaning_ko || "-"}</dd>
                 </div>
                 <div>
                   <dt>품사</dt>
@@ -441,7 +476,7 @@ export function StudySection({
                 <p className="study-example-empty">저장된 문맥 예문이 없습니다.</p>
               )}
               <div className="study-rating-grid" role="group" aria-label="복습 평가">
-                {ratingButtons.map(({ result, label, hint, className }) => (
+                {ratingButtons.map(({ result, label, hint, className, icon: Icon }) => (
                   <button
                     key={result}
                     type="button"
@@ -449,6 +484,7 @@ export function StudySection({
                     onClick={() => onReview(result)}
                     disabled={isReviewing}
                   >
+                    <Icon className="rating-icon" />
                     <span className="rating-label">{label}</span>
                     <span className="rating-hint">{hint}</span>
                   </button>
@@ -477,11 +513,26 @@ export function StudySection({
             {studyMode === "recent" ? "방금 저장한 단어 학습 완료!" : "오늘 학습 완료!"}
           </h3>
           <div className="study-complete-stats">
-            <span>다시 {sessionCounts.again}개</span>
-            <span>어려움 {sessionCounts.hard}개</span>
-            <span>보통 {sessionCounts.good}개</span>
-            <span>쉬움 {sessionCounts.easy}개</span>
-            <span>총 학습 {totalStudied}개</span>
+            <div className="study-complete-stat study-complete-stat-again">
+              <span>다시</span>
+              <strong>{sessionCounts.again}개</strong>
+            </div>
+            <div className="study-complete-stat study-complete-stat-hard">
+              <span>어려움</span>
+              <strong>{sessionCounts.hard}개</strong>
+            </div>
+            <div className="study-complete-stat study-complete-stat-good">
+              <span>보통</span>
+              <strong>{sessionCounts.good}개</strong>
+            </div>
+            <div className="study-complete-stat study-complete-stat-easy">
+              <span>쉬움</span>
+              <strong>{sessionCounts.easy}개</strong>
+            </div>
+            <div className="study-complete-stat study-complete-stat-total">
+              <span>총 학습</span>
+              <strong>{totalStudied}개</strong>
+            </div>
           </div>
           {stats ? (
             <p className="muted-text">오늘 완료 {stats.reviewed_today_count}개</p>

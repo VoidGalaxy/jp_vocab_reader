@@ -64,6 +64,32 @@ export function ShareIcon(props: IconProps) {
   );
 }
 
+export function RotateIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M3 12a9 9 0 1 1 2.64 6.36" />
+      <polyline points="3 21 3 15 9 15" />
+    </svg>
+  );
+}
+
+export function ClockIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+export function ZapIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
 export function InfoIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>
