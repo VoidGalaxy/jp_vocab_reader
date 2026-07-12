@@ -10,7 +10,7 @@ import {
   selectReadingVocabEntriesByMode,
 } from "./coverageUtils";
 import type { ReadingSaveMode, ReadingVocabEntry, ReadingVocabFilter } from "./coverageUtils";
-import { FolderIcon, SearchIcon } from "./icons";
+import { ChevronDownIcon, FolderIcon, SearchIcon } from "./icons";
 import { statusLabels } from "./shared";
 
 type ReadingVocabPanelProps = {
@@ -67,6 +67,13 @@ export function ReadingVocabPanel({
   const [selectedWordKeys, setSelectedWordKeys] = useState<Set<string>>(
     () => new Set(),
   );
+  // Collapsed by default only matters visually on narrow screens (the
+  // toggle button itself is desktop-visible too, but the panel simply
+  // never gets tall enough there to need collapsing) -- keeps the "이 텍스트
+  // 단어 목록" section from pushing the save CTA far down the page on long,
+  // chunk-analyzed texts. Starts expanded so existing behavior is unchanged
+  // until a user actually taps the toggle.
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Each memo only recomputes on the input that actually changed it --
   // typing in the search box never re-derives entries from tokens/vocabItems,
@@ -148,14 +155,36 @@ export function ReadingVocabPanel({
 
   return (
     <section className="panel-card reading-vocab-panel">
-      <div className="panel-card-header">
-        <h3 className="panel-card-title">이 텍스트 단어 목록</h3>
-        <p className="panel-card-description">
-          이 텍스트에서 나온 학습 가능 단어를 모아봤어요. 단어를 누르면 원문
-          위치로 이동하고, 체크박스로 저장할 단어를 직접 골라 담을 수
-          있습니다.
-        </p>
+      <div className="panel-card-header reading-vocab-panel-header">
+        <div>
+          <h3 className="panel-card-title">이 텍스트 단어 목록</h3>
+          <p className="panel-card-description">
+            이 텍스트에서 나온 학습 가능 단어를 모아봤어요. 단어를 누르면 원문
+            위치로 이동하고, 체크박스로 저장할 단어를 직접 골라 담을 수
+            있습니다.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="ghost-button compact-button reading-vocab-collapse-toggle"
+          onClick={() => setIsCollapsed((value) => !value)}
+          aria-expanded={!isCollapsed}
+        >
+          <ChevronDownIcon
+            className={`reading-vocab-collapse-icon${
+              isCollapsed ? " reading-vocab-collapse-icon-collapsed" : ""
+            }`}
+          />
+          {isCollapsed ? "펼치기" : "접기"}
+        </button>
       </div>
+      {isCollapsed ? (
+        <p className="muted-text reading-vocab-collapsed-summary">
+          {entries.length}개 단어
+          {selectedCount > 0 ? ` · 선택한 단어 ${selectedCount}개` : ""}
+        </p>
+      ) : (
+        <>
       <div className="reading-vocab-controls">
         <div className="reading-vocab-search-wrap">
           <SearchIcon className="reading-vocab-search-icon" />
@@ -325,6 +354,8 @@ export function ReadingVocabPanel({
             );
           })}
         </ul>
+      )}
+        </>
       )}
     </section>
   );

@@ -1555,6 +1555,39 @@ select {
   gap: 12px;
 }
 
+.reading-vocab-panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reading-vocab-panel-header > div {
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.reading-vocab-collapse-toggle {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.reading-vocab-collapse-icon {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
+}
+
+.reading-vocab-collapse-icon-collapsed {
+  transform: rotate(-90deg);
+}
+
+.reading-vocab-collapsed-summary {
+  margin: 0;
+  font-size: 13px;
+}
+
 .reading-vocab-controls {
   display: grid;
   gap: 8px;
@@ -3644,7 +3677,44 @@ select {
     gap: 6px;
   }
 
+  .token-sheet-nav-button {
+    min-height: 44px;
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+
   .classify-actions {
     gap: 8px;
+  }
+
+  /* Mobile-only reflow of the reading tab: the reading card and word list
+     (with its own save CTA) move ahead of the "이 텍스트 학습 요약" card so
+     the core reading experience isn't pushed down the page by a status
+     summary, and "저장한 단어로 바로 학습" lands at the very end of the
+     flow, right after the word list a user just saved from. Desktop keeps
+     its existing DOM order (summary before the reader) untouched --
+     `order` only changes visual position, not the underlying markup. */
+  .reading-summary-panel {
+    order: 5;
+  }
+
+  /* Touch-target pass: .compact-button (filter chips, quick-select,
+     row-actions, reader progress/bookmark buttons, etc.) is deliberately
+     small on desktop where a mouse is precise, but that's too tight to
+     tap reliably on a phone. Scoped to mobile only so desktop density is
+     unaffected. */
+  .compact-button {
+    min-height: 40px;
+    padding: 9px 12px;
+  }
+
+  .reading-vocab-filter-button {
+    min-height: 36px;
+    padding: 8px 14px;
+  }
+
+  .checkbox-field input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
   }
 }
