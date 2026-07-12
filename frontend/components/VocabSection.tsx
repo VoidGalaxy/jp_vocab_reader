@@ -2,6 +2,7 @@
 
 import { Fragment, useState } from "react";
 import { HighlightedExample } from "./HighlightedExample";
+import { BookIcon, FolderIcon } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 import { formatDateTime, formatNextReview, StatusSelect } from "./shared";
 import type {
@@ -771,6 +772,7 @@ export function VocabSection({
         </p>
       ) : (
         <div className="empty-guide">
+          <FolderIcon className="empty-state-icon" />
           <p>아직 저장된 단어가 없습니다.</p>
           <p className="muted-text">
             읽기 탭에서 원문을 분석하고 모르는 단어를 저장하면 이곳에
@@ -781,6 +783,7 @@ export function VocabSection({
             className="ghost-button compact-button"
             onClick={onGoToReading}
           >
+            <BookIcon className="button-icon" />
             읽기 탭에서 단어 저장하기
           </button>
         </div>

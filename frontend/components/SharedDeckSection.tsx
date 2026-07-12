@@ -1,3 +1,4 @@
+import { FolderIcon, ShareIcon } from "./icons";
 import {
   formatDateTime,
   getJlptLevel,
@@ -228,10 +229,21 @@ export function SharedDeckSection({
           })}
         </div>
       ) : (
-        <p className="empty">
-          공개 공유 덱이 없습니다. 단어장 탭에서 현재 덱을 공유 덱으로
-          등록할 수 있습니다.
-        </p>
+        <div className="empty-guide">
+          <ShareIcon className="empty-state-icon" />
+          <p>공개 공유 덱이 없습니다.</p>
+          <p className="muted-text">
+            단어장 탭에서 현재 덱을 공유 덱으로 등록할 수 있습니다.
+          </p>
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={onGoToVocab}
+          >
+            <FolderIcon className="button-icon" />
+            단어장 탭으로 이동
+          </button>
+        </div>
       )}
 
       {selectedDeck ? (

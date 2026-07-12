@@ -10,6 +10,16 @@ import {
   resolveSelectedReadingSaveTargets,
 } from "../components/coverageUtils";
 import type { ReadingSaveMode, ReadingSaveTarget } from "../components/coverageUtils";
+import {
+  BookIcon,
+  CardsIcon,
+  ChatIcon,
+  FolderIcon,
+  InfoIcon,
+  ShareIcon,
+  ShieldIcon,
+  SparkleIcon,
+} from "../components/icons";
 import { InfoSection } from "../components/InfoSection";
 import { MeaningFeedbackModal } from "../components/MeaningFeedbackModal";
 import {
@@ -136,13 +146,17 @@ const API_BASE_URL =
 const CLASSIFICATION_DRAFT_KEY = "jp-vocab-reader:classification-draft";
 const ACCESS_TOKEN_KEY = "jp-vocab-reader:access-token";
 
-const tabs: Array<{ key: TabKey; label: string }> = [
-  { key: "analyze", label: "분석" },
-  { key: "reading", label: "읽기" },
-  { key: "vocab", label: "단어장" },
-  { key: "study", label: "학습" },
-  { key: "shared", label: "공유덱" },
-  { key: "info", label: "정보" },
+const tabs: Array<{
+  key: TabKey;
+  label: string;
+  icon: (props: { className?: string }) => JSX.Element;
+}> = [
+  { key: "analyze", label: "분석", icon: SparkleIcon },
+  { key: "reading", label: "읽기", icon: BookIcon },
+  { key: "vocab", label: "단어장", icon: FolderIcon },
+  { key: "study", label: "학습", icon: CardsIcon },
+  { key: "shared", label: "공유덱", icon: ShareIcon },
+  { key: "info", label: "정보", icon: InfoIcon },
 ];
 
 function createEmptySessionCounts(): SessionReviewCounts {
@@ -2706,6 +2720,7 @@ export default function HomePage() {
             className="secondary-button compact-button header-feedback-button"
             onClick={openAppFeedback}
           >
+            <ChatIcon className="button-icon" />
             피드백
           </button>
         </header>
@@ -2745,17 +2760,26 @@ export default function HomePage() {
 
             <div className="landing-steps">
               <div className="landing-step-card">
-                <span className="landing-step-number">1</span>
+                <div className="landing-step-heading">
+                  <span className="landing-step-number">1</span>
+                  <BookIcon className="landing-step-icon" />
+                </div>
                 <h3>원문 붙여넣기</h3>
                 <p>읽고 싶은 일본어 문장을 붙여넣고 분석합니다.</p>
               </div>
               <div className="landing-step-card">
-                <span className="landing-step-number">2</span>
+                <div className="landing-step-heading">
+                  <span className="landing-step-number">2</span>
+                  <FolderIcon className="landing-step-icon" />
+                </div>
                 <h3>모르는 단어 저장</h3>
                 <p>뜻과 읽기를 확인하고, 모르는 단어만 단어장에 저장합니다.</p>
               </div>
               <div className="landing-step-card">
-                <span className="landing-step-number">3</span>
+                <div className="landing-step-heading">
+                  <span className="landing-step-number">3</span>
+                  <CardsIcon className="landing-step-icon" />
+                </div>
                 <h3>문맥 예문으로 복습</h3>
                 <p>단어가 나온 짧은 문장과 함께 SRS로 복습합니다.</p>
               </div>
@@ -2781,9 +2805,12 @@ export default function HomePage() {
             </div>
 
             <p className="landing-trust-note">
-              입력한 원문은 분석에만 사용되며, 원문 전체는 저장하지
-              않습니다. 단어장에는 학습에 필요한 단어 정보와 짧은 문맥
-              예문만 저장됩니다.
+              <ShieldIcon className="landing-trust-note-icon" />
+              <span>
+                입력한 원문은 분석에만 사용되며, 원문 전체는 저장하지
+                않습니다. 단어장에는 학습에 필요한 단어 정보와 짧은 문맥
+                예문만 저장됩니다.
+              </span>
             </p>
           </section>
         ) : null}
@@ -2813,7 +2840,8 @@ export default function HomePage() {
               className={activeTab === tab.key ? "tab active-tab" : "tab"}
               onClick={() => void handleTabChange(tab.key)}
             >
-              {tab.label}
+              <tab.icon className="tab-icon" />
+              <span>{tab.label}</span>
             </button>
           ))}
         </nav>

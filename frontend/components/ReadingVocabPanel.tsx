@@ -10,6 +10,7 @@ import {
   selectReadingVocabEntriesByMode,
 } from "./coverageUtils";
 import type { ReadingSaveMode, ReadingVocabEntry, ReadingVocabFilter } from "./coverageUtils";
+import { FolderIcon, SearchIcon } from "./icons";
 import { statusLabels } from "./shared";
 
 type ReadingVocabPanelProps = {
@@ -156,14 +157,17 @@ export function ReadingVocabPanel({
         </p>
       </div>
       <div className="reading-vocab-controls">
-        <input
-          type="search"
-          className="reading-vocab-search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="단어, 읽기, 뜻으로 검색"
-          aria-label="단어 목록 검색"
-        />
+        <div className="reading-vocab-search-wrap">
+          <SearchIcon className="reading-vocab-search-icon" />
+          <input
+            type="search"
+            className="reading-vocab-search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="단어, 읽기, 뜻으로 검색"
+            aria-label="단어 목록 검색"
+          />
+        </div>
         <div
           className="reading-vocab-filters"
           role="group"
@@ -239,7 +243,14 @@ export function ReadingVocabPanel({
                 : undefined
             }
           >
-            {isSaving ? "저장 중..." : `선택한 단어 저장 (${selectedCount})`}
+            {isSaving ? (
+              "저장 중..."
+            ) : (
+              <>
+                <FolderIcon className="button-icon" />
+                {`선택한 단어 저장 (${selectedCount})`}
+              </>
+            )}
           </button>
         </div>
       </div>

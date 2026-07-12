@@ -5,6 +5,7 @@ import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import { classifyMessageTone, computeReadingSaveSummary } from "./coverageUtils";
 import type { ReadingSaveMode } from "./coverageUtils";
+import { BookIcon, CardsIcon, SparkleIcon } from "./icons";
 import type { ChunkAnalyzeProgress } from "./readingChunkAnalyze";
 import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 
@@ -216,6 +217,7 @@ export function ReadingTab({
             <>
               {!hasResult && !text.trim() ? (
                 <div className="reading-empty-guide">
+                  <BookIcon className="empty-state-icon" />
                   <p>읽고 싶은 일본어 문장을 붙여넣고 분석해보세요.</p>
                   <p className="muted-text">
                     모르는 단어를 클릭해 뜻과 읽기를 확인할 수 있습니다.
@@ -225,6 +227,7 @@ export function ReadingTab({
                     className="ghost-button compact-button"
                     onClick={() => onTextChange(SAMPLE_TEXT)}
                   >
+                    <SparkleIcon className="button-icon" />
                     샘플 문장으로 체험
                   </button>
                 </div>
@@ -256,7 +259,14 @@ export function ReadingTab({
                   type="submit"
                   disabled={isAnalyzing || !selectedDeckId || !text.trim()}
                 >
-                  {isAnalyzing ? "분석 중..." : "읽기 분석"}
+                  {isAnalyzing ? (
+                    "분석 중..."
+                  ) : (
+                    <>
+                      <SparkleIcon className="button-icon" />
+                      읽기 분석
+                    </>
+                  )}
                 </button>
                 {analyzeHint ? <p className="action-hint">{analyzeHint}</p> : null}
               </div>
@@ -390,6 +400,7 @@ export function ReadingTab({
                   : "먼저 단어를 저장하면 바로 학습으로 이동할 수 있습니다."
               }
             >
+              <CardsIcon className="button-icon" />
               저장한 단어로 바로 학습
             </button>
             <button

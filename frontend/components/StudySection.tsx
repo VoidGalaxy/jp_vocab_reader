@@ -11,6 +11,7 @@ import type { StudyStats } from "./types";
 import { StatsPanel } from "./StatsPanel";
 import { formatNextReview } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
+import { BookIcon, CardsIcon, CheckCircleIcon, InboxIcon } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 
 type StudySectionProps = {
@@ -263,7 +264,14 @@ export function StudySection({
               </select>
             </label>
             <button type="button" onClick={onStart} disabled={isLoading}>
-              {isLoading ? "불러오는 중..." : "학습 시작"}
+              {isLoading ? (
+                "불러오는 중..."
+              ) : (
+                <>
+                  <CardsIcon className="button-icon" />
+                  학습 시작
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -300,6 +308,7 @@ export function StudySection({
 
       {!hasStarted && !currentItem && !isComplete ? (
         <div className="study-card study-ready-card">
+          <CardsIcon className="empty-state-icon" />
           <h3>학습할 단어를 불러오세요</h3>
           <p>
             덱과 학습 모드를 선택한 뒤 학습 시작을 누르면 저장한 단어를 바로
@@ -310,6 +319,7 @@ export function StudySection({
 
       {hasStarted && !currentItem && !isComplete ? (
         <div className="study-card study-ready-card">
+          <InboxIcon className="empty-state-icon" />
           <h3>{emptyMessages[studyMode]}</h3>
           <p>{emptySecondaryMessages[studyMode]}</p>
           <div className="study-actions">
@@ -317,6 +327,7 @@ export function StudySection({
               단어장으로 가기
             </button>
             <button type="button" className="secondary-button" onClick={onGoToAnalyze}>
+              <BookIcon className="button-icon" />
               분석 탭으로 가기
             </button>
           </div>
@@ -461,6 +472,7 @@ export function StudySection({
 
       {isComplete ? (
         <div className="study-card complete-card">
+          <CheckCircleIcon className="complete-card-icon" />
           <h3>
             {studyMode === "recent" ? "방금 저장한 단어 학습 완료!" : "오늘 학습 완료!"}
           </h3>
