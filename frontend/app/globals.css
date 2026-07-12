@@ -88,6 +88,208 @@ button {
   margin: 0 auto;
 }
 
+/* App shell: desktop = sticky left sidebar + main content column, sharing
+   one flex row so the sidebar never needs manual margin math against
+   .page's own padding. Mobile hides the sidebar and shows the bottom nav
+   instead (both driven by the same NavAction data from page.tsx). */
+.app-shell {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.app-shell-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-sidebar {
+  position: sticky;
+  top: 24px;
+  flex: 0 0 216px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: calc(100vh - 48px);
+  padding: 18px 12px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: 0 10px 24px rgba(120, 98, 40, 0.04);
+}
+
+.app-sidebar-group {
+  display: grid;
+  gap: 2px;
+}
+
+.app-sidebar-group-label {
+  margin: 4px 10px 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.app-sidebar-link {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 10px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: transparent;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: none;
+  text-align: left;
+}
+
+.app-sidebar-link:not(:disabled):hover {
+  background: var(--soft-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.app-sidebar-link-active {
+  color: #ffffff;
+  background: var(--primary);
+}
+
+.app-sidebar-link-active:not(:disabled):hover {
+  background: var(--primary);
+}
+
+.app-sidebar-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
+.app-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .app-sidebar {
+    display: none;
+  }
+
+  .app-shell {
+    display: block;
+  }
+
+  /* Fixed pill-less tab bar pinned to the bottom of the viewport --
+     env(safe-area-inset-bottom) keeps it clear of the home-indicator area
+     on notched phones instead of sitting flush against it. */
+  .app-bottom-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 500;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 2px;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: var(--panel-bg);
+    box-shadow: 0 -8px 20px rgba(120, 98, 40, 0.08);
+  }
+
+  /* Clears the fixed bottom nav so the last card in any tab never renders
+     underneath it. */
+  .app-shell-content {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  .app-bottom-nav-item {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 48px;
+    padding: 6px 2px;
+    border-radius: 10px;
+    color: var(--muted);
+    background: transparent;
+    font-size: 11px;
+    font-weight: 600;
+    box-shadow: none;
+  }
+
+  .app-bottom-nav-item:not(:disabled):hover {
+    box-shadow: none;
+    transform: none;
+  }
+
+  .app-bottom-nav-item span {
+    overflow: hidden;
+    max-width: 100%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .app-bottom-nav-item-active {
+    color: var(--primary);
+    background: var(--soft-bg);
+  }
+
+  .app-bottom-nav-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .app-bottom-nav-more-wrap {
+    position: relative;
+    display: flex;
+    flex: 1 1 0;
+  }
+
+  .app-bottom-nav-more-sheet {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    display: grid;
+    gap: 2px;
+    width: max(160px, 100%);
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel-bg);
+    box-shadow: 0 -10px 26px rgba(120, 98, 40, 0.14);
+  }
+
+  .app-bottom-nav-more-item {
+    justify-content: flex-start;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    color: var(--text-secondary);
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .app-bottom-nav-more-item:not(:disabled):hover {
+    background: var(--soft-bg);
+    box-shadow: none;
+    transform: none;
+  }
+
+  .app-bottom-nav-more-item-active {
+    color: var(--primary);
+    background: var(--soft-bg);
+  }
+}
+
 .header {
   display: flex;
   flex-wrap: wrap;
@@ -245,23 +447,6 @@ button {
    reading tab so the first-impression promise ("모르는 단어만 골라 문맥
    예문과 함께 복습") visually matches the actual reading experience it
    points to. */
-.landing-hero {
-  display: grid;
-  gap: 22px;
-  margin-bottom: 22px;
-  padding: 28px;
-  border: 1px solid var(--paper-border);
-  border-radius: 14px;
-  background: var(--paper-bg);
-  box-shadow: 0 14px 32px var(--paper-shadow);
-}
-
-.landing-hero-copy {
-  display: grid;
-  gap: 10px;
-  max-width: 640px;
-}
-
 .landing-hero-title {
   margin: 0;
   color: #22201a;
@@ -361,30 +546,169 @@ button {
   line-height: 1.55;
 }
 
-.landing-preview-grid {
+/* Home dashboard */
+
+.home-dashboard-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  align-items: start;
+  gap: 18px;
+}
+
+.home-dashboard-main,
+.home-dashboard-side {
+  display: grid;
+  gap: 18px;
+}
+
+.home-hero-card {
+  gap: 14px;
+  padding: 28px;
+  border-color: var(--paper-border);
+  background: var(--paper-bg);
+  box-shadow: 0 14px 32px var(--paper-shadow);
+}
+
+.home-continue-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.home-continue-icon {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--primary);
+}
+
+.home-continue-body strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.home-continue-body p {
+  margin: 4px 0 0;
+}
+
+.home-continue-button {
+  width: 100%;
+}
+
+.home-quick-entry-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
-.landing-preview-card {
+.home-quick-entry-card {
   display: grid;
   gap: 4px;
-  padding: 12px 14px;
+  justify-items: start;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--panel-bg);
+  text-align: left;
+  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
+}
+
+.home-quick-entry-card:not(:disabled):hover {
+  border-color: var(--border-strong);
+}
+
+.home-quick-entry-icon {
+  width: 20px;
+  height: 20px;
+  margin-bottom: 4px;
+  color: var(--primary);
+}
+
+.home-quick-entry-label {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.home-quick-entry-description {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.home-today-stats {
+  display: grid;
+  gap: 8px;
+}
+
+.home-today-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--soft-bg);
 }
 
-.landing-preview-card strong {
-  color: var(--text);
+.home-today-stat span {
+  color: var(--muted);
   font-size: 13px;
 }
 
-.landing-preview-card span {
+.home-today-stat strong {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.home-guide-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-guide-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.home-guide-number {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--soft-bg);
   color: var(--muted);
   font-size: 12px;
-  line-height: 1.5;
+  font-weight: 800;
+}
+
+.home-trust-list-wrap {
+  display: grid;
+  gap: 4px;
+}
+
+.home-recent-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 @media (max-width: 640px) {
@@ -416,7 +740,11 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .landing-preview-grid {
+  .home-dashboard-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .home-quick-entry-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

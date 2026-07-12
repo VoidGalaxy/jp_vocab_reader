@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AnalyzeSection } from "../components/AnalyzeSection";
+import { AppShell, type NavAction, type NavGroup } from "../components/AppShell";
 import { GlobalFeedbackModal } from "../components/GlobalFeedbackModal";
 import {
   getTokenGroupKey,
@@ -10,14 +11,15 @@ import {
   resolveSelectedReadingSaveTargets,
 } from "../components/coverageUtils";
 import type { ReadingSaveMode, ReadingSaveTarget } from "../components/coverageUtils";
+import { HomeDashboard } from "../components/HomeDashboard";
 import {
   BookIcon,
   CardsIcon,
   ChatIcon,
   FolderIcon,
+  HomeIcon,
   InfoIcon,
   ShareIcon,
-  ShieldIcon,
   SparkleIcon,
 } from "../components/icons";
 import { InfoSection } from "../components/InfoSection";
@@ -128,7 +130,14 @@ type AuthResponse = {
   user: CurrentUser;
 };
 
-type TabKey = "analyze" | "reading" | "vocab" | "study" | "shared" | "info";
+type TabKey =
+  | "home"
+  | "analyze"
+  | "reading"
+  | "vocab"
+  | "study"
+  | "shared"
+  | "info";
 type VocabStatusFilter = "all" | TokenStatus;
 
 type ClassificationDraft = {
@@ -151,6 +160,7 @@ const tabs: Array<{
   label: string;
   icon: (props: { className?: string }) => JSX.Element;
 }> = [
+  { key: "home", label: "홈", icon: HomeIcon },
   { key: "analyze", label: "분석", icon: SparkleIcon },
   { key: "reading", label: "읽기", icon: BookIcon },
   { key: "vocab", label: "단어장", icon: FolderIcon },
@@ -557,7 +567,7 @@ function deriveReadingTokens(
 }
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("analyze");
+  const [activeTab, setActiveTab] = useState<TabKey>("home");
   const [hasLoadedVocab, setHasLoadedVocab] = useState(false);
   const [decks, setDecks] = useState<Deck[]>([]);
   const [selectedSaveDeckId, setSelectedSaveDeckId] = useState("");
@@ -879,6 +889,18 @@ export default function HomePage() {
     vocabDueOnly,
     vocabSort,
   ]);
+
+  // Home starts as the default tab and shows the same "오늘 학습" numbers
+  // the study tab does, so it needs stats fetched up front rather than only
+  // on a study-tab visit. Reuses the existing /stats fetch + state --
+  // failures already surface as studyStatsMessage without throwing, so a
+  // failed request here can't break the home screen.
+  useEffect(() => {
+    if (activeTab === "home") {
+      void loadStudyStats(selectedStudyDeckId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   async function handleTabChange(tab: TabKey) {
     setActiveTab(tab);
@@ -2707,13 +2729,69 @@ export default function HomePage() {
   const currentScreenLabel =
     tabs.find((tab) => tab.key === activeTab)?.label ?? activeTab;
 
+  // Home's "오늘 복습하기" CTA: jump to the study tab and start today's
+  // queue immediately, same as the study tab's own "오늘 복습 시작" quick
+  // start button (quickStartStudy/startStudy are unchanged).
+  function goToStudyToday() {
+    setActiveTab("study");
+    void loadStudyStats(selectedStudyDeckId);
+    quickStartStudy("today");
+  }
+
+  // Builds one NavAction from the existing `tabs` entry for `key` --
+  // sidebar/bottom-nav/more-sheet all resolve through handleTabChange, so
+  // there is exactly one place tab switches actually happen.
+  function navFor(key: TabKey): NavAction {
+    const tab = tabs.find((item) => item.key === key)!;
+    return {
+      key: tab.key,
+      label: tab.label,
+      icon: tab.icon,
+      onClick: () => void handleTabChange(key),
+      isActive: activeTab === key,
+    };
+  }
+
+  const feedbackNav: NavAction = {
+    key: "feedback",
+    label: "피드백",
+    icon: ChatIcon,
+    onClick: openAppFeedback,
+  };
+
+  const sidebarGroups: NavGroup[] = [
+    {
+      label: "MAIN",
+      items: [navFor("home"), navFor("reading"), navFor("analyze"), navFor("study")],
+    },
+    { label: "LIBRARY", items: [navFor("vocab"), navFor("shared")] },
+    { label: "TOOLS", items: [feedbackNav, navFor("info")] },
+  ];
+
+  const mobilePrimaryNavItems: NavAction[] = [
+    navFor("home"),
+    navFor("reading"),
+    navFor("study"),
+    navFor("vocab"),
+  ];
+  const mobileMoreNavItems: NavAction[] = [
+    navFor("shared"),
+    navFor("analyze"),
+    navFor("info"),
+    feedbackNav,
+  ];
+
   return (
     <main className="page">
+      <AppShell
+        groups={sidebarGroups}
+        mobilePrimaryItems={mobilePrimaryNavItems}
+        mobileMoreItems={mobileMoreNavItems}
+      >
       <section className="workspace">
         <header className="header">
           <div>
-            <h1>일본어 단어 분석</h1>
-            <p>일본어 원문을 붙여넣고 학습할 단어 후보를 확인합니다.</p>
+            <h1>일본어 단어장</h1>
           </div>
           <button
             type="button"
@@ -2725,94 +2803,20 @@ export default function HomePage() {
           </button>
         </header>
 
-        {activeTab === "analyze" ? (
-          <section className="landing-hero" aria-label="서비스 소개">
-            <div className="landing-hero-copy">
-              <h2 className="landing-hero-title">
-                일본어 원문을 붙여넣으면,
-                <br />
-                모르는 단어만 골라 문맥 예문과 함께 복습합니다.
-              </h2>
-              <p className="landing-hero-subtitle">
-                웹소설·원서·기사 속 일본어 단어를 자동으로 분석하고, 한국어
-                뜻과 읽기를 확인한 뒤 SRS로 복습할 수 있습니다.
-              </p>
-              <div className="landing-hero-actions">
-                <button
-                  type="button"
-                  onClick={() => void handleTabChange("reading")}
-                >
-                  {isDevUser ? "원문 분석 시작하기" : "읽기 탭으로 이동"}
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={
-                    isDevUser
-                      ? scrollToAccountPanel
-                      : () => void handleTabChange("study")
-                  }
-                >
-                  {isDevUser ? "회원가입 · 로그인" : "오늘 복습하러 가기"}
-                </button>
-              </div>
-            </div>
-
-            <div className="landing-steps">
-              <div className="landing-step-card">
-                <div className="landing-step-heading">
-                  <span className="landing-step-number">1</span>
-                  <BookIcon className="landing-step-icon" />
-                </div>
-                <h3>원문 붙여넣기</h3>
-                <p>읽고 싶은 일본어 문장을 붙여넣고 분석합니다.</p>
-              </div>
-              <div className="landing-step-card">
-                <div className="landing-step-heading">
-                  <span className="landing-step-number">2</span>
-                  <FolderIcon className="landing-step-icon" />
-                </div>
-                <h3>모르는 단어 저장</h3>
-                <p>뜻과 읽기를 확인하고, 모르는 단어만 단어장에 저장합니다.</p>
-              </div>
-              <div className="landing-step-card">
-                <div className="landing-step-heading">
-                  <span className="landing-step-number">3</span>
-                  <CardsIcon className="landing-step-icon" />
-                </div>
-                <h3>문맥 예문으로 복습</h3>
-                <p>단어가 나온 짧은 문장과 함께 SRS로 복습합니다.</p>
-              </div>
-            </div>
-
-            <div className="landing-preview-grid">
-              <div className="landing-preview-card">
-                <strong>원문 분석</strong>
-                <span>붙여넣은 문장에서 학습할 단어를 자동으로 추출합니다.</span>
-              </div>
-              <div className="landing-preview-card">
-                <strong>상태별 단어 표시</strong>
-                <span>아는/모르는/헷갈리는 단어를 색으로 구분해 보여줍니다.</span>
-              </div>
-              <div className="landing-preview-card">
-                <strong>문맥 예문 SRS</strong>
-                <span>단어가 나온 문장과 함께 복습 카드를 만듭니다.</span>
-              </div>
-              <div className="landing-preview-card">
-                <strong>JLPT 추천 어휘 공유덱</strong>
-                <span>레벨별 추천 단어 덱을 가져와 바로 학습합니다.</span>
-              </div>
-            </div>
-
-            <p className="landing-trust-note">
-              <ShieldIcon className="landing-trust-note-icon" />
-              <span>
-                입력한 원문은 분석에만 사용되며, 원문 전체는 저장하지
-                않습니다. 단어장에는 학습에 필요한 단어 정보와 짧은 문맥
-                예문만 저장됩니다.
-              </span>
-            </p>
-          </section>
+        {activeTab === "home" ? (
+          <HomeDashboard
+            isDevUser={isDevUser}
+            studyStats={studyStats}
+            isStudyStatsLoading={isLoadingStudyStats}
+            recentlySavedVocabItemIdsCount={recentlySavedVocabItemIds.length}
+            hasReadingSession={readingTokens.length > 0}
+            onStartReading={() => void handleTabChange("reading")}
+            onStartTodayReview={goToStudyToday}
+            onScrollToAccount={scrollToAccountPanel}
+            onStartRecentlySaved={startStudyFromRecentlySaved}
+            onGoToVocab={() => void handleTabChange("vocab")}
+            onGoToShared={() => void handleTabChange("shared")}
+          />
         ) : null}
 
         <AccountPanel
@@ -2831,20 +2835,6 @@ export default function HomePage() {
           onSubmit={handleAuthSubmit}
           onLogout={() => void handleLogout()}
         />
-
-        <nav className="tab-nav" aria-label="주요 기능">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              className={activeTab === tab.key ? "tab active-tab" : "tab"}
-              onClick={() => void handleTabChange(tab.key)}
-            >
-              <tab.icon className="tab-icon" />
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </nav>
 
         {activeTab === "analyze" ? (
           <AnalyzeSection
@@ -3108,6 +3098,7 @@ export default function HomePage() {
           />
         ) : null}
       </section>
+      </AppShell>
 
       {meaningFeedbackTarget ? (
         <MeaningFeedbackModal
