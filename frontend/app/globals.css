@@ -270,8 +270,10 @@ button {
 }
 
 .landing-trust-note {
-  margin: 6px 0 0;
+  max-width: 640px;
+  margin: 6px auto 0;
   padding: 10px 12px;
+  text-align: center;
   border: 1px solid var(--paper-border);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.6);
@@ -977,8 +979,10 @@ select {
 .study-card {
   display: grid;
   gap: 20px;
+  width: min(640px, 100%);
+  margin: 0 auto;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 28px;
   background: var(--panel-bg);
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
@@ -2069,7 +2073,13 @@ select {
 }
 
 .shared-deck-word-count-badge {
+  display: inline-flex;
+  align-items: center;
   margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
+  background: var(--soft-bg);
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
@@ -2140,13 +2150,28 @@ select {
 
 .vocab-compact-toolbar {
   display: grid;
-  grid-template-columns: minmax(150px, 0.9fr) minmax(220px, 1.4fr) minmax(140px, 0.7fr) auto minmax(150px, 0.8fr) auto auto;
   gap: 10px;
-  align-items: flex-end;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px;
   background: var(--panel-bg);
+}
+
+/* Filters (덱/검색/상태/정렬) and actions (학습하기/추가/관리) read as two
+   distinct groups instead of one long row of unrelated controls. */
+.vocab-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.vocab-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 
 .vocab-management-panel {
@@ -2526,7 +2551,6 @@ select {
   }
 
   .vocab-filters,
-  .vocab-compact-toolbar,
   .analyze-options,
   .info-panel,
   .stats-grid,
@@ -2538,6 +2562,21 @@ select {
   .vocab-filters {
     gap: 8px;
     padding: 10px;
+  }
+
+  .vocab-filter-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vocab-filter-group .inline-field,
+  .vocab-filter-group input {
+    width: 100%;
+  }
+
+  .vocab-action-group {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .management-actions {

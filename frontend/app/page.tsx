@@ -2741,11 +2741,6 @@ export default function HomePage() {
                   {isDevUser ? "회원가입 · 로그인" : "오늘 복습하러 가기"}
                 </button>
               </div>
-              <p className="landing-trust-note">
-                입력한 원문은 분석에만 사용되며, 원문 전체는 저장하지
-                않습니다. 단어장에는 학습에 필요한 단어 정보와 짧은 문맥
-                예문만 저장됩니다.
-              </p>
             </div>
 
             <div className="landing-steps">
@@ -2784,6 +2779,12 @@ export default function HomePage() {
                 <span>레벨별 추천 단어 덱을 가져와 바로 학습합니다.</span>
               </div>
             </div>
+
+            <p className="landing-trust-note">
+              입력한 원문은 분석에만 사용되며, 원문 전체는 저장하지
+              않습니다. 단어장에는 학습에 필요한 단어 정보와 짧은 문맥
+              예문만 저장됩니다.
+            </p>
           </section>
         ) : null}
 

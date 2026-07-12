@@ -191,87 +191,91 @@ export function VocabSection({
   return (
     <section className="tab-panel" aria-live="polite">
       <div className="vocab-compact-toolbar">
-        <label className="inline-field">
-          덱
-          <select value={selectedDeckId} onChange={(event) => onSelectedDeckChange(event.target.value)}>
-            <option value="all">전체 단어장</option>
-            {decks.map((deck) => (
-              <option key={deck.id} value={String(deck.id)}>
-                {deck.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <input
-          value={searchText}
-          onChange={(event) => onSearchTextChange(event.target.value)}
-          placeholder="단어, 뜻, 읽기, 예문 검색"
-        />
-        <label className="inline-field">
-          상태
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              onStatusFilterChange(event.target.value as "all" | TokenStatus)
+        <div className="vocab-filter-group">
+          <label className="inline-field">
+            덱
+            <select value={selectedDeckId} onChange={(event) => onSelectedDeckChange(event.target.value)}>
+              <option value="all">전체 단어장</option>
+              {decks.map((deck) => (
+                <option key={deck.id} value={String(deck.id)}>
+                  {deck.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <input
+            value={searchText}
+            onChange={(event) => onSearchTextChange(event.target.value)}
+            placeholder="단어, 뜻, 읽기, 예문 검색"
+          />
+          <label className="inline-field">
+            상태
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                onStatusFilterChange(event.target.value as "all" | TokenStatus)
+              }
+            >
+              <option value="all">전체</option>
+              <option value="known">완벽히 아는 단어</option>
+              <option value="uncertain">헷갈리는 단어</option>
+              <option value="unknown">모르는 단어</option>
+              <option value="unclassified">분류되지 않음</option>
+            </select>
+          </label>
+          <label className="checkbox-field">
+            <input
+              type="checkbox"
+              checked={dueOnly}
+              onChange={(event) => onDueOnlyChange(event.target.checked)}
+            />
+            복습 대상만 보기
+          </label>
+          <label className="inline-field">
+            정렬
+            <select
+              value={sortValue}
+              onChange={(event) => onSortChange(event.target.value as VocabSort)}
+            >
+              <option value="created_desc">최근 저장순</option>
+              <option value="created_asc">오래된 저장순</option>
+              <option value="wrong_desc">많이 틀린순</option>
+              <option value="correct_desc">많이 맞힌순</option>
+              <option value="review_level_asc">복습 단계 낮은순</option>
+              <option value="next_review_asc">다음 복습 가까운순</option>
+            </select>
+          </label>
+        </div>
+        <div className="vocab-action-group">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={onStudySelectedDeck}
+            disabled={selectedDeckId === "all"}
+            title={
+              selectedDeckId === "all"
+                ? "학습할 특정 덱을 먼저 선택해 주세요."
+                : undefined
             }
           >
-            <option value="all">전체</option>
-            <option value="known">완벽히 아는 단어</option>
-            <option value="uncertain">헷갈리는 단어</option>
-            <option value="unknown">모르는 단어</option>
-            <option value="unclassified">분류되지 않음</option>
-          </select>
-        </label>
-        <label className="checkbox-field">
-          <input
-            type="checkbox"
-            checked={dueOnly}
-            onChange={(event) => onDueOnlyChange(event.target.checked)}
-          />
-          복습 대상만 보기
-        </label>
-        <label className="inline-field">
-          정렬
-          <select
-            value={sortValue}
-            onChange={(event) => onSortChange(event.target.value as VocabSort)}
+            이 덱 학습하기
+          </button>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
           >
-            <option value="created_desc">최근 저장순</option>
-            <option value="created_asc">오래된 저장순</option>
-            <option value="wrong_desc">많이 틀린순</option>
-            <option value="correct_desc">많이 맞힌순</option>
-            <option value="review_level_asc">복습 단계 낮은순</option>
-            <option value="next_review_asc">다음 복습 가까운순</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={onStudySelectedDeck}
-          disabled={selectedDeckId === "all"}
-          title={
-            selectedDeckId === "all"
-              ? "학습할 특정 덱을 먼저 선택해 주세요."
-              : undefined
-          }
-        >
-          이 덱 학습하기
-        </button>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
-        >
-          {isNewVocabFormOpen ? "단어 추가 닫기" : "+ 단어 직접 추가"}
-        </button>
-        <button
-          type="button"
-          className="secondary-button"
-          onClick={() => setIsManagementOpen((open) => !open)}
-          aria-expanded={isManagementOpen}
-        >
-          덱/공유 관리
-        </button>
+            {isNewVocabFormOpen ? "단어 추가 닫기" : "+ 단어 직접 추가"}
+          </button>
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => setIsManagementOpen((open) => !open)}
+            aria-expanded={isManagementOpen}
+          >
+            덱/공유 관리
+          </button>
+        </div>
       </div>
 
       {isManagementOpen ? (

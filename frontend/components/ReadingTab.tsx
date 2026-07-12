@@ -404,18 +404,6 @@ export function ReadingTab({
       ) : null}
 
       {hasResult ? (
-        <ReadingVocabPanel
-          tokens={tokens}
-          vocabItems={vocabItems}
-          selectedDeckId={selectedDeckId}
-          selectedTokenKey={selectedTokenKey}
-          onSelectToken={handleVocabPanelSelect}
-          isSaving={isSavingBatch}
-          onSaveSelected={onSaveSelected}
-        />
-      ) : null}
-
-      {hasResult ? (
         <ReaderMode
           originalText={analyzedText}
           tokens={tokens}
@@ -446,6 +434,22 @@ export function ReadingTab({
           덱을 선택하고 원문을 입력한 뒤 읽기 분석을 눌러주세요.
         </p>
       )}
+
+      {/* Word list follows the reading card, not before it -- for long
+          chunk-analyzed texts a dense candidate list would otherwise push
+          the actual reading experience (the core screen) far down the
+          page. */}
+      {hasResult ? (
+        <ReadingVocabPanel
+          tokens={tokens}
+          vocabItems={vocabItems}
+          selectedDeckId={selectedDeckId}
+          selectedTokenKey={selectedTokenKey}
+          onSelectToken={handleVocabPanelSelect}
+          isSaving={isSavingBatch}
+          onSaveSelected={onSaveSelected}
+        />
+      ) : null}
     </section>
   );
 }
