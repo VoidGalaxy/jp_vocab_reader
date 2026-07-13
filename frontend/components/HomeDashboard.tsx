@@ -43,10 +43,26 @@ const usageSteps = [
 ];
 
 const quickEntries = [
-  { icon: BookIcon, label: "읽기", description: "원문 붙여넣고 분석하기" },
-  { icon: CardsIcon, label: "학습", description: "오늘 복습 이어가기" },
-  { icon: FolderIcon, label: "내 단어장", description: "저장한 단어 확인" },
-  { icon: ShareIcon, label: "공유덱", description: "추천 단어 덱 가져오기" },
+  {
+    icon: BookIcon,
+    label: "원문 읽기",
+    description: "일본어 문장을 붙여넣고 모르는 단어를 골라보세요.",
+  },
+  {
+    icon: CardsIcon,
+    label: "오늘 복습",
+    description: "저장한 단어를 문맥 예문과 함께 복습합니다.",
+  },
+  {
+    icon: FolderIcon,
+    label: "내 단어장",
+    description: "모르는 단어와 헷갈리는 단어를 관리합니다.",
+  },
+  {
+    icon: ShareIcon,
+    label: "공유덱",
+    description: "JLPT 추천 어휘와 공유된 덱을 가져옵니다.",
+  },
 ] as const;
 
 const startGuideSteps = [
@@ -69,8 +85,8 @@ export function HomeDashboard({
   onGoToShared,
 }: HomeDashboardProps) {
   const quickEntryHandlers: Record<string, () => void> = {
-    읽기: onStartReading,
-    학습: onStartTodayReview,
+    "원문 읽기": onStartReading,
+    "오늘 복습": onStartTodayReview,
     "내 단어장": onGoToVocab,
     공유덱: onGoToShared,
   };
@@ -131,45 +147,7 @@ export function HomeDashboard({
             </div>
           </section>
 
-          <section className="panel-card home-continue-card">
-            <div className="panel-card-header">
-              <h3 className="panel-card-title">이어서 학습하기</h3>
-            </div>
-            <div className="home-continue-body">
-              <continueCard.icon className="home-continue-icon" />
-              <div>
-                <strong>{continueCard.title}</strong>
-                <p className="muted-text">{continueCard.description}</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="secondary-button home-continue-button"
-              onClick={continueCard.onAction}
-            >
-              {continueCard.actionLabel}
-            </button>
-          </section>
-
-          <section className="panel-card">
-            <div className="panel-card-header">
-              <h3 className="panel-card-title">사용 흐름 3단계</h3>
-            </div>
-            <div className="landing-steps">
-              {usageSteps.map((step, index) => (
-                <div className="landing-step-card" key={step.title}>
-                  <div className="landing-step-heading">
-                    <span className="landing-step-number">{index + 1}</span>
-                    <step.icon className="landing-step-icon" />
-                  </div>
-                  <h3>{step.title}</h3>
-                  <p>{step.description}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="panel-card">
+          <section className="panel-card home-quickentry-card">
             <div className="panel-card-header">
               <h3 className="panel-card-title">빠른 진입</h3>
             </div>
@@ -190,6 +168,44 @@ export function HomeDashboard({
               ))}
             </div>
           </section>
+
+          <section className="panel-card home-continue-card">
+            <div className="panel-card-header">
+              <h3 className="panel-card-title">이어서 학습하기</h3>
+            </div>
+            <div className="home-continue-body">
+              <continueCard.icon className="home-continue-icon" />
+              <div>
+                <strong>{continueCard.title}</strong>
+                <p className="muted-text">{continueCard.description}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="secondary-button home-continue-button"
+              onClick={continueCard.onAction}
+            >
+              {continueCard.actionLabel}
+            </button>
+          </section>
+
+          <section className="panel-card home-steps-card">
+            <div className="panel-card-header">
+              <h3 className="panel-card-title">사용 흐름 3단계</h3>
+            </div>
+            <div className="landing-steps">
+              {usageSteps.map((step, index) => (
+                <div className="landing-step-card" key={step.title}>
+                  <div className="landing-step-heading">
+                    <span className="landing-step-number">{index + 1}</span>
+                    <step.icon className="landing-step-icon" />
+                  </div>
+                  <h3>{step.title}</h3>
+                  <p>{step.description}</p>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
 
         <div className="home-dashboard-side">
@@ -202,6 +218,10 @@ export function HomeDashboard({
                 <div className="home-today-stat">
                   <span>오늘 복습</span>
                   <strong>{studyStats.due_today_count}개</strong>
+                </div>
+                <div className="home-today-stat">
+                  <span>오늘 완료</span>
+                  <strong>{studyStats.reviewed_today_count}개</strong>
                 </div>
                 <div className="home-today-stat">
                   <span>새 단어</span>

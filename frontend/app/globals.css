@@ -642,13 +642,14 @@ button {
 
 .home-today-stats {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .home-today-stat {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 4px;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -657,12 +658,12 @@ button {
 
 .home-today-stat span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .home-today-stat strong {
   color: var(--text);
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .home-guide-list {
@@ -722,9 +723,9 @@ button {
     align-items: stretch;
   }
 
-  .landing-hero {
-    gap: 16px;
-    padding: 16px;
+  .home-hero-card {
+    gap: 12px;
+    padding: 20px;
   }
 
   .landing-hero-title {
@@ -742,6 +743,48 @@ button {
 
   .home-dashboard-layout {
     grid-template-columns: 1fr;
+  }
+
+  /* Mobile home reads in a different order than desktop (홈 화면 need 별
+     오늘 학습 카드가 이어서 학습하기/3단계보다 먼저 보이도록 요구됨) --
+     rather than duplicating markup, flatten the two desktop columns so
+     every card becomes a direct child of .home-dashboard-layout, then
+     reorder with `order` per card. */
+  .home-dashboard-main,
+  .home-dashboard-side {
+    display: contents;
+  }
+
+  .home-hero-card {
+    order: 1;
+  }
+
+  .home-quickentry-card {
+    order: 2;
+  }
+
+  .home-today-card {
+    order: 3;
+  }
+
+  .home-continue-card {
+    order: 4;
+  }
+
+  .home-steps-card {
+    order: 5;
+  }
+
+  .home-trust-card {
+    order: 6;
+  }
+
+  .home-guide-card {
+    order: 7;
+  }
+
+  .home-recent-card {
+    order: 8;
   }
 
   .home-quick-entry-grid {
