@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { classifyMessageTone } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
 import { BookIcon, CardsIcon, FolderIcon, SearchIcon, ShareIcon } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
@@ -403,7 +404,11 @@ export function VocabSection({
         </button>
       </div>
 
-      {deckMessage ? <p className="message">{deckMessage}</p> : null}
+      {deckMessage ? (
+        <p className={`message message--${classifyMessageTone(deckMessage)}`}>
+          {deckMessage}
+        </p>
+      ) : null}
 
           </section>
           <section className="management-card">
@@ -442,6 +447,11 @@ export function VocabSection({
             type="button"
             onClick={onPublishDeck}
             disabled={selectedDeckId === "all" || isPublishingDeck}
+            title={
+              selectedDeckId === "all"
+                ? "공유할 특정 덱을 먼저 선택해 주세요."
+                : undefined
+            }
           >
             {isPublishingDeck ? "등록 중..." : "현재 덱을 공유 덱으로 등록"}
           </button>
@@ -466,6 +476,11 @@ export function VocabSection({
             className="secondary-button"
             onClick={onExportDeckPackage}
             disabled={selectedDeckId === "all" || isExportingDeckPackage}
+            title={
+              selectedDeckId === "all"
+                ? "내보낼 특정 덱을 먼저 선택해 주세요."
+                : undefined
+            }
           >
             {isExportingDeckPackage
               ? "내보내는 중..."
@@ -488,6 +503,11 @@ export function VocabSection({
             type="button"
             onClick={onImportDeckPackage}
             disabled={!deckPackageFileName || isImportingDeckPackage}
+            title={
+              !deckPackageFileName
+                ? "가져올 덱 공유 JSON 파일을 먼저 선택해 주세요."
+                : undefined
+            }
           >
             {isImportingDeckPackage ? "가져오는 중..." : "덱 가져오기"}
           </button>
@@ -707,7 +727,11 @@ export function VocabSection({
         </div>
       </div>
 
-      {message ? <p className="message">{message}</p> : null}
+      {message ? (
+        <p className={`message message--${classifyMessageTone(message)}`}>
+          {message}
+        </p>
+      ) : null}
 
       {items.length > 0 ? (
         <div className="vocab-list">

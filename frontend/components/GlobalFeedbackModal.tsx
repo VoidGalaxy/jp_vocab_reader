@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyMessageTone } from "./coverageUtils";
 import type { AppFeedbackCategory } from "./types";
 
 const APP_FEEDBACK_MESSAGE_MIN_LENGTH = 10;
@@ -103,7 +104,11 @@ export function GlobalFeedbackModal({
           적어주세요.
         </p>
 
-        {resultMessage ? <p className="message">{resultMessage}</p> : null}
+        {resultMessage ? (
+          <p className={`message message--${classifyMessageTone(resultMessage)}`}>
+            {resultMessage}
+          </p>
+        ) : null}
 
         <div className="classify-actions">
           <button type="button" onClick={onSubmit} disabled={!canSubmit}>

@@ -1,5 +1,7 @@
 "use client";
 
+import { classifyMessageTone } from "./coverageUtils";
+
 const MAX_MEANING_KO_LENGTH = 200;
 
 type MeaningQuickEditProps = {
@@ -54,7 +56,11 @@ export function MeaningQuickEdit({
       <p className="meaning-quick-edit-hint">
         수정한 뜻은 내 단어장에만 적용됩니다.
       </p>
-      {message ? <p className="message compact-message">{message}</p> : null}
+      {message ? (
+        <p className={`message message--${classifyMessageTone(message)} compact-message`}>
+          {message}
+        </p>
+      ) : null}
       <div className="meaning-quick-edit-actions">
         <button type="button" onClick={onSave} disabled={isSaving}>
           {isSaving ? "저장 중..." : "저장"}

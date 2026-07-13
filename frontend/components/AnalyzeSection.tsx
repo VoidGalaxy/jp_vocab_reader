@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { CoverageSummary } from "./CoverageSummary";
-import { computeCoverageStats } from "./coverageUtils";
+import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
 import { StatusSelect, statusLabels } from "./shared";
 import type {
@@ -148,7 +148,11 @@ export function AnalyzeSection({
         않으며, 공유 덱에도 원문 전체가 포함되지 않습니다.
       </p>
 
-      {message ? <p className="message">{message}</p> : null}
+      {message ? (
+        <p className={`message message--${classifyMessageTone(message)}`}>
+          {message}
+        </p>
+      ) : null}
 
       {pendingDraft ? (
         <div className="draft-panel">
@@ -203,6 +207,13 @@ export function AnalyzeSection({
               type="button"
               onClick={onSaveSelected}
               disabled={isSaving || tokens.length === 0 || !selectedDeckId}
+              title={
+                !selectedDeckId
+                  ? "저장할 덱을 선택해 주세요."
+                  : tokens.length === 0
+                    ? "먼저 원문을 분석해 주세요."
+                    : undefined
+              }
             >
               {isSaving ? "저장 중..." : "분류한 단어 저장"}
             </button>
@@ -315,6 +326,9 @@ export function AnalyzeSection({
                   type="button"
                   onClick={onSaveSelected}
                   disabled={isSaving || !selectedDeckId}
+                  title={
+                    !selectedDeckId ? "저장할 덱을 선택해 주세요." : undefined
+                  }
                 >
                   {isSaving ? "저장 중..." : "분류한 단어 저장"}
                 </button>

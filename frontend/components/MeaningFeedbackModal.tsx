@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyMessageTone } from "./coverageUtils";
 import type { MeaningFeedbackTarget } from "./types";
 
 const MAX_FEEDBACK_FIELD_LENGTH = 500;
@@ -88,7 +89,11 @@ export function MeaningFeedbackModal({
           신고 내용은 사전 품질 개선에 참고됩니다.
         </p>
 
-        {message ? <p className="message">{message}</p> : null}
+        {message ? (
+          <p className={`message message--${classifyMessageTone(message)}`}>
+            {message}
+          </p>
+        ) : null}
 
         <div className="classify-actions">
           <button type="button" onClick={onSubmit} disabled={isSubmitting}>

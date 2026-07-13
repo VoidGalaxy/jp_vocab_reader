@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyMessageTone } from "./coverageUtils";
 import type {
   Deck,
   ReviewResult,
@@ -337,7 +338,11 @@ export function StudySection({
         </div>
       </section>
 
-      {message ? <p className="message">{message}</p> : null}
+      {message ? (
+        <p className={`message message--${classifyMessageTone(message)}`}>
+          {message}
+        </p>
+      ) : null}
 
       {!hasStarted && !currentItem && !isComplete ? (
         <div className="study-card study-ready-card">

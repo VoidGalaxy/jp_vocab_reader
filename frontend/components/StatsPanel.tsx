@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyMessageTone } from "./coverageUtils";
 import type { DeckStats, StudyStats } from "./types";
 
 type StatsPanelProps = {
@@ -31,7 +32,11 @@ export function StatsPanel({
       </div>
 
       {isLoading ? <p className="muted-text">학습 통계를 불러오는 중입니다.</p> : null}
-      {message ? <p className="message">{message}</p> : null}
+      {message ? (
+        <p className={`message message--${classifyMessageTone(message)}`}>
+          {message}
+        </p>
+      ) : null}
 
       {stats ? (
         <>
