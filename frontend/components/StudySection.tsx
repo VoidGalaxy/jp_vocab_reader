@@ -356,12 +356,12 @@ export function StudySection({
           <h3>{emptyMessages[studyMode]}</h3>
           <p>{emptySecondaryMessages[studyMode]}</p>
           <div className="study-actions">
-            <button type="button" className="secondary-button" onClick={onGoToVocab}>
-              단어장으로 가기
-            </button>
-            <button type="button" className="secondary-button" onClick={onGoToAnalyze}>
+            <button type="button" onClick={onGoToReading}>
               <BookIcon className="button-icon" />
-              분석 탭으로 가기
+              원문 읽기 시작
+            </button>
+            <button type="button" className="secondary-button" onClick={onGoToVocab}>
+              내 단어장 보기
             </button>
           </div>
         </div>
@@ -377,6 +377,11 @@ export function StudySection({
             <span>{modeLabel}</span>
             <strong>{visibleProgress}</strong>
           </div>
+          {studyMode === "recent" ? (
+            <p className="study-card-recent-hint">
+              읽기 탭에서 저장한 단어를 바로 복습합니다. ({items.length}개 단어)
+            </p>
+          ) : null}
           <div
             className="progress-bar study-card-progress"
             role="progressbar"

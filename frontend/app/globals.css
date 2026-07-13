@@ -1464,6 +1464,17 @@ select {
   color: var(--primary-dark);
 }
 
+.study-card-recent-hint {
+  margin: -4px 0 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--soft-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .study-card-progress {
   height: 6px;
 }
@@ -1655,17 +1666,20 @@ select {
   font-weight: 500;
 }
 
+/* Rating colors are deliberately softer than the app's semantic --danger/
+   --warning (those read as "error"/"caution" elsewhere) -- a wrong recall
+   is a normal, expected part of studying, not a mistake to flag red. */
 .rating-again {
-  background: var(--danger);
+  background: var(--accent);
 }
 
 .rating-hard {
-  color: #7a5b12;
-  background: var(--warning);
+  color: #4a2f06;
+  background: #e8a33d;
 }
 
 .rating-hard .rating-hint {
-  color: rgba(74, 55, 10, 0.75);
+  color: rgba(74, 47, 6, 0.75);
 }
 
 .rating-good {
