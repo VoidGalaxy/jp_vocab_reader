@@ -1783,8 +1783,19 @@ select {
 }
 
 .copyright-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
   margin: -6px 0 0;
   font-size: 12px;
+}
+
+.copyright-note-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--success);
 }
 
 .reading-input-header {
@@ -2250,8 +2261,8 @@ select {
 }
 
 .reading-summary-card-unclassified {
-  border-color: #c9d0ec;
-  background: #f2f4fc;
+  border-color: #ddd0a8;
+  background: #f5efe0;
 }
 
 .reading-summary-card span {
@@ -3757,8 +3768,8 @@ select {
 }
 
 .token-chip-unclassified {
-  background: #eef1fb;
-  color: #46508a;
+  background: #ece4d0;
+  color: #6b5f3f;
 }
 
 .token-chip-muted {
@@ -4058,15 +4069,22 @@ select {
     gap: 8px;
   }
 
-  /* Mobile-only reflow of the reading tab: the reading card and word list
-     (with its own save CTA) move ahead of the "이 텍스트 학습 요약" card so
-     the core reading experience isn't pushed down the page by a status
-     summary, and "저장한 단어로 바로 학습" lands at the very end of the
-     flow, right after the word list a user just saved from. Desktop keeps
-     its existing DOM order (summary before the reader) untouched --
-     `order` only changes visual position, not the underlying markup. */
+  /* Mobile-only reflow of the reading tab: the reading card moves ahead of
+     the "이 텍스트 학습 요약" card so the core reading experience isn't
+     pushed down the page by a status summary, while the summary card still
+     comes before the word list/select-save panel (요약 -> 단어 목록 순).
+     Desktop keeps its existing DOM order (summary before the reader)
+     untouched -- `order` only changes visual position, not markup. */
+  .reader-mode {
+    order: 2;
+  }
+
   .reading-summary-panel {
-    order: 5;
+    order: 3;
+  }
+
+  .reading-vocab-panel {
+    order: 4;
   }
 
   /* Touch-target pass: .compact-button (filter chips, quick-select,

@@ -5,7 +5,7 @@ import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import { classifyMessageTone, computeReadingSaveSummary } from "./coverageUtils";
 import type { ReadingSaveMode } from "./coverageUtils";
-import { BookIcon, CardsIcon, SparkleIcon } from "./icons";
+import { BookIcon, CardsIcon, ShieldIcon, SparkleIcon } from "./icons";
 import type { ChunkAnalyzeProgress } from "./readingChunkAnalyze";
 import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 
@@ -313,11 +313,14 @@ export function ReadingTab({
         ) : null}
 
         <p className="muted-text copyright-note">
-          입력한 원문은 분석에만 사용되며, 원문 전체는 서버에 저장되지 않고
-          공유 덱에도 포함되지 않습니다. 이어서 읽을 수 있도록 이 브라우저에만
-          임시로 저장되며, 언제든 "현재 읽기 작업 초기화"로 직접 지울 수
-          있습니다. 단어 저장 시 해당 단어가 포함된 짧은 문장만 예문으로
-          저장됩니다.
+          <ShieldIcon className="copyright-note-icon" />
+          <span>
+            입력한 원문은 분석에만 사용되며, 원문 전체는 서버에 저장되지 않고
+            공유 덱에도 포함되지 않습니다. 이어서 읽을 수 있도록 이 브라우저에만
+            임시로 저장되며, 언제든 "현재 읽기 작업 초기화"로 직접 지울 수
+            있습니다. 단어 저장 시 해당 단어가 포함된 짧은 문장만 예문으로
+            저장됩니다.
+          </span>
         </p>
         {storageWarning ? (
           <p className="muted-text reading-storage-warning">{storageWarning}</p>
