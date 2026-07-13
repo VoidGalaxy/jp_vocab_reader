@@ -73,7 +73,7 @@ export function SharedDeckSection({
 
   return (
     <section className="tab-panel shared-deck-section" aria-live="polite">
-      <section className="panel-card shared-hero-card">
+      <section className="panel-card hero-card shared-hero-card">
         <div className="panel-card-header">
           <h2 className="panel-card-title">공유덱</h2>
           <p className="panel-card-description">

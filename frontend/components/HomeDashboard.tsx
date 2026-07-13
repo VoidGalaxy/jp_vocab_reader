@@ -121,7 +121,7 @@ export function HomeDashboard({
     <section className="tab-panel home-dashboard" aria-live="polite">
       <div className="home-dashboard-layout">
         <div className="home-dashboard-main">
-          <section className="panel-card home-hero-card">
+          <section className="panel-card hero-card home-hero-card">
             <h2 className="landing-hero-title">
               일본어 원문을 붙여넣으면,
               <br />

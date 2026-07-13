@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MoreIcon } from "./icons";
+import { BookIcon, MoreIcon } from "./icons";
 
 export type NavAction = {
   key: string;
@@ -65,6 +65,15 @@ export function AppShell({
   return (
     <div className="app-shell">
       <aside className="app-sidebar" aria-label="주요 메뉴">
+        <div className="app-sidebar-brand">
+          <span className="app-sidebar-brand-icon" aria-hidden="true">
+            <BookIcon />
+          </span>
+          <div className="app-sidebar-brand-text">
+            <strong>일본어 단어장</strong>
+            <span>원문 읽기 기반 단어 학습</span>
+          </div>
+        </div>
         {groups.map((group) => (
           <div className="app-sidebar-group" key={group.label}>
             <span className="app-sidebar-group-label">{group.label}</span>

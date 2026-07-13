@@ -373,7 +373,7 @@ export function StudySection({
       ) : null}
 
       {currentItem && !isComplete ? (
-        <div className="study-card">
+        <div className="study-card hero-card">
           <div
             className={`study-card-header${
               studyMode === "recent" ? " study-card-header-recent" : ""

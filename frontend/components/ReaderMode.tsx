@@ -365,7 +365,7 @@ export function ReaderMode({
   const activeToken = activeIndex !== null ? tokens[activeIndex] : null;
 
   return (
-    <div className="reader-mode">
+    <div className="reader-mode hero-card">
       <div className="reader-mode-header-row">
         <div>
           <h3 className="reader-mode-title">읽기 모드</h3>

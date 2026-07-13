@@ -223,7 +223,7 @@ export function VocabSection({
 
   return (
     <section className="tab-panel" aria-live="polite">
-      <section className="panel-card vocab-hero-card">
+      <section className="panel-card hero-card vocab-hero-card">
         <div className="panel-card-header">
           <h2 className="panel-card-title">내 단어장</h2>
           <p className="panel-card-description">
