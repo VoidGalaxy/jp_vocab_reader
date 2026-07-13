@@ -3883,7 +3883,7 @@ select {
 
 .token-sheet-word {
   color: var(--text);
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 800;
   overflow-wrap: anywhere;
 }
@@ -3913,9 +3913,68 @@ select {
   padding: 8px 14px;
 }
 
+/* The single most practically useful fact on the card -- called out with
+   its own tinted block, ahead of the (comparatively secondary) base_form/
+   POS/JLPT details below, and read on entry before anything else. */
+.token-sheet-meaning-block {
+  margin: 2px 0 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--soft-bg);
+}
+
+.token-sheet-meaning-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.token-sheet-meaning-value {
+  margin: 0;
+  color: var(--text);
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .token-sheet-status {
   margin: 14px 0 10px;
   color: var(--text);
+}
+
+/* Status pills read as chips (fully rounded) in a 2x2 grid -- wider columns
+   than the Analyze tab's 4-across layout so a label like "완벽히 아는 단어"
+   fits on one line inside a pill instead of wrapping character-by-character.
+   Scoped to .token-sheet so the Analyze tab's classify-card is untouched. */
+.token-sheet .classify-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.token-sheet .classify-actions button {
+  border-radius: 999px;
+  word-break: keep-all;
+}
+
+/* base_form/품사/JLPT now sit below the status pills as secondary,
+   lower-emphasis reference info once meaning_ko has top billing above. */
+.token-sheet-secondary-details {
+  margin-top: 14px;
+}
+
+.token-sheet-secondary-details div {
+  padding: 10px 12px;
+}
+
+.token-sheet-secondary-details dt {
+  font-size: 12px;
+}
+
+.token-sheet-secondary-details dd {
+  font-size: 13px;
 }
 
 /* Secondary-actions footer: word navigation and meaning edit/report read
@@ -3940,6 +3999,10 @@ select {
   flex: 1 1 0;
   width: auto;
   min-width: 0;
+  min-height: 40px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
   white-space: nowrap;
 }
 
