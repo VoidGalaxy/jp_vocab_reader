@@ -2133,7 +2133,11 @@ select {
   gap: 8px;
 }
 
-.reading-vocab-item-checkbox {
+/* `input` prefix matters here: the global `input[type="checkbox"] { width:
+   auto }` reset has equal-or-higher specificity than a bare class selector
+   and was winning, silently shrinking this checkbox to the browser's tiny
+   native width regardless of the px value below. */
+input.reading-vocab-item-checkbox {
   flex: 0 0 auto;
   width: 22px;
   height: 22px;
@@ -2264,7 +2268,7 @@ select {
     justify-content: flex-start;
   }
 
-  .reading-vocab-item-checkbox,
+  input.reading-vocab-item-checkbox,
   .reading-vocab-item-checkbox-placeholder {
     width: 24px;
     height: 24px;
