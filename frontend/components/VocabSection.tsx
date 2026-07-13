@@ -2,22 +2,42 @@
 
 import { Fragment, useState } from "react";
 import { HighlightedExample } from "./HighlightedExample";
-import { BookIcon, FolderIcon } from "./icons";
+import { BookIcon, CardsIcon, FolderIcon, SearchIcon, ShareIcon } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
-import { formatDateTime, formatNextReview, StatusSelect } from "./shared";
+import { formatDateTime, formatNextReview, statusLabels, StatusSelect } from "./shared";
 import type {
   Deck,
   CustomTerm,
   CustomTermFormData,
   QualityTag,
+  StudyStats,
   TokenStatus,
   VocabFormData,
   VocabItem,
   VocabSort,
 } from "./types";
 
+const statusFilterOptions: Array<{ value: "all" | TokenStatus; label: string }> = [
+  { value: "all", label: "전체" },
+  { value: "unknown", label: statusLabels.unknown },
+  { value: "uncertain", label: statusLabels.uncertain },
+  { value: "known", label: statusLabels.known },
+  { value: "unclassified", label: statusLabels.unclassified },
+];
+
+// Ties each status filter chip to the same warm color language as the
+// reading tab / study cards once active -- "전체" stays neutral since it
+// isn't a single status.
+const statusFilterColorClass: Partial<Record<"all" | TokenStatus, string>> = {
+  known: "vocab-filter-known",
+  uncertain: "vocab-filter-uncertain",
+  unknown: "vocab-filter-unknown",
+  unclassified: "vocab-filter-unclassified",
+};
+
 type VocabSectionProps = {
   items: VocabItem[];
+  stats: StudyStats | null;
   isLoading: boolean;
   isExportingCsv: boolean;
   isExportingDeckPackage: boolean;
@@ -101,10 +121,13 @@ type VocabSectionProps = {
   onStatusChange: (itemId: number, status: TokenStatus) => void;
   onDelete: (itemId: number) => void;
   onGoToReading: () => void;
+  onGoToStudyToday: () => void;
+  onGoToShared: () => void;
 };
 
 export function VocabSection({
   items,
+  stats,
   isLoading,
   isExportingCsv,
   isExportingDeckPackage,
@@ -182,6 +205,8 @@ export function VocabSection({
   onStatusChange,
   onDelete,
   onGoToReading,
+  onGoToStudyToday,
+  onGoToShared,
 }: VocabSectionProps) {
   const [isManagementOpen, setIsManagementOpen] = useState(false);
   const [isCustomTermManagerOpen, setIsCustomTermManagerOpen] = useState(false);
@@ -189,8 +214,52 @@ export function VocabSection({
     searchText.trim() !== "" || statusFilter !== "all" || dueOnly;
   const [isBackupToolsOpen, setIsBackupToolsOpen] = useState(false);
 
+  function resetVocabFilters() {
+    onSearchTextChange("");
+    onStatusFilterChange("all");
+    onDueOnlyChange(false);
+  }
+
   return (
     <section className="tab-panel" aria-live="polite">
+      <section className="panel-card vocab-hero-card">
+        <div className="panel-card-header">
+          <h2 className="panel-card-title">내 단어장</h2>
+          <p className="panel-card-description">
+            읽기 탭에서 저장한 단어를 상태별로 관리하고, 문맥 예문과 함께
+            복습하세요.
+          </p>
+        </div>
+        <div className="landing-hero-actions">
+          <button type="button" onClick={onGoToReading}>
+            <BookIcon className="button-icon" />
+            원문 읽기 시작
+          </button>
+          <button type="button" className="secondary-button" onClick={onGoToStudyToday}>
+            <CardsIcon className="button-icon" />
+            오늘 복습하기
+          </button>
+        </div>
+        <div className="vocab-hero-stats">
+          <div className="vocab-hero-stat">
+            <span>전체 단어</span>
+            <strong>{stats ? stats.total_vocab_count : items.length}개</strong>
+          </div>
+          <div className="vocab-hero-stat">
+            <span>모르는 단어</span>
+            <strong>{stats ? stats.unknown_count : "-"}개</strong>
+          </div>
+          <div className="vocab-hero-stat">
+            <span>헷갈리는 단어</span>
+            <strong>{stats ? stats.uncertain_count : "-"}개</strong>
+          </div>
+          <div className="vocab-hero-stat">
+            <span>복습 예정</span>
+            <strong>{stats ? stats.due_today_count : "-"}개</strong>
+          </div>
+        </div>
+      </section>
+
       <div className="vocab-compact-toolbar">
         <div className="vocab-filter-group">
           <label className="inline-field">
@@ -204,34 +273,16 @@ export function VocabSection({
               ))}
             </select>
           </label>
-          <input
-            value={searchText}
-            onChange={(event) => onSearchTextChange(event.target.value)}
-            placeholder="단어, 뜻, 읽기, 예문 검색"
-          />
-          <label className="inline-field">
-            상태
-            <select
-              value={statusFilter}
-              onChange={(event) =>
-                onStatusFilterChange(event.target.value as "all" | TokenStatus)
-              }
-            >
-              <option value="all">전체</option>
-              <option value="known">완벽히 아는 단어</option>
-              <option value="uncertain">헷갈리는 단어</option>
-              <option value="unknown">모르는 단어</option>
-              <option value="unclassified">분류되지 않음</option>
-            </select>
-          </label>
-          <label className="checkbox-field">
+          <div className="vocab-search-wrap">
+            <SearchIcon className="vocab-search-icon" />
             <input
-              type="checkbox"
-              checked={dueOnly}
-              onChange={(event) => onDueOnlyChange(event.target.checked)}
+              className="vocab-search-input"
+              value={searchText}
+              onChange={(event) => onSearchTextChange(event.target.value)}
+              placeholder="단어, 읽기, 뜻으로 검색"
+              aria-label="단어장 검색"
             />
-            복습 대상만 보기
-          </label>
+          </div>
           <label className="inline-field">
             정렬
             <select
@@ -247,6 +298,35 @@ export function VocabSection({
             </select>
           </label>
         </div>
+
+        <div className="vocab-status-filters" role="group" aria-label="상태 필터">
+          {statusFilterOptions.map((option) => {
+            const isActive = statusFilter === option.value;
+            const colorClass = statusFilterColorClass[option.value];
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`vocab-filter-chip${isActive ? " vocab-filter-chip-active" : ""}${
+                  isActive && colorClass ? ` ${colorClass}` : ""
+                }`}
+                aria-pressed={isActive}
+                onClick={() => onStatusFilterChange(option.value)}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            className={`vocab-filter-chip${dueOnly ? " vocab-filter-chip-active" : ""}`}
+            aria-pressed={dueOnly}
+            onClick={() => onDueOnlyChange(!dueOnly)}
+          >
+            복습 예정만
+          </button>
+        </div>
+
         <div className="vocab-action-group">
           <button
             type="button"
@@ -630,162 +710,193 @@ export function VocabSection({
       {message ? <p className="message">{message}</p> : null}
 
       {items.length > 0 ? (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>단어</th>
-                <th>덱</th>
-                <th>기본형</th>
-                <th>읽기</th>
-                <th>품사</th>
-                <th>뜻</th>
-                <th>예문</th>
-                <th>상태</th>
-                <th>맞음</th>
-                <th>틀림</th>
-                <th>레벨</th>
-                <th>마지막 복습</th>
-                <th>다음 복습</th>
-                <th>관리</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <Fragment key={item.id}>
-                  <tr>
-                    <td>
-                      <div>{item.surface}</div>
-                      <QualityBadge qualityTag={item.quality_tag} />
-                    </td>
-                    <td>{item.deck_name}</td>
-                    <td>{item.base_form}</td>
-                    <td>{item.reading}</td>
-                    <td>{item.part_of_speech}</td>
-                    <td>
-                      <div>{item.meaning_ko || "-"}</div>
-                      <MeaningQuickEdit
-                        isEditing={meaningEditItemId === item.id}
-                        draftValue={meaningEditDraft}
-                        isSaving={isSavingMeaningEdit}
-                        message={
-                          meaningEditItemId === item.id ? meaningEditMessage : ""
-                        }
-                        onStartEdit={() =>
-                          onStartMeaningEdit(item.id, item.meaning_ko)
-                        }
-                        onDraftChange={onMeaningEditDraftChange}
-                        onSave={onSaveMeaningEdit}
-                        onCancel={onCancelMeaningEdit}
-                      />
-                    </td>
-                    <td>
-                      <span className="example-text">
-                        <HighlightedExample
-                          sentence={item.example_sentence}
-                          surface={item.surface}
-                          baseForm={item.base_form}
-                          normalizedForm={item.normalized_form}
-                        />
-                      </span>
-                    </td>
-                    <td>
-                      <StatusSelect
-                        value={item.status}
-                        label={`${item.surface} 저장 상태`}
-                        onChange={(status) => onStatusChange(item.id, status)}
-                      />
-                    </td>
-                    <td>{item.correct_count}</td>
-                    <td>{item.wrong_count}</td>
-                    <td>{item.review_level}</td>
-                    <td>{formatDateTime(item.last_reviewed_at)}</td>
-                    <td>{formatNextReview(item.next_review_at)}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button
-                          type="button"
-                          className="secondary-button compact-button"
-                          onClick={() => onStartEdit(item)}
-                        >
-                          수정
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost-button compact-button"
-                          onClick={() => onReportMeaning(item)}
-                        >
-                          뜻 오류 신고
-                        </button>
-                        <button
-                          type="button"
-                          className="danger-button compact-button"
-                          onClick={() => onDelete(item.id)}
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  {editingItemId === item.id ? (
-                    <tr className="edit-row">
-                      <td colSpan={14}>
-                        <div className="vocab-form-panel inline-edit-form">
-                          <div className="form-heading">
-                            <h2>단어 수정</h2>
-                          </div>
-                          <VocabItemForm
-                            form={editVocabForm}
-                            decks={decks}
-                            onChange={onEditVocabFormChange}
-                          />
-                          <div className="form-actions">
-                            <button
-                              type="button"
-                              onClick={onSaveEdit}
-                              disabled={isUpdatingVocab}
-                            >
-                              {isUpdatingVocab ? "저장 중..." : "저장"}
-                            </button>
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              onClick={onCancelEdit}
-                              disabled={isUpdatingVocab}
-                            >
-                              취소
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
+        <div className="vocab-list">
+          {items.map((item) => (
+            <div className="vocab-item-card" key={item.id}>
+              <div className="vocab-item-top">
+                <div className="vocab-item-headword">
+                  <span className="vocab-item-surface">{item.surface}</span>
+                  {item.reading && item.reading !== item.surface ? (
+                    <span className="vocab-item-reading">{item.reading}</span>
                   ) : null}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+                  <QualityBadge qualityTag={item.quality_tag} />
+                </div>
+                <div className={`vocab-item-status-wrap token-chip-${item.status}`}>
+                  <StatusSelect
+                    value={item.status}
+                    label={`${item.surface} 저장 상태`}
+                    onChange={(status) => onStatusChange(item.id, status)}
+                  />
+                </div>
+              </div>
+
+              <p className="vocab-item-meaning">
+                {item.meaning_ko || "뜻 후보 없음"}
+              </p>
+
+              <div className="vocab-item-secondary">
+                {item.base_form && item.base_form !== item.surface ? (
+                  <span className="vocab-item-secondary-tag">
+                    기본형 {item.base_form}
+                  </span>
+                ) : null}
+                {item.part_of_speech ? (
+                  <span className="vocab-item-secondary-tag">
+                    {item.part_of_speech}
+                  </span>
+                ) : null}
+                <span className="vocab-item-secondary-tag">{item.deck_name}</span>
+              </div>
+
+              <div className="vocab-item-review-meta">
+                <span className="vocab-item-review-badge">
+                  복습 레벨 {item.review_level}
+                </span>
+                <span className="vocab-item-review-badge">
+                  맞음 {item.correct_count} · 다시 {item.wrong_count}
+                </span>
+                <span className="vocab-item-review-badge vocab-item-review-badge-accent">
+                  {formatNextReview(item.next_review_at)}
+                </span>
+                {item.last_reviewed_at ? (
+                  <span className="vocab-item-review-badge vocab-item-review-badge-muted">
+                    마지막 복습 {formatDateTime(item.last_reviewed_at)}
+                  </span>
+                ) : null}
+              </div>
+
+              {item.example_sentence ? (
+                <div className="vocab-item-example">
+                  <span className="vocab-item-example-label">문맥 예문</span>
+                  <p className="vocab-item-example-text">
+                    <HighlightedExample
+                      sentence={item.example_sentence}
+                      surface={item.surface}
+                      baseForm={item.base_form}
+                      normalizedForm={item.normalized_form}
+                    />
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="vocab-item-actions">
+                <MeaningQuickEdit
+                  isEditing={meaningEditItemId === item.id}
+                  draftValue={meaningEditDraft}
+                  isSaving={isSavingMeaningEdit}
+                  message={
+                    meaningEditItemId === item.id ? meaningEditMessage : ""
+                  }
+                  onStartEdit={() =>
+                    onStartMeaningEdit(item.id, item.meaning_ko)
+                  }
+                  onDraftChange={onMeaningEditDraftChange}
+                  onSave={onSaveMeaningEdit}
+                  onCancel={onCancelMeaningEdit}
+                />
+                <button
+                  type="button"
+                  className="ghost-button compact-button"
+                  onClick={() => onReportMeaning(item)}
+                >
+                  뜻 오류 신고
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button compact-button"
+                  onClick={() => onStartEdit(item)}
+                >
+                  수정
+                </button>
+                <button
+                  type="button"
+                  className="danger-button compact-button"
+                  onClick={() => {
+                    const label = item.surface || item.base_form;
+                    if (
+                      window.confirm(
+                        `"${label}" 단어를 삭제할까요? 저장된 학습 기록도 함께 삭제됩니다.`,
+                      )
+                    ) {
+                      onDelete(item.id);
+                    }
+                  }}
+                >
+                  삭제
+                </button>
+              </div>
+
+              {editingItemId === item.id ? (
+                <div className="vocab-form-panel inline-edit-form">
+                  <div className="form-heading">
+                    <h2>단어 수정</h2>
+                  </div>
+                  <VocabItemForm
+                    form={editVocabForm}
+                    decks={decks}
+                    onChange={onEditVocabFormChange}
+                  />
+                  <div className="form-actions">
+                    <button
+                      type="button"
+                      onClick={onSaveEdit}
+                      disabled={isUpdatingVocab}
+                    >
+                      {isUpdatingVocab ? "저장 중..." : "저장"}
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={onCancelEdit}
+                      disabled={isUpdatingVocab}
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ))}
         </div>
       ) : hasActiveFilter ? (
-        <p className="empty">
-          검색/필터 조건에 맞는 단어가 없습니다. 검색어와 필터를 바꾸거나
-          단어를 직접 추가해 보세요.
-        </p>
-      ) : (
         <div className="empty-guide">
           <FolderIcon className="empty-state-icon" />
-          <p>아직 저장된 단어가 없습니다.</p>
-          <p className="muted-text">
-            읽기 탭에서 원문을 분석하고 모르는 단어를 저장하면 이곳에
-            쌓입니다.
-          </p>
+          <p>조건에 맞는 단어가 없습니다.</p>
+          <p className="muted-text">검색어나 필터를 바꿔보세요.</p>
           <button
             type="button"
             className="ghost-button compact-button"
-            onClick={onGoToReading}
+            onClick={resetVocabFilters}
           >
-            <BookIcon className="button-icon" />
-            읽기 탭에서 단어 저장하기
+            필터 초기화
           </button>
+        </div>
+      ) : (
+        <div className="empty-guide">
+          <FolderIcon className="empty-state-icon" />
+          <p>아직 저장한 단어가 없습니다.</p>
+          <p className="muted-text">
+            읽기 탭에서 모르는 단어를 저장하면 여기에 모입니다. 문맥 예문과
+            함께 복습할 단어장을 만들어보세요.
+          </p>
+          <div className="study-actions">
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onGoToReading}
+            >
+              <BookIcon className="button-icon" />
+              원문 읽기 시작
+            </button>
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onGoToShared}
+            >
+              <ShareIcon className="button-icon" />
+              공유덱 둘러보기
+            </button>
+          </div>
         </div>
       )}
     </section>

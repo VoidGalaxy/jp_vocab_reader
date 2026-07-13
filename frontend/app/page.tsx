@@ -2925,6 +2925,7 @@ export default function HomePage() {
         {activeTab === "vocab" ? (
           <VocabSection
             items={vocabItems}
+            stats={studyStats}
             isLoading={isLoadingVocab}
             isExportingCsv={isExportingCsv}
             isExportingDeckPackage={isExportingDeckPackage}
@@ -3013,6 +3014,8 @@ export default function HomePage() {
             }
             onDelete={(itemId) => void deleteVocabItem(itemId)}
             onGoToReading={() => setActiveTab("reading")}
+            onGoToStudyToday={goToStudyToday}
+            onGoToShared={() => void handleTabChange("shared")}
           />
         ) : null}
 

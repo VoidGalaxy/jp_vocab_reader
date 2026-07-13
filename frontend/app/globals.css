@@ -2860,6 +2860,270 @@ select {
   border-top: 1px solid var(--border);
 }
 
+/* Vocab tab hero -- "내 학습 라이브러리" framing above the search/filter
+   toolbar, reusing the same warm-paper card look and hero-actions layout
+   the home dashboard and reading tab already use. */
+.vocab-hero-card {
+  gap: 14px;
+  border-color: var(--paper-border);
+  background: var(--paper-bg);
+  box-shadow: 0 14px 32px var(--paper-shadow);
+}
+
+.vocab-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.vocab-hero-stat {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--soft-bg);
+}
+
+.vocab-hero-stat span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.vocab-hero-stat strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.vocab-search-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 220px;
+}
+
+.vocab-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.vocab-search-input {
+  min-height: 42px;
+  padding-left: 32px;
+}
+
+.vocab-status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vocab-filter-chip {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vocab-filter-chip:hover {
+  filter: brightness(0.97);
+}
+
+.vocab-filter-chip-active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.vocab-filter-known.vocab-filter-chip-active {
+  border-color: #bfe3cc;
+  background: #eef9f1;
+  color: #1b6b3a;
+}
+
+.vocab-filter-uncertain.vocab-filter-chip-active {
+  border-color: #ecdba9;
+  background: #fbf0d9;
+  color: #7a5b12;
+}
+
+.vocab-filter-unknown.vocab-filter-chip-active {
+  border-color: #f3cdd1;
+  background: #fbe8ea;
+  color: #9b3b42;
+}
+
+.vocab-filter-unclassified.vocab-filter-chip-active {
+  border-color: #ddd0a8;
+  background: #ece4d0;
+  color: #6b5f3f;
+}
+
+/* Word list -- learning-library cards instead of an admin data table. */
+.vocab-list {
+  display: grid;
+  gap: 12px;
+}
+
+.vocab-item-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  background: var(--panel-bg);
+  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
+}
+
+.vocab-item-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vocab-item-headword {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.vocab-item-surface {
+  color: var(--text);
+  font-size: 22px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.vocab-item-reading {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Wraps the (still fully functional) native <select> in the same warm
+   status tint used by reader highlights/status badges elsewhere, so the
+   status control reads as a colored badge rather than a plain dropdown. */
+.vocab-item-status-wrap {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.vocab-item-status-wrap select {
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vocab-item-meaning {
+  margin: 0;
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.vocab-item-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vocab-item-secondary-tag {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vocab-item-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vocab-item-review-badge {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vocab-item-review-badge-accent {
+  border-color: var(--border-strong);
+  background: var(--paper-bg);
+  color: var(--primary-dark);
+}
+
+.vocab-item-review-badge-muted {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.vocab-item-example {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #ecdfb8;
+  border-left: 4px solid #e8c25c;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fdf9ee;
+}
+
+.vocab-item-example-label {
+  color: #8a6d1f;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vocab-item-example-text {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.vocab-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
 .vocab-management-panel {
   display: grid;
   gap: 12px;
@@ -3263,6 +3527,30 @@ select {
   .vocab-action-group {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .vocab-hero-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vocab-item-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .vocab-item-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Same app-wide mobile `button { width: 100% }` touch-target rule as the
+     reading tab's filter chips -- opt these small status filter chips back
+     out to their natural pill width so they wrap side-by-side. */
+  .vocab-status-filters .vocab-filter-chip {
+    width: auto;
+    min-width: 0;
+    min-height: 34px;
+    padding: 7px 12px;
   }
 
   .management-actions {
