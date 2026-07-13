@@ -2675,18 +2675,26 @@ select {
 
 .shared-deck-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
 }
 
 .shared-deck-card,
 .shared-deck-detail {
   display: grid;
   gap: 12px;
+  align-content: start;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 16px;
   background: var(--panel-bg);
-  padding: 16px;
+  padding: 18px;
+  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.05);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.shared-deck-card:hover {
+  box-shadow: 0 12px 26px rgba(120, 98, 40, 0.09);
+  transform: translateY(-2px);
 }
 
 .selected-shared-deck-card {
@@ -2738,24 +2746,28 @@ select {
   white-space: nowrap;
 }
 
+/* A warm, single-hue ramp (light -> deep terracotta) reads as a difficulty
+   gradient from N5 to N1, instead of the unrelated rainbow of hues a
+   categorical palette would use -- keeps the card grid feeling like one
+   cohesive "book shelf" rather than a color-coded admin taxonomy. */
 .jlpt-level-n5 {
-  background: #16a34a;
+  background: #a98a5c;
 }
 
 .jlpt-level-n4 {
-  background: #0ea5e9;
+  background: #c17d4a;
 }
 
 .jlpt-level-n3 {
-  background: #6366f1;
+  background: var(--accent);
 }
 
 .jlpt-level-n2 {
-  background: #d97706;
+  background: #b85c35;
 }
 
 .jlpt-level-n1 {
-  background: #dc2626;
+  background: #8f4324;
 }
 
 .shared-deck-word-count-badge {
@@ -2785,27 +2797,35 @@ select {
   white-space: nowrap;
 }
 
-.shared-deck-meta {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.shared-deck-description {
+  display: -webkit-box;
   margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow-wrap: anywhere;
 }
 
-.shared-deck-meta div {
-  display: grid;
-  gap: 2px;
-}
-
-.shared-deck-meta dt {
+.shared-deck-byline {
+  margin: 0;
   color: var(--muted);
   font-size: 12px;
 }
 
-.shared-deck-meta dd {
-  margin: 0;
-  color: var(--text);
-  font-weight: 700;
+/* Softer than .danger-button -- "공유 취소" only removes the deck from the
+   public list (the owner's own deck and anyone who already imported it are
+   untouched), so it reads as a reversible secondary action rather than a
+   destructive delete. */
+.danger-secondary-button {
+  color: #9b3b42;
+  background: #fbe8ea;
+  border: 1px solid #f3cdd1;
+}
+
+.danger-secondary-button:not(:disabled):hover {
+  background: #f8dade;
 }
 
 .shared-detail-columns {
@@ -3469,27 +3489,8 @@ select {
     gap: 10px;
   }
 
-  .shared-detail-columns,
-  .shared-deck-meta {
+  .shared-detail-columns {
     grid-template-columns: 1fr;
-  }
-
-  .shared-deck-meta {
-    gap: 6px;
-  }
-
-  .shared-deck-meta div {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px 10px;
-    background: var(--soft-bg);
-  }
-
-  .shared-deck-meta dd {
-    text-align: right;
   }
 
   .shared-preview-row {

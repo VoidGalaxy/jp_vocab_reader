@@ -1,4 +1,5 @@
-import { FolderIcon, ShareIcon } from "./icons";
+import { classifyMessageTone } from "./coverageUtils";
+import { FolderIcon, ShareIcon, ShieldIcon } from "./icons";
 import {
   formatDateTime,
   getJlptLevel,
@@ -67,14 +68,23 @@ export function SharedDeckSection({
     onImportDeck(deck.id);
   }
 
+  const messageTone = classifyMessageTone(message);
+  const isInitialLoading = isLoading && decks.length === 0;
+
   return (
     <section className="tab-panel shared-deck-section" aria-live="polite">
-      <div className="result-heading">
-        <div>
-          <h2>공유 덱</h2>
-          <span>{decks.length}개</span>
+      <section className="panel-card shared-hero-card">
+        <div className="panel-card-header">
+          <h2 className="panel-card-title">공유덱</h2>
+          <p className="panel-card-description">
+            다른 사용자가 공유한 어휘 덱과 JLPT 추천 어휘를 가져와 문맥
+            예문과 함께 학습하세요.
+          </p>
         </div>
-        <div className="heading-actions">
+        <div className="landing-hero-actions">
+          <button type="button" onClick={onGoToVocab}>
+            <FolderIcon className="button-icon" />내 단어장 보기
+          </button>
           <button
             type="button"
             className="secondary-button"
@@ -84,7 +94,14 @@ export function SharedDeckSection({
             {isLoading ? "불러오는 중..." : "새로고침"}
           </button>
         </div>
-      </div>
+        <p className="landing-trust-note">
+          <ShieldIcon className="landing-trust-note-icon" />
+          <span className="home-trust-list-wrap">
+            <span>가져온 덱은 내 단어장에 그대로 추가됩니다.</span>
+            <span>공유덱에는 사용자 원문 전체가 포함되지 않습니다.</span>
+          </span>
+        </p>
+      </section>
 
       {hasJlptDeck ? (
         <p className="shared-deck-disclaimer">
@@ -95,7 +112,7 @@ export function SharedDeckSection({
 
       {message ? (
         <div className="shared-deck-message">
-          <p className="message">{message}</p>
+          <p className={`message message--${messageTone}`}>{message}</p>
           <button
             type="button"
             className="secondary-button compact-button"
@@ -106,7 +123,12 @@ export function SharedDeckSection({
         </div>
       ) : null}
 
-      {sortedDecks.length > 0 ? (
+      {isInitialLoading ? (
+        <div className="empty-guide">
+          <ShareIcon className="empty-state-icon" />
+          <p>공유덱을 불러오는 중입니다...</p>
+        </div>
+      ) : sortedDecks.length > 0 ? (
         <div className="shared-deck-grid">
           {sortedDecks.map((deck) => {
             const isSelected = selectedDeckId === deck.id;
@@ -148,42 +170,15 @@ export function SharedDeckSection({
                       </span>
                     ) : null}
                   </div>
-                  <p className="muted-text">
+                  <p className="shared-deck-description">
                     {deck.description || "설명이 없습니다."}
                   </p>
                 </div>
-                <dl className="shared-deck-meta">
-                  <div>
-                    <dt>작성자</dt>
-                    <dd>{deck.owner_display_name || "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>단어 수</dt>
-                    <dd>{deck.vocab_count}</dd>
-                  </div>
-                  <div>
-                    <dt>용어 수</dt>
-                    <dd>{deck.custom_term_count}</dd>
-                  </div>
-                  <div>
-                    <dt>공유된 횟수</dt>
-                    <dd>{deck.import_count}</dd>
-                  </div>
-                  <div>
-                    <dt>등록일</dt>
-                    <dd>{formatDateTime(deck.created_at)}</dd>
-                  </div>
-                  <div>
-                    <dt>상태</dt>
-                    <dd>
-                      {alreadyImported
-                        ? "가져옴"
-                        : isSelected
-                          ? "상세 표시 중"
-                          : "공개"}
-                    </dd>
-                  </div>
-                </dl>
+                <p className="shared-deck-byline">
+                  {deck.owner_display_name ? `${deck.owner_display_name} · ` : ""}
+                  등록일 {formatDateTime(deck.created_at)} · 가져간 횟수{" "}
+                  {deck.import_count}회
+                </p>
                 <div className="row-actions">
                   <button
                     type="button"
@@ -216,7 +211,7 @@ export function SharedDeckSection({
                   {deck.is_owner ? (
                     <button
                       type="button"
-                      className="secondary-button compact-button danger-button"
+                      className="danger-secondary-button compact-button"
                       onClick={() => onUnpublishDeck(deck.id)}
                       disabled={isUnpublishing}
                     >
@@ -231,9 +226,10 @@ export function SharedDeckSection({
       ) : (
         <div className="empty-guide">
           <ShareIcon className="empty-state-icon" />
-          <p>공개 공유 덱이 없습니다.</p>
+          <p>아직 공유된 덱이 없습니다.</p>
           <p className="muted-text">
-            단어장 탭에서 현재 덱을 공유 덱으로 등록할 수 있습니다.
+            내 단어장을 공유하거나, 단어장 탭에서 JLPT 추천 어휘 덱을 가져와
+            보세요.
           </p>
           <button
             type="button"
@@ -271,9 +267,12 @@ export function SharedDeckSection({
                   </span>
                 ) : null}
               </div>
-              <span>
+              <span className="shared-deck-byline">
+                {selectedDeck.owner_display_name
+                  ? `${selectedDeck.owner_display_name} · `
+                  : ""}
                 단어 수 {selectedDeck.vocab_count}개 · 용어 수{" "}
-                {selectedDeck.custom_term_count}개 · 공유된 횟수{" "}
+                {selectedDeck.custom_term_count}개 · 가져간 횟수{" "}
                 {selectedDeck.import_count}회
               </span>
             </div>
@@ -300,7 +299,7 @@ export function SharedDeckSection({
               {selectedDeck.is_owner ? (
                 <button
                   type="button"
-                  className="secondary-button danger-button"
+                  className="danger-secondary-button"
                   onClick={() => onUnpublishDeck(selectedDeck.id)}
                   disabled={unpublishingDeckId === selectedDeck.id}
                 >
@@ -311,7 +310,7 @@ export function SharedDeckSection({
               ) : null}
             </div>
           </div>
-          <p className="muted-text">
+          <p className="shared-deck-description">
             {selectedDeck.description || "설명이 없습니다."}
           </p>
           {getJlptLevel(selectedDeck.title) ? (
