@@ -462,6 +462,8 @@ export function ReadingTab({
           onSelectToken={handleVocabPanelSelect}
           isSaving={isSavingBatch}
           onSaveSelected={onSaveSelected}
+          message={message}
+          messageTone={messageTone}
         />
       ) : null}
     </section>

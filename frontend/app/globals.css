@@ -1950,6 +1950,30 @@ select {
   flex: 1 1 220px;
 }
 
+.reading-vocab-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.reading-vocab-stat-pill {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reading-vocab-stat-pill-accent {
+  border-color: var(--border-strong);
+  background: var(--paper-bg);
+  color: var(--primary-dark);
+}
+
 .reading-vocab-collapse-toggle {
   flex: 0 0 auto;
   white-space: nowrap;
@@ -1963,11 +1987,6 @@ select {
 
 .reading-vocab-collapse-icon-collapsed {
   transform: rotate(-90deg);
-}
-
-.reading-vocab-collapsed-summary {
-  margin: 0;
-  font-size: 13px;
 }
 
 .reading-vocab-controls {
@@ -2021,6 +2040,33 @@ select {
   border-color: var(--primary);
   background: var(--primary);
   color: #ffffff;
+}
+
+/* Status-specific filter chips borrow the same warm palette as the reader
+   highlights/status badges once active, so "지금 어떤 상태로 걸러보고
+   있는지" reads at a glance without relying on the label text alone. */
+.reading-vocab-filter-known.reading-vocab-filter-active {
+  border-color: #bfe3cc;
+  background: #eef9f1;
+  color: #1b6b3a;
+}
+
+.reading-vocab-filter-uncertain.reading-vocab-filter-active {
+  border-color: #ecdba9;
+  background: #fbf0d9;
+  color: #7a5b12;
+}
+
+.reading-vocab-filter-unknown.reading-vocab-filter-active {
+  border-color: #f3cdd1;
+  background: #fbe8ea;
+  color: #9b3b42;
+}
+
+.reading-vocab-filter-unclassified.reading-vocab-filter-active {
+  border-color: #ddd0a8;
+  background: #ece4d0;
+  color: #6b5f3f;
 }
 
 .reading-vocab-select-controls {
@@ -2182,6 +2228,18 @@ select {
   white-space: nowrap;
 }
 
+/* Quiet "tap to jump to this word in the text" affordance -- muted so it
+   doesn't compete with the status/occurrence/saved badges, just enough of
+   a visual cue that the row body itself is a distinct, clickable action
+   from the checkbox next to it. */
+.reading-vocab-item-goto-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  opacity: 0.7;
+}
+
 @media (max-width: 640px) {
   .reading-vocab-item {
     grid-template-columns: 1fr;
@@ -2204,6 +2262,19 @@ select {
 
   .reading-vocab-save-selected-button {
     flex: 1 1 auto;
+  }
+
+  /* The app-wide mobile touch-target pass makes every <button> full-width
+     (see the global `button { width: 100% }` mobile rule) -- right for the
+     save CTA above, but it stretches these small filter/quick-select chips
+     into one-per-row blocks inside their flex-wrap rows. Opt them back out
+     to their natural pill width so they wrap side-by-side like chips. */
+  .reading-vocab-filters .reading-vocab-filter-button,
+  .reading-vocab-quick-select button {
+    width: auto;
+    min-width: 0;
+    min-height: 34px;
+    padding: 7px 12px;
   }
 }
 

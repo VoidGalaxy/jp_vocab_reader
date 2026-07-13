@@ -9,8 +9,13 @@ import {
   searchReadingVocabEntries,
   selectReadingVocabEntriesByMode,
 } from "./coverageUtils";
-import type { ReadingSaveMode, ReadingVocabEntry, ReadingVocabFilter } from "./coverageUtils";
-import { ChevronDownIcon, FolderIcon, SearchIcon } from "./icons";
+import type {
+  MessageTone,
+  ReadingSaveMode,
+  ReadingVocabEntry,
+  ReadingVocabFilter,
+} from "./coverageUtils";
+import { ChevronDownIcon, ChevronRightIcon, FolderIcon, SearchIcon } from "./icons";
 import { statusLabels } from "./shared";
 
 type ReadingVocabPanelProps = {
@@ -24,6 +29,12 @@ type ReadingVocabPanelProps = {
   // actually saved (fulfilled or already-saved) so the panel can drop just
   // those from the selection instead of clearing everything indiscriminately.
   onSaveSelected: (tokenIndexes: number[]) => Promise<number[]>;
+  // Same save-result message/tone the "이 텍스트 학습 요약" card shows --
+  // threaded down so a save triggered from this panel's own CTA also
+  // surfaces feedback right next to where the user clicked, not only
+  // higher up the page.
+  message: string;
+  messageTone: MessageTone;
 };
 
 const filterOptions: Array<{ value: ReadingVocabFilter; label: string }> = [
@@ -34,6 +45,17 @@ const filterOptions: Array<{ value: ReadingVocabFilter; label: string }> = [
   { value: "known", label: "아는 단어" },
   { value: "saveable", label: "저장 가능" },
 ];
+
+// Ties each status-specific filter chip to the same warm color language as
+// the reader highlights/status badges elsewhere -- "전체"/"저장 가능" stay
+// neutral since they aren't a single status. Only applied on the *active*
+// chip so the idle filter row stays calm rather than rainbow-striped.
+const filterColorClass: Partial<Record<ReadingVocabFilter, string>> = {
+  known: "reading-vocab-filter-known",
+  uncertain: "reading-vocab-filter-uncertain",
+  unknown: "reading-vocab-filter-unknown",
+  unclassified: "reading-vocab-filter-unclassified",
+};
 
 const quickSelectModes: Array<{ mode: ReadingSaveMode; label: string; hint: string }> = [
   {
@@ -61,6 +83,8 @@ export function ReadingVocabPanel({
   onSelectToken,
   isSaving,
   onSaveSelected,
+  message,
+  messageTone,
 }: ReadingVocabPanelProps) {
   const [filter, setFilter] = useState<ReadingVocabFilter>("all");
   const [search, setSearch] = useState("");
@@ -112,6 +136,12 @@ export function ReadingVocabPanel({
   const selectedAlreadySavedCount = selectedEntries.filter(
     (entry) => entry.isSaved,
   ).length;
+  // Total saveable words in this text (not just the current selection) --
+  // the header-level "저장 가능" stat design improvement 1 asks for.
+  const saveableCount = useMemo(
+    () => entries.filter((entry) => entry.isSaveable).length,
+    [entries],
+  );
 
   function toggleSelect(key: string) {
     setSelectedWordKeys((current) => {
@@ -163,6 +193,17 @@ export function ReadingVocabPanel({
             위치로 이동하고, 체크박스로 저장할 단어를 직접 골라 담을 수
             있습니다.
           </p>
+          <div className="reading-vocab-stats-row">
+            <span className="reading-vocab-stat-pill">
+              전체 단어 {entries.length}개
+            </span>
+            <span className="reading-vocab-stat-pill">
+              선택한 단어 {selectedCount}개
+            </span>
+            <span className="reading-vocab-stat-pill reading-vocab-stat-pill-accent">
+              저장 가능 {saveableCount}개
+            </span>
+          </div>
         </div>
         <button
           type="button"
@@ -178,12 +219,7 @@ export function ReadingVocabPanel({
           {isCollapsed ? "펼치기" : "접기"}
         </button>
       </div>
-      {isCollapsed ? (
-        <p className="muted-text reading-vocab-collapsed-summary">
-          {entries.length}개 단어
-          {selectedCount > 0 ? ` · 선택한 단어 ${selectedCount}개` : ""}
-        </p>
-      ) : (
+      {isCollapsed ? null : (
         <>
       <div className="reading-vocab-controls">
         <div className="reading-vocab-search-wrap">
@@ -202,19 +238,23 @@ export function ReadingVocabPanel({
           role="group"
           aria-label="상태 필터"
         >
-          {filterOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={`reading-vocab-filter-button${
-                filter === option.value ? " reading-vocab-filter-active" : ""
-              }`}
-              aria-pressed={filter === option.value}
-              onClick={() => setFilter(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
+          {filterOptions.map((option) => {
+            const isActive = filter === option.value;
+            const colorClass = filterColorClass[option.value];
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`reading-vocab-filter-button${
+                  isActive ? " reading-vocab-filter-active" : ""
+                }${isActive && colorClass ? ` ${colorClass}` : ""}`}
+                aria-pressed={isActive}
+                onClick={() => setFilter(option.value)}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -254,7 +294,7 @@ export function ReadingVocabPanel({
           ))}
         </div>
         <p className="reading-vocab-selection-summary">
-          선택한 단어 {selectedCount}개 · 저장 가능 {selectedCount}개
+          선택한 단어 {selectedCount}개
           {selectedAlreadySavedCount > 0
             ? ` · 이미 저장됨 ${selectedAlreadySavedCount}개`
             : ""}
@@ -282,11 +322,20 @@ export function ReadingVocabPanel({
             )}
           </button>
         </div>
+        {message ? (
+          <p className={`message message--${messageTone} compact-message`}>
+            {message}
+          </p>
+        ) : null}
       </div>
 
       {visibleEntries.length === 0 ? (
         <p className="muted-text reading-vocab-empty">
-          표시할 학습 단어가 없습니다.
+          {search.trim()
+            ? "검색 결과가 없습니다. 다른 단어나 읽기로 검색해보세요."
+            : filter === "saveable"
+              ? "저장할 새 단어가 없습니다. 이미 저장한 단어는 학습 탭에서 복습할 수 있어요."
+              : "표시할 학습 단어가 없습니다."}
         </p>
       ) : (
         <ul className="reading-vocab-list">
@@ -324,6 +373,7 @@ export function ReadingVocabPanel({
                     isActive ? " reading-vocab-item-active" : ""
                   }`}
                   onClick={() => onSelectToken(entry.tokenIndex)}
+                  title={`${label} 원문 위치로 이동`}
                 >
                   <span className="reading-vocab-item-main">
                     <span className="reading-vocab-item-word">{label}</span>
@@ -333,7 +383,10 @@ export function ReadingVocabPanel({
                       </span>
                     ) : null}
                   </span>
-                  <span className="reading-vocab-item-meaning">
+                  <span
+                    className="reading-vocab-item-meaning"
+                    title={meaning || "뜻 후보 없음"}
+                  >
                     {meaning || "뜻 후보 없음"}
                   </span>
                   <span className="reading-vocab-item-meta">
@@ -348,6 +401,10 @@ export function ReadingVocabPanel({
                     {entry.isSaved ? (
                       <span className="reading-vocab-saved-badge">저장됨</span>
                     ) : null}
+                    <ChevronRightIcon
+                      className="reading-vocab-item-goto-icon"
+                      aria-hidden="true"
+                    />
                   </span>
                 </button>
               </li>
