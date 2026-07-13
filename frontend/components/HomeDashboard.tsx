@@ -122,28 +122,52 @@ export function HomeDashboard({
       <div className="home-dashboard-layout">
         <div className="home-dashboard-main">
           <section className="panel-card hero-card home-hero-card">
-            <h2 className="landing-hero-title">
-              일본어 원문을 붙여넣으면,
-              <br />
-              모르는 단어만 골라 문맥 예문과 함께 복습합니다.
-            </h2>
-            <p className="landing-hero-subtitle">
-              웹소설·원서·기사 속 일본어 단어를 자동으로 분석하고, 한국어
-              뜻과 읽기를 확인한 뒤 SRS로 복습할 수 있습니다.
-            </p>
-            <div className="landing-hero-actions">
-              <button type="button" onClick={onStartReading}>
-                <SparkleIcon className="button-icon" />
-                원문 읽기 시작
-              </button>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={isDevUser ? onScrollToAccount : onStartTodayReview}
-              >
-                <CardsIcon className="button-icon" />
-                오늘 복습하기
-              </button>
+            <div className="home-hero-layout">
+              <div className="home-hero-main">
+                <span className="home-hero-badge">
+                  <BookIcon className="home-hero-badge-icon" />
+                  일본어 원문 학습
+                </span>
+                <h2 className="landing-hero-title">
+                  일본어 원문을 읽으며
+                  <br />
+                  나만의 단어장을 만들어보세요.
+                </h2>
+                <p className="landing-hero-subtitle">
+                  웹소설, 원서, 기사 속 모르는 단어를 골라 문맥 예문과 함께
+                  복습합니다.
+                </p>
+                <div className="landing-hero-actions">
+                  <button type="button" onClick={onStartReading}>
+                    <SparkleIcon className="button-icon" />
+                    원문 읽기 시작
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={isDevUser ? onScrollToAccount : onStartTodayReview}
+                  >
+                    <CardsIcon className="button-icon" />
+                    오늘 복습하기
+                  </button>
+                </div>
+              </div>
+              <div className="home-hero-preview">
+                <div className="home-hero-preview-step">
+                  <span className="home-hero-preview-word">読む</span>
+                  <span className="home-hero-preview-caption">읽기</span>
+                </div>
+                <span className="home-hero-preview-arrow">→</span>
+                <div className="home-hero-preview-step">
+                  <span className="home-hero-preview-word">保存</span>
+                  <span className="home-hero-preview-caption">저장</span>
+                </div>
+                <span className="home-hero-preview-arrow">→</span>
+                <div className="home-hero-preview-step">
+                  <span className="home-hero-preview-word">復習</span>
+                  <span className="home-hero-preview-caption">복습</span>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -159,7 +183,9 @@ export function HomeDashboard({
                   key={entry.label}
                   onClick={quickEntryHandlers[entry.label]}
                 >
-                  <entry.icon className="home-quick-entry-icon" />
+                  <span className="home-quick-entry-icon-wrap">
+                    <entry.icon className="home-quick-entry-icon" />
+                  </span>
                   <span className="home-quick-entry-label">{entry.label}</span>
                   <span className="home-quick-entry-description">
                     {entry.description}
@@ -172,6 +198,11 @@ export function HomeDashboard({
           <section className="panel-card home-continue-card">
             <div className="panel-card-header">
               <h3 className="panel-card-title">이어서 학습하기</h3>
+              {recentlySavedVocabItemIdsCount > 0 ? (
+                <span className="home-continue-count-badge">
+                  {recentlySavedVocabItemIdsCount}개 대기 중
+                </span>
+              ) : null}
             </div>
             <div className="home-continue-body">
               <continueCard.icon className="home-continue-icon" />
@@ -198,7 +229,9 @@ export function HomeDashboard({
                 <div className="landing-step-card" key={step.title}>
                   <div className="landing-step-heading">
                     <span className="landing-step-number">{index + 1}</span>
-                    <step.icon className="landing-step-icon" />
+                    <span className="landing-step-icon-wrap">
+                      <step.icon className="landing-step-icon" />
+                    </span>
                   </div>
                   <h3>{step.title}</h3>
                   <p>{step.description}</p>
@@ -239,6 +272,13 @@ export function HomeDashboard({
                   : "아직 학습 통계가 없습니다. 단어를 저장하면 이곳에 표시돼요."}
               </p>
             )}
+            <button
+              type="button"
+              className="ghost-button compact-button home-today-cta"
+              onClick={isDevUser ? onScrollToAccount : onStartTodayReview}
+            >
+              오늘 복습하기
+            </button>
           </section>
 
           <section className="panel-card home-guide-card">
@@ -269,11 +309,11 @@ export function HomeDashboard({
             </p>
           </section>
 
-          {hasRecentActivity ? (
-            <section className="panel-card home-recent-card">
-              <div className="panel-card-header">
-                <h3 className="panel-card-title">최근 활동</h3>
-              </div>
+          <section className="panel-card home-recent-card">
+            <div className="panel-card-header">
+              <h3 className="panel-card-title">최근 활동</h3>
+            </div>
+            {hasRecentActivity ? (
               <ul className="home-recent-list">
                 {hasReadingSession ? (
                   <li>읽던 원문 작업이 남아있어요.</li>
@@ -285,8 +325,13 @@ export function HomeDashboard({
                   </li>
                 ) : null}
               </ul>
-            </section>
-          ) : null}
+            ) : (
+              <p className="muted-text home-recent-empty">
+                아직 최근 작업이 없습니다. 원문을 읽고 단어를 저장하면 여기에
+                이어서 할 일이 표시됩니다.
+              </p>
+            )}
+          </section>
         </div>
       </div>
     </section>
