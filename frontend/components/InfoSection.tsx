@@ -62,7 +62,7 @@ export function InfoSection({
       </div>
 
       <div>
-        <h2>TODO</h2>
+        <h2>앞으로 추가할 기능</h2>
         <ul>
           <li>사전 데이터 확장</li>
           <li>고급 간격 반복과 학습 통계</li>

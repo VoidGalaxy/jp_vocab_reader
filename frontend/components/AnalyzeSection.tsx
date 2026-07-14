@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
+import { ShieldIcon } from "./icons";
 import { StatusSelect, statusLabels } from "./shared";
 import type {
   Deck,
@@ -104,49 +105,68 @@ export function AnalyzeSection({
 
   return (
     <section className="tab-panel" aria-live="polite">
-      <form className="analyze-form" onSubmit={onAnalyze}>
-        <label htmlFor="source-text">원문</label>
-        <textarea
-          id="source-text"
-          value={text}
-          onChange={(event) => onTextChange(event.target.value)}
-          placeholder="彼は怠惰であることを自覚していた。"
-          rows={8}
-        />
-        <div className="analyze-options">
-          <label className="inline-field">
-            분석/저장 덱
-            <select
-              value={selectedDeckId}
-              onChange={(event) => onSelectedDeckChange(event.target.value)}
-            >
-              {decks.map((deck) => (
-                <option key={deck.id} value={String(deck.id)}>
-                  {deck.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="checkbox-field analyze-checkbox">
-            <input
-              type="checkbox"
-              checked={includeKnown}
-              onChange={(event) => onIncludeKnownChange(event.target.checked)}
-            />
-            완벽히 아는 단어도 표시
-          </label>
-        </div>
-        <div className="actions">
-          <button type="submit" disabled={isAnalyzing}>
-            {isAnalyzing ? "분석 중..." : "분석하기"}
-          </button>
-        </div>
-      </form>
+      <div className="reading-hero">
+        <h2 className="reading-hero-title">단어 카드로 빠르게 분류하기</h2>
+        <p className="reading-hero-subtitle">
+          원문을 붙여넣고 단어를 한 장씩 카드로 넘기며 완벽히 아는 단어,
+          헷갈리는 단어, 모르는 단어로 분류하세요.
+        </p>
+      </div>
 
-      <p className="muted-text copyright-note">
-        입력한 원문은 본인 학습용으로 사용하세요. 원문 전체는 서버에 저장되지
-        않으며, 공유 덱에도 원문 전체가 포함되지 않습니다.
-      </p>
+      <section className="panel-card reading-input-card">
+        <div className="panel-card-header">
+          <h3 className="panel-card-title">원문 입력</h3>
+          <p className="panel-card-description">
+            읽고 싶은 일본어 문장을 붙여넣으세요.
+          </p>
+        </div>
+        <form className="analyze-form" onSubmit={onAnalyze}>
+          <label htmlFor="source-text">원문</label>
+          <textarea
+            id="source-text"
+            value={text}
+            onChange={(event) => onTextChange(event.target.value)}
+            placeholder="彼は怠惰であることを自覚していた。"
+            rows={8}
+          />
+          <div className="analyze-options">
+            <label className="inline-field">
+              분석/저장 덱
+              <select
+                value={selectedDeckId}
+                onChange={(event) => onSelectedDeckChange(event.target.value)}
+              >
+                {decks.map((deck) => (
+                  <option key={deck.id} value={String(deck.id)}>
+                    {deck.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="checkbox-field analyze-checkbox">
+              <input
+                type="checkbox"
+                checked={includeKnown}
+                onChange={(event) => onIncludeKnownChange(event.target.checked)}
+              />
+              완벽히 아는 단어도 표시
+            </label>
+          </div>
+          <div className="actions">
+            <button type="submit" disabled={isAnalyzing}>
+              {isAnalyzing ? "분석 중..." : "분석하기"}
+            </button>
+          </div>
+        </form>
+
+        <p className="muted-text copyright-note">
+          <ShieldIcon className="copyright-note-icon" />
+          <span>
+            입력한 원문은 본인 학습용으로 사용하세요. 원문 전체는 서버에
+            저장되지 않으며, 공유 덱에도 원문 전체가 포함되지 않습니다.
+          </span>
+        </p>
+      </section>
 
       {message ? (
         <p className={`message message--${classifyMessageTone(message)}`}>
