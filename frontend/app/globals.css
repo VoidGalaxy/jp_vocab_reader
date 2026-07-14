@@ -414,6 +414,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .account-summary > div {
@@ -433,11 +434,92 @@ button {
   font-size: 13px;
 }
 
+/* Login card (left) + value-prop/info card (right) side by side on wide
+   screens; the info card explains what gets saved and reassures learners
+   original text isn't stored, so it sits beside the form rather than
+   inside it. */
+.account-panel-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 16px;
+  align-items: start;
+}
+
+.account-info-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 12px;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--soft-bg);
+}
+
+.account-info-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--primary);
+}
+
+.account-info-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.account-info-lead {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.account-info-detail {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.account-info-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.account-info-privacy-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.account-info-illustration {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+}
+
 .account-form {
   display: grid;
-  grid-template-columns: auto minmax(180px, 1fr) minmax(160px, 1fr) auto;
-  align-items: end;
   gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.account-form-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
 }
 
 .account-form label {
@@ -446,6 +528,33 @@ button {
   color: var(--text-secondary);
   font-size: 13px;
   font-weight: 700;
+}
+
+.account-form input {
+  min-height: 44px;
+}
+
+.account-submit-button {
+  width: 100%;
+  min-height: 46px;
+}
+
+.account-mode-switch {
+  justify-self: center;
+  min-width: 0;
+  padding: 4px 6px;
+  color: var(--primary);
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.account-mode-switch:not(:disabled):hover {
+  box-shadow: none;
+  transform: none;
+  opacity: 0.8;
 }
 
 .account-mode {
@@ -471,10 +580,8 @@ button {
 }
 
 .account-message {
-  margin: 0;
-  color: #1b4a4f;
+  margin-top: 2px;
   font-size: 13px;
-  font-weight: 700;
 }
 
 .tab-nav {
@@ -4086,9 +4193,24 @@ input.reading-vocab-item-checkbox {
     font-size: 12px;
   }
 
+  .account-panel-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .account-info-card {
+    grid-template-columns: auto 1fr;
+    padding: 12px;
+  }
+
+  .account-info-illustration {
+    display: none;
+  }
+
   .account-form {
     grid-template-columns: 1fr;
     gap: 8px;
+    padding: 12px;
   }
 
   .account-panel {

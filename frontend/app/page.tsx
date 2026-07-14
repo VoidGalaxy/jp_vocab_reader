@@ -3,8 +3,10 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AnalyzeSection } from "../components/AnalyzeSection";
 import { AppShell, type NavAction, type NavGroup } from "../components/AppShell";
+import { BrandReadingFlowIllustration } from "../components/BrandElements";
 import { GlobalFeedbackModal } from "../components/GlobalFeedbackModal";
 import {
+  classifyMessageTone,
   getTokenGroupKey,
   getTokenStatus,
   resolveReadingSaveTargets,
@@ -20,6 +22,7 @@ import {
   HomeIcon,
   InfoIcon,
   ShareIcon,
+  ShieldIcon,
   SparkleIcon,
 } from "../components/icons";
 import { InfoSection } from "../components/InfoSection";
@@ -154,6 +157,13 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
 const CLASSIFICATION_DRAFT_KEY = "jp-vocab-reader:classification-draft";
 const ACCESS_TOKEN_KEY = "jp-vocab-reader:access-token";
+// Client-side only sanity check for a friendlier signup/login error message --
+// the backend (see backend/app/main.py register_user) only rejects a blank
+// email, so this never blocks anything the API would have accepted.
+const EMAIL_FORMAT_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Must match the backend's actual minimum (backend/app/main.py register_user:
+// `if len(request.password) < 8`) -- never invent a stricter policy here.
+const AUTH_MIN_PASSWORD_LENGTH = 8;
 
 const tabs: Array<{
   key: TabKey;
@@ -937,15 +947,24 @@ export default function HomePage() {
       setCurrentUser(user);
     } catch (error) {
       if (isHttpError(error, 401)) {
+        // Stored token is stale/invalid/tampered. Drop it and fall back to
+        // the dev user so the app never gets stuck on a blank screen or an
+        // infinite loading spinner -- the fallback fetch itself is wrapped
+        // separately so a network hiccup here can't throw back out past
+        // this catch block.
         clearAccessToken();
-        const devUser = await requestJson<CurrentUser>(
-          "/me",
-          {},
-          { includeAuth: false },
-        );
-        setCurrentUser(devUser);
+        try {
+          const devUser = await requestJson<CurrentUser>(
+            "/me",
+            {},
+            { includeAuth: false },
+          );
+          setCurrentUser(devUser);
+        } catch {
+          setCurrentUser(null);
+        }
         setAuthMessage(
-          "저장된 로그인 정보가 만료되어 개발 모드 사용자로 전환했습니다.",
+          "로그인이 만료되어 로그아웃되었습니다. 다시 로그인해주세요.",
         );
         return;
       }
@@ -960,12 +979,22 @@ export default function HomePage() {
     event.preventDefault();
     const email = authEmail.trim();
     const password = authPassword;
-    if (!email || !password) {
-      setAuthMessage("이메일과 비밀번호를 입력해 주세요.");
+    if (!email) {
+      setAuthMessage("이메일을 입력해주세요.");
       return;
     }
-    if (authMode === "register" && password.length < 8) {
-      setAuthMessage("회원가입 비밀번호는 8자 이상이어야 합니다.");
+    if (!EMAIL_FORMAT_PATTERN.test(email)) {
+      setAuthMessage("올바른 이메일 형식으로 입력해주세요.");
+      return;
+    }
+    if (!password) {
+      setAuthMessage("비밀번호를 입력해주세요.");
+      return;
+    }
+    if (authMode === "register" && password.length < AUTH_MIN_PASSWORD_LENGTH) {
+      setAuthMessage(
+        `비밀번호는 최소 ${AUTH_MIN_PASSWORD_LENGTH}자 이상 입력해주세요.`,
+      );
       return;
     }
 
@@ -998,15 +1027,22 @@ export default function HomePage() {
       );
       await refreshUserScopedData();
     } catch (error) {
-      const errorMessage = getErrorMessage(
-        error,
-        "이메일 또는 비밀번호가 올바르지 않습니다.",
-      );
-      setAuthMessage(
-        errorMessage.includes("(401)")
-          ? "이메일 또는 비밀번호가 올바르지 않습니다."
-          : errorMessage,
-      );
+      if (isHttpError(error, 401)) {
+        setAuthMessage("이메일 또는 비밀번호를 다시 확인해주세요.");
+      } else if (
+        authMode === "register" &&
+        error instanceof ApiError &&
+        error.status === 400 &&
+        error.detail.includes("email already exists")
+      ) {
+        setAuthMessage("이미 가입된 이메일일 수 있습니다. 로그인해보세요.");
+      } else {
+        setAuthMessage(
+          authMode === "login"
+            ? "로그인에 실패했습니다. 잠시 후 다시 시도해주세요."
+            : "회원가입에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        );
+      }
     } finally {
       setIsSubmittingAuth(false);
     }
@@ -1070,7 +1106,7 @@ export default function HomePage() {
             : "",
       );
     } catch (error) {
-      setDeckMessage(getErrorMessage(error, "덱 목록을 불러오지 못했습니다."));
+      setDeckMessage(getAuthAwareErrorMessage(error, "덱 목록을 불러오지 못했습니다."));
     }
   }
 
@@ -1175,7 +1211,7 @@ export default function HomePage() {
       setShowAllAnalyzeResults(false);
       await loadVocabItems();
     } catch (error) {
-      setMessage(getErrorMessage(error, "단어 저장 중 오류가 발생했습니다."));
+      setMessage(getAuthAwareErrorMessage(error, "단어 저장 중 오류가 발생했습니다."));
     } finally {
       setIsSaving(false);
     }
@@ -1209,7 +1245,7 @@ export default function HomePage() {
       setHasLoadedVocab(true);
     } catch (error) {
       setVocabMessage(
-        getErrorMessage(error, "단어장 목록을 불러오지 못했습니다."),
+        getAuthAwareErrorMessage(error, "단어장 목록을 불러오지 못했습니다."),
       );
     } finally {
       setIsLoadingVocab(false);
@@ -1705,7 +1741,7 @@ export default function HomePage() {
       setCustomTerms(data.items);
     } catch (error) {
       setVocabMessage(
-        getErrorMessage(error, "사용자 정의 용어를 불러오지 못했습니다."),
+        getAuthAwareErrorMessage(error, "사용자 정의 용어를 불러오지 못했습니다."),
       );
     }
   }
@@ -1720,7 +1756,7 @@ export default function HomePage() {
       setStudyStats(data);
     } catch (error) {
       setStudyStatsMessage(
-        getErrorMessage(error, "학습 통계를 불러오지 못했습니다."),
+        getAuthAwareErrorMessage(error, "학습 통계를 불러오지 못했습니다."),
       );
     } finally {
       setIsLoadingStudyStats(false);
@@ -1736,7 +1772,7 @@ export default function HomePage() {
       setInfoStats(data);
     } catch (error) {
       setInfoStatsMessage(
-        getErrorMessage(error, "전체 학습 통계를 불러오지 못했습니다."),
+        getAuthAwareErrorMessage(error, "전체 학습 통계를 불러오지 못했습니다."),
       );
     } finally {
       setIsLoadingInfoStats(false);
@@ -1785,7 +1821,7 @@ export default function HomePage() {
       setSelectedSharedDeck(data);
     } catch (error) {
       setSharedDeckMessage(
-        getErrorMessage(error, "공유 덱 상세 정보를 불러오지 못했습니다."),
+        getAuthAwareErrorMessage(error, "공유 덱 상세 정보를 불러오지 못했습니다."),
       );
     } finally {
       setIsLoadingSharedDeckDetail(false);
@@ -1832,7 +1868,7 @@ export default function HomePage() {
       );
       await loadSharedDecks();
     } catch (error) {
-      setDeckMessage(getErrorMessage(error, "공유 덱 등록에 실패했습니다."));
+      setDeckMessage(getAuthAwareErrorMessage(error, "공유 덱 등록에 실패했습니다."));
     } finally {
       setIsPublishingDeck(false);
     }
@@ -1868,9 +1904,12 @@ export default function HomePage() {
       await loadVocabItems(importedDeckId);
       await loadCustomTerms(importedDeckId);
       await loadSharedDecks();
-    } catch {
+    } catch (error) {
       setSharedDeckMessage(
-        "공유덱 가져오기에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        getAuthAwareErrorMessage(
+          error,
+          "공유덱 가져오기에 실패했습니다. 잠시 후 다시 시도해주세요.",
+        ),
       );
     } finally {
       setImportingSharedDeckId(null);
@@ -1902,7 +1941,11 @@ export default function HomePage() {
       }
       setSharedDeckMessage("공유덱을 공유 목록에서 내렸습니다.");
     } catch (error) {
-      if (isHttpError(error, 403)) {
+      if (isHttpError(error, 401)) {
+        setSharedDeckMessage(
+          "로그인 후 사용할 수 있습니다. 저장한 단어와 복습 기록을 이어서 보려면 로그인해주세요.",
+        );
+      } else if (isHttpError(error, 403)) {
         setSharedDeckMessage("내가 올린 공유덱만 공유 취소할 수 있습니다.");
       } else if (isHttpError(error, 404)) {
         setSharedDeckMessage("이미 삭제되었거나 존재하지 않는 공유덱입니다.");
@@ -1941,7 +1984,7 @@ export default function HomePage() {
       setNewDeckDescription("");
       setDeckMessage("덱을 저장했습니다.");
     } catch (error) {
-      setDeckMessage(getErrorMessage(error, "덱 생성에 실패했습니다."));
+      setDeckMessage(getAuthAwareErrorMessage(error, "덱 생성에 실패했습니다."));
     } finally {
       setIsCreatingDeck(false);
     }
@@ -1983,7 +2026,7 @@ export default function HomePage() {
         `덱과 덱에 포함된 단어 ${data.deleted_vocab_count}개를 삭제했습니다.`,
       );
     } catch (error) {
-      setDeckMessage(getErrorMessage(error, "덱 삭제에 실패했습니다."));
+      setDeckMessage(getAuthAwareErrorMessage(error, "덱 삭제에 실패했습니다."));
     }
   }
 
@@ -2077,7 +2120,7 @@ export default function HomePage() {
       setVocabMessage("단어를 저장했습니다.");
       await loadVocabItems();
     } catch (error) {
-      setVocabMessage(getErrorMessage(error, "단어 추가에 실패했습니다."));
+      setVocabMessage(getAuthAwareErrorMessage(error, "단어 추가에 실패했습니다."));
     } finally {
       setIsAddingVocab(false);
     }
@@ -2107,7 +2150,7 @@ export default function HomePage() {
       await loadCustomTerms();
     } catch (error) {
       setVocabMessage(
-        getErrorMessage(error, "사용자 정의 용어 추가에 실패했습니다."),
+        getAuthAwareErrorMessage(error, "사용자 정의 용어 추가에 실패했습니다."),
       );
     } finally {
       setIsSavingCustomTerm(false);
@@ -2147,7 +2190,7 @@ export default function HomePage() {
       await loadCustomTerms();
     } catch (error) {
       setVocabMessage(
-        getErrorMessage(error, "사용자 정의 용어 수정에 실패했습니다."),
+        getAuthAwareErrorMessage(error, "사용자 정의 용어 수정에 실패했습니다."),
       );
     } finally {
       setIsSavingCustomTerm(false);
@@ -2168,7 +2211,7 @@ export default function HomePage() {
       await loadCustomTerms();
     } catch (error) {
       setVocabMessage(
-        getErrorMessage(error, "사용자 정의 용어 삭제에 실패했습니다."),
+        getAuthAwareErrorMessage(error, "사용자 정의 용어 삭제에 실패했습니다."),
       );
     }
   }
@@ -2205,7 +2248,7 @@ export default function HomePage() {
       setVocabMessage("단어를 수정했습니다.");
       await loadVocabItems();
     } catch (error) {
-      setVocabMessage(getErrorMessage(error, "단어 수정에 실패했습니다."));
+      setVocabMessage(getAuthAwareErrorMessage(error, "단어 수정에 실패했습니다."));
     } finally {
       setIsUpdatingVocab(false);
     }
@@ -2272,7 +2315,7 @@ export default function HomePage() {
       setMeaningEditDraft("");
       setMeaningEditMessage("");
     } catch (error) {
-      setMeaningEditMessage(getErrorMessage(error, "뜻 수정에 실패했습니다."));
+      setMeaningEditMessage(getAuthAwareErrorMessage(error, "뜻 수정에 실패했습니다."));
     } finally {
       setIsSavingMeaningEdit(false);
     }
@@ -2313,7 +2356,7 @@ export default function HomePage() {
       });
       setFeedbackMessage("신고가 접수되었습니다. 사전 품질 개선에 참고됩니다.");
     } catch (error) {
-      setFeedbackMessage(getErrorMessage(error, "신고 접수에 실패했습니다."));
+      setFeedbackMessage(getAuthAwareErrorMessage(error, "신고 접수에 실패했습니다."));
     } finally {
       setIsSubmittingFeedback(false);
     }
@@ -2355,7 +2398,7 @@ export default function HomePage() {
       setAppFeedbackResultMessage("피드백을 보냈습니다. 감사합니다.");
     } catch (error) {
       setAppFeedbackResultMessage(
-        getErrorMessage(error, "피드백을 보내지 못했습니다. 잠시 후 다시 시도해주세요."),
+        getAuthAwareErrorMessage(error, "피드백을 보내지 못했습니다. 잠시 후 다시 시도해주세요."),
       );
     } finally {
       setIsSubmittingAppFeedback(false);
@@ -2402,7 +2445,7 @@ export default function HomePage() {
       await loadVocabItems();
     } catch (error) {
       setVocabItems(previousItems);
-      setVocabMessage(getErrorMessage(error, "상태 변경에 실패했습니다."));
+      setVocabMessage(getAuthAwareErrorMessage(error, "상태 변경에 실패했습니다."));
     }
   }
 
@@ -2423,7 +2466,7 @@ export default function HomePage() {
       await loadVocabItems();
     } catch (error) {
       setVocabItems(previousItems);
-      setVocabMessage(getErrorMessage(error, "삭제에 실패했습니다."));
+      setVocabMessage(getAuthAwareErrorMessage(error, "삭제에 실패했습니다."));
     }
   }
 
@@ -2467,7 +2510,7 @@ export default function HomePage() {
       setVocabMessage("덱 공유 파일 다운로드를 시작했습니다.");
     } catch (error) {
       setVocabMessage(
-        getErrorMessage(error, "덱 공유 파일 내보내기에 실패했습니다."),
+        getAuthAwareErrorMessage(error, "덱 공유 파일 내보내기에 실패했습니다."),
       );
     } finally {
       setIsExportingDeckPackage(false);
@@ -2509,7 +2552,7 @@ export default function HomePage() {
       );
     } catch (error) {
       setVocabMessage(
-        getErrorMessage(error, "덱 공유 파일 가져오기에 실패했습니다."),
+        getAuthAwareErrorMessage(error, "덱 공유 파일 가져오기에 실패했습니다."),
       );
     } finally {
       setIsImportingDeckPackage(false);
@@ -2539,7 +2582,7 @@ export default function HomePage() {
       window.URL.revokeObjectURL(url);
       setVocabMessage("CSV 다운로드를 시작했습니다.");
     } catch (error) {
-      setVocabMessage(getErrorMessage(error, "CSV 다운로드에 실패했습니다."));
+      setVocabMessage(getAuthAwareErrorMessage(error, "CSV 다운로드에 실패했습니다."));
     } finally {
       setIsExportingCsv(false);
     }
@@ -2654,7 +2697,7 @@ export default function HomePage() {
       }
     } catch (error) {
       setStudyMessage(
-        getErrorMessage(error, "학습 대상 단어를 불러오지 못했습니다."),
+        getAuthAwareErrorMessage(error, "학습 대상 단어를 불러오지 못했습니다."),
       );
     } finally {
       setIsLoadingStudy(false);
@@ -2761,7 +2804,7 @@ export default function HomePage() {
         void loadInfoStats();
       }
     } catch (error) {
-      setStudyMessage(getErrorMessage(error, "복습 결과 저장에 실패했습니다."));
+      setStudyMessage(getAuthAwareErrorMessage(error, "복습 결과 저장에 실패했습니다."));
     } finally {
       setIsReviewing(false);
     }
@@ -3226,87 +3269,120 @@ function AccountPanel({
   onLogout,
 }: AccountPanelProps) {
   const isDevUser = !user || user.auth_provider === "dev";
+  const messageTone = classifyMessageTone(message);
 
   return (
     <section id="account-panel" className="account-panel" aria-label="계정">
-      <div className="account-summary">
-        <div>
-          <strong>{isDevUser ? "로그인하지 않은 개발 모드" : user.display_name}</strong>
-          <span>
-            {isLoadingUser
-              ? "사용자 확인 중"
-              : user
-                ? `${user.email} · ${user.auth_provider}`
-                : "사용자 정보를 불러오지 못했습니다."}
-          </span>
+      {isDevUser ? (
+        <div className="account-panel-cards">
+          <div className="account-info-card">
+            <BookIcon className="account-info-icon" aria-hidden="true" />
+            <div className="account-info-copy">
+              <p className="account-info-lead">
+                저장한 단어와 복습 기록을 이어서 보려면 로그인하세요.
+              </p>
+              <p className="account-info-detail">
+                가입하면 내 단어장, 복습 기록, 가져온 공유덱이 계정에
+                저장됩니다.
+              </p>
+              <p className="account-info-privacy">
+                <ShieldIcon className="account-info-privacy-icon" aria-hidden="true" />
+                원문 전체는 서버에 저장하지 않고, 단어와 짧은 문맥 예문만
+                저장합니다.
+              </p>
+            </div>
+            <div className="account-info-illustration">
+              <BrandReadingFlowIllustration />
+            </div>
+          </div>
+
+          <form className="account-form" onSubmit={onSubmit} noValidate>
+            <h3 className="account-form-title">
+              {authMode === "login" ? "로그인" : "회원가입"}
+            </h3>
+            <label>
+              이메일
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => onEmailChange(event.target.value)}
+                placeholder="test@example.com"
+                autoComplete="email"
+              />
+            </label>
+            <label>
+              비밀번호
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => onPasswordChange(event.target.value)}
+                placeholder="8자 이상"
+                autoComplete={
+                  authMode === "login" ? "current-password" : "new-password"
+                }
+              />
+            </label>
+            {authMode === "register" ? (
+              <label>
+                표시 이름
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(event) => onDisplayNameChange(event.target.value)}
+                  placeholder="비우면 이메일 앞부분"
+                  autoComplete="nickname"
+                />
+              </label>
+            ) : null}
+            <button
+              type="submit"
+              className="primary-button account-submit-button"
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? "처리 중"
+                : authMode === "login"
+                  ? "로그인"
+                  : "가입하고 시작하기"}
+            </button>
+            <button
+              type="button"
+              className="account-mode-switch"
+              onClick={() =>
+                onAuthModeChange(authMode === "login" ? "register" : "login")
+              }
+            >
+              {authMode === "login"
+                ? "계정이 없나요? 회원가입"
+                : "이미 계정이 있나요? 로그인"}
+            </button>
+            {message ? (
+              <p className={`account-message message message--${messageTone}`}>
+                {message}
+              </p>
+            ) : null}
+          </form>
         </div>
-        {!isDevUser ? (
+      ) : (
+        <div className="account-summary">
+          <div>
+            <strong>{user.display_name}</strong>
+            <span>{`${user.email} · 저장한 단어와 복습 기록이 이 계정에 보관됩니다.`}</span>
+          </div>
           <button type="button" className="secondary-button" onClick={onLogout}>
             로그아웃
           </button>
-        ) : null}
-      </div>
+        </div>
+      )}
 
-      {isDevUser ? (
-        <form className="account-form" onSubmit={onSubmit}>
-          <div className="account-mode">
-            <button
-              type="button"
-              className={authMode === "login" ? "mode-button active-mode" : "mode-button"}
-              onClick={() => onAuthModeChange("login")}
-            >
-              로그인
-            </button>
-            <button
-              type="button"
-              className={
-                authMode === "register" ? "mode-button active-mode" : "mode-button"
-              }
-              onClick={() => onAuthModeChange("register")}
-            >
-              회원가입
-            </button>
-          </div>
-          <label>
-            이메일
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => onEmailChange(event.target.value)}
-              placeholder="test@example.com"
-            />
-          </label>
-          <label>
-            비밀번호
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => onPasswordChange(event.target.value)}
-              placeholder="8자 이상"
-            />
-          </label>
-          {authMode === "register" ? (
-            <label>
-              표시 이름
-              <input
-                type="text"
-                value={displayName}
-                onChange={(event) => onDisplayNameChange(event.target.value)}
-                placeholder="비우면 이메일 앞부분"
-              />
-            </label>
-          ) : null}
-          <button type="submit" className="primary-button" disabled={isSubmitting}>
-            {isSubmitting
-              ? "처리 중"
-              : authMode === "login"
-                ? "로그인"
-                : "회원가입"}
-          </button>
-        </form>
+      {!isDevUser && message ? (
+        <p className={`account-message message message--${messageTone}`}>
+          {message}
+        </p>
       ) : null}
-
-      {message ? <p className="account-message">{message}</p> : null}
+      {isDevUser && isLoadingUser ? (
+        <p className="account-message">사용자 확인 중</p>
+      ) : null}
     </section>
   );
 }
@@ -3319,14 +3395,19 @@ async function requestJson<T>(
   const response = await apiFetch(path, init, options);
 
   if (!response.ok) {
-    let detail = "";
+    let rawDetail = "";
     try {
       const data = (await response.json()) as { detail?: string };
-      detail = data.detail ? ` ${data.detail}` : "";
+      rawDetail = data.detail ?? "";
     } catch {
-      detail = "";
+      rawDetail = "";
     }
-    throw new ApiError(response.status, getHttpErrorMessage(response.status, detail));
+    const suffix = rawDetail ? ` ${rawDetail}` : "";
+    throw new ApiError(
+      response.status,
+      getHttpErrorMessage(response.status, suffix),
+      rawDetail,
+    );
   }
 
   return (await response.json()) as T;
@@ -3375,10 +3456,24 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+// Same as getErrorMessage, but for actions that only work for a signed-in
+// user (saving words, viewing vocab/study data, shared-deck import/publish).
+// A 401 here always means "the stored token is stale/invalid", never
+// "logged out" -- every endpoint falls back to the dev user when no token is
+// sent at all -- so this always points the learner at logging back in
+// rather than repeating the generic HTTP status text.
+function getAuthAwareErrorMessage(error: unknown, fallback: string) {
+  if (isHttpError(error, 401)) {
+    return "로그인 후 사용할 수 있습니다. 저장한 단어와 복습 기록을 이어서 보려면 로그인해주세요.";
+  }
+  return getErrorMessage(error, fallback);
+}
+
 class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly detail: string = "",
   ) {
     super(message);
     this.name = "ApiError";
@@ -3395,7 +3490,7 @@ function getHttpErrorMessage(status: number, detail: string) {
     return `요청 값을 확인해 주세요. (${status})${suffix}`;
   }
   if (status === 401) {
-    return `로그인이 만료되었습니다. (${status})${suffix}`;
+    return `로그인이 필요하거나 로그인이 만료되었습니다. 로그인 후 다시 시도해주세요. (${status})${suffix}`;
   }
   if (status === 404) {
     return `대상을 찾을 수 없습니다. (${status})${suffix}`;
