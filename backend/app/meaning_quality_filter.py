@@ -159,3 +159,48 @@ def should_suppress_short_token(surface: str, part_of_speech: str) -> bool:
     if not _SINGLE_HIRAGANA_RE.match(surface or ""):
         return False
     return part_of_speech in SUPPRESS_SHORT_TOKEN_POS
+
+
+# --- Custom-term meaning_ko sanity guard ------------------------------------
+# A user-defined custom term's meaning_ko is trusted verbatim by
+# dictionary_service.lookup_meaning (it's the one place in the pipeline that
+# skips is_valid_korean_candidate entirely, since a learner should be free to
+# type any real Korean meaning they want, including things the automatic
+# ranker's stricter rules would otherwise flag). But "any real Korean
+# meaning" still excludes values that are clearly not one at all: known
+# placeholder text, or a value with no Korean in it whatsoever (pure English
+# gloss, pure Japanese reading/kana). This never touches what's stored in the
+# custom_terms table -- it only decides whether lookup_meaning may use the
+# value for this analysis pass; an unusable value falls through to the
+# normal dictionary/Kaikki/KRDICT pipeline instead of the empty result the
+# raw passthrough would otherwise show a user.
+KNOWN_PLACEHOLDER_MEANINGS = {
+    "todo",
+    "tbd",
+    "n/a",
+    "na",
+    "none",
+    "null",
+    "undefined",
+    "meaning_needs_review",
+    "source english",
+    "english gloss",
+    "확인 필요",
+    "확인필요",
+    "미정",
+}
+
+_HANGUL_RE = re.compile(r"[가-힣]")
+
+
+def is_usable_custom_meaning(value: str) -> bool:
+    cleaned = (value or "").strip()
+    if not cleaned:
+        return False
+    if cleaned.lower() in KNOWN_PLACEHOLDER_MEANINGS:
+        return False
+    # No Korean at all -- an English-only gloss or a bare Japanese
+    # reading/kana string is not a Korean meaning, whatever else it is.
+    if not _HANGUL_RE.search(cleaned):
+        return False
+    return True

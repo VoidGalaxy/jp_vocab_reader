@@ -11,7 +11,7 @@ import type {
 } from "./types";
 import type { StudyStats } from "./types";
 import { StatsPanel } from "./StatsPanel";
-import { formatNextReview } from "./shared";
+import { formatNextReview, getDisplayMeaning } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
 import {
   BookIcon,
@@ -452,7 +452,7 @@ export function StudySection({
               <div className="study-meaning-hero">
                 <span className="study-meaning-label">뜻</span>
                 <p className="study-meaning-text">
-                  {currentItem.meaning_ko || "뜻 후보 없음"}
+                  {getDisplayMeaning(currentItem.meaning_ko)}
                 </p>
               </div>
               <dl className="study-answer">

@@ -2,6 +2,56 @@
 
 import type { TokenStatus } from "./types";
 
+// A meaning_ko value is only worth showing as "the Korean meaning" if it
+// actually contains Korean text. The backend's custom-term bypass and any
+// already-saved data from before that guard existed can still carry a raw
+// English gloss, a bare Japanese reading, or a leftover placeholder string
+// ("TODO", "확인 필요", ...) -- any of those showing up as-is would read as
+// a broken/untrustworthy product to a learner expecting a Korean
+// definition. This is a display-time-only guard (never touches what's
+// stored): every screen that shows a saved meaning_ko should route through
+// this one function so the fallback wording and rule stay identical
+// everywhere, instead of each screen inventing its own "-" / "뜻 후보 없음"
+// fallback. Never apply this to a value about to be pre-filled into an
+// *edit* field -- editing needs the real raw stored value, not the
+// fallback text, or saving would overwrite it with the fallback itself.
+const MEANING_PLACEHOLDER_VALUES = new Set([
+  "todo",
+  "tbd",
+  "n/a",
+  "na",
+  "none",
+  "null",
+  "undefined",
+  "meaning_needs_review",
+  "source english",
+  "english gloss",
+  "확인 필요",
+  "확인필요",
+  "미정",
+]);
+
+const HANGUL_PATTERN = /[가-힣]/;
+
+export const DEFAULT_MEANING_FALLBACK = "한국어 뜻을 찾지 못했습니다.";
+
+export function getDisplayMeaning(
+  meaningKo: string | null | undefined,
+  fallback: string = DEFAULT_MEANING_FALLBACK,
+): string {
+  const trimmed = (meaningKo || "").trim();
+  if (!trimmed) {
+    return fallback;
+  }
+  if (MEANING_PLACEHOLDER_VALUES.has(trimmed.toLowerCase())) {
+    return fallback;
+  }
+  if (!HANGUL_PATTERN.test(trimmed)) {
+    return fallback;
+  }
+  return trimmed;
+}
+
 export const statusLabels: Record<TokenStatus, string> = {
   known: "완벽히 아는 단어",
   uncertain: "헷갈리는 단어",

@@ -1,7 +1,7 @@
 "use client";
 
 import type { TokenWithStatus } from "./types";
-import { statusLabels } from "./shared";
+import { getDisplayMeaning, statusLabels } from "./shared";
 
 // Part-of-speech tags that reach the frontend but read as function
 // words/fillers (particles/aux verbs/symbols are already filtered out on the
@@ -66,7 +66,7 @@ export function TokenChip({
       ? `기본형: ${token.base_form}`
       : null,
     token.reading ? `읽기: ${token.reading}` : null,
-    token.meaning_ko ? `뜻: ${token.meaning_ko}` : "뜻 후보 없음",
+    `뜻: ${getDisplayMeaning(token.meaning_ko)}`,
     `상태: ${statusLabels[token.status]}`,
   ]
     .filter(Boolean)

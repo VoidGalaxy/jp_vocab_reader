@@ -7,6 +7,7 @@ import { classifyMessageTone } from "./coverageUtils";
 import { BookIcon, FolderIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
 import {
   formatDateTime,
+  getDisplayMeaning,
   getJlptLevel,
   sortSharedDecksByJlptLevel,
 } from "./shared";
@@ -436,7 +437,7 @@ export function SharedDeckSection({
                     <div key={item.id} className="shared-preview-row">
                       <strong>{item.surface || item.base_form || "-"}</strong>
                       <span>{item.reading || "-"}</span>
-                      <span>{item.meaning_ko || "-"}</span>
+                      <span>{getDisplayMeaning(item.meaning_ko)}</span>
                     </div>
                   ))}
                 </div>
@@ -449,13 +450,18 @@ export function SharedDeckSection({
               <h3>사용자 정의 용어</h3>
               {selectedDeck.custom_terms.length > 0 ? (
                 <div className="shared-preview-list">
-                  {selectedDeck.custom_terms.slice(0, 30).map((term) => (
-                    <div key={term.id} className="shared-preview-row">
-                      <strong>{term.term}</strong>
-                      <span>{term.reading || "-"}</span>
-                      <span>{term.meaning_ko || term.description || "-"}</span>
-                    </div>
-                  ))}
+                  {selectedDeck.custom_terms.slice(0, 30).map((term) => {
+                    const goodMeaning = getDisplayMeaning(term.meaning_ko, "");
+                    return (
+                      <div key={term.id} className="shared-preview-row">
+                        <strong>{term.term}</strong>
+                        <span>{term.reading || "-"}</span>
+                        <span>
+                          {goodMeaning || term.description || getDisplayMeaning(null)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="empty">공유된 사용자 정의 용어가 없습니다.</p>

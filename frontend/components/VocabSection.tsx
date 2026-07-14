@@ -6,7 +6,13 @@ import { classifyMessageTone } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
 import { BookIcon, CardsIcon, FolderIcon, SearchIcon, ShareIcon } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
-import { formatDateTime, formatNextReview, statusLabels, StatusSelect } from "./shared";
+import {
+  formatDateTime,
+  formatNextReview,
+  getDisplayMeaning,
+  statusLabels,
+  StatusSelect,
+} from "./shared";
 import type {
   Deck,
   CustomTerm,
@@ -640,7 +646,7 @@ export function VocabSection({
                       <td>{term.term}</td>
                       <td>{term.reading || "-"}</td>
                       <td>{term.part_of_speech || "-"}</td>
-                      <td>{term.meaning_ko || "-"}</td>
+                      <td>{getDisplayMeaning(term.meaning_ko)}</td>
                       <td>{term.deck_name || "공통"}</td>
                       <td>
                         <span className="example-text">
@@ -764,7 +770,7 @@ export function VocabSection({
               </div>
 
               <p className="vocab-item-meaning">
-                {item.meaning_ko || "뜻 후보 없음"}
+                {getDisplayMeaning(item.meaning_ko)}
               </p>
 
               <div className="vocab-item-secondary">

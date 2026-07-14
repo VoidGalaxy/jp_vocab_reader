@@ -1,7 +1,7 @@
 "use client";
 
 import type { TokenStatus, TokenWithStatus } from "./types";
-import { statusLabels } from "./shared";
+import { getDisplayMeaning, statusLabels } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 
@@ -87,7 +87,7 @@ export function TokenDetailSheet({
         <div className="token-sheet-meaning-block">
           <span className="token-sheet-meaning-label">한국어 뜻</span>
           <p className="token-sheet-meaning-value">
-            {displayedMeaning || "뜻 후보 없음"}
+            {getDisplayMeaning(displayedMeaning)}
           </p>
         </div>
         <p className="token-sheet-status">

@@ -17,7 +17,7 @@ import type {
   ReadingVocabFilter,
 } from "./coverageUtils";
 import { ChevronDownIcon, ChevronRightIcon, FolderIcon, SearchIcon } from "./icons";
-import { statusLabels } from "./shared";
+import { getDisplayMeaning, statusLabels } from "./shared";
 
 type ReadingVocabPanelProps = {
   tokens: TokenWithStatus[];
@@ -353,7 +353,9 @@ export function ReadingVocabPanel({
               selectedTokenKey !== null && key === selectedTokenKey;
             const isChecked = selectedWordKeys.has(key);
             const label = entry.token.surface || entry.token.base_form;
-            const meaning = entry.token.savedMeaningKo || entry.token.meaning_ko;
+            const meaning = getDisplayMeaning(
+              entry.token.savedMeaningKo || entry.token.meaning_ko,
+            );
             return (
               <li
                 key={`${key}-${entry.tokenIndex}`}
@@ -391,11 +393,8 @@ export function ReadingVocabPanel({
                       </span>
                     ) : null}
                   </span>
-                  <span
-                    className="reading-vocab-item-meaning"
-                    title={meaning || "뜻 후보 없음"}
-                  >
-                    {meaning || "뜻 후보 없음"}
+                  <span className="reading-vocab-item-meaning" title={meaning}>
+                    {meaning}
                   </span>
                   <span className="reading-vocab-item-meta">
                     <span

@@ -6,7 +6,7 @@ import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
 import { ShieldIcon, SparkleIcon } from "./icons";
-import { StatusSelect, statusLabels } from "./shared";
+import { getDisplayMeaning, StatusSelect, statusLabels } from "./shared";
 import type {
   Deck,
   QualityTag,
@@ -286,7 +286,7 @@ export function AnalyzeSection({
                   </div>
                   <div>
                     <dt>한국어 뜻</dt>
-                    <dd>{currentToken.meaning_ko || "-"}</dd>
+                    <dd>{getDisplayMeaning(currentToken.meaning_ko)}</dd>
                   </div>
                   <div className="classify-example">
                     <dt>예문</dt>
@@ -393,7 +393,7 @@ export function AnalyzeSection({
                         <td>{token.reading}</td>
                         <td>{token.part_of_speech}</td>
                         <td>
-                          <div>{token.meaning_ko || "-"}</div>
+                          <div>{getDisplayMeaning(token.meaning_ko)}</div>
                         </td>
                         <td>
                           <span className="example-text">
