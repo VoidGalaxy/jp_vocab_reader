@@ -39,16 +39,40 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Brand background layer: a faint dot-grid "notebook paper" texture plus
+   two warm/cool corner blobs, sitting behind every screen so the app reads
+   as one warm reading-notebook surface instead of a flat white box-tool
+   background. All CSS gradients, no images -- kept low-contrast enough
+   (2-4% alpha) to never compete with foreground text/card contrast, and
+   `scroll` (not `fixed`) attachment so it never taxes mobile scroll perf. */
 body {
   margin: 0;
-  background:
+  background-color: var(--page-bg);
+  background-image:
+    radial-gradient(circle, rgba(61, 47, 20, 0.05) 1px, transparent 1.4px),
     radial-gradient(
       ellipse 900px 480px at 50% -80px,
       rgba(255, 250, 235, 0.9) 0%,
       rgba(255, 250, 235, 0) 70%
     ),
-    linear-gradient(180deg, #fbf8f0 0, var(--page-bg) 260px),
-    var(--page-bg);
+    radial-gradient(
+      circle 620px at 100% 680px,
+      rgba(217, 122, 74, 0.05) 0%,
+      rgba(217, 122, 74, 0) 70%
+    ),
+    radial-gradient(
+      circle 520px at -6% 46%,
+      rgba(47, 100, 112, 0.05) 0%,
+      rgba(47, 100, 112, 0) 70%
+    ),
+    linear-gradient(180deg, #fbf8f0 0, var(--page-bg) 260px);
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-size:
+    24px 24px,
+    auto,
+    auto,
+    auto,
+    auto;
 }
 
 button,
@@ -557,9 +581,18 @@ button {
   height: 14px;
 }
 
+/* Wraps the flow-preview card so the word-card + bookmark ribbon below
+   have room to sit slightly outside its edges, like a small pile of
+   notebook scraps rather than one flat box. Purely a positioning
+   container -- no visual of its own. */
+.home-hero-illustration {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 12px 20px 26px 6px;
+}
+
 .home-hero-preview {
   display: flex;
-  flex: 0 0 auto;
   align-items: center;
   gap: 10px;
   padding: 18px 20px;
@@ -572,12 +605,43 @@ button {
   display: grid;
   justify-items: center;
   gap: 4px;
+  padding: 8px 12px;
+  border: 1px solid var(--paper-border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.07);
+}
+
+/* Alternating tilt on the three step cards -- reads as a small loose stack
+   of index cards instead of one rigid three-column table. nth-of-type
+   counts only sibling <div>s (the arrows in between are <span>s), so this
+   targets the 1st/3rd step card without needing extra JSX hooks. */
+.home-hero-preview-step:nth-of-type(1) {
+  transform: rotate(-2.5deg);
+}
+
+.home-hero-preview-step:nth-of-type(3) {
+  transform: rotate(2deg);
 }
 
 .home-hero-preview-word {
+  position: relative;
   color: var(--primary-dark);
   font-size: 20px;
   font-weight: 800;
+}
+
+/* A highlighter-marker swipe behind "復習" (the payoff step) -- a plain
+   background band under the text's lower half, not a border/underline, so
+   it reads as a highlighter stroke rather than a link or divider. */
+.home-hero-preview-step:nth-of-type(3) .home-hero-preview-word {
+  background-image: linear-gradient(
+    rgba(250, 204, 21, 0.55),
+    rgba(250, 204, 21, 0.55)
+  );
+  background-repeat: no-repeat;
+  background-size: 100% 38%;
+  background-position: 0 78%;
 }
 
 .home-hero-preview-caption {
@@ -590,6 +654,58 @@ button {
   color: var(--border-strong);
   font-size: 16px;
   font-weight: 700;
+}
+
+/* Small decorative vocab card peeking out from behind the flow preview --
+   a stand-in for "the word you just saved", using the same sample word
+   (闇/やみ/어둠) already used across the app's reading-flow examples. No
+   real user text; aria-hidden since it repeats what the flow card already
+   says structurally. */
+.home-hero-word-card {
+  position: absolute;
+  right: 4px;
+  bottom: -2px;
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  padding: 7px 12px;
+  border: 1px solid var(--paper-border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: 0 10px 22px rgba(120, 98, 40, 0.16);
+  transform: rotate(6deg);
+}
+
+.home-hero-word-card-surface {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.home-hero-word-card-reading {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.home-hero-word-card-meaning {
+  color: var(--primary-dark);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Bookmark ribbon tab -- a notched strip peeking out of the flow card's
+   top edge, echoing a paper bookmark. Pure CSS (clip-path), no asset. */
+.home-hero-bookmark {
+  position: absolute;
+  top: 0;
+  left: 22px;
+  width: 16px;
+  height: 24px;
+  background: var(--accent);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 76%, 0 100%);
+  box-shadow: 0 4px 10px rgba(217, 122, 74, 0.25);
 }
 
 .landing-trust-note {
@@ -891,9 +1007,10 @@ button {
   }
 
   /* Keeps the mobile hero short (design improvement 8): the flow-preview
-     is a wide-screen extra, not essential content, so it's dropped rather
-     than stacked underneath the CTAs. */
-  .home-hero-preview {
+     illustration (steps, word-card, bookmark) is a wide-screen extra, not
+     essential content, so it's dropped rather than stacked underneath the
+     CTAs. */
+  .home-hero-illustration {
     display: none;
   }
 
@@ -1493,6 +1610,16 @@ td .term-badge {
   font-size: 22px;
 }
 
+/* Opt-in icon badge for a handful of key section headings (brief: "핵심
+   섹션 위주", not every h2) -- scoped to this modifier class rather than
+   changing .result-heading h2 generally, since that base rule is shared by
+   many plain-text headings elsewhere. */
+.result-heading h2.section-title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .result-heading span {
   color: var(--muted);
   font-size: 14px;
@@ -1584,14 +1711,27 @@ select {
 }
 
 /* Small decorative icon used at the top of empty-state cards (.empty-guide,
-   .reading-empty-guide, .study-ready-card, and similar) -- a shared visual
-   cue so "nothing here yet" reads as friendly guidance rather than a blank
-   admin panel. */
+   .reading-empty-guide, .study-ready-card, and similar) -- turns the plain
+   line-icon into a small soft badge, a low-effort "illustration" reusing
+   the existing icon library instead of adding new art. (::before/::after
+   don't reliably paint over <svg> replaced content across browsers, so
+   this is a plain background/shadow on the icon itself, not a layered
+   pseudo-element.) */
 .empty-state-icon {
-  width: 28px;
-  height: 28px;
-  margin-bottom: 2px;
-  color: var(--border-strong);
+  /* The app sets `* { box-sizing: border-box }` globally -- opt back out
+     here so `padding` adds to the box instead of eating into the 22px
+     icon's own drawing area (which border-box would shrink to 0). */
+  box-sizing: content-box;
+  width: 22px;
+  height: 22px;
+  margin-bottom: 6px;
+  padding: 11px;
+  border-radius: 999px;
+  background: var(--soft-bg);
+  box-shadow:
+    0 6px 14px rgba(120, 98, 40, 0.1),
+    inset 0 0 0 1px var(--border);
+  color: var(--primary);
 }
 
 .study-control-panel {
@@ -3083,32 +3223,100 @@ input.reading-vocab-item-checkbox {
    via negative margins back out to .shared-deck-card's own padding, so the
    card keeps one consistent radius/padding rhythm with the rest of the app
    while still reading as a shelved book/course cover. CSS-only, no new
-   image asset. */
+   image asset: a faint dot-cloth texture plus a folded-corner triangle
+   (::after) sell the "book cover", and the bottom edge gets a hairline
+   shadow standing in for a spine crease. */
 .shared-deck-cover {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
   margin: -16px -16px 0;
   padding: 9px 16px;
+  overflow: hidden;
   border-radius: 16px 16px 0 0;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.01em;
+  /* Dot-cloth texture size/position/blend apply to whichever two-layer
+     background-image the level/owner modifier below sets -- kept here so
+     each modifier only needs to declare its own color layers. */
+  background-size: 12px 12px, auto;
+  background-blend-mode: overlay;
+}
+
+/* Folded page-corner -- a small triangle notched into the top-right of the
+   cover band, like a dog-eared book cover. */
+.shared-deck-cover::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 16px 16px 0;
+  border-color: transparent rgba(255, 255, 255, 0.28) transparent transparent;
 }
 
 .shared-deck-cover-icon {
+  position: relative;
   flex: 0 0 auto;
   width: 14px;
   height: 14px;
 }
 
+.shared-deck-cover span {
+  position: relative;
+}
+
 .shared-deck-cover-mine {
-  background: linear-gradient(135deg, #3d7885 0%, var(--primary) 100%);
+  background-color: var(--primary);
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
+    linear-gradient(135deg, #3d7885 0%, var(--primary) 100%);
 }
 
 .shared-deck-cover-shared {
-  background: linear-gradient(135deg, #b3a483 0%, #8a7b5e 100%);
+  background-color: #8a7b5e;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
+    linear-gradient(135deg, #b3a483 0%, #8a7b5e 100%);
+}
+
+/* Richer book-cover gradient per JLPT level, layered under the same dot
+   texture -- reuses the existing N5->N1 warm ramp (.jlpt-level-n5..n1)
+   instead of introducing new hues, just adds depth for the cover context. */
+.shared-deck-cover.jlpt-level-n5 {
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
+    linear-gradient(135deg, #c2a679 0%, #a98a5c 100%);
+}
+
+.shared-deck-cover.jlpt-level-n4 {
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
+    linear-gradient(135deg, #d69568 0%, #c17d4a 100%);
+}
+
+.shared-deck-cover.jlpt-level-n3 {
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
+    linear-gradient(135deg, #e59266 0%, var(--accent) 100%);
+}
+
+.shared-deck-cover.jlpt-level-n2 {
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
+    linear-gradient(135deg, #cc7350 0%, #b85c35 100%);
+}
+
+.shared-deck-cover.jlpt-level-n1 {
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
+    linear-gradient(135deg, #a8593a 0%, #8f4324 100%);
 }
 
 .shared-deck-meta-row {
@@ -3448,6 +3656,13 @@ input.reading-vocab-item-checkbox {
   padding: 14px;
   background: var(--panel-bg);
   box-shadow: 0 6px 16px rgba(120, 98, 40, 0.04);
+  transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.vocab-item-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 10px 22px rgba(120, 98, 40, 0.08);
+  transform: translateY(-2px);
 }
 
 .vocab-item-top {

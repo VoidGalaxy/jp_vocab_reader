@@ -152,20 +152,28 @@ export function HomeDashboard({
                   </button>
                 </div>
               </div>
-              <div className="home-hero-preview">
-                <div className="home-hero-preview-step">
-                  <span className="home-hero-preview-word">読む</span>
-                  <span className="home-hero-preview-caption">읽기</span>
+              <div className="home-hero-illustration">
+                <span className="home-hero-bookmark" aria-hidden="true" />
+                <div className="home-hero-preview">
+                  <div className="home-hero-preview-step">
+                    <span className="home-hero-preview-word">読む</span>
+                    <span className="home-hero-preview-caption">읽기</span>
+                  </div>
+                  <span className="home-hero-preview-arrow">→</span>
+                  <div className="home-hero-preview-step">
+                    <span className="home-hero-preview-word">保存</span>
+                    <span className="home-hero-preview-caption">저장</span>
+                  </div>
+                  <span className="home-hero-preview-arrow">→</span>
+                  <div className="home-hero-preview-step">
+                    <span className="home-hero-preview-word">復習</span>
+                    <span className="home-hero-preview-caption">복습</span>
+                  </div>
                 </div>
-                <span className="home-hero-preview-arrow">→</span>
-                <div className="home-hero-preview-step">
-                  <span className="home-hero-preview-word">保存</span>
-                  <span className="home-hero-preview-caption">저장</span>
-                </div>
-                <span className="home-hero-preview-arrow">→</span>
-                <div className="home-hero-preview-step">
-                  <span className="home-hero-preview-word">復習</span>
-                  <span className="home-hero-preview-caption">복습</span>
+                <div className="home-hero-word-card" aria-hidden="true">
+                  <span className="home-hero-word-card-surface">闇</span>
+                  <span className="home-hero-word-card-reading">やみ</span>
+                  <span className="home-hero-word-card-meaning">어둠</span>
                 </div>
               </div>
             </div>
@@ -173,7 +181,10 @@ export function HomeDashboard({
 
           <section className="panel-card home-quickentry-card">
             <div className="panel-card-header">
-              <h3 className="panel-card-title">빠른 진입</h3>
+              <h3 className="panel-card-title">
+                <SparkleIcon className="panel-card-title-icon" />
+                빠른 진입
+              </h3>
             </div>
             <div className="home-quick-entry-grid">
               {quickEntries.map((entry) => (
@@ -281,7 +292,7 @@ export function HomeDashboard({
             </button>
           </section>
 
-          <section className="panel-card home-guide-card">
+          <section className="panel-card note-card home-guide-card">
             <div className="panel-card-header">
               <h3 className="panel-card-title">시작 가이드</h3>
             </div>
@@ -295,7 +306,7 @@ export function HomeDashboard({
             </ol>
           </section>
 
-          <section className="panel-card home-trust-card">
+          <section className="panel-card note-card home-trust-card">
             <div className="panel-card-header">
               <h3 className="panel-card-title">저장 정책 안내</h3>
             </div>

@@ -712,7 +712,10 @@ export function VocabSection({
 
       <div className="result-heading">
         <div>
-          <h2>저장된 단어장</h2>
+          <h2 className="section-title-with-icon">
+            <FolderIcon className="panel-card-title-icon" />
+            저장된 단어장
+          </h2>
           <span>{items.length}개</span>
         </div>
         <div className="heading-actions">
