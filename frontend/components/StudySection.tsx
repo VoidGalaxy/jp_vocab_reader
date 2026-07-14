@@ -19,6 +19,7 @@ import {
   ClockIcon,
   InboxIcon,
   RotateIcon,
+  ShareIcon,
   ZapIcon,
 } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
@@ -59,6 +60,7 @@ type StudySectionProps = {
   onGoToVocab: () => void;
   onGoToAnalyze: () => void;
   onGoToReading: () => void;
+  onGoToShared: () => void;
   onShowAnswer: () => void;
   onReview: (result: ReviewResult) => void;
 };
@@ -82,7 +84,7 @@ const emptyMessages: Record<StudyMode, string> = {
 };
 
 const emptySecondaryMessages: Record<StudyMode, string> = {
-  today: "새 단어를 추가하거나 전체 학습을 시작해보세요.",
+  today: "새 원문을 읽고 단어를 추가하거나 전체 학습을 시작해보세요.",
   uncertain: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
   unknown: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
   all: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
@@ -94,8 +96,9 @@ const quickStartCta: Array<{
   mode: StudyMode;
   label: string;
   countKey: keyof StudyStats;
+  primary?: boolean;
 }> = [
-  { mode: "today", label: "오늘 복습 시작", countKey: "due_today_count" },
+  { mode: "today", label: "오늘 복습 시작", countKey: "due_today_count", primary: true },
   { mode: "new", label: "새 단어 학습", countKey: "new_count" },
   { mode: "uncertain", label: "어려운 단어 복습", countKey: "hard_count" },
   { mode: "all", label: "덱별 학습", countKey: "total_vocab_count" },
@@ -138,55 +141,54 @@ const ratingButtons: Array<{
   },
 ];
 
-function TodayDashboard({ stats }: { stats: StudyStats | null }) {
-  if (!stats) {
-    return null;
-  }
-  return (
-    <div className="today-dashboard" role="group" aria-label="오늘 학습 대시보드">
-      <div className="today-dashboard-card">
-        <span>오늘 복습</span>
-        <strong>{stats.due_today_count}개</strong>
-      </div>
-      <div className="today-dashboard-card">
-        <span>오늘 완료</span>
-        <strong>{stats.reviewed_today_count}개</strong>
-      </div>
-      <div className="today-dashboard-card">
-        <span>어려운 단어</span>
-        <strong>{stats.hard_count}개</strong>
-      </div>
-      <div className="today-dashboard-card">
-        <span>새 단어</span>
-        <strong>{stats.new_count}개</strong>
-      </div>
-    </div>
-  );
-}
-
-function TodayProgress({ stats }: { stats: StudyStats | null }) {
+function StudyCompactStats({ stats }: { stats: StudyStats | null }) {
   if (!stats) {
     return null;
   }
   const completed = stats.reviewed_today_count;
   const total = completed + stats.due_today_count;
   const percent = total > 0 ? Math.min(Math.round((completed / total) * 100), 100) : 0;
+
   return (
-    <div className="today-progress">
-      <div className="today-progress-label">
-        <span>오늘 진행률</span>
-        <strong>
-          {completed} / {total} 완료
-        </strong>
+    <div className="study-compact-stats" role="group" aria-label="오늘 학습 요약">
+      <div className="study-compact-stat-row">
+        <div className="study-compact-stat">
+          <span>오늘 복습</span>
+          <strong>{stats.due_today_count}</strong>
+        </div>
+        <div className="study-compact-stat">
+          <span>오늘 완료</span>
+          <strong>{stats.reviewed_today_count}</strong>
+        </div>
+        <div className="study-compact-stat">
+          <span>어려운 단어</span>
+          <strong>{stats.hard_count}</strong>
+        </div>
+        <div className="study-compact-stat">
+          <span>새 단어</span>
+          <strong>{stats.new_count}</strong>
+        </div>
       </div>
-      <div className="progress-bar" aria-hidden="true">
-        <div style={{ width: `${percent}%` }} />
+      <div className="study-compact-progress">
+        <div
+          className="progress-bar study-compact-progress-bar"
+          role="progressbar"
+          aria-label="오늘 학습 진행률"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+        >
+          <div style={{ width: `${percent}%` }} />
+        </div>
+        <span className="study-compact-progress-label">
+          {completed} / {total} 완료
+        </span>
       </div>
     </div>
   );
 }
 
-function StudyQuickStartGrid({
+function StudyQuickStartHero({
   stats,
   onQuickStart,
 }: {
@@ -194,21 +196,30 @@ function StudyQuickStartGrid({
   onQuickStart: (mode: StudyMode) => void;
 }) {
   return (
-    <div className="study-cta-grid" role="group" aria-label="오늘 학습 시작">
-      {quickStartCta.map(({ mode, label, countKey }) => (
-        <button
-          key={mode}
-          type="button"
-          className="study-cta-button"
-          onClick={() => onQuickStart(mode)}
-        >
-          <span className="study-cta-label">{label}</span>
-          <span className="study-cta-hint">
-            {stats ? `${stats[countKey]}개` : "-"}
-          </span>
-        </button>
-      ))}
-    </div>
+    <section className="study-hero-card hero-card">
+      <div className="study-hero-header">
+        <CardsIcon className="study-hero-icon" />
+        <div>
+          <h2>학습 시작</h2>
+          <p>오늘 복습할 단어를 문맥 예문과 함께 확인하세요.</p>
+        </div>
+      </div>
+      <div className="study-cta-grid" role="group" aria-label="오늘 학습 시작">
+        {quickStartCta.map(({ mode, label, countKey, primary }) => (
+          <button
+            key={mode}
+            type="button"
+            className={`study-cta-button${primary ? " study-cta-button-primary" : ""}`}
+            onClick={() => onQuickStart(mode)}
+          >
+            <span className="study-cta-label">{label}</span>
+            <span className="study-cta-hint">
+              {stats ? `${stats[countKey]}개` : "-"}
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -248,6 +259,7 @@ export function StudySection({
   onGoToVocab,
   onGoToAnalyze,
   onGoToReading,
+  onGoToShared,
   onShowAnswer,
   onReview,
 }: StudySectionProps) {
@@ -260,83 +272,97 @@ export function StudySection({
   const allStudyCount = uncertainCount + unknownCount;
   const visibleProgress =
     items.length > 0 ? `${Math.min(currentIndex + 1, items.length)} / ${items.length}` : "0 / 0";
+  // While a card is actively on screen, the dashboard/CTA chrome above it is
+  // hidden -- the review flow should read as one focused flashcard, not a
+  // stats screen with a card wedged underneath it.
+  const isReviewingActive = Boolean(currentItem) && !isComplete;
 
   return (
     <section className="tab-panel" aria-live="polite">
-      <TodayDashboard stats={stats} />
-      <TodayProgress stats={stats} />
-      <StudyQuickStartGrid stats={stats} onQuickStart={onQuickStart} />
+      {!isReviewingActive ? (
+        <>
+          <StudyCompactStats stats={stats} />
+          <StudyQuickStartHero stats={stats} onQuickStart={onQuickStart} />
 
-      <StatsPanel
-        title="학습 현황"
-        stats={stats}
-        isLoading={isStatsLoading}
-        message={statsMessage}
-      />
+          <section className="study-control-panel study-control-panel-compact">
+            <div className="study-control-heading">
+              <h3>덱과 모드 직접 선택</h3>
+              <span>
+                {selectedDeckName} · {modeLabel}
+              </span>
+            </div>
 
-      <section className="study-control-panel">
-        <div className="result-heading">
-          <div>
-            <h2>덱과 모드 직접 선택</h2>
-            <span>
-              {selectedDeckName} · {modeLabel}
-            </span>
-          </div>
-          <div className="heading-actions">
-            <label className="inline-field">
-              학습 덱
-              <select
-                value={selectedDeckId}
-                onChange={(event) => onSelectedDeckChange(event.target.value)}
+            <div className="study-mode-grid" role="group" aria-label="학습 모드">
+              {(["today", "uncertain", "unknown", "all"] as StudyMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={
+                    studyMode === mode
+                      ? "study-mode-button active-study-mode"
+                      : "study-mode-button"
+                  }
+                  onClick={() => onStudyModeChange(mode)}
+                >
+                  <span>{studyModeLabels[mode]}</span>
+                  <strong>
+                    {mode === "today"
+                      ? dueCount
+                      : mode === "uncertain"
+                        ? uncertainCount
+                        : mode === "unknown"
+                          ? unknownCount
+                          : allStudyCount}
+                    개
+                  </strong>
+                </button>
+              ))}
+            </div>
+
+            <div className="study-control-footer">
+              <label className="inline-field">
+                학습 덱
+                <select
+                  value={selectedDeckId}
+                  onChange={(event) => onSelectedDeckChange(event.target.value)}
+                >
+                  <option value="all">전체 단어장</option>
+                  {decks.map((deck) => (
+                    <option key={deck.id} value={String(deck.id)}>
+                      {deck.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="study-start-button"
+                onClick={onStart}
+                disabled={isLoading}
               >
-                <option value="all">전체 단어장</option>
-                {decks.map((deck) => (
-                  <option key={deck.id} value={String(deck.id)}>
-                    {deck.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="button" onClick={onStart} disabled={isLoading}>
-              {isLoading ? (
-                "불러오는 중..."
-              ) : (
-                <>
-                  <CardsIcon className="button-icon" />
-                  학습 시작
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+                {isLoading ? (
+                  "불러오는 중..."
+                ) : (
+                  <>
+                    <CardsIcon className="button-icon" />
+                    학습 시작
+                  </>
+                )}
+              </button>
+            </div>
+          </section>
 
-        <div className="study-mode-grid" role="group" aria-label="학습 모드">
-          {(["today", "uncertain", "unknown", "all"] as StudyMode[]).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={
-                studyMode === mode
-                  ? "study-mode-button active-study-mode"
-                  : "study-mode-button"
-              }
-              onClick={() => onStudyModeChange(mode)}
-            >
-              <span>{studyModeLabels[mode]}</span>
-              <strong>
-                {mode === "today"
-                  ? dueCount
-                  : mode === "uncertain"
-                    ? uncertainCount
-                    : mode === "unknown"
-                      ? unknownCount
-                      : allStudyCount}
-                개
-              </strong>
-            </button>
-          ))}
-        </div>
-      </section>
+          <details className="study-stats-collapsible">
+            <summary>학습 현황 자세히 보기</summary>
+            <StatsPanel
+              title="학습 현황"
+              stats={stats}
+              isLoading={isStatsLoading}
+              message={statsMessage}
+            />
+          </details>
+        </>
+      ) : null}
 
       {message ? (
         <p className={`message message--${classifyMessageTone(message)}`}>
@@ -367,6 +393,10 @@ export function StudySection({
             </button>
             <button type="button" className="secondary-button" onClick={onGoToVocab}>
               내 단어장 보기
+            </button>
+            <button type="button" className="ghost-button" onClick={onGoToShared}>
+              <ShareIcon className="button-icon" />
+              공유덱 둘러보기
             </button>
           </div>
         </div>
@@ -557,27 +587,27 @@ export function StudySection({
               다시 학습하기
             </button>
             {studyMode === "recent" ? (
-              <>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={onGoToReading}
-                >
-                  읽기 탭으로 돌아가기
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => onQuickStart("today")}
-                >
-                  오늘 복습 보기
-                </button>
-              </>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={onGoToReading}
+              >
+                읽기 탭으로 돌아가기
+              </button>
             ) : null}
             <button type="button" className="secondary-button" onClick={onGoToVocab}>
               단어장으로 가기
             </button>
-            <button type="button" className="secondary-button" onClick={onGoToAnalyze}>
+            {studyMode === "recent" ? (
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => onQuickStart("today")}
+              >
+                오늘 복습 보기
+              </button>
+            ) : null}
+            <button type="button" className="ghost-button" onClick={onGoToAnalyze}>
               분석 탭으로 가기
             </button>
           </div>

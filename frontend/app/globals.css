@@ -1594,6 +1594,82 @@ select {
   box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
 }
 
+/* Secondary utility panel (deck + mode picker) sitting below the primary
+   study-hero-card -- flatter shadow and tighter padding keep it reading as
+   "advanced options", not a second competing headline card. */
+.study-control-panel-compact {
+  gap: 12px;
+  padding: 14px;
+  background: var(--soft-bg);
+  box-shadow: none;
+}
+
+.study-control-heading {
+  display: grid;
+  gap: 2px;
+}
+
+.study-control-heading h3 {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.study-control-heading span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Deck select and the 학습 시작 button live in the same row at the bottom
+   of the card instead of floating top-right, so the button reads as part
+   of the card's natural flow. */
+.study-control-footer {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.study-control-footer .inline-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.study-start-button {
+  flex: 0 0 auto;
+}
+
+/* Full stats-panel behind a native <details> toggle -- keeps the tab's
+   dominant real estate for the study-start flow while the full numbers
+   stay one tap away instead of disappearing entirely. */
+.study-stats-collapsible summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  list-style: none;
+}
+
+.study-stats-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.study-stats-collapsible summary::before {
+  content: "▸";
+  color: var(--border-strong);
+}
+
+.study-stats-collapsible[open] summary::before {
+  content: "▾";
+}
+
+.study-stats-collapsible .stats-panel {
+  margin-top: 12px;
+}
+
 .study-mode-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2625,48 +2701,103 @@ input.reading-vocab-item-checkbox {
   box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
 }
 
-.today-dashboard {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
+/* Compact "오늘 학습 요약" strip -- replaces the old 4-card + separate
+   progress-bar dashboard with one dense row so the study tab reads as a
+   study-start screen first, stats second. */
+.study-compact-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
-}
-
-.today-dashboard-card {
-  display: grid;
-  gap: 4px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   background: var(--panel-bg);
-  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
+  box-shadow: 0 6px 16px rgba(120, 98, 40, 0.04);
 }
 
-.today-dashboard-card span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
+.study-compact-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-.today-dashboard-card strong {
-  color: var(--text);
-  font-size: 20px;
-}
-
-.today-progress {
-  display: grid;
+.study-compact-stat {
+  display: flex;
+  align-items: baseline;
   gap: 6px;
 }
 
-.today-progress-label {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
+.study-compact-stat span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.today-progress-label strong {
+.study-compact-stat strong {
   color: var(--text);
+  font-size: 16px;
+}
+
+.study-compact-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 160px;
+  min-width: 140px;
+  max-width: 260px;
+}
+
+.study-compact-progress-bar {
+  flex: 1 1 auto;
+  height: 6px;
+}
+
+.study-compact-progress-label {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The single strongest CTA on the tab -- title + one-line copy above the
+   quick-start tiles, wrapped in .hero-card so it visually outranks the
+   compact stats strip and the deck/mode utility panel below it. */
+.study-hero-card {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.study-hero-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.study-hero-icon {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 7px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: var(--primary);
+}
+
+.study-hero-header h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 19px;
+}
+
+.study-hero-header p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .study-cta-grid {
@@ -2701,6 +2832,20 @@ input.reading-vocab-item-checkbox {
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
+}
+
+/* "오늘 복습 시작" is the one action the tab wants the learner to take --
+   filled in the primary color so it outranks the other three quick-start
+   tiles instead of sitting as an equal-weight grid cell. */
+.study-cta-button-primary {
+  border-color: var(--primary);
+  color: #ffffff;
+  background: linear-gradient(180deg, #3d7885 0%, var(--primary) 100%);
+  box-shadow: 0 10px 22px rgba(61, 120, 133, 0.22);
+}
+
+.study-cta-button-primary .study-cta-hint {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .stats-grid {
@@ -3201,20 +3346,36 @@ input.reading-vocab-item-checkbox {
   color: #6b5f3f;
 }
 
-/* Word list -- learning-library cards instead of an admin data table. */
+/* Word list -- learning-library cards instead of an admin data table.
+   Two columns once there's room so a shelf of saved words reads as a
+   dense library rather than a stack of oversized panels; an open inline
+   edit form (.vocab-item-card-editing) spans both columns so its full
+   field grid has room to breathe. */
 .vocab-list {
   display: grid;
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 860px) {
+  .vocab-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vocab-item-card-editing {
+    grid-column: 1 / -1;
+  }
 }
 
 .vocab-item-card {
   display: grid;
-  gap: 10px;
+  align-content: start;
+  gap: 8px;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 18px;
+  border-radius: 12px;
+  padding: 14px;
   background: var(--panel-bg);
-  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
+  box-shadow: 0 6px 16px rgba(120, 98, 40, 0.04);
 }
 
 .vocab-item-top {
@@ -3235,7 +3396,7 @@ input.reading-vocab-item-checkbox {
 
 .vocab-item-surface {
   color: var(--text);
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 800;
   overflow-wrap: anywhere;
 }
@@ -3271,9 +3432,9 @@ input.reading-vocab-item-checkbox {
 .vocab-item-meaning {
   margin: 0;
   color: var(--text);
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
@@ -3284,7 +3445,7 @@ input.reading-vocab-item-checkbox {
 }
 
 .vocab-item-secondary-tag {
-  padding: 3px 10px;
+  padding: 2px 8px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--soft-bg);
@@ -3301,7 +3462,7 @@ input.reading-vocab-item-checkbox {
 }
 
 .vocab-item-review-badge {
-  padding: 3px 10px;
+  padding: 2px 8px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--soft-bg);
@@ -3322,38 +3483,59 @@ input.reading-vocab-item-checkbox {
   font-weight: 500;
 }
 
+/* Note-card treatment: an accent rule instead of the study card's fuller
+   callout box, and clamped to two lines so a long saved sentence can't
+   make the library card tower over its neighbors. */
 .vocab-item-example {
   display: grid;
-  gap: 6px;
-  border: 1px solid #ecdfb8;
-  border-left: 4px solid #e8c25c;
-  border-radius: 10px;
-  padding: 12px 14px;
+  gap: 4px;
+  border-left: 3px solid #e8c25c;
+  border-radius: 6px;
+  padding: 6px 10px;
   background: #fdf9ee;
 }
 
 .vocab-item-example-label {
   color: #8a6d1f;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
 .vocab-item-example-text {
+  display: -webkit-box;
   margin: 0;
+  overflow: hidden;
   color: var(--text);
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.6;
   word-break: keep-all;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .vocab-item-actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 8px;
-  padding-top: 10px;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
   border-top: 1px solid var(--border);
+}
+
+/* Delete stays clearly a danger action but reads as an outline chip
+   rather than a solid red button competing with 수정/뜻 오류 신고 for
+   attention -- this is a library card action row, not an admin table. */
+.danger-button-subtle {
+  color: var(--danger);
+  background: transparent;
+  border: 1px solid var(--danger);
+}
+
+.danger-button-subtle:not(:disabled):hover {
+  background: rgba(200, 60, 60, 0.08);
+  box-shadow: none;
+  transform: none;
 }
 
 .vocab-management-panel {
@@ -3618,6 +3800,7 @@ input.reading-vocab-item-checkbox {
   .analyze-form,
   .result-section,
   .study-control-panel,
+  .study-hero-card,
   .study-card,
   .shared-deck-card,
   .shared-deck-detail,
@@ -3866,12 +4049,27 @@ input.reading-vocab-item-checkbox {
     padding: 14px 8px;
   }
 
-  .today-dashboard {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .study-compact-stats {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .study-compact-stat-row {
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .study-compact-progress {
+    max-width: none;
   }
 
   .study-cta-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .study-control-footer {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .reading-summary-grid {
@@ -3889,11 +4087,6 @@ input.reading-vocab-item-checkbox {
   .reading-summary-cta-button {
     flex: 0 0 auto;
     width: 100%;
-  }
-
-  .today-progress-label {
-    flex-direction: column;
-    gap: 2px;
   }
 
   .study-complete-stats {

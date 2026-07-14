@@ -331,7 +331,6 @@ export function VocabSection({
         <div className="vocab-action-group">
           <button
             type="button"
-            className="secondary-button"
             onClick={onStudySelectedDeck}
             disabled={selectedDeckId === "all"}
             title={
@@ -340,6 +339,7 @@ export function VocabSection({
                 : undefined
             }
           >
+            <CardsIcon className="button-icon" />
             이 덱 학습하기
           </button>
           <button
@@ -736,7 +736,12 @@ export function VocabSection({
       {items.length > 0 ? (
         <div className="vocab-list">
           {items.map((item) => (
-            <div className="vocab-item-card" key={item.id}>
+            <div
+              className={`vocab-item-card${
+                editingItemId === item.id ? " vocab-item-card-editing" : ""
+              }`}
+              key={item.id}
+            >
               <div className="vocab-item-top">
                 <div className="vocab-item-headword">
                   <span className="vocab-item-surface">{item.surface}</span>
@@ -834,7 +839,7 @@ export function VocabSection({
                 </button>
                 <button
                   type="button"
-                  className="danger-button compact-button"
+                  className="danger-button danger-button-subtle compact-button"
                   onClick={() => {
                     const label = item.surface || item.base_form;
                     if (

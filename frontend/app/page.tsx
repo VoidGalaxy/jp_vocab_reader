@@ -3085,6 +3085,7 @@ export default function HomePage() {
             onGoToVocab={goToVocabFromStudy}
             onGoToAnalyze={goToAnalyzeFromStudy}
             onGoToReading={() => setActiveTab("reading")}
+            onGoToShared={() => void handleTabChange("shared")}
             onShowAnswer={() => {
               answerShownAtRef.current = Date.now();
               setIsAnswerVisible(true);
