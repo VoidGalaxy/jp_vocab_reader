@@ -327,11 +327,8 @@ export function ReadingTab({
         <p className="muted-text copyright-note">
           <ShieldIcon className="copyright-note-icon" />
           <span>
-            입력한 원문은 분석에만 사용되며, 원문 전체는 서버에 저장되지 않고
-            공유 덱에도 포함되지 않습니다. 이어서 읽을 수 있도록 이 브라우저에만
-            임시로 저장되며, 언제든 "현재 읽기 작업 초기화"로 직접 지울 수
-            있습니다. 단어 저장 시 해당 단어가 포함된 짧은 문장만 예문으로
-            저장됩니다.
+            원문 전체는 저장되지 않고 이 브라우저에만 임시 보관돼요. 저장한
+            단어에는 짧은 예문만 남습니다.
           </span>
         </p>
         {storageWarning ? (
@@ -345,6 +342,7 @@ export function ReadingTab({
 
       {summary && isSampleText ? (
         <div className="panel-card note-card reading-onboarding-note">
+          <span className="memo-label">가이드</span>
           <p className="reading-onboarding-note-title">
             샘플로 핵심 흐름을 체험해보세요
           </p>

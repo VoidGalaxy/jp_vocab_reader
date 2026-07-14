@@ -297,19 +297,10 @@ export function HomeDashboard({
             </ol>
           </section>
 
-          <section className="panel-card note-card home-trust-card">
-            <div className="panel-card-header">
-              <h3 className="panel-card-title">저장 정책 안내</h3>
-            </div>
-            <p className="landing-trust-note">
-              <ShieldIcon className="landing-trust-note-icon" />
-              <span className="home-trust-list-wrap">
-                <span>원문 전체는 서버에 저장하지 않습니다.</span>
-                <span>단어와 짧은 문맥 예문만 단어장에 저장됩니다.</span>
-                <span>공유덱에는 원문 전체가 포함되지 않습니다.</span>
-              </span>
-            </p>
-          </section>
+          <p className="info-strip">
+            <ShieldIcon className="info-strip-icon" />
+            원문 전체는 저장하지 않아요. 단어와 짧은 예문만 단어장·공유덱에 남습니다.
+          </p>
 
           <section className="panel-card home-recent-card">
             <div className="panel-card-header">

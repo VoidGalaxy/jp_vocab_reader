@@ -27,12 +27,10 @@ export function BrandEmptyIllustration({ icon: Icon }: { icon: IconComponent }) 
 }
 
 // Home hero's "読む -> 保存 -> 復習" flow illustration -- three slightly
-// tilted paper cards, a highlighter swipe on the payoff step, a bookmark
-// ribbon, and a small decorative vocab card peeking out behind it (using
-// the same 闇/やみ/어둠 sample word already used across the app's reading
-// examples, never a real user sentence). Extracted from HomeDashboard so
-// the same illustration can be reused anywhere the product's core loop
-// needs a visual, not just the home hero.
+// tilted paper cards, a highlighter swipe on the payoff step, and a
+// bookmark ribbon. Extracted from HomeDashboard so the same illustration
+// can be reused anywhere the product's core loop needs a visual, not just
+// the home hero.
 export function BrandReadingFlowIllustration() {
   return (
     <div className="home-hero-illustration">
@@ -52,11 +50,6 @@ export function BrandReadingFlowIllustration() {
           <span className="home-hero-preview-word">復習</span>
           <span className="home-hero-preview-caption">복습</span>
         </div>
-      </div>
-      <div className="home-hero-word-card" aria-hidden="true">
-        <span className="home-hero-word-card-surface">闇</span>
-        <span className="home-hero-word-card-reading">やみ</span>
-        <span className="home-hero-word-card-meaning">어둠</span>
       </div>
     </div>
   );

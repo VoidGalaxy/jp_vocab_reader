@@ -23,6 +23,39 @@
   --paper-bg: var(--panel-bg);
   --paper-border: var(--border);
   --paper-shadow: rgba(120, 98, 40, 0.08);
+  /* Named brand palette aliases -- same hex values used throughout the
+     file, just given brand-concept names so new work reaches for
+     "--sand"/"--sage" instead of inventing another one-off hex. */
+  --sand: var(--soft-bg);
+  --warm-gray: var(--text-secondary);
+  --bookmark-orange: var(--accent);
+  --sage-green: #4f8c66;
+  --rose: #b5495a;
+  /* Vocab-status colors, tokenized so chip/badge/legend rules across the
+     app read from one place instead of repeating the same hex per rule.
+     Values match the existing token-chip palette (kept as-is; this only
+     promotes them to variables). */
+  --status-known-fg: #2f7a4d;
+  --status-known-bg: #eaf5ee;
+  --status-known-line: #b7ddc4;
+  --status-uncertain-fg: #82631a;
+  --status-uncertain-bg: #fdf6e4;
+  --status-unknown-fg: #a3444d;
+  --status-unknown-bg: #fdf1f1;
+  --status-unclassified-fg: var(--muted);
+  --status-unclassified-line: #cebfa0;
+  /* Spacing/radius scale -- most rules in this file still hardcode their
+     own values (pre-existing, left as-is to avoid a risky mass rename),
+     but new shared primitives below use this scale so they stay
+     consistent with each other. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
   font-family:
     Arial,
     "Hiragino Sans",
@@ -763,45 +796,6 @@ button {
   font-weight: 700;
 }
 
-/* Small decorative vocab card peeking out from behind the flow preview --
-   a stand-in for "the word you just saved", using the same sample word
-   (闇/やみ/어둠) already used across the app's reading-flow examples. No
-   real user text; aria-hidden since it repeats what the flow card already
-   says structurally. */
-.home-hero-word-card {
-  position: absolute;
-  right: 4px;
-  bottom: -2px;
-  display: grid;
-  gap: 1px;
-  justify-items: center;
-  padding: 7px 12px;
-  border: 1px solid var(--paper-border);
-  border-radius: 10px;
-  background: var(--panel-bg);
-  box-shadow: 0 10px 22px rgba(120, 98, 40, 0.16);
-  transform: rotate(6deg);
-}
-
-.home-hero-word-card-surface {
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.home-hero-word-card-reading {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.home-hero-word-card-meaning {
-  color: var(--primary-dark);
-  font-size: 11px;
-  font-weight: 700;
-}
-
 /* Bookmark ribbon tab -- a notched strip peeking out of the flow card's
    top edge, echoing a paper bookmark. Pure CSS (clip-path), no asset. */
 .home-hero-bookmark {
@@ -831,11 +825,38 @@ button {
   line-height: 1.6;
 }
 
-.landing-trust-note-icon {
+.landing-trust-note-icon,
+.info-strip-icon {
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
   color: var(--success);
+}
+
+/* Generic one-line policy/trust strip -- same "icon + short text" recipe
+   as .landing-trust-note but without its hero-specific centered max-width,
+   so any screen (reading tab save-policy line, shared-deck import note,
+   vocab card footnote) can drop in a compact strip instead of a paragraph
+   of explanatory text. */
+.info-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid var(--paper-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.info-strip-compact {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--soft-bg);
+  border-color: transparent;
 }
 
 .landing-steps {
@@ -971,7 +992,13 @@ button {
   gap: 10px;
 }
 
-.home-quick-entry-card {
+/* .action-card is the generic name for this "icon + title + one-line
+   description" quick-entry recipe (card tier C in the brand card system --
+   Hero / Summary tile / Action card / Notebook card / Catalog card). Kept
+   as an alias on the original .home-quick-entry-card selector, rather than
+   a rename, so any screen can reach for it without redefining the look. */
+.home-quick-entry-card,
+.action-card {
   display: grid;
   gap: 4px;
   justify-items: start;
@@ -986,13 +1013,15 @@ button {
   transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
 }
 
-.home-quick-entry-card:not(:disabled):hover {
+.home-quick-entry-card:not(:disabled):hover,
+.action-card:not(:disabled):hover {
   border-color: var(--border-strong);
   box-shadow: 0 12px 24px rgba(120, 98, 40, 0.08);
   transform: translateY(-2px);
 }
 
-.home-quick-entry-icon-wrap {
+.home-quick-entry-icon-wrap,
+.action-card-icon-wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1004,29 +1033,38 @@ button {
   color: var(--primary);
 }
 
-.home-quick-entry-icon {
+.home-quick-entry-icon,
+.action-card-icon {
   width: 18px;
   height: 18px;
 }
 
-.home-quick-entry-label {
+.home-quick-entry-label,
+.action-card-label {
   font-weight: 700;
   font-size: 14px;
 }
 
-.home-quick-entry-description {
+.home-quick-entry-description,
+.action-card-description {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
 }
 
-.home-today-stats {
+/* .summary-tile is the generic name for card tier B -- a small,
+   number-forward stat tile (today's due count, new-word count, etc.).
+   Aliased on the original .home-today-stat selector for the same reason
+   as .action-card above. */
+.home-today-stats,
+.summary-tile-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.home-today-stat {
+.home-today-stat,
+.summary-tile {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1036,12 +1074,14 @@ button {
   background: var(--soft-bg);
 }
 
-.home-today-stat span {
+.home-today-stat span,
+.summary-tile span {
   color: var(--muted);
   font-size: 12px;
 }
 
-.home-today-stat strong {
+.home-today-stat strong,
+.summary-tile strong {
   color: var(--text);
   font-size: 18px;
 }
@@ -1082,10 +1122,6 @@ button {
   font-weight: 800;
 }
 
-.home-trust-list-wrap {
-  display: grid;
-  gap: 4px;
-}
 
 .home-recent-list {
   display: grid;
@@ -1168,10 +1204,6 @@ button {
     order: 5;
   }
 
-  .home-trust-card {
-    order: 6;
-  }
-
   .home-steps-card {
     order: 7;
   }
@@ -1222,6 +1254,61 @@ button {
 .note-card {
   border-radius: 12px;
   border-left: 3px solid var(--accent);
+}
+
+/* Repeating "catalog" list rhythm (shared-deck cards, vocab-item cards) --
+   tighter internal spacing and a slightly flatter shadow than .panel-card
+   so a long repeated list reads as one organized shelf instead of a stack
+   of separate content cards. */
+.catalog-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 16px rgba(120, 98, 40, 0.03);
+}
+
+/* Small brand motifs, reused across screens instead of each one inventing
+   its own decoration: a memo-style label tag, a dashed "notebook rule"
+   divider, and a paper-corner fold. Deliberately tiny/quiet -- repeated
+   small marks, not illustration. */
+.memo-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.dotted-divider {
+  height: 0;
+  margin: 4px 0;
+  border: none;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.paper-corner {
+  position: relative;
+}
+
+.paper-corner::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 14px 14px 0;
+  border-color: transparent var(--soft-bg) transparent transparent;
+  border-radius: 0 12px 0 0;
 }
 
 .panel-card-header {
@@ -4967,23 +5054,23 @@ input.reading-vocab-item-checkbox {
    height) keeps the state visible without painting most of the page. */
 .token-chip-known {
   background: transparent;
-  box-shadow: inset 0 -2px 0 0 #b7ddc4;
+  box-shadow: inset 0 -2px 0 0 var(--status-known-line);
 }
 
 .token-chip-uncertain {
-  background: #fdf6e4;
-  color: #82631a;
+  background: var(--status-uncertain-bg);
+  color: var(--status-uncertain-fg);
 }
 
 .token-chip-unknown {
-  background: #fdf1f1;
-  color: #a3444d;
+  background: var(--status-unknown-bg);
+  color: var(--status-unknown-fg);
 }
 
 .token-chip-unclassified {
   background: transparent;
   color: inherit;
-  box-shadow: inset 0 -2px 0 0 #cebfa0;
+  box-shadow: inset 0 -2px 0 0 var(--status-unclassified-line);
 }
 
 /* .reading-vocab-status-badge and .legend-swatch reuse the same

@@ -248,6 +248,7 @@ export function VocabSection({
             오늘 복습하기
           </button>
         </div>
+        <hr className="dotted-divider" />
         <div className="vocab-hero-stats">
           <div className="vocab-hero-stat">
             <span>전체 단어</span>

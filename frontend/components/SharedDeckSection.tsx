@@ -266,12 +266,9 @@ export function SharedDeckSection({
             {isLoading ? "불러오는 중..." : "새로고침"}
           </button>
         </div>
-        <p className="landing-trust-note">
-          <ShieldIcon className="landing-trust-note-icon" />
-          <span className="home-trust-list-wrap">
-            <span>가져온 덱은 내 단어장에 그대로 추가됩니다.</span>
-            <span>공유덱에는 사용자 원문 전체가 포함되지 않습니다.</span>
-          </span>
+        <p className="info-strip">
+          <ShieldIcon className="info-strip-icon" />
+          가져온 덱은 내 단어장에 바로 추가돼요. 원문 전체는 포함되지 않습니다.
         </p>
       </section>
 
