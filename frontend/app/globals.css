@@ -27,6 +27,7 @@
      file, just given brand-concept names so new work reaches for
      "--sand"/"--sage" instead of inventing another one-off hex. */
   --sand: var(--soft-bg);
+  --sand-amber: #dba054;
   --warm-gray: var(--text-secondary);
   --bookmark-orange: var(--accent);
   --sage-green: #4f8c66;
@@ -2298,14 +2299,17 @@ select {
 
 /* Rating colors are deliberately softer than the app's semantic --danger/
    --warning (those read as "error"/"caution" elsewhere) -- a wrong recall
-   is a normal, expected part of studying, not a mistake to flag red. */
+   is a normal, expected part of studying, not a mistake to flag red. Ramped
+   across the brand's 4 accent tones (rose -> sand-amber -> teal -> sage) so
+   "다시"/"어려움" are clearly distinct from each other, not two shades of the
+   same orange. */
 .rating-again {
-  background: var(--accent);
+  background: var(--rose);
 }
 
 .rating-hard {
   color: #4a2f06;
-  background: #e8a33d;
+  background: var(--sand-amber);
 }
 
 .rating-hard .rating-hint {
@@ -2317,12 +2321,17 @@ select {
 }
 
 .rating-easy {
-  background: var(--success);
+  background: var(--sage-green);
 }
 
+/* Completion gets the same hero radius/shadow tier as the active flashcard
+   it follows (.study-card.hero-card) -- otherwise the "학습 완료" moment
+   renders smaller/flatter than an ordinary mid-session card. */
 .complete-card {
   justify-items: center;
   text-align: center;
+  border-radius: 20px;
+  box-shadow: 0 16px 36px var(--paper-shadow);
 }
 
 .complete-card-icon {
@@ -2330,8 +2339,8 @@ select {
   height: 40px;
   padding: 8px;
   border-radius: 999px;
-  background: #eefaf1;
-  color: var(--success);
+  background: var(--soft-bg);
+  color: var(--sage-green);
 }
 
 .study-complete-stats {
@@ -2363,12 +2372,15 @@ select {
   font-size: 18px;
 }
 
+/* Same rose/sand-amber/teal/sage ramp as the .rating-* buttons above, so the
+   completion summary reads as the same 4-way story the learner just rated
+   through, not a second, differently-colored legend. */
 .study-complete-stat-again {
-  border-top-color: var(--danger);
+  border-top-color: var(--rose);
 }
 
 .study-complete-stat-hard {
-  border-top-color: var(--warning);
+  border-top-color: var(--sand-amber);
 }
 
 .study-complete-stat-good {
@@ -2376,7 +2388,7 @@ select {
 }
 
 .study-complete-stat-easy {
-  border-top-color: var(--success);
+  border-top-color: var(--sage-green);
 }
 
 .study-complete-stat-total {
@@ -2751,8 +2763,18 @@ select {
 }
 
 .reading-vocab-empty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   font-size: 13px;
+}
+
+.reading-vocab-empty-icon {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
 }
 
 .reading-vocab-list {
@@ -3416,7 +3438,11 @@ input.reading-vocab-item-checkbox {
 
 .shared-deck-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  /* 280px (not 260px) gives the 3-button owner-card footer ("상세 보기" /
+     "가져오기" / "공유 취소") more room to stay on one line, so owner cards
+     don't wrap to a visibly taller card than the 2-button ones next to
+     them. */
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 14px;
 }
 
@@ -3556,6 +3582,17 @@ input.reading-vocab-item-checkbox {
   margin: 0 0 4px;
   color: var(--text);
   font-size: 16px;
+}
+
+/* Clamp to 2 lines so a long non-JLPT deck title ("내가 공유한 덱" cards
+   don't share the JLPT cards' short "N5 추천 어휘" naming) doesn't add a
+   second, independent source of card-height variance on top of the
+   description clamp below. */
+.shared-deck-card h3 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .shared-deck-disclaimer {
@@ -4180,38 +4217,29 @@ input.reading-vocab-item-checkbox {
   align-items: flex-end;
 }
 
+/* Info tab's "서비스 개요 / 저장 정책 / ..." section grid -- each section is
+   a regular .panel-card (or .note-card for the two policy/attribution
+   asides), so this only owns the grid layout, not the card box itself
+   (previously a parallel, un-themed `.info-panel > div` box). */
 .info-panel {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
-.info-panel > div {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px;
-  background: var(--panel-bg);
-}
-
-.info-panel > div:first-child {
+.info-panel-card:first-child {
   grid-column: 1 / -1;
 }
 
-.info-panel h2 {
-  margin: 0 0 8px;
-  color: var(--text);
-  font-size: 20px;
-}
-
-.info-panel p,
-.info-panel ul {
+.info-panel-list {
   margin: 0;
+  padding-left: 20px;
   color: var(--text-secondary);
   line-height: 1.7;
 }
 
-.info-panel ul {
-  padding-left: 20px;
+.info-panel-list li + li {
+  margin-top: 2px;
 }
 
 @media (max-width: 640px) {
@@ -5573,7 +5601,7 @@ input.reading-vocab-item-checkbox {
   }
 
   .token-sheet {
-    padding: 16px;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
   }
 
   .token-sheet-title-group {

@@ -339,6 +339,7 @@ export function ReadingVocabPanel({
 
       {visibleEntries.length === 0 ? (
         <p className="muted-text reading-vocab-empty">
+          <SearchIcon className="reading-vocab-empty-icon" />
           {search.trim()
             ? "검색 결과가 없습니다. 다른 단어나 읽기로 검색해보세요."
             : filter === "saveable"

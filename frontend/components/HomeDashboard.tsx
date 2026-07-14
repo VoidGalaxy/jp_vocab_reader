@@ -1,10 +1,15 @@
 "use client";
 
-import { BrandReadingFlowIllustration, BrandSectionBadge } from "./BrandElements";
+import {
+  BrandEmptyIllustration,
+  BrandReadingFlowIllustration,
+  BrandSectionBadge,
+} from "./BrandElements";
 import {
   BookIcon,
   CardsIcon,
   FolderIcon,
+  InboxIcon,
   ShareIcon,
   ShieldIcon,
   SparkleIcon,
@@ -319,10 +324,14 @@ export function HomeDashboard({
                 ) : null}
               </ul>
             ) : (
-              <p className="muted-text home-recent-empty">
-                아직 최근 작업이 없습니다. 원문을 읽고 단어를 저장하면 여기에
-                이어서 할 일이 표시됩니다.
-              </p>
+              <div className="empty-guide home-recent-empty">
+                <BrandEmptyIllustration icon={InboxIcon} />
+                <p>아직 최근 작업이 없어요.</p>
+                <button type="button" className="ghost-button compact-button" onClick={onStartReading}>
+                  <BookIcon className="button-icon" />
+                  원문 읽기 시작
+                </button>
+              </div>
             )}
           </section>
         </div>

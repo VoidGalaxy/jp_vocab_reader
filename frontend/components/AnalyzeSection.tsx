@@ -5,7 +5,7 @@ import { BrandEmptyIllustration } from "./BrandElements";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
-import { ShieldIcon, SparkleIcon } from "./icons";
+import { CheckCircleIcon, ShieldIcon, SparkleIcon } from "./icons";
 import { getDisplayMeaning, StatusSelect, statusLabels } from "./shared";
 import type {
   Deck,
@@ -162,10 +162,7 @@ export function AnalyzeSection({
 
         <p className="muted-text copyright-note">
           <ShieldIcon className="copyright-note-icon" />
-          <span>
-            입력한 원문은 본인 학습용으로 사용하세요. 원문 전체는 서버에
-            저장되지 않으며, 공유 덱에도 원문 전체가 포함되지 않습니다.
-          </span>
+          <span>원문 전체는 저장하지 않고, 분석에만 사용됩니다.</span>
         </p>
       </section>
 
@@ -336,6 +333,7 @@ export function AnalyzeSection({
               </div>
             ) : (
               <div className="classification-complete">
+                <CheckCircleIcon className="complete-card-icon" />
                 <h3>분류 완료</h3>
                 <div className="classification-summary final-summary">
                   <span>{statusLabels.known} {knownCount}개</span>

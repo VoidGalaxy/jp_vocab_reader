@@ -337,7 +337,27 @@ export function ReadingTab({
       </section>
 
       {!summary && message ? (
-        <p className={`message message--${messageTone}`}>{message}</p>
+        !hasResult && !isAnalyzing && messageTone === "info" ? (
+          // Analysis genuinely ran and found nothing learnable (as opposed
+          // to a network/analysis error, which keeps the plain inline
+          // message below) -- give it the same icon+text empty-state
+          // treatment as every other "nothing here" moment in the app
+          // instead of a bare one-line message.
+          <div className="reading-empty-guide">
+            <BrandEmptyIllustration icon={SparkleIcon} />
+            <p>{message}</p>
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onLoadSampleText}
+            >
+              <SparkleIcon className="button-icon" />
+              샘플 문장으로 체험
+            </button>
+          </div>
+        ) : (
+          <p className={`message message--${messageTone}`}>{message}</p>
+        )
       ) : null}
 
       {summary && isSampleText ? (

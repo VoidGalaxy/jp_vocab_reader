@@ -266,6 +266,20 @@ export function StudySection({
 }: StudySectionProps) {
   const totalStudied =
     sessionCounts.again + sessionCounts.hard + sessionCounts.good + sessionCounts.easy;
+  // One combined line instead of a separate paragraph per rating -- the
+  // stat grid above already shows each count, so this only needs to say
+  // *what happens next* for the ratings that actually occurred this session.
+  const completionHintParts: string[] = [];
+  if (sessionCounts.again > 0) {
+    completionHintParts.push(`다시 ${sessionCounts.again}개는 5분 후 재등장`);
+  }
+  if (sessionCounts.hard > 0) {
+    completionHintParts.push(`어려움 ${sessionCounts.hard}개는 곧 재등장`);
+  }
+  if (sessionCounts.easy > 0) {
+    completionHintParts.push(`쉬움 ${sessionCounts.easy}개는 간격 늘어남`);
+  }
+  const completionHint = completionHintParts.join(" · ");
   const modeLabel = studyModeLabels[studyMode];
   const dueCount = stats?.due_today_count ?? 0;
   const uncertainCount = stats?.uncertain_count ?? 0;
@@ -550,6 +564,7 @@ export function StudySection({
       {isComplete ? (
         <div className="study-card complete-card">
           <CheckCircleIcon className="complete-card-icon" />
+          <span className="memo-label">완료</span>
           <h3>
             {studyMode === "recent" ? "방금 저장한 단어 학습 완료!" : "오늘 학습 완료!"}
           </h3>
@@ -575,24 +590,7 @@ export function StudySection({
               <strong>{totalStudied}개</strong>
             </div>
           </div>
-          {stats ? (
-            <p className="muted-text">오늘 완료 {stats.reviewed_today_count}개</p>
-          ) : null}
-          {sessionCounts.again > 0 ? (
-            <p className="muted-text">
-              다시 {sessionCounts.again}개는 5분 후부터 다시 복습에 나타납니다.
-            </p>
-          ) : null}
-          {sessionCounts.hard > 0 ? (
-            <p className="muted-text">
-              어려움 {sessionCounts.hard}개는 짧은 간격으로 곧 다시 나타납니다.
-            </p>
-          ) : null}
-          {sessionCounts.easy > 0 ? (
-            <p className="muted-text">
-              쉬움 {sessionCounts.easy}개는 더 긴 간격으로 복습됩니다.
-            </p>
-          ) : null}
+          {completionHint ? <p className="muted-text">{completionHint}</p> : null}
           <p>
             {nextUpcomingReviewAt
               ? formatNextReview(nextUpcomingReviewAt)
