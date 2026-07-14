@@ -1,6 +1,6 @@
 "use client";
 
-import type { TokenStatus } from "./types";
+import type { ReviewResult, TokenStatus } from "./types";
 
 // A meaning_ko value is only worth showing as "the Korean meaning" if it
 // actually contains Korean text. The backend's custom-term bypass and any
@@ -97,16 +97,65 @@ export function formatDateTime(value: string | null) {
   });
 }
 
+// Rounded to the minute so a normal (sub-second) gap between server-side
+// render and client-side hydration can't flip the label and trigger a
+// hydration mismatch warning.
+export function formatReviewDelay(value: string | null): string {
+  if (!value) {
+    return "미정";
+  }
+
+  const diffMinutes = Math.round((new Date(value).getTime() - Date.now()) / 60000);
+  if (diffMinutes <= 0) {
+    return "지금";
+  }
+  if (diffMinutes < 60) {
+    return `${diffMinutes}분 후`;
+  }
+
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours}시간 후`;
+  }
+
+  const diffDays = Math.round(diffHours / 24);
+  if (diffDays === 1) {
+    return "내일";
+  }
+  return `${diffDays}일 후`;
+}
+
 export function formatNextReview(value: string | null) {
   if (!value) {
     return "다음 복습: 미정";
   }
 
-  return `다음 복습: ${new Date(value).toLocaleDateString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })}`;
+  const diffMinutes = Math.round((new Date(value).getTime() - Date.now()) / 60000);
+  if (diffMinutes <= 0) {
+    return "지금 복습 가능";
+  }
+  return `다음 복습: ${formatReviewDelay(value)}`;
+}
+
+// Short, non-alarming confirmation shown right after a rating button is
+// pressed. "again" already states its own delay ("5분 후"), so it skips the
+// redundant "(다음 복습: 5분 후)" suffix the other three ratings get.
+export function buildRatingFeedbackMessage(
+  rating: ReviewResult,
+  nextReviewAt: string | null,
+): string {
+  const delay = formatReviewDelay(nextReviewAt);
+  switch (rating) {
+    case "again":
+      return "5분 후 다시 볼게요.";
+    case "hard":
+      return `곧 다시 복습할게요. (다음 복습: ${delay})`;
+    case "easy":
+      return `복습 간격을 더 늘렸어요. (다음 복습: ${delay})`;
+    case "good":
+    default:
+      return `다음 복습이 예약됐어요. (다음 복습: ${delay})`;
+  }
 }
 
 // Matches both the documented "JLPT {level} 추천 어휘" naming and the

@@ -33,7 +33,7 @@ import {
 } from "../components/readingChunkAnalyze";
 import { ReadingTab, SAMPLE_TEXT } from "../components/ReadingTab";
 import { SharedDeckSection } from "../components/SharedDeckSection";
-import { withObjectParticle } from "../components/shared";
+import { buildRatingFeedbackMessage, withObjectParticle } from "../components/shared";
 import { splitTextIntoChunks } from "../components/textChunking";
 import { StudySection } from "../components/StudySection";
 import { VocabSection } from "../components/VocabSection";
@@ -2787,6 +2787,7 @@ export default function HomePage() {
         ...counts,
         [rating]: counts[rating] + 1,
       }));
+      setStudyMessage(buildRatingFeedbackMessage(rating, updatedItem.next_review_at));
       setNextUpcomingReviewAt((current) => {
         if (!updatedItem.next_review_at) {
           return current;

@@ -1079,13 +1079,35 @@ def next_review_for_correct(current_level: int, reviewed_at: datetime) -> str:
     return (reviewed_at + delay).isoformat()
 
 
-# Simple, predictable interval table shared by the "good"/"easy" ratings,
-# indexed by review_level. Not FSRS -- a fixed step table meant to be easy to
-# reason about now and swappable for a real FSRS scheduler later without
-# touching review_logs' shape (each log already records the level/interval
-# that was actually used, which is what a future FSRS migration would need).
-REVIEW_INTERVAL_DAYS = [1, 3, 7, 14, 30, 45, 60]
-MAX_REVIEW_LEVEL = len(REVIEW_INTERVAL_DAYS) - 1
+# Fixed-step interval ladder indexed by review_level. Levels 0-2 are
+# minute-scale so a freshly-saved or just-lapsed word comes back within the
+# same sitting; levels 3-4 are hour-scale for same-day reinforcement; level 5+
+# is day-scale for words that have proven durable. Not FSRS -- a fixed table
+# meant to be easy to reason about now and swappable for a real FSRS
+# scheduler later without touching review_logs' shape (each log already
+# records the level/interval that was actually used, which is what a future
+# FSRS migration would need).
+SRS_LEVEL_INTERVALS: list[timedelta] = [
+    timedelta(minutes=5),  # level 0
+    timedelta(minutes=15),  # level 1
+    timedelta(minutes=30),  # level 2
+    timedelta(hours=3),  # level 3
+    timedelta(hours=12),  # level 4
+    timedelta(days=1),  # level 5
+    timedelta(days=3),  # level 6
+    timedelta(days=7),  # level 7
+    timedelta(days=14),  # level 8
+    timedelta(days=30),  # level 9
+    timedelta(days=60),  # level 10
+]
+SRS_MAX_INTERVAL = timedelta(days=90)  # level 11+
+
+
+def get_srs_interval(level: int) -> timedelta:
+    level = max(level, 0)
+    if level >= len(SRS_LEVEL_INTERVALS):
+        return SRS_MAX_INTERVAL
+    return SRS_LEVEL_INTERVALS[level]
 
 
 def compute_review_schedule(
@@ -1093,17 +1115,23 @@ def compute_review_schedule(
 ) -> tuple[int, str]:
     current_level = max(current_level, 0)
     if rating == "again":
+        # Failed recall: reset to the front of the ladder but still give a
+        # short break (5 minutes) rather than making it due instantly, so it
+        # doesn't just loop back-to-back inside the same study session.
         next_level = 0
-        next_review_at = reviewed_at
+        next_review_at = reviewed_at + get_srs_interval(next_level)
     elif rating == "hard":
-        next_level = current_level
-        next_review_at = reviewed_at + timedelta(days=1)
+        # Remembered, but shakily: step back one level (never below 1, since
+        # level 0 is reserved for "just failed") instead of repeating the
+        # same interval, so it comes back sooner than a "good" would.
+        next_level = 1 if current_level == 0 else max(1, current_level - 1)
+        next_review_at = reviewed_at + get_srs_interval(next_level)
     elif rating == "easy":
-        next_level = min(current_level + 2, MAX_REVIEW_LEVEL)
-        next_review_at = reviewed_at + timedelta(days=REVIEW_INTERVAL_DAYS[next_level])
-    else:
-        next_level = min(current_level + 1, MAX_REVIEW_LEVEL)
-        next_review_at = reviewed_at + timedelta(days=REVIEW_INTERVAL_DAYS[next_level])
+        next_level = current_level + 2
+        next_review_at = reviewed_at + get_srs_interval(next_level)
+    else:  # "good"
+        next_level = current_level + 1
+        next_review_at = reviewed_at + get_srs_interval(next_level)
     return next_level, next_review_at.isoformat()
 
 

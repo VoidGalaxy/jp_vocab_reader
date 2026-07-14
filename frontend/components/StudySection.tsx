@@ -578,6 +578,21 @@ export function StudySection({
           {stats ? (
             <p className="muted-text">오늘 완료 {stats.reviewed_today_count}개</p>
           ) : null}
+          {sessionCounts.again > 0 ? (
+            <p className="muted-text">
+              다시 {sessionCounts.again}개는 5분 후부터 다시 복습에 나타납니다.
+            </p>
+          ) : null}
+          {sessionCounts.hard > 0 ? (
+            <p className="muted-text">
+              어려움 {sessionCounts.hard}개는 짧은 간격으로 곧 다시 나타납니다.
+            </p>
+          ) : null}
+          {sessionCounts.easy > 0 ? (
+            <p className="muted-text">
+              쉬움 {sessionCounts.easy}개는 더 긴 간격으로 복습됩니다.
+            </p>
+          ) : null}
           <p>
             {nextUpcomingReviewAt
               ? formatNextReview(nextUpcomingReviewAt)
