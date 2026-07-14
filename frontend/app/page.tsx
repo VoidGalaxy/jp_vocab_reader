@@ -1342,6 +1342,14 @@ export default function HomePage() {
         setReadingMessage(
           `전체 ${outcome.totalChunkCount}조각 중 ${outcome.failedChunkCount}개 구간 분석에 실패했습니다. 나머지는 정상적으로 분석되었습니다. 실패한 구간은 다시 분석해 주세요.`,
         );
+      } else if (derivedTokens.length === 0) {
+        // Analysis genuinely succeeded but found nothing learnable (e.g. the
+        // text is only punctuation/particles) -- without this, the screen
+        // would fall back to "덱을 선택하고 원문을 입력한 뒤..." which reads
+        // as if analysis never ran at all.
+        setReadingMessage(
+          "분석했지만 추출된 단어가 없습니다. 다른 일본어 문장으로 다시 시도해보세요.",
+        );
       } else if (chunks.length > 1) {
         setReadingMessage(
           `긴 원문을 ${chunks.length}조각으로 나눠 분석을 완료했습니다.`,

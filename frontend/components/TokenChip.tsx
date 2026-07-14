@@ -23,6 +23,13 @@ export function isMutedToken(token: Pick<TokenWithStatus, "part_of_speech">): bo
 type TokenChipProps = {
   token: TokenWithStatus;
   tokenIndex: number;
+  // Unique per rendered occurrence (unlike tokenIndex, which is shared by
+  // every literal occurrence of a repeated word after dedup) -- lets the
+  // reader tell "which one of these 40 identical 闇 chips was clicked"
+  // apart, so scrollIntoView can return to that exact spot instead of
+  // always the word's first occurrence. Omitted for the unmatched-token
+  // fallback row, where there's only ever one chip per token anyway.
+  segmentKey?: string;
   isActive: boolean;
   focusMode: boolean;
   showJlptTags: boolean;
@@ -32,6 +39,7 @@ type TokenChipProps = {
 export function TokenChip({
   token,
   tokenIndex,
+  segmentKey,
   isActive,
   focusMode,
   showJlptTags,
@@ -70,6 +78,7 @@ export function TokenChip({
       type="button"
       className={classNames.join(" ")}
       data-token-index={tokenIndex}
+      data-segment-key={segmentKey}
       onClick={onSelect}
       title={
         jlptLevel ? `${title} · JLPT 추천 레벨: ${jlptLevel}` : title

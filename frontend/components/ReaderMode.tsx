@@ -87,6 +87,15 @@ export function ReaderMode({
   onReportMeaning,
 }: ReaderModeProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  // Which literal rendered occurrence was clicked, when known -- a repeated
+  // word (e.g. 闇 appearing 40 times in a long text) collapses to one
+  // tokenIndex after dedup, so tokenIndex alone can't tell "the 3rd 闇" apart
+  // from "the 1st 闇". null means "no specific occurrence" (prev/next nav,
+  // the word-list panel, or a restored selection), which intentionally
+  // falls back to the word's first occurrence.
+  const [activeSegmentKey, setActiveSegmentKey] = useState<string | null>(
+    null,
+  );
   const [focusMode, setFocusMode] = useState(false);
   const [showJlptTags, setShowJlptTags] = useState(true);
   // Guards against re-applying a restored selection every time tokens
@@ -110,6 +119,16 @@ export function ReaderMode({
   const bookmarkScrollFractionRef = useRef<number | null>(
     initialScrollFraction,
   );
+  // Same reasoning, same bug class: initialSelectedTokenKey and
+  // onSelectedTokenKeyChange are two ends of one live-updating piece of
+  // parent state (the parent just echoes back whatever the user last
+  // clicked), not a one-shot "restore this" value. Freezing it at mount
+  // keeps the restore effect below from misfiring on the user's very first
+  // in-session click (which otherwise looks identical to "a session was
+  // restored with this key" the moment that click's key change round-trips
+  // back down as a new initialSelectedTokenKey) and stomping the segment
+  // key that click just set.
+  const initialSelectedTokenKeyRef = useRef(initialSelectedTokenKey);
   // Tracks the last externalSelectRequest.requestId actually applied, so a
   // repeat click on the same word (same tokenIndex, new requestId) still
   // re-triggers the select+scroll, while an unrelated re-render that just
@@ -150,19 +169,20 @@ export function ReaderMode({
   useEffect(() => {
     if (
       hasAppliedInitialSelection ||
-      !initialSelectedTokenKey ||
+      !initialSelectedTokenKeyRef.current ||
       tokens.length === 0
     ) {
       return;
     }
     const matchIndex = tokens.findIndex(
-      (token) => getTokenGroupKey(token) === initialSelectedTokenKey,
+      (token) => getTokenGroupKey(token) === initialSelectedTokenKeyRef.current,
     );
     if (matchIndex !== -1) {
       setActiveIndex(matchIndex);
+      setActiveSegmentKey(null);
     }
     setHasAppliedInitialSelection(true);
-  }, [hasAppliedInitialSelection, initialSelectedTokenKey, tokens]);
+  }, [hasAppliedInitialSelection, tokens]);
 
   // Handles an external "jump to this word" request (the word-list panel).
   // Inlines the same select+notify steps selectToken does below rather than
@@ -181,6 +201,7 @@ export function ReaderMode({
       return;
     }
     setActiveIndex(tokenIndex);
+    setActiveSegmentKey(null);
     onSelectedTokenKeyChange?.(getTokenGroupKey(tokens[tokenIndex]));
   }, [externalSelectRequest, tokens, onSelectedTokenKeyChange]);
 
@@ -268,15 +289,21 @@ export function ReaderMode({
   // Keeps the selected word visible in the source text as prev/next moves
   // it around -- best-effort only, so a missing DOM match (e.g. the active
   // token fell into the "unmatched" fallback row) is silently skipped.
+  // Prefers the exact clicked occurrence (activeSegmentKey) when known;
+  // otherwise falls back to the word's first occurrence by tokenIndex --
+  // without this split, clicking e.g. the 40th occurrence of a repeated
+  // word would scroll back up to the 1st one instead of staying put, since
+  // querying by tokenIndex alone always finds the first DOM match.
   useEffect(() => {
     if (activeIndex === null || !readerTextRef.current) {
       return;
     }
-    const target = readerTextRef.current.querySelector(
-      `[data-token-index="${activeIndex}"]`,
-    );
+    const selector = activeSegmentKey
+      ? `[data-segment-key="${activeSegmentKey}"]`
+      : `[data-token-index="${activeIndex}"]`;
+    const target = readerTextRef.current.querySelector(selector);
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [activeIndex]);
+  }, [activeIndex, activeSegmentKey]);
 
   useEffect(() => {
     if (activeIndex === null) {
@@ -304,13 +331,18 @@ export function ReaderMode({
     return null;
   }
 
-  function selectToken(index: number) {
+  // segmentKey is the specific rendered occurrence that was clicked, if
+  // any -- omitted (null) for prev/next nav, which has no single "clicked
+  // element" and intentionally lands on the word's first occurrence.
+  function selectToken(index: number, segmentKey: string | null = null) {
     setActiveIndex(index);
+    setActiveSegmentKey(segmentKey);
     onSelectedTokenKeyChange?.(getTokenGroupKey(tokens[index]));
   }
 
   function closeDetail() {
     setActiveIndex(null);
+    setActiveSegmentKey(null);
     onSelectedTokenKeyChange?.(null);
   }
 
@@ -350,9 +382,10 @@ export function ReaderMode({
 
   function scrollToBookmark() {
     if (activeIndex !== null) {
-      const target = readerTextRef.current?.querySelector(
-        `[data-token-index="${activeIndex}"]`,
-      );
+      const selector = activeSegmentKey
+        ? `[data-segment-key="${activeSegmentKey}"]`
+        : `[data-token-index="${activeIndex}"]`;
+      const target = readerTextRef.current?.querySelector(selector);
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
@@ -461,10 +494,11 @@ export function ReaderMode({
                       key={segment.key}
                       token={tokens[segment.tokenIndex]}
                       tokenIndex={segment.tokenIndex}
+                      segmentKey={segment.key}
                       isActive={activeIndex === segment.tokenIndex}
                       focusMode={focusMode}
                       showJlptTags={showJlptTags}
-                      onSelect={() => selectToken(segment.tokenIndex)}
+                      onSelect={() => selectToken(segment.tokenIndex, segment.key)}
                     />
                   ) : (
                     <span key={segment.key}>{segment.content}</span>

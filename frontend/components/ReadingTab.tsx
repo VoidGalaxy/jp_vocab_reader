@@ -467,7 +467,11 @@ export function ReadingTab({
             분석 중입니다. 잠시만 기다려주세요...
           </p>
         ) : null
-      ) : (
+      ) : message ? null : (
+        // Whenever there's a message (analysis failed, found zero words,
+        // sample just loaded, session reset, ...), it already explains
+        // what happened -- this generic "please analyze" prompt would
+        // otherwise sit right below it and contradict it.
         <p className="empty">
           덱을 선택하고 원문을 입력한 뒤 읽기 분석을 눌러주세요.
         </p>
