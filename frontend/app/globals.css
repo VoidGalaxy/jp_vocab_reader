@@ -1006,10 +1006,20 @@ button {
 }
 
 .panel-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   color: var(--text);
   font-size: 16px;
   font-weight: 700;
+}
+
+.panel-card-title-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
 }
 
 .panel-card-description {
@@ -3030,21 +3040,36 @@ input.reading-vocab-item-checkbox {
   gap: 16px;
 }
 
+/* One "shelf" of cards under a small heading -- a display-only grouping of
+   the same fetched deck list (recommended / mine / everyone else's), so the
+   grid reads as a sorted bookshelf instead of one undifferentiated pile. */
+.shared-deck-shelf {
+  display: grid;
+  gap: 10px;
+}
+
+.shared-deck-shelf-title {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .shared-deck-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 14px;
 }
 
 .shared-deck-card,
 .shared-deck-detail {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-content: start;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--panel-bg);
-  padding: 18px;
+  padding: 16px;
   box-shadow: 0 8px 20px rgba(120, 98, 40, 0.05);
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
@@ -3052,6 +3077,46 @@ input.reading-vocab-item-checkbox {
 .shared-deck-card:hover {
   box-shadow: 0 12px 26px rgba(120, 98, 40, 0.09);
   transform: translateY(-2px);
+}
+
+/* Course-card "cover" band -- full-bleed strip across the top of the card
+   via negative margins back out to .shared-deck-card's own padding, so the
+   card keeps one consistent radius/padding rhythm with the rest of the app
+   while still reading as a shelved book/course cover. CSS-only, no new
+   image asset. */
+.shared-deck-cover {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -16px -16px 0;
+  padding: 9px 16px;
+  border-radius: 16px 16px 0 0;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.shared-deck-cover-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}
+
+.shared-deck-cover-mine {
+  background: linear-gradient(135deg, #3d7885 0%, var(--primary) 100%);
+}
+
+.shared-deck-cover-shared {
+  background: linear-gradient(135deg, #b3a483 0%, #8a7b5e 100%);
+}
+
+.shared-deck-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: -2px;
 }
 
 .selected-shared-deck-card {
@@ -3130,7 +3195,6 @@ input.reading-vocab-item-checkbox {
 .shared-deck-word-count-badge {
   display: inline-flex;
   align-items: center;
-  margin-left: auto;
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 3px 10px;
@@ -3163,6 +3227,14 @@ input.reading-vocab-item-checkbox {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow-wrap: anywhere;
+}
+
+/* Detail panel gets the full description instead of the card grid's
+   3-line clamp. */
+.shared-deck-description-full {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
 }
 
 .shared-deck-byline {
@@ -3869,10 +3941,6 @@ input.reading-vocab-item-checkbox {
 
   .shared-deck-title-row {
     gap: 6px;
-  }
-
-  .shared-deck-word-count-badge {
-    margin-left: 0;
   }
 
   .shared-deck-disclaimer {
@@ -4872,6 +4940,120 @@ input.reading-vocab-item-checkbox {
   background: #fef08a;
   color: #422006;
   font-weight: 600;
+}
+
+/* Dedicated dialog chrome for the two "send feedback" dialogs (app-wide
+   feedback + 뜻 오류 신고) -- deliberately separate from .token-sheet*
+   (TokenDetailSheet keeps its transparent, right-docked "peek while
+   reading" look). A feedback dialog is a blocking ask for input, so it
+   gets a real dimmed backdrop and a centered card on desktop, collapsing
+   to a bottom sheet on mobile. */
+.feedback-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 24px;
+}
+
+.feedback-modal {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: 20px;
+  padding: 22px;
+  background: var(--panel-bg);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+}
+
+/* .wide-field's "grid-column: span 2" (meant for the 2-column
+   .vocab-item-form/.deck-share-panel grids) would otherwise force this
+   single-column dialog to grow a phantom second implicit column, which
+   then scrambles every other child's auto-placement onto the same rows. */
+.feedback-modal .wide-field {
+  grid-column: 1;
+}
+
+.feedback-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.feedback-modal-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 19px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.feedback-modal-close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--soft-bg);
+  border: 1px solid var(--border);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.feedback-modal-close:not(:disabled):hover {
+  background: var(--border);
+  color: var(--text);
+  box-shadow: none;
+  transform: none;
+}
+
+.feedback-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.feedback-modal-footer button {
+  min-width: 96px;
+}
+
+@media (max-width: 640px) {
+  /* Bottom sheet instead of a centered modal -- easier to reach one-handed
+     and matches the app's other mobile sheets (token-sheet, more-nav). */
+  .feedback-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .feedback-modal {
+    max-width: none;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+    padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .feedback-modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .feedback-modal-footer button {
+    width: 100%;
+  }
 }
 
 @media (min-width: 641px) {

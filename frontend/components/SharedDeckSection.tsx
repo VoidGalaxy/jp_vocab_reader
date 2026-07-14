@@ -1,5 +1,5 @@
 import { classifyMessageTone } from "./coverageUtils";
-import { FolderIcon, ShareIcon, ShieldIcon } from "./icons";
+import { BookIcon, FolderIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
 import {
   formatDateTime,
   getJlptLevel,
@@ -12,6 +12,73 @@ function JlptLevelTag({ level }: { level: string }) {
     <span className={`jlpt-level-tag jlpt-level-${level.toLowerCase()}`}>
       {level}
     </span>
+  );
+}
+
+// UI-only display label -- the underlying deck.title in the DB may still be
+// the older "N5어휘모음" form (see getJlptLevel's pattern below); this only
+// normalizes what's rendered, never the stored data.
+function getDisplayTitle(deck: SharedDeckSummary, level: string | null) {
+  if (level) {
+    return `JLPT 추천 어휘 ${level}`;
+  }
+  return deck.title;
+}
+
+const jlptLevelDescriptions: Record<string, string> = {
+  N5: "기초 문장 읽기에 자주 쓰이는 추천 어휘입니다.",
+  N4: "초급 원문 읽기에 도움이 되는 추천 어휘입니다.",
+  N3: "중급 독해로 넘어가기 위한 추천 어휘입니다.",
+  N2: "긴 문장과 기사 독해에 도움이 되는 추천 어휘입니다.",
+  N1: "고급 독해와 원서 읽기에 도움이 되는 추천 어휘입니다.",
+};
+
+const DEFAULT_SHARED_DECK_DESCRIPTION =
+  "일본어 원문 읽기에 활용할 수 있는 공유 어휘 덱입니다. 가져와서 내 단어장에 추가하고 복습할 수 있어요.";
+
+// Display-only fallback -- never written back, so a deck with no
+// description in the DB still reads as a finished library card instead of
+// showing "설명이 없습니다."
+function getDeckDescription(
+  description: string | null | undefined,
+  level: string | null,
+) {
+  const trimmed = description?.trim();
+  if (trimmed) {
+    return trimmed;
+  }
+  if (level && jlptLevelDescriptions[level]) {
+    return jlptLevelDescriptions[level];
+  }
+  return DEFAULT_SHARED_DECK_DESCRIPTION;
+}
+
+// Small top "cover" band -- gives each card the shelf/course-card silhouette
+// the reference design wants, without any new image asset. Tone follows the
+// same warm N5->N1 ramp already used by JlptLevelTag for recommended decks;
+// a plain deck reads as either "내가 공유함" or a neutral "공유 덱" cover.
+function DeckCover({ deck, level }: { deck: SharedDeckSummary; level: string | null }) {
+  if (level) {
+    return (
+      <div className={`shared-deck-cover jlpt-level-${level.toLowerCase()}`}>
+        <BookIcon className="shared-deck-cover-icon" />
+        <span>추천 어휘</span>
+      </div>
+    );
+  }
+  if (deck.is_owner) {
+    return (
+      <div className="shared-deck-cover shared-deck-cover-mine">
+        <ShareIcon className="shared-deck-cover-icon" />
+        <span>내가 공유함</span>
+      </div>
+    );
+  }
+  return (
+    <div className="shared-deck-cover shared-deck-cover-shared">
+      <FolderIcon className="shared-deck-cover-icon" />
+      <span>공유 덱</span>
+    </div>
   );
 }
 
@@ -55,6 +122,7 @@ export function SharedDeckSection({
   const selectedAlreadyImported = selectedDeck
     ? Boolean(selectedDeck.imported_at) || importedDeckId === selectedDeck.id
     : false;
+  const selectedLevel = selectedDeck ? getJlptLevel(selectedDeck.title) : null;
 
   function handleImportClick(deck: SharedDeckSummary) {
     if (deck.imported_at) {
@@ -68,6 +136,117 @@ export function SharedDeckSection({
     onImportDeck(deck.id);
   }
 
+  function renderDeckCard(deck: SharedDeckSummary) {
+    const isSelected = selectedDeckId === deck.id;
+    const isImporting = importingDeckId === deck.id;
+    const isImported = importedDeckId === deck.id;
+    const isUnpublishing = unpublishingDeckId === deck.id;
+    const level = getJlptLevel(deck.title);
+    const totalWordCount = deck.vocab_count + deck.custom_term_count;
+    const alreadyImported = Boolean(deck.imported_at) || isImported;
+    return (
+      <article
+        key={deck.id}
+        className={
+          isSelected
+            ? "shared-deck-card selected-shared-deck-card"
+            : "shared-deck-card"
+        }
+      >
+        <DeckCover deck={deck} level={level} />
+        <div>
+          <div className="shared-deck-title-row">
+            <h3>{getDisplayTitle(deck, level)}</h3>
+            {level ? <JlptLevelTag level={level} /> : null}
+          </div>
+          <div className="shared-deck-meta-row">
+            <span className="shared-deck-word-count-badge">
+              단어 {totalWordCount}개
+            </span>
+            {alreadyImported ? (
+              <span
+                className="shared-deck-imported-badge"
+                title={
+                  deck.imported_at
+                    ? `가져온 날짜: ${formatDateTime(deck.imported_at)}`
+                    : undefined
+                }
+              >
+                가져옴
+                {deck.imported_at ? ` · ${formatDateTime(deck.imported_at)}` : ""}
+              </span>
+            ) : null}
+          </div>
+          <p className="shared-deck-description">
+            {getDeckDescription(deck.description, level)}
+          </p>
+        </div>
+        <p className="shared-deck-byline">
+          {deck.owner_display_name ? `${deck.owner_display_name} · ` : ""}
+          등록일 {formatDateTime(deck.created_at)} · 가져간 횟수{" "}
+          {deck.import_count}회
+        </p>
+        <div className="row-actions">
+          <button
+            type="button"
+            className="secondary-button compact-button"
+            onClick={() => onSelectDeck(deck.id)}
+            disabled={isLoadingDetail && isSelected}
+          >
+            {isLoadingDetail && isSelected
+              ? "불러오는 중..."
+              : isSelected
+                ? "상세 닫기"
+                : "상세 보기"}
+          </button>
+          <button
+            type="button"
+            className={
+              alreadyImported
+                ? "secondary-button compact-button"
+                : "compact-button"
+            }
+            onClick={() => handleImportClick(deck)}
+            disabled={isImporting}
+            title={
+              alreadyImported
+                ? "이미 가져온 덱입니다. 다시 가져오면 확인 후 새로 추가됩니다."
+                : undefined
+            }
+          >
+            {isImporting
+              ? "가져오는 중..."
+              : alreadyImported
+                ? "다시 가져오기"
+                : "내 덱으로 가져오기"}
+          </button>
+          {deck.is_owner ? (
+            <button
+              type="button"
+              className="danger-secondary-button compact-button"
+              onClick={() => onUnpublishDeck(deck.id)}
+              disabled={isUnpublishing}
+            >
+              {isUnpublishing ? "공유 취소 중..." : "공유 취소"}
+            </button>
+          ) : null}
+        </div>
+      </article>
+    );
+  }
+
+  const recommendedDecks = sortedDecks.filter((deck) => getJlptLevel(deck.title));
+  const myDecks = sortedDecks.filter(
+    (deck) => !getJlptLevel(deck.title) && deck.is_owner,
+  );
+  const otherDecks = sortedDecks.filter(
+    (deck) => !getJlptLevel(deck.title) && !deck.is_owner,
+  );
+  // Grouping is a display-only partition of the already-fetched `decks`
+  // array (by fields the API already returns) -- no extra fetch/filter
+  // logic, so an ambiguous shape just falls back to one plain grid below.
+  const hasGroups = recommendedDecks.length > 0 && (myDecks.length > 0 || otherDecks.length > 0);
+
   const messageTone = classifyMessageTone(message);
   const isInitialLoading = isLoading && decks.length === 0;
 
@@ -75,7 +254,10 @@ export function SharedDeckSection({
     <section className="tab-panel shared-deck-section" aria-live="polite">
       <section className="panel-card hero-card shared-hero-card">
         <div className="panel-card-header">
-          <h2 className="panel-card-title">공유덱</h2>
+          <h2 className="panel-card-title">
+            <BookIcon className="panel-card-title-icon" />
+            공유덱
+          </h2>
           <p className="panel-card-description">
             다른 사용자가 공유한 어휘 덱과 JLPT 추천 어휘를 가져와 문맥
             예문과 함께 학습하세요.
@@ -83,14 +265,18 @@ export function SharedDeckSection({
         </div>
         <div className="landing-hero-actions">
           <button type="button" onClick={onGoToVocab}>
+            <ShareIcon className="button-icon" />내 단어장 공유하기
+          </button>
+          <button type="button" className="secondary-button" onClick={onGoToVocab}>
             <FolderIcon className="button-icon" />내 단어장 보기
           </button>
           <button
             type="button"
-            className="secondary-button"
+            className="ghost-button"
             onClick={onRefresh}
             disabled={isLoading}
           >
+            <RotateIcon className="button-icon" />
             {isLoading ? "불러오는 중..." : "새로고침"}
           </button>
         </div>
@@ -129,100 +315,32 @@ export function SharedDeckSection({
           <p>공유덱을 불러오는 중입니다...</p>
         </div>
       ) : sortedDecks.length > 0 ? (
-        <div className="shared-deck-grid">
-          {sortedDecks.map((deck) => {
-            const isSelected = selectedDeckId === deck.id;
-            const isImporting = importingDeckId === deck.id;
-            const isImported = importedDeckId === deck.id;
-            const isUnpublishing = unpublishingDeckId === deck.id;
-            const level = getJlptLevel(deck.title);
-            const totalWordCount = deck.vocab_count + deck.custom_term_count;
-            const alreadyImported = Boolean(deck.imported_at) || isImported;
-            return (
-              <article
-                key={deck.id}
-                className={
-                  isSelected
-                    ? "shared-deck-card selected-shared-deck-card"
-                    : "shared-deck-card"
-                }
-              >
-                <div>
-                  <div className="shared-deck-title-row">
-                    <h3>{deck.title}</h3>
-                    {level ? <JlptLevelTag level={level} /> : null}
-                    <span className="shared-deck-word-count-badge">
-                      단어 {totalWordCount}개
-                    </span>
-                    {alreadyImported ? (
-                      <span
-                        className="shared-deck-imported-badge"
-                        title={
-                          deck.imported_at
-                            ? `가져온 날짜: ${formatDateTime(deck.imported_at)}`
-                            : undefined
-                        }
-                      >
-                        가져옴
-                        {deck.imported_at
-                          ? ` · ${formatDateTime(deck.imported_at)}`
-                          : ""}
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="shared-deck-description">
-                    {deck.description || "설명이 없습니다."}
-                  </p>
+        hasGroups ? (
+          <>
+            {recommendedDecks.length > 0 ? (
+              <div className="shared-deck-shelf">
+                <h3 className="shared-deck-shelf-title">추천 어휘 덱</h3>
+                <div className="shared-deck-grid">
+                  {recommendedDecks.map(renderDeckCard)}
                 </div>
-                <p className="shared-deck-byline">
-                  {deck.owner_display_name ? `${deck.owner_display_name} · ` : ""}
-                  등록일 {formatDateTime(deck.created_at)} · 가져간 횟수{" "}
-                  {deck.import_count}회
-                </p>
-                <div className="row-actions">
-                  <button
-                    type="button"
-                    className="secondary-button compact-button"
-                    onClick={() => onSelectDeck(deck.id)}
-                    disabled={isLoadingDetail && isSelected}
-                  >
-                    {isLoadingDetail && isSelected
-                      ? "불러오는 중..."
-                      : isSelected
-                        ? "상세 닫기"
-                        : "상세 보기"}
-                  </button>
-                  <button
-                    type="button"
-                    className={
-                      alreadyImported
-                        ? "secondary-button compact-button"
-                        : "compact-button"
-                    }
-                    onClick={() => handleImportClick(deck)}
-                    disabled={isImporting}
-                  >
-                    {isImporting
-                      ? "가져오는 중..."
-                      : alreadyImported
-                        ? "다시 가져오기"
-                        : "내 덱으로 가져오기"}
-                  </button>
-                  {deck.is_owner ? (
-                    <button
-                      type="button"
-                      className="danger-secondary-button compact-button"
-                      onClick={() => onUnpublishDeck(deck.id)}
-                      disabled={isUnpublishing}
-                    >
-                      {isUnpublishing ? "공유 취소 중..." : "공유 취소"}
-                    </button>
-                  ) : null}
-                </div>
-              </article>
-            );
-          })}
-        </div>
+              </div>
+            ) : null}
+            {myDecks.length > 0 ? (
+              <div className="shared-deck-shelf">
+                <h3 className="shared-deck-shelf-title">내가 공유한 덱</h3>
+                <div className="shared-deck-grid">{myDecks.map(renderDeckCard)}</div>
+              </div>
+            ) : null}
+            {otherDecks.length > 0 ? (
+              <div className="shared-deck-shelf">
+                <h3 className="shared-deck-shelf-title">공개 공유덱</h3>
+                <div className="shared-deck-grid">{otherDecks.map(renderDeckCard)}</div>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="shared-deck-grid">{sortedDecks.map(renderDeckCard)}</div>
+        )
       ) : (
         <div className="empty-guide">
           <ShareIcon className="empty-state-icon" />
@@ -247,10 +365,8 @@ export function SharedDeckSection({
           <div className="result-heading compact-heading">
             <div>
               <div className="shared-deck-title-row">
-                <h2>{selectedDeck.title}</h2>
-                {getJlptLevel(selectedDeck.title) ? (
-                  <JlptLevelTag level={getJlptLevel(selectedDeck.title)!} />
-                ) : null}
+                <h2>{getDisplayTitle(selectedDeck, selectedLevel)}</h2>
+                {selectedLevel ? <JlptLevelTag level={selectedLevel} /> : null}
                 {selectedAlreadyImported ? (
                   <span
                     className="shared-deck-imported-badge"
@@ -310,10 +426,10 @@ export function SharedDeckSection({
               ) : null}
             </div>
           </div>
-          <p className="shared-deck-description">
-            {selectedDeck.description || "설명이 없습니다."}
+          <p className="shared-deck-description shared-deck-description-full">
+            {getDeckDescription(selectedDeck.description, selectedLevel)}
           </p>
-          {getJlptLevel(selectedDeck.title) ? (
+          {selectedLevel ? (
             <p className="shared-deck-disclaimer">
               JLPT 추천 어휘 덱은 공식 JLPT 어휘 목록이 아니라, 공개 학습
               자료와 내부 사전 데이터를 바탕으로 구성한 학습용 추천 덱입니다.

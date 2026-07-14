@@ -34,22 +34,23 @@ export function MeaningFeedbackModal({
   const label = target.surface || target.baseForm || "단어";
 
   return (
-    <div className="token-sheet-overlay" role="presentation" onClick={onClose}>
+    <div className="feedback-modal-overlay" role="presentation" onClick={onClose}>
       <div
-        className="token-sheet"
+        className="feedback-modal"
         role="dialog"
         aria-modal="true"
         aria-label={`${label} 뜻 오류 신고`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="token-sheet-header">
-          <span className="token-sheet-word">{label}</span>
+        <div className="feedback-modal-header">
+          <h2 className="feedback-modal-title">{label} 뜻 오류 신고</h2>
           <button
             type="button"
-            className="secondary-button token-sheet-close"
+            className="feedback-modal-close"
             onClick={onClose}
+            aria-label="뜻 오류 신고 창 닫기"
           >
-            닫기
+            ×
           </button>
         </div>
 
@@ -95,17 +96,17 @@ export function MeaningFeedbackModal({
           </p>
         ) : null}
 
-        <div className="classify-actions">
-          <button type="button" onClick={onSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "제출 중..." : "신고 제출"}
-          </button>
+        <div className="feedback-modal-footer">
           <button
             type="button"
-            className="secondary-button"
+            className="ghost-button"
             onClick={onClose}
             disabled={isSubmitting}
           >
             취소
+          </button>
+          <button type="button" onClick={onSubmit} disabled={isSubmitting}>
+            {isSubmitting ? "제출 중..." : "신고 제출"}
           </button>
         </div>
       </div>
