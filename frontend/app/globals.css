@@ -2283,19 +2283,26 @@ select {
   color: #6b5f3f;
 }
 
-.reading-vocab-select-controls {
-  display: grid;
-  gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--soft-bg);
-}
-
+/* Quick-select stays a loose row of ghost chips (no boxed surface) so it
+   reads as light shortcut actions, not a toolbar bolted onto the list. */
 .reading-vocab-quick-select {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+/* Separated from the quick-select chips above by a hairline rather than its
+   own bordered box -- reads as one distinct action bar (selection count +
+   save CTA) instead of another panel stacked inside the word list. */
+.reading-vocab-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 2px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
 
 .reading-vocab-selection-summary {
@@ -2304,12 +2311,13 @@ select {
   font-size: 12px;
 }
 
-.reading-vocab-save-selected-row {
-  display: flex;
+.reading-vocab-save-selected-button {
+  flex: 0 0 auto;
 }
 
-.reading-vocab-save-selected-button {
-  flex: 0 1 auto;
+.reading-vocab-action-hint {
+  margin: 0;
+  font-size: 12px;
 }
 
 .reading-vocab-empty {
@@ -2474,8 +2482,9 @@ input.reading-vocab-item-checkbox {
     height: 24px;
   }
 
-  .reading-vocab-save-selected-row {
-    justify-content: stretch;
+  .reading-vocab-action-bar {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .reading-vocab-save-selected-button {
@@ -2518,10 +2527,9 @@ input.reading-vocab-item-checkbox {
 
 .reading-summary-card {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 10px;
+  padding: 10px 8px;
   background: var(--soft-bg);
   text-align: center;
 }
@@ -4191,10 +4199,10 @@ input.reading-vocab-item-checkbox {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(120px, 220px) auto;
   align-items: center;
-  gap: 10px 14px;
-  margin-bottom: 10px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
+  gap: 8px 14px;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border: none;
   border-radius: 10px;
   background: var(--soft-bg);
 }
@@ -4222,9 +4230,9 @@ input.reading-vocab-item-checkbox {
 
 .reader-progress-bar {
   width: 100%;
-  height: 6px;
+  height: 4px;
   border-radius: 999px;
-  background: var(--soft-bg);
+  background: var(--border);
   overflow: hidden;
 }
 
@@ -4330,23 +4338,59 @@ input.reading-vocab-item-checkbox {
   color: inherit;
 }
 
+/* known/unclassified are usually the majority of tokens in any given text,
+   so a filled highlight on both made ordinary prose look like an annotated
+   dataset. An inset underline (via box-shadow so it doesn't add to line
+   height) keeps the state visible without painting most of the page. */
 .token-chip-known {
-  background: #eef9f1;
+  background: transparent;
+  box-shadow: inset 0 -2px 0 0 #b7ddc4;
 }
 
 .token-chip-uncertain {
+  background: #fdf6e4;
+  color: #82631a;
+}
+
+.token-chip-unknown {
+  background: #fdf1f1;
+  color: #a3444d;
+}
+
+.token-chip-unclassified {
+  background: transparent;
+  color: inherit;
+  box-shadow: inset 0 -2px 0 0 #cebfa0;
+}
+
+/* .reading-vocab-status-badge and .legend-swatch reuse the same
+   .token-chip-* classes for their color coding, but need the original
+   filled-pill look (not the running-text underline treatment above) since
+   they're small standalone chips, not inline highlights inside prose. */
+.reading-vocab-status-badge.token-chip-known,
+.legend-swatch.token-chip-known {
+  background: #eef9f1;
+  color: #1b6b3a;
+  box-shadow: none;
+}
+
+.reading-vocab-status-badge.token-chip-uncertain,
+.legend-swatch.token-chip-uncertain {
   background: #fbf0d9;
   color: #7a5b12;
 }
 
-.token-chip-unknown {
+.reading-vocab-status-badge.token-chip-unknown,
+.legend-swatch.token-chip-unknown {
   background: #fbe8ea;
   color: #9b3b42;
 }
 
-.token-chip-unclassified {
+.reading-vocab-status-badge.token-chip-unclassified,
+.legend-swatch.token-chip-unclassified {
   background: #ece4d0;
   color: #6b5f3f;
+  box-shadow: none;
 }
 
 .token-chip-muted {
@@ -4357,27 +4401,37 @@ input.reading-vocab-item-checkbox {
   opacity: 0.8;
 }
 
-/* Selection cue shares the same warm tone as .example-highlight so the
-   "currently open" word reads consistently with example-sentence highlights. */
+/* Selection cue -- a light amber wash plus a ring rather than a solid fill,
+   so the active word is unmistakable without reading as a data highlight. */
 .token-chip-active {
-  background: #fef3b8;
-  color: #422006;
-  box-shadow: 0 0 0 2px #f6d675;
+  background: rgba(250, 204, 21, 0.16);
+  color: inherit;
+  box-shadow: 0 0 0 2px rgba(217, 164, 30, 0.55);
 }
 
 .jlpt-chip-badge {
   display: inline-block;
   margin-left: 2px;
-  padding: 0 4px;
-  border: 1px solid #d7dce5;
+  padding: 0 3px;
+  border: 1px solid #e1e5eb;
   border-radius: 999px;
   background: #f4f6fa;
-  color: #5b6472;
-  font-size: 9px;
+  color: #8b93a1;
+  font-size: 8px;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.45;
   vertical-align: text-top;
   white-space: nowrap;
+  opacity: 0.8;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+
+/* Stays out of the way while reading; brightens only when its word is
+   actively hovered/focused, per the "muted by default" requirement. */
+.token-chip:hover .jlpt-chip-badge,
+.token-chip:focus-visible .jlpt-chip-badge {
+  opacity: 1;
+  color: #5b6472;
 }
 
 .jlpt-detail-hint {
@@ -4391,31 +4445,34 @@ input.reading-vocab-item-checkbox {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  margin: 10px 0 14px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--soft-bg);
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .legend-title {
-  color: var(--text);
+  margin-right: 2px;
+  color: var(--muted);
   font-weight: 700;
 }
 
 .legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--soft-bg);
 }
 
 .legend-swatch {
   display: inline-block;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border: 1px solid rgba(15, 23, 42, 0.1);
   border-radius: 3px;
 }

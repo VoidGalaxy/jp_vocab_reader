@@ -258,41 +258,42 @@ export function ReadingVocabPanel({
         </div>
       </div>
 
-      <div className="reading-vocab-select-controls">
-        <div
-          className="reading-vocab-quick-select"
-          role="group"
-          aria-label="빠른 선택"
+      <div
+        className="reading-vocab-quick-select"
+        role="group"
+        aria-label="빠른 선택"
+      >
+        <button
+          type="button"
+          className="ghost-button compact-button"
+          title="전체 텍스트에서 저장 가능한 단어를 모두 선택합니다"
+          onClick={() => replaceSelection(entries.filter((e) => e.isSaveable))}
         >
+          전체 선택
+        </button>
+        <button
+          type="button"
+          className="ghost-button compact-button"
+          onClick={() => setSelectedWordKeys(new Set())}
+        >
+          선택 해제
+        </button>
+        {quickSelectModes.map(({ mode, label, hint }) => (
           <button
+            key={mode}
             type="button"
             className="ghost-button compact-button"
-            title="전체 텍스트에서 저장 가능한 단어를 모두 선택합니다"
-            onClick={() => replaceSelection(entries.filter((e) => e.isSaveable))}
+            title={hint}
+            onClick={() =>
+              replaceSelection(selectReadingVocabEntriesByMode(entries, mode))
+            }
           >
-            전체 선택
+            {label}
           </button>
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={() => setSelectedWordKeys(new Set())}
-          >
-            선택 해제
-          </button>
-          {quickSelectModes.map(({ mode, label, hint }) => (
-            <button
-              key={mode}
-              type="button"
-              className="ghost-button compact-button"
-              title={hint}
-              onClick={() =>
-                replaceSelection(selectReadingVocabEntriesByMode(entries, mode))
-              }
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        ))}
+      </div>
+
+      <div className="reading-vocab-action-bar">
         <p className="reading-vocab-selection-summary">
           선택한 단어 {selectedCount}개
           {selectedAlreadySavedCount > 0
@@ -300,34 +301,37 @@ export function ReadingVocabPanel({
             : ""}
           {" · "}현재 목록 {visibleEntries.length}개
         </p>
-        <div className="reading-vocab-save-selected-row">
-          <button
-            type="button"
-            className="reading-vocab-save-selected-button"
-            onClick={() => void handleSaveSelected()}
-            disabled={selectedCount === 0 || isSaving}
-            title={
-              selectedCount === 0
-                ? "먼저 저장할 단어를 선택해 주세요."
-                : undefined
-            }
-          >
-            {isSaving ? (
-              "저장 중..."
-            ) : (
-              <>
-                <FolderIcon className="button-icon" />
-                {`선택한 단어 저장 (${selectedCount})`}
-              </>
-            )}
-          </button>
-        </div>
-        {message ? (
-          <p className={`message message--${messageTone} compact-message`}>
-            {message}
-          </p>
-        ) : null}
+        <button
+          type="button"
+          className="reading-vocab-save-selected-button"
+          onClick={() => void handleSaveSelected()}
+          disabled={selectedCount === 0 || isSaving}
+          title={
+            selectedCount === 0
+              ? "먼저 저장할 단어를 선택해 주세요."
+              : undefined
+          }
+        >
+          {isSaving ? (
+            "저장 중..."
+          ) : (
+            <>
+              <FolderIcon className="button-icon" />
+              {`선택한 단어 저장 (${selectedCount})`}
+            </>
+          )}
+        </button>
       </div>
+      {selectedCount === 0 ? (
+        <p className="muted-text reading-vocab-action-hint">
+          먼저 저장할 단어를 선택해 주세요.
+        </p>
+      ) : null}
+      {message ? (
+        <p className={`message message--${messageTone} compact-message`}>
+          {message}
+        </p>
+      ) : null}
 
       {visibleEntries.length === 0 ? (
         <p className="muted-text reading-vocab-empty">

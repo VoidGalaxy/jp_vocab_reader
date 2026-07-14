@@ -344,23 +344,23 @@ export function ReadingTab({
             </span>
           </div>
           <div className="reading-summary-grid" role="group" aria-label="이 텍스트 학습 요약">
-            <div className="reading-summary-card reading-summary-card-new">
+            <div className="reading-summary-card compact-stat-card reading-summary-card-new">
               <span>새 단어</span>
               <strong>{summary.newCount}개</strong>
             </div>
-            <div className="reading-summary-card reading-summary-card-unknown">
+            <div className="reading-summary-card compact-stat-card reading-summary-card-unknown">
               <span>모르는 단어</span>
               <strong>{summary.unknownCount}개</strong>
             </div>
-            <div className="reading-summary-card reading-summary-card-uncertain">
+            <div className="reading-summary-card compact-stat-card reading-summary-card-uncertain">
               <span>헷갈리는 단어</span>
               <strong>{summary.uncertainCount}개</strong>
             </div>
-            <div className="reading-summary-card reading-summary-card-known">
+            <div className="reading-summary-card compact-stat-card reading-summary-card-known">
               <span>이미 아는 단어</span>
               <strong>{summary.knownCount}개</strong>
             </div>
-            <div className="reading-summary-card reading-summary-card-unclassified">
+            <div className="reading-summary-card compact-stat-card reading-summary-card-unclassified">
               <span>미분류 단어</span>
               <strong>{summary.unclassifiedCount}개</strong>
             </div>
