@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandEmptyIllustration } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import type {
   Deck,
@@ -372,7 +373,7 @@ export function StudySection({
 
       {!hasStarted && !currentItem && !isComplete ? (
         <div className="study-card study-ready-card">
-          <CardsIcon className="empty-state-icon" />
+          <BrandEmptyIllustration icon={CardsIcon} />
           <h3>학습할 단어를 불러오세요</h3>
           <p>
             덱과 학습 모드를 선택한 뒤 학습 시작을 누르면 저장한 단어를 바로
@@ -383,7 +384,7 @@ export function StudySection({
 
       {hasStarted && !currentItem && !isComplete ? (
         <div className="study-card study-ready-card">
-          <InboxIcon className="empty-state-icon" />
+          <BrandEmptyIllustration icon={InboxIcon} />
           <h3>{emptyMessages[studyMode]}</h3>
           <p>{emptySecondaryMessages[studyMode]}</p>
           <div className="study-actions">

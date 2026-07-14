@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { BrandEmptyIllustration, BrandSectionBadge } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
 import { BookIcon, CardsIcon, FolderIcon, SearchIcon, ShareIcon } from "./icons";
@@ -713,7 +714,7 @@ export function VocabSection({
       <div className="result-heading">
         <div>
           <h2 className="section-title-with-icon">
-            <FolderIcon className="panel-card-title-icon" />
+            <BrandSectionBadge icon={FolderIcon} />
             저장된 단어장
           </h2>
           <span>{items.length}개</span>
@@ -892,7 +893,7 @@ export function VocabSection({
         </div>
       ) : hasActiveFilter ? (
         <div className="empty-guide">
-          <FolderIcon className="empty-state-icon" />
+          <BrandEmptyIllustration icon={FolderIcon} />
           <p>조건에 맞는 단어가 없습니다.</p>
           <p className="muted-text">검색어나 필터를 바꿔보세요.</p>
           <button
@@ -905,7 +906,7 @@ export function VocabSection({
         </div>
       ) : (
         <div className="empty-guide">
-          <FolderIcon className="empty-state-icon" />
+          <BrandEmptyIllustration icon={FolderIcon} />
           <p>아직 저장한 단어가 없습니다.</p>
           <p className="muted-text">
             읽기 탭에서 모르는 단어를 저장하면 여기에 모입니다. 문맥 예문과

@@ -1132,10 +1132,20 @@ button {
   font-weight: 700;
 }
 
-.panel-card-title-icon {
+/* Brand badge tier 1 -- small soft-circle icon reused next to a handful of
+   key section headings (BrandSectionBadge). Deliberately smaller than
+   .brand-empty-illustration below so the two tiers read as "inline badge"
+   vs. "standalone illustration", not as arbitrary size drift. content-box
+   opts out of the app's `* { box-sizing: border-box }` so padding doesn't
+   eat into the icon's own drawing area. */
+.brand-section-badge {
+  box-sizing: content-box;
   flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
+  width: 13px;
+  height: 13px;
+  padding: 5px;
+  border-radius: 999px;
+  background: var(--soft-bg);
   color: var(--primary);
 }
 
@@ -1710,14 +1720,14 @@ select {
   margin-top: 6px;
 }
 
-/* Small decorative icon used at the top of empty-state cards (.empty-guide,
-   .reading-empty-guide, .study-ready-card, and similar) -- turns the plain
-   line-icon into a small soft badge, a low-effort "illustration" reusing
-   the existing icon library instead of adding new art. (::before/::after
-   don't reliably paint over <svg> replaced content across browsers, so
-   this is a plain background/shadow on the icon itself, not a layered
-   pseudo-element.) */
-.empty-state-icon {
+/* Brand badge tier 2 -- standalone icon illustration (BrandEmptyIllustration)
+   used at the top of every empty-state card (.empty-guide,
+   .reading-empty-guide, .study-ready-card, and similar) so "nothing here
+   yet" reads as one consistent family across the app instead of each
+   screen inventing its own. (::before/::after don't reliably paint over
+   <svg> replaced content across browsers, so this is a plain
+   background/shadow on the icon itself, not a layered pseudo-element.) */
+.brand-empty-illustration {
   /* The app sets `* { box-sizing: border-box }` globally -- opt back out
      here so `padding` adds to the box instead of eating into the 22px
      icon's own drawing area (which border-box would shrink to 0). */
@@ -3226,7 +3236,7 @@ input.reading-vocab-item-checkbox {
    image asset: a faint dot-cloth texture plus a folded-corner triangle
    (::after) sell the "book cover", and the bottom edge gets a hairline
    shadow standing in for a spine crease. */
-.shared-deck-cover {
+.brand-deck-cover {
   position: relative;
   display: flex;
   align-items: center;
@@ -3249,7 +3259,7 @@ input.reading-vocab-item-checkbox {
 
 /* Folded page-corner -- a small triangle notched into the top-right of the
    cover band, like a dog-eared book cover. */
-.shared-deck-cover::after {
+.brand-deck-cover::after {
   content: "";
   position: absolute;
   top: 0;
@@ -3261,25 +3271,25 @@ input.reading-vocab-item-checkbox {
   border-color: transparent rgba(255, 255, 255, 0.28) transparent transparent;
 }
 
-.shared-deck-cover-icon {
+.brand-deck-cover-icon {
   position: relative;
   flex: 0 0 auto;
   width: 14px;
   height: 14px;
 }
 
-.shared-deck-cover span {
+.brand-deck-cover span {
   position: relative;
 }
 
-.shared-deck-cover-mine {
+.brand-deck-cover-mine {
   background-color: var(--primary);
   background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
     linear-gradient(135deg, #3d7885 0%, var(--primary) 100%);
 }
 
-.shared-deck-cover-shared {
+.brand-deck-cover-shared {
   background-color: #8a7b5e;
   background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
@@ -3289,31 +3299,31 @@ input.reading-vocab-item-checkbox {
 /* Richer book-cover gradient per JLPT level, layered under the same dot
    texture -- reuses the existing N5->N1 warm ramp (.jlpt-level-n5..n1)
    instead of introducing new hues, just adds depth for the cover context. */
-.shared-deck-cover.jlpt-level-n5 {
+.brand-deck-cover.jlpt-level-n5 {
   background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
     linear-gradient(135deg, #c2a679 0%, #a98a5c 100%);
 }
 
-.shared-deck-cover.jlpt-level-n4 {
+.brand-deck-cover.jlpt-level-n4 {
   background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
     linear-gradient(135deg, #d69568 0%, #c17d4a 100%);
 }
 
-.shared-deck-cover.jlpt-level-n3 {
+.brand-deck-cover.jlpt-level-n3 {
   background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
     linear-gradient(135deg, #e59266 0%, var(--accent) 100%);
 }
 
-.shared-deck-cover.jlpt-level-n2 {
+.brand-deck-cover.jlpt-level-n2 {
   background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
     linear-gradient(135deg, #cc7350 0%, #b85c35 100%);
 }
 
-.shared-deck-cover.jlpt-level-n1 {
+.brand-deck-cover.jlpt-level-n1 {
   background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
     linear-gradient(135deg, #a8593a 0%, #8f4324 100%);

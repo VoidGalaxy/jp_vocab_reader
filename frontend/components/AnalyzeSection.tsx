@@ -1,10 +1,11 @@
 "use client";
 
 import type { FormEvent } from "react";
+import { BrandEmptyIllustration } from "./BrandElements";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
-import { ShieldIcon } from "./icons";
+import { ShieldIcon, SparkleIcon } from "./icons";
 import { StatusSelect, statusLabels } from "./shared";
 import type {
   Deck,
@@ -419,7 +420,13 @@ export function AnalyzeSection({
             ) : null}
           </>
         ) : (
-          <p className="empty">분석 결과가 아직 없습니다.</p>
+          <div className="empty-guide">
+            <BrandEmptyIllustration icon={SparkleIcon} />
+            <p>분석 결과가 아직 없습니다.</p>
+            <p className="muted-text">
+              원문을 붙여넣고 분석하기를 누르면 단어 카드가 여기에 나타나요.
+            </p>
+          </div>
         )}
       </section>
     </section>

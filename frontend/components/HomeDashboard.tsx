@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandReadingFlowIllustration, BrandSectionBadge } from "./BrandElements";
 import {
   BookIcon,
   CardsIcon,
@@ -152,37 +153,14 @@ export function HomeDashboard({
                   </button>
                 </div>
               </div>
-              <div className="home-hero-illustration">
-                <span className="home-hero-bookmark" aria-hidden="true" />
-                <div className="home-hero-preview">
-                  <div className="home-hero-preview-step">
-                    <span className="home-hero-preview-word">読む</span>
-                    <span className="home-hero-preview-caption">읽기</span>
-                  </div>
-                  <span className="home-hero-preview-arrow">→</span>
-                  <div className="home-hero-preview-step">
-                    <span className="home-hero-preview-word">保存</span>
-                    <span className="home-hero-preview-caption">저장</span>
-                  </div>
-                  <span className="home-hero-preview-arrow">→</span>
-                  <div className="home-hero-preview-step">
-                    <span className="home-hero-preview-word">復習</span>
-                    <span className="home-hero-preview-caption">복습</span>
-                  </div>
-                </div>
-                <div className="home-hero-word-card" aria-hidden="true">
-                  <span className="home-hero-word-card-surface">闇</span>
-                  <span className="home-hero-word-card-reading">やみ</span>
-                  <span className="home-hero-word-card-meaning">어둠</span>
-                </div>
-              </div>
+              <BrandReadingFlowIllustration />
             </div>
           </section>
 
           <section className="panel-card home-quickentry-card">
             <div className="panel-card-header">
               <h3 className="panel-card-title">
-                <SparkleIcon className="panel-card-title-icon" />
+                <BrandSectionBadge icon={SparkleIcon} />
                 빠른 진입
               </h3>
             </div>
@@ -208,7 +186,10 @@ export function HomeDashboard({
 
           <section className="panel-card home-continue-card">
             <div className="panel-card-header">
-              <h3 className="panel-card-title">이어서 학습하기</h3>
+              <h3 className="panel-card-title">
+                <BrandSectionBadge icon={CardsIcon} />
+                이어서 학습하기
+              </h3>
               {recentlySavedVocabItemIdsCount > 0 ? (
                 <span className="home-continue-count-badge">
                   {recentlySavedVocabItemIdsCount}개 대기 중

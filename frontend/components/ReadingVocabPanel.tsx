@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { BrandSectionBadge } from "./BrandElements";
 import type { TokenWithStatus, VocabItem } from "./types";
 import {
   computeReadingVocabEntries,
@@ -187,7 +188,10 @@ export function ReadingVocabPanel({
     <section className="panel-card reading-vocab-panel">
       <div className="panel-card-header reading-vocab-panel-header">
         <div>
-          <h3 className="panel-card-title">이 텍스트 단어 목록</h3>
+          <h3 className="panel-card-title">
+            <BrandSectionBadge icon={SearchIcon} />
+            이 텍스트 단어 목록
+          </h3>
           <p className="panel-card-description">
             이 텍스트에서 나온 학습 가능 단어를 모아봤어요. 단어를 누르면 원문
             위치로 이동하고, 체크박스로 저장할 단어를 직접 골라 담을 수

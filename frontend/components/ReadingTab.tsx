@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
+import { BrandEmptyIllustration } from "./BrandElements";
 import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import { classifyMessageTone, computeReadingSaveSummary } from "./coverageUtils";
@@ -217,7 +218,7 @@ export function ReadingTab({
             <>
               {!hasResult && !text.trim() ? (
                 <div className="reading-empty-guide">
-                  <BookIcon className="empty-state-icon" />
+                  <BrandEmptyIllustration icon={BookIcon} />
                   <p>읽고 싶은 일본어 문장을 붙여넣고 분석해보세요.</p>
                   <p className="muted-text">
                     모르는 단어를 클릭해 뜻과 읽기를 확인할 수 있습니다.

@@ -1,3 +1,8 @@
+import {
+  BrandDeckCover,
+  BrandEmptyIllustration,
+  BrandSectionBadge,
+} from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import { BookIcon, FolderIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
 import {
@@ -53,33 +58,13 @@ function getDeckDescription(
   return DEFAULT_SHARED_DECK_DESCRIPTION;
 }
 
-// Small top "cover" band -- gives each card the shelf/course-card silhouette
-// the reference design wants, without any new image asset. Tone follows the
-// same warm N5->N1 ramp already used by JlptLevelTag for recommended decks;
-// a plain deck reads as either "내가 공유함" or a neutral "공유 덱" cover.
-function DeckCover({ deck, level }: { deck: SharedDeckSummary; level: string | null }) {
+// Resolves which BrandDeckCover tone/level a deck gets -- level wins
+// (recommended-vocab ramp), otherwise ownership decides 내가 공유함 vs 공유 덱.
+function getDeckCoverProps(deck: SharedDeckSummary, level: string | null) {
   if (level) {
-    return (
-      <div className={`shared-deck-cover jlpt-level-${level.toLowerCase()}`}>
-        <BookIcon className="shared-deck-cover-icon" />
-        <span>추천 어휘</span>
-      </div>
-    );
+    return { tone: "recommended" as const, level };
   }
-  if (deck.is_owner) {
-    return (
-      <div className="shared-deck-cover shared-deck-cover-mine">
-        <ShareIcon className="shared-deck-cover-icon" />
-        <span>내가 공유함</span>
-      </div>
-    );
-  }
-  return (
-    <div className="shared-deck-cover shared-deck-cover-shared">
-      <FolderIcon className="shared-deck-cover-icon" />
-      <span>공유 덱</span>
-    </div>
-  );
+  return { tone: deck.is_owner ? ("mine" as const) : ("shared" as const) };
 }
 
 type SharedDeckSectionProps = {
@@ -153,7 +138,7 @@ export function SharedDeckSection({
             : "shared-deck-card"
         }
       >
-        <DeckCover deck={deck} level={level} />
+        <BrandDeckCover {...getDeckCoverProps(deck, level)} />
         <div>
           <div className="shared-deck-title-row">
             <h3>{getDisplayTitle(deck, level)}</h3>
@@ -255,7 +240,7 @@ export function SharedDeckSection({
       <section className="panel-card hero-card shared-hero-card">
         <div className="panel-card-header">
           <h2 className="panel-card-title">
-            <BookIcon className="panel-card-title-icon" />
+            <BrandSectionBadge icon={BookIcon} />
             공유덱
           </h2>
           <p className="panel-card-description">
@@ -311,7 +296,7 @@ export function SharedDeckSection({
 
       {isInitialLoading ? (
         <div className="empty-guide">
-          <ShareIcon className="empty-state-icon" />
+          <BrandEmptyIllustration icon={ShareIcon} />
           <p>공유덱을 불러오는 중입니다...</p>
         </div>
       ) : sortedDecks.length > 0 ? (
@@ -343,7 +328,7 @@ export function SharedDeckSection({
         )
       ) : (
         <div className="empty-guide">
-          <ShareIcon className="empty-state-icon" />
+          <BrandEmptyIllustration icon={ShareIcon} />
           <p>아직 공유된 덱이 없습니다.</p>
           <p className="muted-text">
             내 단어장을 공유하거나, 단어장 탭에서 JLPT 추천 어휘 덱을 가져와
