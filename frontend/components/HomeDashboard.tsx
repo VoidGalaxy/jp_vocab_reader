@@ -18,6 +18,7 @@ type HomeDashboardProps = {
   recentlySavedVocabItemIdsCount: number;
   hasReadingSession: boolean;
   onStartReading: () => void;
+  onTryWithSample: () => void;
   onStartTodayReview: () => void;
   onScrollToAccount: () => void;
   onStartRecentlySaved: () => void;
@@ -67,9 +68,9 @@ const quickEntries = [
 ] as const;
 
 const startGuideSteps = [
-  "원문 붙여넣기",
-  "단어 저장하기",
-  "첫 복습 완료하기",
+  "원문 읽기 시작",
+  "모르는 단어 저장",
+  "문맥 예문으로 복습",
 ];
 
 export function HomeDashboard({
@@ -79,6 +80,7 @@ export function HomeDashboard({
   recentlySavedVocabItemIdsCount,
   hasReadingSession,
   onStartReading,
+  onTryWithSample,
   onStartTodayReview,
   onScrollToAccount,
   onStartRecentlySaved,
@@ -150,6 +152,14 @@ export function HomeDashboard({
                   >
                     <CardsIcon className="button-icon" />
                     오늘 복습하기
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={onTryWithSample}
+                  >
+                    <SparkleIcon className="button-icon" />
+                    샘플로 체험하기
                   </button>
                 </div>
               </div>

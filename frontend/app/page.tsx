@@ -28,7 +28,7 @@ import {
   analyzeLongTextInChunks,
   type ChunkAnalyzeProgress,
 } from "../components/readingChunkAnalyze";
-import { ReadingTab } from "../components/ReadingTab";
+import { ReadingTab, SAMPLE_TEXT } from "../components/ReadingTab";
 import { SharedDeckSection } from "../components/SharedDeckSection";
 import { withObjectParticle } from "../components/shared";
 import { splitTextIntoChunks } from "../components/textChunking";
@@ -1433,6 +1433,50 @@ export default function HomePage() {
     void performReadingAnalyze(text, selectedSaveDeckId);
   }
 
+  // Reading tab's own empty-state "샘플 문장으로 체험" button -- only fills
+  // the textarea and leaves "분석하기" as the next explicit step (the
+  // button only ever renders when the textarea is already empty, so there's
+  // nothing to guard against overwriting here).
+  function loadSampleReadingText() {
+    setReadingText(SAMPLE_TEXT);
+    setReadingMessage(
+      "샘플 문장을 불러왔습니다. 분석하기를 눌러 단어를 확인해보세요.",
+    );
+  }
+
+  // Home hero's "샘플로 체험하기" CTA -- jumps to the reading tab with the
+  // sample pre-filled and immediately analyzed (reusing the same
+  // text+deck -> performReadingAnalyze pipeline viewCurrentTextInReadingTab
+  // above already uses), so a first-time visitor sees real token cards
+  // without a second click. Guards against silently discarding an
+  // in-progress reading session when jumping in from a different tab, the
+  // same way resetReadingSession above already confirms before clearing.
+  function startSampleReadingFromHome() {
+    const hasExistingReadingWork =
+      readingText.trim() !== "" || readingTokens.length > 0;
+    if (
+      hasExistingReadingWork &&
+      !window.confirm(
+        "현재 읽기 작업을 샘플 문장으로 바꿀까요? 기존 원문과 분석 결과가 사라집니다.",
+      )
+    ) {
+      return;
+    }
+    // readingSelectedDeckId may still be empty this early (decks load
+    // async on mount) -- fall back to the same default-deck resolution
+    // loadDecks() itself seeds that state with, so clicking the sample CTA
+    // right after landing on Home still analyzes instead of silently
+    // no-op'ing.
+    const deckId =
+      readingSelectedDeckId || (defaultDeck ? String(defaultDeck.id) : "");
+    setReadingText(SAMPLE_TEXT);
+    setReadingSelectedDeckId(deckId);
+    setActiveTab("reading");
+    if (deckId) {
+      void performReadingAnalyze(SAMPLE_TEXT, deckId);
+    }
+  }
+
   // Reading tab persists status changes immediately (no separate save step).
   async function handleReadingStatusChange(index: number, status: TokenStatus) {
     const token = readingTokens[index];
@@ -2814,6 +2858,7 @@ export default function HomePage() {
             recentlySavedVocabItemIdsCount={recentlySavedVocabItemIds.length}
             hasReadingSession={readingTokens.length > 0}
             onStartReading={() => void handleTabChange("reading")}
+            onTryWithSample={startSampleReadingFromHome}
             onStartTodayReview={goToStudyToday}
             onScrollToAccount={scrollToAccountPanel}
             onStartRecentlySaved={startStudyFromRecentlySaved}
@@ -2891,6 +2936,7 @@ export default function HomePage() {
             scrollFraction={readingScrollFraction}
             onScrollProgressChange={setReadingScrollFraction}
             onTextChange={setReadingText}
+            onLoadSampleText={loadSampleReadingText}
             onSelectedDeckChange={setReadingSelectedDeckId}
             onAnalyze={handleReadingAnalyze}
             onStatusChange={(index, status) =>

@@ -2742,6 +2742,21 @@ input.reading-vocab-item-checkbox {
 }
 
 
+/* Onboarding-only guide note shown while analyzedText is the sample
+   sentence (see ReadingTab's isSampleText) -- small note-card, same
+   left-accent-strip language as the home dashboard's guide/trust cards, so
+   it doesn't read as a separate one-off callout. */
+.reading-onboarding-note {
+  padding: 12px 16px;
+}
+
+.reading-onboarding-note-title {
+  margin: 0 0 2px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .reading-summary-highlight {
   display: inline-flex;
   align-items: center;

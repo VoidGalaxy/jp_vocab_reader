@@ -11,8 +11,12 @@ import type { ChunkAnalyzeProgress } from "./readingChunkAnalyze";
 import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 
 // Copyright-safe, hand-written sample so first-time users can try the flow
-// without pasting their own text first.
-const SAMPLE_TEXT =
+// without pasting their own text first. Exported so page.tsx's home-tab
+// "샘플로 체험하기" CTA can load the exact same text/deck-analyze pipeline
+// from outside this tab, and so this component can tell "the user is
+// looking at the sample" apart from their own text (see isSampleText
+// below) without a second source of truth.
+export const SAMPLE_TEXT =
   "彼は闇の中で声を聞いた。少女は約束を思い出した。騎士は剣を握り、敵から王を守った。";
 
 type ReadingTabProps = {
@@ -35,6 +39,7 @@ type ReadingTabProps = {
   scrollFraction: number | null;
   onScrollProgressChange: (fraction: number) => void;
   onTextChange: (text: string) => void;
+  onLoadSampleText: () => void;
   onSelectedDeckChange: (deckId: string) => void;
   onAnalyze: (event: FormEvent<HTMLFormElement>) => void;
   onStatusChange: (index: number, status: TokenStatus) => void;
@@ -103,6 +108,7 @@ export function ReadingTab({
   scrollFraction,
   onScrollProgressChange,
   onTextChange,
+  onLoadSampleText,
   onSelectedDeckChange,
   onAnalyze,
   onStatusChange,
@@ -147,6 +153,11 @@ export function ReadingTab({
   const summary = hasResult
     ? computeReadingSaveSummary(tokens, vocabItems, selectedDeckId)
     : null;
+  // Onboarding-only guide note (design improvement 5) -- derived from
+  // existing props (no new dismissed-state storage key needed) so it only
+  // shows while the user is actually looking at the sample text, and
+  // disappears on its own once they analyze their own real text.
+  const isSampleText = analyzedText === SAMPLE_TEXT;
   const analyzeHint = !text.trim()
     ? "원문을 입력하면 분석할 수 있습니다."
     : !selectedDeckId
@@ -226,7 +237,7 @@ export function ReadingTab({
                   <button
                     type="button"
                     className="ghost-button compact-button"
-                    onClick={() => onTextChange(SAMPLE_TEXT)}
+                    onClick={onLoadSampleText}
                   >
                     <SparkleIcon className="button-icon" />
                     샘플 문장으로 체험
@@ -330,6 +341,18 @@ export function ReadingTab({
 
       {!summary && message ? (
         <p className={`message message--${messageTone}`}>{message}</p>
+      ) : null}
+
+      {summary && isSampleText ? (
+        <div className="panel-card note-card reading-onboarding-note">
+          <p className="reading-onboarding-note-title">
+            샘플로 핵심 흐름을 체험해보세요
+          </p>
+          <p className="muted-text">
+            1 단어 클릭해 뜻 확인 → 2 모르는 단어 저장 → 3 저장한 단어로
+            바로 학습
+          </p>
+        </div>
       ) : null}
 
       {summary ? (
