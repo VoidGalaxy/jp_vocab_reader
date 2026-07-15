@@ -8,6 +8,7 @@ import {
 import {
   BookIcon,
   CardsIcon,
+  ChatIcon,
   FolderIcon,
   InboxIcon,
   ShareIcon,
@@ -29,6 +30,7 @@ type HomeDashboardProps = {
   onStartRecentlySaved: () => void;
   onGoToVocab: () => void;
   onGoToShared: () => void;
+  onOpenFeedback: () => void;
 };
 
 const usageSteps = [
@@ -91,6 +93,7 @@ export function HomeDashboard({
   onStartRecentlySaved,
   onGoToVocab,
   onGoToShared,
+  onOpenFeedback,
 }: HomeDashboardProps) {
   const quickEntryHandlers: Record<string, () => void> = {
     "원문 읽기": onStartReading,
@@ -333,6 +336,27 @@ export function HomeDashboard({
                 </button>
               </div>
             )}
+          </section>
+
+          <section className="panel-card note-card home-beta-card">
+            <div className="panel-card-header">
+              <h3 className="panel-card-title">
+                <BrandSectionBadge icon={ChatIcon} />
+                베타 테스트 중
+              </h3>
+            </div>
+            <p className="panel-card-description">
+              원문 읽기부터 복습까지 사용해보고, 뜻이 이상했거나 헷갈렸던
+              부분을 알려주세요.
+            </p>
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onOpenFeedback}
+            >
+              <ChatIcon className="button-icon" />
+              피드백 남기기
+            </button>
           </section>
         </div>
       </div>

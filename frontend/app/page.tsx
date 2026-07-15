@@ -2364,7 +2364,7 @@ export default function HomePage() {
 
   function openAppFeedback() {
     setIsAppFeedbackOpen(true);
-    setAppFeedbackCategory("bug");
+    setAppFeedbackCategory("ux");
     setAppFeedbackDraft("");
     setAppFeedbackResultMessage("");
   }
@@ -2395,7 +2395,7 @@ export default function HomePage() {
         }),
       });
       setAppFeedbackDraft("");
-      setAppFeedbackResultMessage("피드백을 보냈습니다. 감사합니다.");
+      setAppFeedbackResultMessage("피드백이 접수되었습니다. 베타 개선에 참고할게요.");
     } catch (error) {
       setAppFeedbackResultMessage(
         getAuthAwareErrorMessage(error, "피드백을 보내지 못했습니다. 잠시 후 다시 시도해주세요."),
@@ -2916,6 +2916,7 @@ export default function HomePage() {
             onStartRecentlySaved={startStudyFromRecentlySaved}
             onGoToVocab={() => void handleTabChange("vocab")}
             onGoToShared={() => void handleTabChange("shared")}
+            onOpenFeedback={openAppFeedback}
           />
         ) : null}
 

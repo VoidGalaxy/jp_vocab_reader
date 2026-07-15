@@ -5473,6 +5473,11 @@ input.reading-vocab-item-checkbox {
   overflow-wrap: anywhere;
 }
 
+.feedback-modal-subtitle {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+}
+
 .feedback-modal-close {
   flex: 0 0 auto;
   width: 32px;
