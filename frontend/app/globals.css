@@ -130,6 +130,12 @@ html {
    `scroll` (not `fixed`) attachment so it never taxes mobile scroll perf. */
 body {
   margin: 0;
+  /* Defensive safety net -- every scrollable/wide element in the app
+     (.table-wrap, .tab-nav, filter-chip rows, ...) already scrolls
+     internally, so the page itself should never need to scroll
+     horizontally. Catches anything that slips through without changing
+     any layout that wasn't already overflowing. */
+  overflow-x: hidden;
   background-color: var(--page-bg);
   background-image:
     radial-gradient(circle, rgba(61, 47, 20, 0.05) 1px, transparent 1.4px),
@@ -2278,6 +2284,7 @@ select {
 
 .study-front-word {
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .study-front-reading {
@@ -4703,6 +4710,14 @@ input.reading-vocab-item-checkbox {
   .shared-deck-grid {
     grid-template-columns: 1fr;
     gap: 10px;
+  }
+
+  /* Slightly shorter book-cover band on narrow screens -- the desktop
+     height reads fine in a multi-column shelf, but stacked 1-up on mobile
+     a shorter band keeps the title/description from starting too far down
+     the card. */
+  .brand-deck-cover {
+    padding: 7px 14px;
   }
 
   .shared-detail-columns {
