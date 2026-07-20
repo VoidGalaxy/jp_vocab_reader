@@ -800,13 +800,27 @@ button {
    CTAs the core loop needs, no illustration column. The flow-preview
    card/companion (BrandReadingFlowIllustration) that used to render here
    traded space for a graphic competing with the CTAs -- the component
-   itself is untouched (still available elsewhere), this just stops
-   calling it from Home. */
+   itself is untouched (still available elsewhere, and its cover-flow
+   language is echoed in the compact .home-flow-strip below instead). */
 .home-hero-main {
   display: grid;
   gap: 10px;
   flex: 1 1 380px;
   min-width: 0;
+}
+
+/* Badge + Shiori share the hero's top line -- Shiori greets the screen (one
+   of her 5 designated spots) without pushing the title/CTAs down, since she
+   sits beside the badge rather than adding her own row. */
+.home-hero-greeting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.home-hero-companion {
+  margin: -8px -10px 0 0;
 }
 
 .home-hero-badge {
@@ -826,6 +840,41 @@ button {
 .home-hero-badge-icon {
   width: 14px;
   height: 14px;
+}
+
+/* One-line "읽기 -> 담기 -> 복습" flow reminder under the hero CTAs -- the
+   core loop made visible without the old full illustration card's height.
+   Text + small icons only. */
+.home-flow-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.home-flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--paper-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--text-secondary);
+}
+
+.home-flow-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--screen-accent, var(--accent));
+}
+
+.home-flow-arrow {
+  color: var(--border-strong);
 }
 
 /* Wraps the flow-preview card so the word-card + bookmark ribbon below
@@ -1476,17 +1525,22 @@ button:focus-visible {
   font-weight: 700;
 }
 
+/* Flashcard-tier card (hero-card scale) instead of a plain 10px-radius box
+   -- this is the one card the Analyze tab wants seen as immersive, not a
+   form. The screen-accent top edge ties it to the tab's coral accent, same
+   language .shared-hero-card/.reader-mode already use. */
 .classify-card,
 .classification-complete {
   width: min(720px, 100%);
   display: grid;
-  gap: 18px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 26px;
+  gap: 16px;
+  border: 1px solid var(--paper-border);
+  border-top: 3px solid var(--screen-accent, var(--accent));
+  border-radius: 20px;
+  padding: 28px;
   margin: 0 auto;
-  background: var(--panel-bg);
-  box-shadow: 0 16px 36px rgba(120, 98, 40, 0.08);
+  background: var(--paper-bg);
+  box-shadow: 0 16px 36px var(--paper-shadow);
 }
 
 .classify-progress {
@@ -1494,6 +1548,11 @@ button:focus-visible {
   font-size: 14px;
   font-weight: 700;
   text-align: right;
+}
+
+.classify-reading {
+  margin-top: -6px;
+  text-align: center;
 }
 
 .classify-word {
@@ -1552,10 +1611,6 @@ td .term-badge {
   line-height: 1.55;
 }
 
-.classify-details .classify-example {
-  grid-column: 1 / -1;
-}
-
 .classify-actions {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1565,6 +1620,15 @@ td .term-badge {
 .classify-actions button {
   min-width: 0;
   padding: 11px 10px;
+}
+
+/* Analyze tab only (TokenDetailSheet's compact 2-col version is untouched)
+   -- slightly taller/bolder action buttons so the 4-way classify decision
+   reads as the card's main event, not four same-weight form buttons. */
+.analyze-panel .classify-actions button {
+  min-height: 52px;
+  font-size: 14.5px;
+  font-weight: 800;
 }
 
 /* Marks the button matching the word's current status -- a shape/weight
@@ -1795,6 +1859,25 @@ select {
   height: 96px;
 }
 
+/* Hero-level presence badge -- a soft round glow behind Shiori for the two
+   "guide" spots (home hero, study quick-start hero) so the character reads
+   as a deliberate brand mascot greeting the screen rather than a small
+   inline icon. CSS radial-gradient only, no new asset; the ribbon SVG
+   itself is unchanged. */
+.study-companion-glow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    var(--screen-accent-soft, var(--soft-bg)) 0%,
+    transparent 72%
+  );
+}
+
 .study-companion-body {
   fill: var(--screen-accent, var(--accent));
 }
@@ -1966,6 +2049,7 @@ select {
   width: min(640px, 100%);
   margin: 0 auto;
   border: 1px solid var(--border);
+  border-top: 3px solid var(--screen-accent, var(--accent));
   border-radius: 12px;
   padding: 28px;
   background: var(--panel-bg);
@@ -2071,31 +2155,11 @@ select {
   line-height: 1.4;
 }
 
-.study-answer {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+/* Compact tag row (same recipe as .token-sheet-meta-row elsewhere) instead
+   of a 3-cell bordered grid -- 읽기/품사/기본형 read as light context, not
+   a data table, once the answer is revealed. */
+.study-answer-tags {
   margin: 0;
-}
-
-.study-answer div {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  background: var(--soft-bg);
-}
-
-.study-answer dt {
-  margin-bottom: 6px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.study-answer dd {
-  margin: 0;
-  color: var(--text);
-  font-size: 16px;
 }
 
 .study-example-callout {
@@ -2992,6 +3056,20 @@ input.reading-vocab-item-checkbox {
   margin: 0;
 }
 
+/* Save-success gets Shiori's small "done" stamp instead of the generic
+   .message::before checkmark -- one of the character's 5 designated spots
+   (단어 저장 완료). Swaps the icon rather than showing both. */
+.reading-summary-message-stamped::before {
+  display: none;
+}
+
+.reading-summary-message-stamp {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 24px;
+  margin-top: -3px;
+}
+
 .stats-panel {
   display: grid;
   gap: 14px;
@@ -3031,6 +3109,7 @@ input.reading-vocab-item-checkbox {
   display: grid;
   gap: 16px;
   padding: 20px;
+  border-top: 3px solid var(--screen-accent, var(--accent));
 }
 
 .study-hero-header {
@@ -3053,6 +3132,10 @@ input.reading-vocab-item-checkbox {
   margin: 0;
   color: var(--text);
   font-size: 19px;
+}
+
+.study-hero-companion {
+  margin: -10px -6px 0 auto;
 }
 
 .study-hero-header p {
@@ -3323,11 +3406,25 @@ input.reading-vocab-item-checkbox {
   gap: 10px;
 }
 
+/* A small ledge line under each shelf label -- reads as the shelf edge the
+   cards below sit on, tying the "서가" name to an actual shelf visual. */
 .shared-deck-shelf-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--paper-border);
   color: var(--text-secondary);
   font-size: 14px;
   font-weight: 700;
+}
+
+.shared-deck-shelf-icon {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--screen-accent, var(--accent));
 }
 
 .shared-deck-grid {
@@ -3349,14 +3446,21 @@ input.reading-vocab-item-checkbox {
   border-radius: 16px;
   background: var(--panel-bg);
   padding: 16px;
-  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.05);
+  /* A soft inner shadow along the left edge reads as a book spine/gutter
+     next to the cover band -- small addition to the existing drop shadow,
+     no new element. */
+  box-shadow:
+    inset 3px 0 6px -4px rgba(60, 45, 20, 0.35),
+    0 8px 20px rgba(120, 98, 40, 0.05);
   transition:
     box-shadow var(--motion-fast) var(--ease-soft),
     transform var(--motion-fast) var(--ease-soft);
 }
 
 .shared-deck-card:hover {
-  box-shadow: 0 12px 26px rgba(120, 98, 40, 0.09);
+  box-shadow:
+    inset 3px 0 6px -4px rgba(60, 45, 20, 0.35),
+    0 12px 26px rgba(120, 98, 40, 0.09);
   transform: translateY(-2px);
 }
 
@@ -3683,6 +3787,7 @@ input.reading-vocab-item-checkbox {
 .vocab-hero-card {
   gap: 14px;
   border-color: var(--paper-border);
+  border-top: 3px solid var(--screen-accent, var(--accent));
   background: var(--paper-bg);
   box-shadow: 0 14px 32px var(--paper-shadow);
 }
@@ -3819,18 +3924,19 @@ input.reading-vocab-item-checkbox {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
+  border-top: 3px solid var(--screen-accent, var(--accent));
   border-radius: 12px;
   overflow: hidden;
   background: var(--panel-bg);
 }
 
 .vocab-row {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  border-left: 3px solid transparent;
-  transition:
-    background var(--motion-fast) var(--ease-soft),
-    border-left-color var(--motion-fast) var(--ease-soft);
+  position: relative;
+  padding: 10px 14px 10px 20px;
+  /* Dashed "ruled paper" rule instead of a solid table row-line -- same
+     motif as .dotted-divider, so the list reads as ruled notebook paper. */
+  border-bottom: 1px dashed var(--border-strong);
+  transition: background var(--motion-fast) var(--ease-soft);
 }
 
 .vocab-row:last-child {
@@ -3843,7 +3949,32 @@ input.reading-vocab-item-checkbox {
 
 .vocab-row-expanded {
   background: var(--soft-bg);
-  border-left-color: var(--screen-accent, var(--accent));
+}
+
+/* Small colored index-card tab down the row's left edge, keyed to the
+   word's saved status -- the same "file card drawer" cue a physical index
+   card box uses, so status reads at a glance without opening the row. */
+.vocab-row::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 6px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--status-unclassified-line);
+}
+
+.vocab-row-status-known::before {
+  background: var(--status-known-fg);
+}
+
+.vocab-row-status-uncertain::before {
+  background: var(--status-uncertain-fg);
+}
+
+.vocab-row-status-unknown::before {
+  background: var(--status-unknown-fg);
 }
 
 .vocab-row-main {
@@ -4464,8 +4595,7 @@ input.reading-vocab-item-checkbox {
     grid-template-columns: 1fr;
   }
 
-  .classify-details div,
-  .study-answer div {
+  .classify-details div {
     padding: 10px;
   }
 
@@ -4522,10 +4652,6 @@ input.reading-vocab-item-checkbox {
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;
-  }
-
-  .study-answer {
-    grid-template-columns: 1fr;
   }
 
   .study-actions {
@@ -4822,6 +4948,37 @@ input.reading-vocab-item-checkbox {
 }
 
 /* Reader mode */
+
+/* Binds the reader / save tray / candidate list into one "notebook" unit --
+   a dashed spine down the left edge in the screen's accent color, echoing a
+   spiral/ring binding, so the three cards read as bound pages of one
+   workspace instead of unrelated floating boxes. Each section keeps its
+   own card-tier styling (reader stays the "hero", tray/list stay
+   "section") -- this only adds a connecting thread behind them. */
+.reading-workspace {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding-left: 18px;
+}
+
+.reading-workspace::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 3px;
+  width: 2px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--screen-accent, var(--accent)) 0,
+    var(--screen-accent, var(--accent)) 6px,
+    transparent 6px,
+    transparent 13px
+  );
+  opacity: 0.45;
+}
 
 .reader-mode {
   border: 1px solid var(--paper-border);

@@ -168,6 +168,11 @@ function StudyQuickStartHero({
           <h2>오늘의 복습</h2>
           <p>저장한 단어를 문맥 예문과 함께 다시 확인해요.</p>
         </div>
+        <StudyCompanion
+          mood="reading"
+          size="md"
+          className="study-companion-glow study-hero-companion"
+        />
       </div>
       {total > 0 ? (
         <div className="study-compact-progress">
@@ -464,20 +469,24 @@ export function StudySection({
                   {getDisplayMeaning(currentItem.meaning_ko)}
                 </p>
               </div>
-              <dl className="study-answer">
-                <div>
-                  <dt>읽기</dt>
-                  <dd>{currentItem.reading || "-"}</dd>
-                </div>
-                <div>
-                  <dt>품사</dt>
-                  <dd>{currentItem.part_of_speech || "-"}</dd>
-                </div>
-                <div>
-                  <dt>기본형</dt>
-                  <dd>{currentItem.base_form}</dd>
-                </div>
-              </dl>
+              <div className="token-sheet-meta-row study-answer-tags">
+                {currentItem.reading ? (
+                  <span className="token-sheet-meta-tag">
+                    읽기 {currentItem.reading}
+                  </span>
+                ) : null}
+                {currentItem.part_of_speech ? (
+                  <span className="token-sheet-meta-tag">
+                    {currentItem.part_of_speech}
+                  </span>
+                ) : null}
+                {currentItem.base_form &&
+                currentItem.base_form !== currentItem.surface ? (
+                  <span className="token-sheet-meta-tag">
+                    기본형 {currentItem.base_form}
+                  </span>
+                ) : null}
+              </div>
               <div className="meaning-actions-row">
                 <MeaningQuickEdit
                   isEditing={meaningEditItemId === currentItem.id}

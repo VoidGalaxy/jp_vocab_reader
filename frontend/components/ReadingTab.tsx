@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { AppEmptyState, BrandSectionBadge } from "./BrandElements";
+import { AppEmptyState, BrandSectionBadge, StudyCompanion } from "./BrandElements";
 import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import {
@@ -486,6 +486,12 @@ export function ReadingTab({
         </div>
       ) : null}
 
+      {/* Reader / save tray / candidate list share one "bound notebook"
+          frame (a dashed spine down the left edge, see .reading-workspace)
+          instead of reading as three unrelated floating boxes -- each still
+          keeps its own card tier (reader = hero, tray/list = section) so
+          the visual hierarchy from design improvement 1 isn't flattened. */}
+      <div className="reading-workspace">
       {hasResult ? (
         <ReaderMode
           originalText={analyzedText}
@@ -618,8 +624,19 @@ export function ReadingTab({
             </p>
           ) : null}
           {message ? (
-            <p className={`message message--${messageTone} reading-summary-message`}>
-              {message}
+            <p
+              className={`message message--${messageTone} reading-summary-message${
+                messageTone === "success" ? " reading-summary-message-stamped" : ""
+              }`}
+            >
+              {messageTone === "success" ? (
+                <StudyCompanion
+                  mood="done"
+                  size="sm"
+                  className="reading-summary-message-stamp"
+                />
+              ) : null}
+              <span>{message}</span>
             </p>
           ) : null}
 
@@ -665,6 +682,7 @@ export function ReadingTab({
           onClearSelection={clearSelection}
         />
       ) : null}
+      </div>
     </section>
   );
 }

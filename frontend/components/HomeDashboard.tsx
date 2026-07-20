@@ -1,6 +1,14 @@
 "use client";
 
-import { BookIcon, CardsIcon, ChevronRightIcon, ShieldIcon, SparkleIcon } from "./icons";
+import { StudyCompanion } from "./BrandElements";
+import {
+  BookIcon,
+  CardsIcon,
+  ChevronRightIcon,
+  FolderIcon,
+  ShieldIcon,
+  SparkleIcon,
+} from "./icons";
 import type { StudyStats } from "./types";
 
 type HomeDashboardProps = {
@@ -60,10 +68,17 @@ export function HomeDashboard({
     <section className="tab-panel home-dashboard" aria-live="polite">
       <section className="panel-card hero-card home-hero-card">
         <div className="home-hero-main">
-          <span className="home-hero-badge">
-            <BookIcon className="home-hero-badge-icon" />
-            오늘의 책상
-          </span>
+          <div className="home-hero-greeting">
+            <span className="home-hero-badge">
+              <BookIcon className="home-hero-badge-icon" />
+              오늘의 책상
+            </span>
+            <StudyCompanion
+              mood="reading"
+              size="md"
+              className="study-companion-glow home-hero-companion"
+            />
+          </div>
           <h2 className="landing-hero-title">
             오늘 읽을 원문을
             <br />
@@ -92,6 +107,22 @@ export function HomeDashboard({
             >
               샘플로 체험
             </button>
+          </div>
+          <div className="home-flow-strip" aria-hidden="true">
+            <span className="home-flow-step">
+              <BookIcon className="home-flow-icon" />
+              읽기
+            </span>
+            <span className="home-flow-arrow">→</span>
+            <span className="home-flow-step">
+              <FolderIcon className="home-flow-icon" />
+              담기
+            </span>
+            <span className="home-flow-arrow">→</span>
+            <span className="home-flow-step">
+              <CardsIcon className="home-flow-icon" />
+              복습
+            </span>
           </div>
         </div>
       </section>

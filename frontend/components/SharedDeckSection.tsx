@@ -294,7 +294,10 @@ export function SharedDeckSection({
           <>
             {recommendedDecks.length > 0 ? (
               <div className="shared-deck-shelf">
-                <h3 className="shared-deck-shelf-title">JLPT 추천 어휘 서가</h3>
+                <h3 className="shared-deck-shelf-title">
+                  <BookIcon className="shared-deck-shelf-icon" />
+                  JLPT 추천 어휘 서가
+                </h3>
                 <div className="shared-deck-grid">
                   {recommendedDecks.map(renderDeckCard)}
                 </div>
@@ -302,13 +305,19 @@ export function SharedDeckSection({
             ) : null}
             {myDecks.length > 0 ? (
               <div className="shared-deck-shelf">
-                <h3 className="shared-deck-shelf-title">내가 공유한 덱</h3>
+                <h3 className="shared-deck-shelf-title">
+                  <BookIcon className="shared-deck-shelf-icon" />
+                  내가 공유한 덱
+                </h3>
                 <div className="shared-deck-grid">{myDecks.map(renderDeckCard)}</div>
               </div>
             ) : null}
             {otherDecks.length > 0 ? (
               <div className="shared-deck-shelf">
-                <h3 className="shared-deck-shelf-title">다른 학습자의 덱</h3>
+                <h3 className="shared-deck-shelf-title">
+                  <BookIcon className="shared-deck-shelf-icon" />
+                  다른 학습자의 덱
+                </h3>
                 <div className="shared-deck-grid">{otherDecks.map(renderDeckCard)}</div>
               </div>
             ) : null}

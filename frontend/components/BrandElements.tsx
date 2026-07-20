@@ -56,7 +56,12 @@ export function BrandReadingFlowIllustration() {
   );
 }
 
-// Shiori, the brand symbol -- a quiet bookmark silhouette, not a mascot.
+// Shiori (시오리) -- the app's bookmark-fairy guide character. Reads as a
+// bookmark first (the shape is instantly a ribbon/bookmark), and as a quiet
+// companion second (two eyes, a warm screen-tinted body). Appears at 5
+// deliberate spots app-wide: home hero, reading empty/idle state, save
+// success, study quick-start hero, and other empty states -- never as
+// constant decoration on a loaded/busy screen.
 // Deliberately just three shapes (one rounded-corner ribbon path, one paper
 // face plate, two eye dots) and nothing else: no mouth, no expression, no
 // per-mood accessory. "mood" is kept only because ~8 call sites across the

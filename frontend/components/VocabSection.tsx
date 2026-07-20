@@ -788,7 +788,7 @@ export function VocabSection({
 
             return (
               <div
-                className={`vocab-row${isExpanded ? " vocab-row-expanded" : ""}`}
+                className={`vocab-row vocab-row-status-${item.status}${isExpanded ? " vocab-row-expanded" : ""}`}
                 key={item.id}
               >
                 <div className="vocab-row-main">

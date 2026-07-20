@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { AppEmptyState, StudyCompanion } from "./BrandElements";
+import { AppEmptyState, BrandSectionBadge, StudyCompanion } from "./BrandElements";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
@@ -115,7 +115,10 @@ export function AnalyzeSection({
 
       <section className="panel-card reading-input-card">
         <div className="panel-card-header">
-          <h3 className="panel-card-title">원문 입력</h3>
+          <h3 className="panel-card-title">
+            <BrandSectionBadge icon={SparkleIcon} />
+            원문 입력
+          </h3>
           <p className="panel-card-description">
             읽고 싶은 일본어 문장을 붙여넣으세요.
           </p>
@@ -262,33 +265,56 @@ export function AnalyzeSection({
                 <div className="classify-word">
                   {currentToken.surface || currentToken.base_form}
                 </div>
+                {currentToken.reading &&
+                currentToken.reading !==
+                  (currentToken.surface || currentToken.base_form) ? (
+                  <div className="token-sheet-reading classify-reading">
+                    {currentToken.reading}
+                  </div>
+                ) : null}
                 {currentToken.quality_tag !== "normal" ? (
                   <div className="term-badge-wrap">
                     <QualityBadge qualityTag={currentToken.quality_tag} />
                   </div>
                 ) : null}
-                <dl className="classify-details">
-                  <div>
-                    <dt>기본형</dt>
-                    <dd>{currentToken.base_form || "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>읽기</dt>
-                    <dd>{currentToken.reading || "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>품사</dt>
-                    <dd>{currentToken.part_of_speech || "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>한국어 뜻</dt>
-                    <dd>{getDisplayMeaning(currentToken.meaning_ko)}</dd>
-                  </div>
-                  <div className="classify-example">
-                    <dt>예문</dt>
-                    <dd>{currentToken.example_sentence || "-"}</dd>
-                  </div>
-                </dl>
+
+                <div className="token-sheet-meaning-block">
+                  <span className="token-sheet-meaning-label">한국어 뜻</span>
+                  <p className="token-sheet-meaning-value">
+                    {getDisplayMeaning(currentToken.meaning_ko)}
+                  </p>
+                </div>
+
+                <div className="token-sheet-meta-row">
+                  {currentToken.base_form &&
+                  currentToken.base_form !== currentToken.surface ? (
+                    <span className="token-sheet-meta-tag">
+                      기본형 {currentToken.base_form}
+                    </span>
+                  ) : null}
+                  {currentToken.part_of_speech ? (
+                    <span className="token-sheet-meta-tag">
+                      {currentToken.part_of_speech}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="context-example-block">
+                  <p className="context-example-label">문맥 예문</p>
+                  {currentToken.example_sentence ? (
+                    <p className="context-example-text">
+                      <HighlightedExample
+                        sentence={currentToken.example_sentence}
+                        surface={currentToken.surface}
+                        baseForm={currentToken.base_form}
+                        normalizedForm={currentToken.normalized_form}
+                      />
+                    </p>
+                  ) : (
+                    <p className="context-example-hint">예문을 찾지 못했습니다.</p>
+                  )}
+                </div>
+
                 <div className="classify-actions">
                   <button
                     type="button"
