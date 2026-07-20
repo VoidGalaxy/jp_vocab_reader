@@ -2895,7 +2895,9 @@ select {
 }
 
 .reading-vocab-selection-summary {
-  margin: 0;
+  margin: 2px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
   color: var(--muted);
   font-size: 12px;
 }
@@ -3120,71 +3122,128 @@ input.reading-vocab-item-checkbox {
   font-weight: 700;
 }
 
-.reading-summary-highlight {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-  padding: 5px 14px;
+/* Reader Workspace top toolbar -- compact state chips shown once analysis
+   has a result, so "저장 가능/바구니에 담음" counts stay visible without the
+   big descriptive summary card the reader used to open with. */
+.reader-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 2px;
+}
+
+.reader-toolbar-chip {
+  padding: 5px 12px;
+  border: 1px solid var(--paper-border);
   border-radius: 999px;
-  background: var(--primary);
-  color: #ffffff;
-  font-size: 13px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
+  font-size: 12px;
   font-weight: 700;
 }
 
-.reading-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(100px, 1fr));
+.reader-toolbar-chip-accent {
+  border-color: transparent;
+  background: var(--screen-accent, var(--primary));
+  color: #ffffff;
+}
+
+/* Save Tray / Word Basket -- replaces the old big "이 텍스트 학습 요약" grid
+   card with a compact tray: how many words are in the basket, a status
+   breakdown as small pills (not boxes), one primary "담은 단어 저장" CTA,
+   and the bulk quick-save buttons demoted to a smaller secondary row so the
+   basket-based save reads as the primary path (design brief: 저장 버튼이
+   너무 많아 보이지 않게, 위계를 정리). */
+.save-tray {
+  border-top: 3px solid var(--screen-accent, var(--accent));
+}
+
+.save-tray-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 10px;
 }
 
-.reading-summary-card {
-  display: grid;
-  gap: 3px;
+.save-tray-count-badge {
+  flex: 0 0 auto;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--screen-accent-soft, var(--soft-bg));
+  color: var(--screen-accent, var(--primary-dark));
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.save-tray-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.save-tray-stat-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
   border: 1px solid var(--border);
-  padding: 10px 8px;
   background: var(--soft-bg);
-  text-align: center;
-}
-
-/* Per-status tint, matching the same palette used by .token-chip-* so the
-   text highlight, this summary grid, and the legend all read as one
-   consistent color system rather than three independent choices. */
-.reading-summary-card-new {
-  border-color: #dbe2ec;
-  background: #f4f7fb;
-}
-
-.reading-summary-card-unknown {
-  border-color: #f3cdd1;
-  background: #fdf1f2;
-}
-
-.reading-summary-card-uncertain {
-  border-color: #ecdba9;
-  background: #fdf6e6;
-}
-
-.reading-summary-card-known {
-  border-color: #bfe3cc;
-  background: #f1faf4;
-}
-
-.reading-summary-card-unclassified {
-  border-color: #ddd0a8;
-  background: #f5efe0;
-}
-
-.reading-summary-card span {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
 }
 
-.reading-summary-card strong {
-  color: var(--text);
-  font-size: 18px;
+.save-tray-stat-new {
+  border-color: #dbe2ec;
+  background: #f4f7fb;
+}
+
+.save-tray-stat-unknown {
+  border-color: #f3cdd1;
+  background: #fdf1f2;
+}
+
+.save-tray-stat-uncertain {
+  border-color: #ecdba9;
+  background: #fdf6e6;
+}
+
+.save-tray-stat-unclassified {
+  border-color: #ddd0a8;
+  background: #f5efe0;
+}
+
+.save-tray-stat-known {
+  border-color: #bfe3cc;
+  background: #f1faf4;
+  color: var(--muted);
+}
+
+.save-tray-primary-button {
+  width: 100%;
+}
+
+.save-tray-quick-save {
+  display: grid;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.save-tray-quick-save-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.save-tray-quick-save .reading-summary-actions {
+  gap: 6px;
+}
+
+.save-tray-quick-save .reading-summary-save-button {
+  flex: 1 1 160px;
+  min-height: 38px;
+  padding: 8px 10px;
+  font-size: 12.5px;
 }
 
 .reading-summary-actions {
@@ -5384,6 +5443,35 @@ input.reading-vocab-item-checkbox {
   box-shadow: 0 -8px 30px rgba(120, 98, 40, 0.22);
 }
 
+/* Idle Word Inspector -- desktop-only "nothing selected yet" placeholder
+   docked in the exact same spot TokenDetailSheet occupies once a word is
+   clicked (see the min-width:641px override below), so the panel reads as
+   a permanent fixture of the workspace rather than something that only
+   appears on demand. Hidden by default (mobile): the reader-workspace
+   mobile spec wants the inspector to stay out of the way until a word is
+   actually tapped, not sit as a permanent bottom sheet. */
+.token-sheet-overlay-idle {
+  display: none;
+  pointer-events: none;
+  background: transparent;
+}
+
+.token-sheet-idle {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 28px 20px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.token-sheet-idle-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .token-sheet-header {
   display: flex;
   align-items: flex-start;
@@ -5476,6 +5564,35 @@ input.reading-vocab-item-checkbox {
 .token-sheet .classify-actions button {
   border-radius: 999px;
   word-break: keep-all;
+}
+
+/* Word Basket toggle -- the inspector's "저장 대상에 추가/제외" action.
+   Full-width and visually distinct (dashed border, screen-accent tint)
+   from the status pills above so "change this word's status" and "put it
+   in the save basket" don't read as the same kind of button. */
+.token-sheet-basket-button {
+  width: 100%;
+  margin-top: 10px;
+  border: 1.5px dashed var(--screen-accent, var(--accent));
+  color: var(--screen-accent, var(--accent));
+  background: transparent;
+}
+
+.token-sheet-basket-button:not(:disabled):hover {
+  background: var(--screen-accent-soft, var(--soft-bg));
+  box-shadow: none;
+  transform: none;
+}
+
+.token-sheet-basket-button-active {
+  border-style: solid;
+  color: #ffffff;
+  background: var(--screen-accent, var(--accent));
+}
+
+.token-sheet-basket-button-active:not(:disabled):hover {
+  background: var(--screen-accent, var(--accent));
+  opacity: 0.92;
 }
 
 /* base_form/품사/JLPT now sit below the status pills as secondary,
@@ -5721,6 +5838,12 @@ input.reading-vocab-item-checkbox {
     border-radius: 16px;
     box-shadow: 0 16px 40px rgba(120, 98, 40, 0.18);
   }
+
+  /* Idle inspector reuses .token-sheet-overlay's right-dock positioning
+     above (same base class) -- only needs to become visible here. */
+  .token-sheet-overlay-idle {
+    display: flex;
+  }
 }
 
 @media (max-width: 640px) {
@@ -5792,7 +5915,7 @@ input.reading-vocab-item-checkbox {
     order: 2;
   }
 
-  .reading-summary-panel {
+  .save-tray {
     order: 3;
   }
 

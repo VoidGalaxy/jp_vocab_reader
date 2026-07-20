@@ -13,7 +13,14 @@ type TokenDetailSheetProps = {
   onNext: () => void;
   canGoPrevious: boolean;
   canGoNext: boolean;
+  onNextUnknown: () => void;
+  canGoNextUnknown: boolean;
+  onFirstOccurrence: () => void;
+  canGoFirstOccurrence: boolean;
   positionLabel: string | null;
+  isInBasket: boolean;
+  canAddToBasket: boolean;
+  onToggleBasket: () => void;
   meaningEditItemId: number | null;
   meaningEditDraft: string;
   isSavingMeaningEdit: boolean;
@@ -33,7 +40,14 @@ export function TokenDetailSheet({
   onNext,
   canGoPrevious,
   canGoNext,
+  onNextUnknown,
+  canGoNextUnknown,
+  onFirstOccurrence,
+  canGoFirstOccurrence,
   positionLabel,
+  isInBasket,
+  canAddToBasket,
+  onToggleBasket,
   meaningEditItemId,
   meaningEditDraft,
   isSavingMeaningEdit,
@@ -131,6 +145,16 @@ export function TokenDetailSheet({
             미분류 / 건너뛰기
           </button>
         </div>
+        {canAddToBasket ? (
+          <button
+            type="button"
+            className={`token-sheet-basket-button${isInBasket ? " token-sheet-basket-button-active" : ""}`}
+            onClick={onToggleBasket}
+            aria-pressed={isInBasket}
+          >
+            {isInBasket ? "저장 바구니에서 빼기" : "저장 바구니에 담기"}
+          </button>
+        ) : null}
         <dl className="classify-details token-sheet-secondary-details">
           <div>
             <dt>기본형</dt>
@@ -139,6 +163,10 @@ export function TokenDetailSheet({
           <div>
             <dt>품사</dt>
             <dd>{token.part_of_speech || "-"}</dd>
+          </div>
+          <div>
+            <dt>등장 횟수</dt>
+            <dd>{token.occurrence_count || 1}회</dd>
           </div>
           <div className="classify-example">
             <dt>JLPT 추천 레벨</dt>
@@ -206,6 +234,26 @@ export function TokenDetailSheet({
               disabled={!canGoNext}
             >
               다음 →
+            </button>
+          </div>
+          <div className="token-sheet-nav" role="group" aria-label="빠른 이동">
+            {token.occurrence_count > 1 ? (
+              <button
+                type="button"
+                className="ghost-button compact-button token-sheet-nav-button"
+                onClick={onFirstOccurrence}
+                disabled={!canGoFirstOccurrence}
+              >
+                첫 등장 위치로
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="ghost-button compact-button token-sheet-nav-button"
+              onClick={onNextUnknown}
+              disabled={!canGoNextUnknown}
+            >
+              다음 모르는 단어
             </button>
           </div>
           <div className="meaning-actions-row">

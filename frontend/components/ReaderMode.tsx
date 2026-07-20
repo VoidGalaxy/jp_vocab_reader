@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
+import { StudyCompanion } from "./BrandElements";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet } from "./TokenDetailSheet";
 import { buildReaderLayout, getNavigableTokenIndexes } from "./readerLayout";
@@ -65,6 +66,12 @@ type ReaderModeProps = {
   onSaveMeaningEdit: () => void;
   onCancelMeaningEdit: () => void;
   onReportMeaning: (token: TokenWithStatus) => void;
+  // Word Basket (Save Tray) wiring -- the selection Set itself lives in
+  // ReadingTab (shared with the word-list panel), so the inspector only
+  // needs yes/no + a toggle for whichever token is currently active.
+  isTokenInBasket: (token: TokenWithStatus) => boolean;
+  canAddToBasket: (token: TokenWithStatus) => boolean;
+  onToggleBasket: (token: TokenWithStatus) => void;
 };
 
 export function ReaderMode({
@@ -85,6 +92,9 @@ export function ReaderMode({
   onSaveMeaningEdit,
   onCancelMeaningEdit,
   onReportMeaning,
+  isTokenInBasket,
+  canAddToBasket,
+  onToggleBasket,
 }: ReaderModeProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   // Which literal rendered occurrence was clicked, when known -- a repeated
@@ -362,6 +372,37 @@ export function ReaderMode({
     }
   }
 
+  // "다음 모르는 단어" -- same forward-only walk as goToNext, but skips
+  // ahead to the next `unknown`-status word instead of the immediate
+  // neighbor. Search starts right after the current position (or from the
+  // very start when nothing is selected yet), never wraps.
+  function findNextUnknownPosition(): number {
+    const startPos = activeIndex !== null ? navPosition : -1;
+    for (let i = startPos + 1; i < navigableIndexes.length; i += 1) {
+      if (tokens[navigableIndexes[i]].status === "unknown") {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function goToNextUnknown() {
+    const nextPos = findNextUnknownPosition();
+    if (nextPos !== -1) {
+      selectToken(navigableIndexes[nextPos]);
+    }
+  }
+
+  // Re-selects the same word with no specific occurrence -- selectToken's
+  // segmentKey=null default already falls back to the word's first
+  // occurrence (see the scroll-into-view effect above), so this is enough
+  // to jump back to it from any later occurrence.
+  function goToFirstOccurrence() {
+    if (activeIndex !== null) {
+      selectToken(activeIndex);
+    }
+  }
+
   function scrollToTop() {
     readerTextRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -396,6 +437,8 @@ export function ReaderMode({
 
   const progressPercent = Math.round(scrollProgress * 100);
   const activeToken = activeIndex !== null ? tokens[activeIndex] : null;
+  const hasNextUnknown = findNextUnknownPosition() !== -1;
+  const isAtFirstOccurrence = activeSegmentKey === null;
 
   return (
     <div className="reader-mode hero-card">
@@ -541,11 +584,18 @@ export function ReaderMode({
           onNext={goToNext}
           canGoPrevious={canGoPrev}
           canGoNext={canGoNext}
+          onNextUnknown={goToNextUnknown}
+          canGoNextUnknown={hasNextUnknown}
+          onFirstOccurrence={goToFirstOccurrence}
+          canGoFirstOccurrence={!isAtFirstOccurrence}
           positionLabel={
             navPosition !== -1
               ? `${navPosition + 1} / ${navigableIndexes.length}`
               : null
           }
+          isInBasket={isTokenInBasket(activeToken)}
+          canAddToBasket={canAddToBasket(activeToken)}
+          onToggleBasket={() => onToggleBasket(activeToken)}
           meaningEditItemId={meaningEditItemId}
           meaningEditDraft={meaningEditDraft}
           isSavingMeaningEdit={isSavingMeaningEdit}
@@ -556,7 +606,26 @@ export function ReaderMode({
           onCancelMeaningEdit={onCancelMeaningEdit}
           onReportMeaning={onReportMeaning}
         />
-      ) : null}
+      ) : (
+        // Desktop-only idle Word Inspector: docked in the same spot
+        // TokenDetailSheet occupies once a word is selected (see
+        // .token-sheet-overlay-idle in globals.css, hidden below the
+        // 641px breakpoint) so the panel reads as "always there", not
+        // something that only appears after a click. Mobile intentionally
+        // shows nothing here -- the bottom-sheet inspector only appears
+        // on demand there, per the reader-workspace mobile spec.
+        <div
+          className="token-sheet-overlay token-sheet-overlay-idle"
+          aria-hidden="true"
+        >
+          <div className="token-sheet token-sheet-idle">
+            <StudyCompanion mood="reading" size="sm" />
+            <p className="token-sheet-idle-text">
+              원문에서 모르는 단어를 눌러보세요.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

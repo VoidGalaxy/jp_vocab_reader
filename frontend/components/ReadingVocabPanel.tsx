@@ -2,40 +2,35 @@
 
 import { useMemo, useState } from "react";
 import { BrandSectionBadge } from "./BrandElements";
-import type { TokenWithStatus, VocabItem } from "./types";
 import {
-  computeReadingVocabEntries,
   filterReadingVocabEntries,
   getTokenGroupKey,
   searchReadingVocabEntries,
   selectReadingVocabEntriesByMode,
 } from "./coverageUtils";
 import type {
-  MessageTone,
   ReadingSaveMode,
   ReadingVocabEntry,
   ReadingVocabFilter,
 } from "./coverageUtils";
-import { ChevronDownIcon, ChevronRightIcon, FolderIcon, SearchIcon } from "./icons";
+import { ChevronDownIcon, ChevronRightIcon, SearchIcon } from "./icons";
 import { getDisplayMeaning, statusLabels } from "./shared";
 
 type ReadingVocabPanelProps = {
-  tokens: TokenWithStatus[];
-  vocabItems: VocabItem[];
-  selectedDeckId: string;
+  // Computed once in ReadingTab (shared with the Save Tray/Word Inspector)
+  // instead of recomputed here, so every part of the reading workspace
+  // agrees on exactly the same grouped/deduped word list.
+  entries: ReadingVocabEntry[];
   selectedTokenKey: string | null;
   onSelectToken: (tokenIndex: number) => void;
-  isSaving: boolean;
-  // Resolves once persistence finishes; returns the tokenIndexes that were
-  // actually saved (fulfilled or already-saved) so the panel can drop just
-  // those from the selection instead of clearing everything indiscriminately.
-  onSaveSelected: (tokenIndexes: number[]) => Promise<number[]>;
-  // Same save-result message/tone the "이 텍스트 학습 요약" card shows --
-  // threaded down so a save triggered from this panel's own CTA also
-  // surfaces feedback right next to where the user clicked, not only
-  // higher up the page.
-  message: string;
-  messageTone: MessageTone;
+  // Word Basket (Save Tray) selection -- lifted up to ReadingTab so the
+  // Word Inspector's "저장 바구니에 담기" toggle and this panel's checkboxes
+  // both read/write the same Set. This panel no longer owns saving itself;
+  // the Save Tray's "담은 단어 저장" button is the one save action.
+  selectedWordKeys: Set<string>;
+  onToggleSelect: (key: string) => void;
+  onReplaceSelection: (entries: ReadingVocabEntry[]) => void;
+  onClearSelection: () => void;
 };
 
 const filterOptions: Array<{ value: ReadingVocabFilter; label: string }> = [
@@ -61,52 +56,36 @@ const filterColorClass: Partial<Record<ReadingVocabFilter, string>> = {
 const quickSelectModes: Array<{ mode: ReadingSaveMode; label: string; hint: string }> = [
   {
     mode: "unknown_only",
-    label: "모르는 단어 선택",
-    hint: "unknown 상태 단어를 선택합니다",
+    label: "모르는 단어 담기",
+    hint: "unknown 상태 단어를 바구니에 담습니다",
   },
   {
     mode: "unknown_uncertain",
-    label: "모르는+헷갈리는 단어 선택",
-    hint: "unknown + uncertain 상태 단어를 선택합니다",
+    label: "모르는+헷갈리는 단어 담기",
+    hint: "unknown + uncertain 상태 단어를 바구니에 담습니다",
   },
   {
     mode: "all_unclassified",
-    label: "미분류까지 선택",
-    hint: "unknown + uncertain + 미분류 단어를 선택합니다",
+    label: "미분류까지 담기",
+    hint: "unknown + uncertain + 미분류 단어를 바구니에 담습니다",
   },
 ];
 
 export function ReadingVocabPanel({
-  tokens,
-  vocabItems,
-  selectedDeckId,
+  entries,
   selectedTokenKey,
   onSelectToken,
-  isSaving,
-  onSaveSelected,
-  message,
-  messageTone,
+  selectedWordKeys,
+  onToggleSelect,
+  onReplaceSelection,
+  onClearSelection,
 }: ReadingVocabPanelProps) {
   const [filter, setFilter] = useState<ReadingVocabFilter>("all");
   const [search, setSearch] = useState("");
-  const [selectedWordKeys, setSelectedWordKeys] = useState<Set<string>>(
-    () => new Set(),
-  );
-  // Collapsed by default only matters visually on narrow screens (the
-  // toggle button itself is desktop-visible too, but the panel simply
-  // never gets tall enough there to need collapsing) -- keeps the "이 텍스트
-  // 단어 목록" section from pushing the save CTA far down the page on long,
-  // chunk-analyzed texts. Starts expanded so existing behavior is unchanged
-  // until a user actually taps the toggle.
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  // Each memo only recomputes on the input that actually changed it --
-  // typing in the search box never re-derives entries from tokens/vocabItems,
-  // which matters once a chunk-analyzed text has hundreds of unique words.
-  const entries = useMemo(
-    () => computeReadingVocabEntries(tokens, vocabItems, selectedDeckId),
-    [tokens, vocabItems, selectedDeckId],
-  );
+  // Collapsed by default -- the word list is a secondary/reference panel in
+  // the reader workspace, not the main event, so it starts out of the way
+  // and only expands on request ("어휘 후보 보기").
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const filteredEntries = useMemo(
     () => filterReadingVocabEntries(entries, filter),
@@ -118,25 +97,14 @@ export function ReadingVocabPanel({
     [filteredEntries, search],
   );
 
-  // selectedWordKeys can outlive the entries it was built from (a
-  // re-analysis swaps tokens out from under an already-mounted panel) --
-  // this is the single place that reconciles the raw key Set against what's
-  // actually selectable right now, so every count/action below only ever
-  // sees valid, currently-saveable selections.
-  const selectedEntries = useMemo(() => {
-    if (selectedWordKeys.size === 0) {
-      return [];
-    }
-    return entries.filter(
-      (entry) =>
-        entry.isSaveable && selectedWordKeys.has(getTokenGroupKey(entry.token)),
-    );
-  }, [entries, selectedWordKeys]);
-
-  const selectedCount = selectedEntries.length;
-  const selectedAlreadySavedCount = selectedEntries.filter(
-    (entry) => entry.isSaved,
-  ).length;
+  const selectedCount = useMemo(
+    () =>
+      entries.filter(
+        (entry) =>
+          entry.isSaveable && selectedWordKeys.has(getTokenGroupKey(entry.token)),
+      ).length,
+    [entries, selectedWordKeys],
+  );
   // Total saveable words in this text (not just the current selection) --
   // the header-level "저장 가능" stat design improvement 1 asks for.
   const saveableCount = useMemo(
@@ -144,65 +112,23 @@ export function ReadingVocabPanel({
     [entries],
   );
 
-  function toggleSelect(key: string) {
-    setSelectedWordKeys((current) => {
-      const next = new Set(current);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  }
-
-  function replaceSelection(nextEntries: ReadingVocabEntry[]) {
-    setSelectedWordKeys(
-      new Set(nextEntries.map((entry) => getTokenGroupKey(entry.token))),
-    );
-  }
-
-  async function handleSaveSelected() {
-    if (selectedCount === 0 || isSaving) {
-      return;
-    }
-    const tokenIndexes = selectedEntries.map((entry) => entry.tokenIndex);
-    const savedTokenIndexes = await onSaveSelected(tokenIndexes);
-    if (savedTokenIndexes.length === 0) {
-      return;
-    }
-    const savedKeys = new Set(
-      savedTokenIndexes
-        .map((index) => tokens[index])
-        .filter((token): token is TokenWithStatus => Boolean(token))
-        .map((token) => getTokenGroupKey(token)),
-    );
-    setSelectedWordKeys((current) => {
-      const next = new Set(current);
-      savedKeys.forEach((key) => next.delete(key));
-      return next;
-    });
-  }
-
   return (
     <section className="panel-card reading-vocab-panel">
       <div className="panel-card-header reading-vocab-panel-header">
         <div>
           <h3 className="panel-card-title">
             <BrandSectionBadge icon={SearchIcon} />
-            이 텍스트 단어 목록
+            어휘 후보
           </h3>
           <p className="panel-card-description">
-            이 텍스트에서 나온 학습 가능 단어를 모아봤어요. 단어를 누르면 원문
-            위치로 이동하고, 체크박스로 저장할 단어를 직접 골라 담을 수
-            있습니다.
+            단어를 누르면 원문 위치로 이동하고, 체크박스로 바구니에 담을 수 있어요.
           </p>
           <div className="reading-vocab-stats-row">
             <span className="reading-vocab-stat-pill">
               전체 단어 {entries.length}개
             </span>
             <span className="reading-vocab-stat-pill">
-              선택한 단어 {selectedCount}개
+              바구니에 담음 {selectedCount}개
             </span>
             <span className="reading-vocab-stat-pill reading-vocab-stat-pill-accent">
               저장 가능 {saveableCount}개
@@ -220,7 +146,7 @@ export function ReadingVocabPanel({
               isCollapsed ? " reading-vocab-collapse-icon-collapsed" : ""
             }`}
           />
-          {isCollapsed ? "펼치기" : "접기"}
+          {isCollapsed ? "어휘 후보 보기" : "접기"}
         </button>
       </div>
       {isCollapsed ? null : (
@@ -270,17 +196,17 @@ export function ReadingVocabPanel({
         <button
           type="button"
           className="ghost-button compact-button"
-          title="전체 텍스트에서 저장 가능한 단어를 모두 선택합니다"
-          onClick={() => replaceSelection(entries.filter((e) => e.isSaveable))}
+          title="전체 텍스트에서 저장 가능한 단어를 모두 바구니에 담습니다"
+          onClick={() => onReplaceSelection(entries.filter((e) => e.isSaveable))}
         >
-          전체 선택
+          전체 담기
         </button>
         <button
           type="button"
           className="ghost-button compact-button"
-          onClick={() => setSelectedWordKeys(new Set())}
+          onClick={onClearSelection}
         >
-          선택 해제
+          바구니 비우기
         </button>
         {quickSelectModes.map(({ mode, label, hint }) => (
           <button
@@ -289,7 +215,7 @@ export function ReadingVocabPanel({
             className="ghost-button compact-button"
             title={hint}
             onClick={() =>
-              replaceSelection(selectReadingVocabEntriesByMode(entries, mode))
+              onReplaceSelection(selectReadingVocabEntriesByMode(entries, mode))
             }
           >
             {label}
@@ -297,45 +223,9 @@ export function ReadingVocabPanel({
         ))}
       </div>
 
-      <div className="reading-vocab-action-bar">
-        <p className="reading-vocab-selection-summary">
-          선택한 단어 {selectedCount}개
-          {selectedAlreadySavedCount > 0
-            ? ` · 이미 저장됨 ${selectedAlreadySavedCount}개`
-            : ""}
-          {" · "}현재 목록 {visibleEntries.length}개
-        </p>
-        <button
-          type="button"
-          className="reading-vocab-save-selected-button"
-          onClick={() => void handleSaveSelected()}
-          disabled={selectedCount === 0 || isSaving}
-          title={
-            selectedCount === 0
-              ? "먼저 저장할 단어를 선택해 주세요."
-              : undefined
-          }
-        >
-          {isSaving ? (
-            "저장 중..."
-          ) : (
-            <>
-              <FolderIcon className="button-icon" />
-              {`선택한 단어 저장 (${selectedCount})`}
-            </>
-          )}
-        </button>
-      </div>
-      {selectedCount === 0 ? (
-        <p className="muted-text reading-vocab-action-hint">
-          먼저 저장할 단어를 선택해 주세요.
-        </p>
-      ) : null}
-      {message ? (
-        <p className={`message message--${messageTone} compact-message`}>
-          {message}
-        </p>
-      ) : null}
+      <p className="reading-vocab-selection-summary">
+        바구니에 담음 {selectedCount}개 · 현재 목록 {visibleEntries.length}개
+      </p>
 
       {visibleEntries.length === 0 ? (
         <p className="muted-text reading-vocab-empty">
@@ -369,7 +259,7 @@ export function ReadingVocabPanel({
                     type="checkbox"
                     className="reading-vocab-item-checkbox"
                     checked={isChecked}
-                    onChange={() => toggleSelect(key)}
+                    onChange={() => onToggleSelect(key)}
                     aria-label={`${label} 저장 대상으로 선택`}
                   />
                 ) : (

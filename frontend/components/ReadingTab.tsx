@@ -1,12 +1,17 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
-import { BrandEmptyIllustration, StudyCompanion } from "./BrandElements";
+import { useMemo, useRef, useState, type FormEvent } from "react";
+import { BrandEmptyIllustration, BrandSectionBadge, StudyCompanion } from "./BrandElements";
 import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
-import { classifyMessageTone, computeReadingSaveSummary } from "./coverageUtils";
-import type { ReadingSaveMode } from "./coverageUtils";
-import { CardsIcon, ShieldIcon, SparkleIcon } from "./icons";
+import {
+  classifyMessageTone,
+  computeReadingSaveSummary,
+  computeReadingVocabEntries,
+  getTokenGroupKey,
+} from "./coverageUtils";
+import type { ReadingSaveMode, ReadingVocabEntry } from "./coverageUtils";
+import { CardsIcon, FolderIcon, ShieldIcon, SparkleIcon } from "./icons";
 import type { ChunkAnalyzeProgress } from "./readingChunkAnalyze";
 import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 
@@ -153,6 +158,95 @@ export function ReadingTab({
   const summary = hasResult
     ? computeReadingSaveSummary(tokens, vocabItems, selectedDeckId)
     : null;
+
+  // Save Tray / Word Basket -- lifted up from ReadingVocabPanel so both the
+  // word-list panel's checkboxes and the Word Inspector's "저장 바구니에
+  // 담기" toggle read/write the exact same selection instead of each owning
+  // a separate one. Keyed by getTokenGroupKey (same grouping every other
+  // save path already uses), not tokenIndex, so a repeated word selected via
+  // one occurrence is recognized when clicked via another.
+  const entries = useMemo(
+    () => computeReadingVocabEntries(tokens, vocabItems, selectedDeckId),
+    [tokens, vocabItems, selectedDeckId],
+  );
+  const entriesByKey = useMemo(() => {
+    const map = new Map<string, ReadingVocabEntry>();
+    entries.forEach((entry) => map.set(getTokenGroupKey(entry.token), entry));
+    return map;
+  }, [entries]);
+  const [selectedWordKeys, setSelectedWordKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  // Reconciles the raw key Set against what's actually selectable right now
+  // (a re-analysis can swap tokens out from under an already-built
+  // selection) -- every count/action below only ever sees valid, currently
+  // saveable entries.
+  const selectedEntries = useMemo(() => {
+    if (selectedWordKeys.size === 0) {
+      return [];
+    }
+    return entries.filter(
+      (entry) =>
+        entry.isSaveable && selectedWordKeys.has(getTokenGroupKey(entry.token)),
+    );
+  }, [entries, selectedWordKeys]);
+  const selectedCount = selectedEntries.length;
+
+  function toggleSelect(key: string) {
+    setSelectedWordKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }
+
+  function replaceSelection(nextEntries: ReadingVocabEntry[]) {
+    setSelectedWordKeys(
+      new Set(nextEntries.map((entry) => getTokenGroupKey(entry.token))),
+    );
+  }
+
+  function clearSelection() {
+    setSelectedWordKeys(new Set());
+  }
+
+  async function handleSaveSelected() {
+    if (selectedCount === 0 || isSavingBatch) {
+      return;
+    }
+    const tokenIndexes = selectedEntries.map((entry) => entry.tokenIndex);
+    const savedTokenIndexes = await onSaveSelected(tokenIndexes);
+    if (savedTokenIndexes.length === 0) {
+      return;
+    }
+    const savedKeys = new Set(
+      savedTokenIndexes
+        .map((index) => tokens[index])
+        .filter((token): token is TokenWithStatus => Boolean(token))
+        .map((token) => getTokenGroupKey(token)),
+    );
+    setSelectedWordKeys((current) => {
+      const next = new Set(current);
+      savedKeys.forEach((key) => next.delete(key));
+      return next;
+    });
+  }
+
+  function isTokenInBasket(token: TokenWithStatus) {
+    return selectedWordKeys.has(getTokenGroupKey(token));
+  }
+
+  function canAddToBasket(token: TokenWithStatus) {
+    return entriesByKey.get(getTokenGroupKey(token))?.isSaveable ?? false;
+  }
+
+  function onToggleBasket(token: TokenWithStatus) {
+    toggleSelect(getTokenGroupKey(token));
+  }
   // Onboarding-only guide note (design improvement 5) -- derived from
   // existing props (no new dismissed-state storage key needed) so it only
   // shows while the user is actually looking at the sample text, and
@@ -373,89 +467,14 @@ export function ReadingTab({
       ) : null}
 
       {summary ? (
-        <section className="panel-card reading-summary-panel">
-          <div className="panel-card-header">
-            <h3 className="panel-card-title">이 텍스트 학습 요약</h3>
-            <p className="panel-card-description">
-              상태별 단어 수를 확인하고, 원하는 범위만 골라 단어장에
-              저장하세요.
-            </p>
-            <span className="reading-summary-highlight">
-              저장 가능 단어 {summary.saveableCount}개
-            </span>
-          </div>
-          <div className="reading-summary-grid" role="group" aria-label="이 텍스트 학습 요약">
-            <div className="reading-summary-card compact-stat-card reading-summary-card-new">
-              <span>새 단어</span>
-              <strong>{summary.newCount}개</strong>
-            </div>
-            <div className="reading-summary-card compact-stat-card reading-summary-card-unknown">
-              <span>모르는 단어</span>
-              <strong>{summary.unknownCount}개</strong>
-            </div>
-            <div className="reading-summary-card compact-stat-card reading-summary-card-uncertain">
-              <span>헷갈리는 단어</span>
-              <strong>{summary.uncertainCount}개</strong>
-            </div>
-            <div className="reading-summary-card compact-stat-card reading-summary-card-known">
-              <span>이미 아는 단어</span>
-              <strong>{summary.knownCount}개</strong>
-            </div>
-            <div className="reading-summary-card compact-stat-card reading-summary-card-unclassified">
-              <span>미분류 단어</span>
-              <strong>{summary.unclassifiedCount}개</strong>
-            </div>
-          </div>
-          <div className="reading-summary-actions">
-            {saveButtons.map(({ mode, label, hint, variant }) => (
-              <button
-                key={mode}
-                type="button"
-                className={`${variant === "ghost" ? "ghost-button" : "secondary-button"} reading-summary-save-button`}
-                onClick={() => onSaveBatch(mode)}
-                disabled={isSavingBatch || summary.saveableCount === 0}
-                title={hint}
-              >
-                {isSavingBatch ? "저장 중..." : label}
-              </button>
-            ))}
-          </div>
-          {summary.saveableCount === 0 ? (
-            <p className="muted-text reading-summary-hint">
-              저장 가능한 단어가 없어요. 이미 학습 중인 단어일 수 있습니다.
-            </p>
-          ) : isSavingBatch ? (
-            <p className="muted-text reading-summary-hint">저장 중입니다...</p>
-          ) : null}
-          {message ? (
-            <p className={`message message--${messageTone} reading-summary-message`}>
-              {message}
-            </p>
-          ) : null}
-          <div className="reading-summary-next-actions">
-            <button
-              type="button"
-              className="reading-summary-cta-button"
-              onClick={onStartStudyFromSaved}
-              disabled={!canStartFromSaved}
-              title={
-                canStartFromSaved
-                  ? undefined
-                  : "먼저 단어를 저장하면 바로 학습으로 이동할 수 있습니다."
-              }
-            >
-              <CardsIcon className="button-icon" />
-              저장한 단어로 바로 학습
-            </button>
-            <button
-              type="button"
-              className="secondary-button reading-summary-cta-button"
-              onClick={onGoToVocab}
-            >
-              단어장 보기
-            </button>
-          </div>
-        </section>
+        <div className="reader-toolbar" role="group" aria-label="읽기 작업 상태">
+          <span className="reader-toolbar-chip">
+            저장 가능 {summary.saveableCount}개
+          </span>
+          <span className="reader-toolbar-chip reader-toolbar-chip-accent">
+            바구니에 담음 {selectedCount}개
+          </span>
+        </div>
       ) : null}
 
       {hasResult ? (
@@ -468,6 +487,9 @@ export function ReadingTab({
           initialScrollFraction={scrollFraction}
           onScrollProgressChange={onScrollProgressChange}
           externalSelectRequest={externalSelectRequest}
+          isTokenInBasket={isTokenInBasket}
+          canAddToBasket={canAddToBasket}
+          onToggleBasket={onToggleBasket}
           meaningEditItemId={meaningEditItemId}
           meaningEditDraft={meaningEditDraft}
           isSavingMeaningEdit={isSavingMeaningEdit}
@@ -494,21 +516,125 @@ export function ReadingTab({
         </p>
       )}
 
-      {/* Word list follows the reading card, not before it -- for long
-          chunk-analyzed texts a dense candidate list would otherwise push
-          the actual reading experience (the core screen) far down the
-          page. */}
+      {summary ? (
+        <section className="panel-card save-tray">
+          <div className="panel-card-header save-tray-header">
+            <div>
+              <h3 className="panel-card-title">
+                <BrandSectionBadge icon={FolderIcon} />
+                저장 바구니
+              </h3>
+              <p className="panel-card-description">
+                담은 단어를 확인하고 저장하세요.
+              </p>
+            </div>
+            <span className="save-tray-count-badge">
+              {selectedCount}개 담음
+            </span>
+          </div>
+
+          <div className="save-tray-stats" role="group" aria-label="상태별 단어 수">
+            <span className="save-tray-stat-pill save-tray-stat-new">
+              새 단어 {summary.newCount}개
+            </span>
+            <span className="save-tray-stat-pill save-tray-stat-unknown">
+              모르는 단어 {summary.unknownCount}개
+            </span>
+            <span className="save-tray-stat-pill save-tray-stat-uncertain">
+              헷갈리는 단어 {summary.uncertainCount}개
+            </span>
+            <span className="save-tray-stat-pill save-tray-stat-unclassified">
+              미분류 {summary.unclassifiedCount}개
+            </span>
+            <span className="save-tray-stat-pill save-tray-stat-known">
+              아는 단어 {summary.knownCount}개
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="save-tray-primary-button"
+            onClick={() => void handleSaveSelected()}
+            disabled={selectedCount === 0 || isSavingBatch}
+            title={
+              selectedCount === 0
+                ? "원문에서 단어를 눌러 바구니에 담아주세요."
+                : undefined
+            }
+          >
+            <FolderIcon className="button-icon" />
+            {isSavingBatch ? "저장 중..." : `담은 단어 저장 (${selectedCount})`}
+          </button>
+
+          <div className="save-tray-quick-save">
+            <span className="save-tray-quick-save-label">빠르게 전체 저장</span>
+            <div className="reading-summary-actions">
+              {saveButtons.map(({ mode, label, hint, variant }) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`${variant === "ghost" ? "ghost-button" : "secondary-button"} reading-summary-save-button`}
+                  onClick={() => onSaveBatch(mode)}
+                  disabled={isSavingBatch || summary.saveableCount === 0}
+                  title={hint}
+                >
+                  {isSavingBatch ? "저장 중..." : label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {summary.saveableCount === 0 ? (
+            <p className="muted-text reading-summary-hint">
+              저장 가능한 단어가 없어요. 이미 학습 중인 단어일 수 있습니다.
+            </p>
+          ) : null}
+          {message ? (
+            <p className={`message message--${messageTone} reading-summary-message`}>
+              {message}
+            </p>
+          ) : null}
+
+          <div className="reading-summary-next-actions">
+            <button
+              type="button"
+              className="reading-summary-cta-button"
+              onClick={onStartStudyFromSaved}
+              disabled={!canStartFromSaved}
+              title={
+                canStartFromSaved
+                  ? undefined
+                  : "먼저 단어를 저장하면 바로 학습으로 이동할 수 있습니다."
+              }
+            >
+              <CardsIcon className="button-icon" />
+              저장한 단어로 바로 학습
+            </button>
+            <button
+              type="button"
+              className="secondary-button reading-summary-cta-button"
+              onClick={onGoToVocab}
+            >
+              어휘 노트 보기
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Word list follows the reading card and save tray, not before them
+          -- for long chunk-analyzed texts a dense candidate list would
+          otherwise push the actual reading experience (the core screen)
+          far down the page. Collapsed by default (design: word list is a
+          secondary/reference panel, not the main event). */}
       {hasResult ? (
         <ReadingVocabPanel
-          tokens={tokens}
-          vocabItems={vocabItems}
-          selectedDeckId={selectedDeckId}
+          entries={entries}
           selectedTokenKey={selectedTokenKey}
           onSelectToken={handleVocabPanelSelect}
-          isSaving={isSavingBatch}
-          onSaveSelected={onSaveSelected}
-          message={message}
-          messageTone={messageTone}
+          selectedWordKeys={selectedWordKeys}
+          onToggleSelect={toggleSelect}
+          onReplaceSelection={replaceSelection}
+          onClearSelection={clearSelection}
         />
       ) : null}
     </section>
