@@ -3677,21 +3677,6 @@ input.reading-vocab-item-checkbox {
   border-top: 1px solid var(--border);
 }
 
-/* Groups "이 덱 학습하기" with its one-line caption so the pair reads as
-   the row's clear primary action, not an equal-weight button next to
-   "+ 단어 직접 추가" / "덱/공유 관리". */
-.vocab-action-group-primary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.vocab-action-group-hint {
-  color: var(--muted);
-  font-size: 12px;
-}
-
 /* Vocab tab hero -- "내 학습 라이브러리" framing above the search/filter
    toolbar, reusing the same warm-paper card look and hero-actions layout
    the home dashboard and reading tab already use. */
@@ -3707,30 +3692,49 @@ input.reading-vocab-item-checkbox {
   margin-top: 2px;
 }
 
-.vocab-hero-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+/* Compact hero (구현1) -- replaces the old 3-button action row + dotted
+   divider + 4-cell stat grid with one chip row and a 2-button primary
+   pair, so the note screen opens light instead of reading as a stats
+   dashboard. */
+.vocab-hero-compact {
   gap: 10px;
 }
 
-.vocab-hero-stat {
-  display: grid;
-  gap: 4px;
-  padding: 10px 12px;
+.vocab-hero-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.vocab-hero-chip {
+  padding: 3px 10px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--soft-bg);
-}
-
-.vocab-hero-stat span {
-  color: var(--muted);
+  color: var(--text-secondary);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.vocab-hero-stat strong {
-  color: var(--text);
-  font-size: 18px;
+.vocab-hero-chip-accent {
+  border-color: var(--border-strong);
+  background: var(--paper-bg);
+  color: var(--primary-dark);
+}
+
+.vocab-hero-actions-compact {
+  margin: 0;
+}
+
+/* "오늘 복습하기" / "덱 책장" -- kept, but demoted below the primary pair
+   as small text links instead of full-size buttons (구현1: 관리 도구처럼
+   보이는 액션 버튼 묶음 줄이기). */
+.vocab-hero-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .vocab-search-wrap {
@@ -3806,65 +3810,106 @@ input.reading-vocab-item-checkbox {
   color: #6b5f3f;
 }
 
-/* Word list -- learning-library cards instead of an admin data table.
-   Two columns once there's room so a shelf of saved words reads as a
-   dense library rather than a stack of oversized panels; an open inline
-   edit form (.vocab-item-card-editing) spans both columns so its full
-   field grid has room to breathe. */
-.vocab-list {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-
-@media (min-width: 860px) {
-  .vocab-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .vocab-item-card-editing {
-    grid-column: 1 / -1;
-  }
-}
-
-.vocab-item-card {
-  display: grid;
-  align-content: start;
-  gap: 8px;
+/* Word list -- a compact, scannable list of thin rows (구현3) instead of
+   the old two-column stack of bordered/shadowed cards, so many words fit
+   per screen and the note reads as a list to skim, not a card gallery.
+   Divider lines between rows replace per-card borders/shadows; a row only
+   grows once its own detail panel is expanded (.vocab-row-expanded). */
+.vocab-list-compact {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--screen-accent, var(--accent));
   border-radius: 12px;
-  padding: 14px;
+  overflow: hidden;
   background: var(--panel-bg);
-  box-shadow: 0 6px 16px rgba(120, 98, 40, 0.04);
+}
+
+.vocab-row {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
   transition:
-    box-shadow var(--motion-fast) var(--ease-soft),
-    transform var(--motion-fast) var(--ease-soft),
-    border-color var(--motion-fast) var(--ease-soft);
+    background var(--motion-fast) var(--ease-soft),
+    border-left-color var(--motion-fast) var(--ease-soft);
 }
 
-.vocab-item-card:hover {
-  border-top-color: var(--border-strong);
-  border-right-color: var(--border-strong);
-  border-bottom-color: var(--border-strong);
-  box-shadow: 0 10px 22px rgba(120, 98, 40, 0.08);
-  transform: translateY(-2px);
+.vocab-row:last-child {
+  border-bottom: none;
 }
 
-.vocab-item-top {
+.vocab-row:hover {
+  background: var(--soft-bg);
+}
+
+.vocab-row-expanded {
+  background: var(--soft-bg);
+  border-left-color: var(--screen-accent, var(--accent));
+}
+
+.vocab-row-main {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  align-items: center;
+  gap: 8px 10px;
 }
 
-.vocab-item-headword {
+.vocab-row-headword {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
+  flex: 0 1 auto;
   min-width: 0;
+}
+
+.vocab-row-meaning {
+  flex: 1 1 140px;
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.vocab-row-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.vocab-row-due-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--paper-bg);
+  color: var(--primary-dark);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.vocab-row-toggle {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 4px 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.vocab-row-toggle .reading-vocab-collapse-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.vocab-row-detail {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
 }
 
 .vocab-item-surface {
@@ -4374,18 +4419,12 @@ input.reading-vocab-item-checkbox {
     align-items: stretch;
   }
 
-  .vocab-action-group-primary {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .vocab-hero-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .vocab-item-top {
-    flex-direction: column;
+  .vocab-row-main {
     align-items: flex-start;
+  }
+
+  .vocab-row-toggle {
+    width: auto;
   }
 
   .vocab-item-actions {
