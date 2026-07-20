@@ -18,12 +18,12 @@ import {
   BookIcon,
   CardsIcon,
   ChatIcon,
+  CheckCircleIcon,
+  ClockIcon,
   FolderIcon,
   HomeIcon,
-  InfoIcon,
   ShareIcon,
   ShieldIcon,
-  SparkleIcon,
 } from "../components/icons";
 import { InfoSection } from "../components/InfoSection";
 import { MeaningFeedbackModal } from "../components/MeaningFeedbackModal";
@@ -165,18 +165,26 @@ const EMAIL_FORMAT_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // `if len(request.password) < 8`) -- never invent a stricter policy here.
 const AUTH_MIN_PASSWORD_LENGTH = 8;
 
+// User-facing screen names, "조용한 서재의 학습 책상" concept -- route/state
+// keys (TabKey) and every internal handler/variable stay on their original
+// functional names (analyze/reading/vocab/study/shared/info) on purpose, so
+// this rename never touches routing or state management, only what people
+// actually read. mobileLabel is a shorter form for the bottom tab bar only
+// (falls back to `label` when omitted) -- the sidebar/feedback-modal screen
+// label always uses the full `label`.
 const tabs: Array<{
   key: TabKey;
   label: string;
+  mobileLabel?: string;
   icon: (props: { className?: string }) => JSX.Element;
 }> = [
-  { key: "home", label: "홈", icon: HomeIcon },
-  { key: "analyze", label: "분석", icon: SparkleIcon },
-  { key: "reading", label: "읽기", icon: BookIcon },
-  { key: "vocab", label: "단어장", icon: FolderIcon },
-  { key: "study", label: "학습", icon: CardsIcon },
-  { key: "shared", label: "공유덱", icon: ShareIcon },
-  { key: "info", label: "정보", icon: InfoIcon },
+  { key: "home", label: "오늘의 책상", mobileLabel: "책상", icon: HomeIcon },
+  { key: "analyze", label: "빠른 분류", mobileLabel: "분류", icon: CheckCircleIcon },
+  { key: "reading", label: "원문 읽기", mobileLabel: "읽기", icon: BookIcon },
+  { key: "vocab", label: "어휘 노트", mobileLabel: "노트", icon: FolderIcon },
+  { key: "study", label: "복습", icon: CardsIcon },
+  { key: "shared", label: "덱 책장", mobileLabel: "덱", icon: ShareIcon },
+  { key: "info", label: "기록", icon: ClockIcon },
 ];
 
 function createEmptySessionCounts(): SessionReviewCounts {
@@ -2839,12 +2847,15 @@ export default function HomePage() {
 
   // Builds one NavAction from the existing `tabs` entry for `key` --
   // sidebar/bottom-nav/more-sheet all resolve through handleTabChange, so
-  // there is exactly one place tab switches actually happen.
-  function navFor(key: TabKey): NavAction {
+  // there is exactly one place tab switches actually happen. `mobile: true`
+  // swaps in the tab's shorter mobileLabel (falling back to the full label
+  // when none is set) for the bottom tab bar, which has much less width to
+  // work with than the sidebar.
+  function navFor(key: TabKey, options?: { mobile?: boolean }): NavAction {
     const tab = tabs.find((item) => item.key === key)!;
     return {
       key: tab.key,
-      label: tab.label,
+      label: options?.mobile ? tab.mobileLabel ?? tab.label : tab.label,
       icon: tab.icon,
       onClick: () => void handleTabChange(key),
       isActive: activeTab === key,
@@ -2860,23 +2871,23 @@ export default function HomePage() {
 
   const sidebarGroups: NavGroup[] = [
     {
-      label: "MAIN",
+      label: "학습",
       items: [navFor("home"), navFor("reading"), navFor("analyze"), navFor("study")],
     },
-    { label: "LIBRARY", items: [navFor("vocab"), navFor("shared")] },
-    { label: "TOOLS", items: [feedbackNav, navFor("info")] },
+    { label: "서재", items: [navFor("vocab"), navFor("shared")] },
+    { label: "메모", items: [feedbackNav, navFor("info")] },
   ];
 
   const mobilePrimaryNavItems: NavAction[] = [
-    navFor("home"),
-    navFor("reading"),
-    navFor("study"),
-    navFor("vocab"),
+    navFor("home", { mobile: true }),
+    navFor("reading", { mobile: true }),
+    navFor("study", { mobile: true }),
+    navFor("vocab", { mobile: true }),
   ];
   const mobileMoreNavItems: NavAction[] = [
-    navFor("shared"),
-    navFor("analyze"),
-    navFor("info"),
+    navFor("shared", { mobile: true }),
+    navFor("analyze", { mobile: true }),
+    navFor("info", { mobile: true }),
     feedbackNav,
   ];
 

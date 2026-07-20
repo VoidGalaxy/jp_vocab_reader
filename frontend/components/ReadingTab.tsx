@@ -170,10 +170,9 @@ export function ReadingTab({
   return (
     <section className="tab-panel reading-panel" aria-live="polite">
       <div className="reading-hero">
-        <h2 className="reading-hero-title">원문으로 읽고 바로 단어장에 담기</h2>
+        <h2 className="reading-hero-title">원문으로 읽고 바로 노트에 담기</h2>
         <p className="reading-hero-subtitle">
-          일본어 원문을 붙여넣고 분석하면 모르는 단어만 골라 문맥 예문과
-          함께 저장하고, 바로 복습으로 이어갈 수 있습니다.
+          원문을 붙여넣고 모르는 단어를 바로 담아보세요.
         </p>
       </div>
 

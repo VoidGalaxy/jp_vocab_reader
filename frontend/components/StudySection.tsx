@@ -200,8 +200,8 @@ function StudyQuickStartHero({
       <div className="study-hero-header">
         <CardsIcon className="study-hero-icon" />
         <div>
-          <h2>학습 시작</h2>
-          <p>오늘 복습할 단어를 문맥 예문과 함께 확인하세요.</p>
+          <h2>복습 시작</h2>
+          <p>저장한 단어를 문맥 예문과 함께 다시 확인해요.</p>
         </div>
       </div>
       <div className="study-cta-grid" role="group" aria-label="오늘 학습 시작">

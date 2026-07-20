@@ -232,10 +232,9 @@ export function VocabSection({
     <section className="tab-panel vocab-panel" aria-live="polite">
       <section className="panel-card hero-card vocab-hero-card">
         <div className="panel-card-header">
-          <h2 className="panel-card-title">내 단어장</h2>
+          <h2 className="panel-card-title">어휘 노트</h2>
           <p className="panel-card-description">
-            읽기 탭에서 저장한 단어를 상태별로 관리하고, 문맥 예문과 함께
-            복습하세요.
+            읽으면서 담은 단어들이 쌓이는 곳입니다.
           </p>
         </div>
         <div className="landing-hero-actions">
@@ -914,11 +913,8 @@ export function VocabSection({
       ) : (
         <div className="empty-guide">
           <StudyCompanion mood="empty" />
-          <p>아직 저장한 단어가 없습니다.</p>
-          <p className="muted-text">
-            읽기 탭에서 모르는 단어를 저장하면 여기에 모입니다. 문맥 예문과
-            함께 복습할 단어장을 만들어보세요.
-          </p>
+          <p>아직 저장한 단어가 없어요.</p>
+          <p className="muted-text">원문 읽기에서 모르는 단어를 담아보세요.</p>
           <div className="study-actions">
             <button
               type="button"

@@ -243,19 +243,18 @@ export function SharedDeckSection({
         <div className="panel-card-header">
           <h2 className="panel-card-title">
             <BrandSectionBadge icon={BookIcon} />
-            공유덱
+            덱 책장
           </h2>
           <p className="panel-card-description">
-            다른 사용자가 공유한 어휘 덱과 JLPT 추천 어휘를 가져와 문맥
-            예문과 함께 학습하세요.
+            추천 어휘 덱을 둘러보고 내 노트에 가져오세요.
           </p>
         </div>
         <div className="landing-hero-actions">
           <button type="button" onClick={onGoToVocab}>
-            <ShareIcon className="button-icon" />내 단어장 공유하기
+            <ShareIcon className="button-icon" />어휘 노트 공유하기
           </button>
           <button type="button" className="secondary-button" onClick={onGoToVocab}>
-            <FolderIcon className="button-icon" />내 단어장 보기
+            <FolderIcon className="button-icon" />어휘 노트 보기
           </button>
           <button
             type="button"
@@ -269,7 +268,7 @@ export function SharedDeckSection({
         </div>
         <p className="info-strip">
           <ShieldIcon className="info-strip-icon" />
-          가져온 덱은 내 단어장에 바로 추가돼요. 원문 전체는 포함되지 않습니다.
+          가져온 덱은 내 노트에 바로 추가돼요. 원문 전체는 들어가지 않습니다.
         </p>
       </section>
 
@@ -288,7 +287,7 @@ export function SharedDeckSection({
             className="secondary-button compact-button"
             onClick={onGoToVocab}
           >
-            단어장 탭으로 이동
+            어휘 노트로 이동
           </button>
         </div>
       ) : null}
@@ -328,18 +327,15 @@ export function SharedDeckSection({
       ) : (
         <div className="empty-guide">
           <StudyCompanion mood="reading" />
-          <p>아직 공유된 덱이 없습니다.</p>
-          <p className="muted-text">
-            내 단어장을 공유하거나, 단어장 탭에서 JLPT 추천 어휘 덱을 가져와
-            보세요.
-          </p>
+          <p>가져올 수 있는 추천 덱을 살펴보세요.</p>
+          <p className="muted-text">내 어휘 노트를 공유하거나 추천 덱을 가져올 수 있어요.</p>
           <button
             type="button"
             className="ghost-button compact-button"
             onClick={onGoToVocab}
           >
             <FolderIcon className="button-icon" />
-            단어장 탭으로 이동
+            어휘 노트로 이동
           </button>
         </div>
       )}

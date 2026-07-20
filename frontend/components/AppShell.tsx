@@ -71,7 +71,7 @@ export function AppShell({
           </span>
           <div className="app-sidebar-brand-text">
             <strong>일본어 단어장</strong>
-            <span>원문 읽기 기반 단어 학습</span>
+            <span>조용한 서재의 학습 책상</span>
           </div>
         </div>
         {groups.map((group) => (

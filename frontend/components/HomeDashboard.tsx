@@ -65,12 +65,12 @@ const quickEntries = [
   },
   {
     icon: FolderIcon,
-    label: "내 단어장",
+    label: "어휘 노트",
     description: "모르는 단어와 헷갈리는 단어를 관리합니다.",
   },
   {
     icon: ShareIcon,
-    label: "공유덱",
+    label: "덱 책장",
     description: "JLPT 추천 어휘와 공유된 덱을 가져옵니다.",
   },
 ] as const;
@@ -99,8 +99,8 @@ export function HomeDashboard({
   const quickEntryHandlers: Record<string, () => void> = {
     "원문 읽기": onStartReading,
     "오늘 복습": onStartTodayReview,
-    "내 단어장": onGoToVocab,
-    공유덱: onGoToShared,
+    "어휘 노트": onGoToVocab,
+    "덱 책장": onGoToShared,
   };
 
   const continueCard = recentlySavedVocabItemIdsCount > 0
@@ -138,16 +138,15 @@ export function HomeDashboard({
               <div className="home-hero-main">
                 <span className="home-hero-badge">
                   <BookIcon className="home-hero-badge-icon" />
-                  일본어 원문 학습
+                  오늘의 책상
                 </span>
                 <h2 className="landing-hero-title">
-                  일본어 원문을 읽으며
+                  오늘 읽을 원문을
                   <br />
-                  나만의 단어장을 만들어보세요.
+                  펼쳐볼까요?
                 </h2>
                 <p className="landing-hero-subtitle">
-                  웹소설, 원서, 기사 속 모르는 단어를 골라 문맥 예문과 함께
-                  복습합니다.
+                  원문을 읽고, 모르는 단어를 내 노트에 담아보세요.
                 </p>
                 <div className="landing-hero-actions">
                   <button type="button" onClick={onStartReading}>
@@ -315,7 +314,7 @@ export function HomeDashboard({
 
           <p className="info-strip">
             <ShieldIcon className="info-strip-icon" />
-            원문 전체는 저장하지 않아요. 단어와 짧은 예문만 단어장·공유덱에 남습니다.
+            원문 전체는 서버에 저장하지 않아요.
           </p>
 
           <section className="panel-card home-recent-card">

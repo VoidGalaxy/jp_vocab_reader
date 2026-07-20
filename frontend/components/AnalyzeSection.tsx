@@ -109,8 +109,7 @@ export function AnalyzeSection({
       <div className="reading-hero">
         <h2 className="reading-hero-title">단어 카드로 빠르게 분류하기</h2>
         <p className="reading-hero-subtitle">
-          원문을 붙여넣고 단어를 한 장씩 카드로 넘기며 완벽히 아는 단어,
-          헷갈리는 단어, 모르는 단어로 분류하세요.
+          추출된 단어를 아는/헷갈리는/모르는 단어로 빠르게 나눠보세요.
         </p>
       </div>
 

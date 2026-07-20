@@ -16,6 +16,13 @@ export function InfoSection({
 }: InfoSectionProps) {
   return (
     <section className="tab-panel" aria-live="polite">
+      <div className="reading-hero">
+        <h2 className="reading-hero-title">기록</h2>
+        <p className="reading-hero-subtitle">
+          오늘의 학습 흐름과 복습 상태를 확인하세요.
+        </p>
+      </div>
+
       <StatsPanel
         title="전체 학습 통계"
         stats={stats}
@@ -46,7 +53,7 @@ export function InfoSection({
             </h2>
           </div>
           <p className="panel-card-description">
-            원문 전체는 저장하지 않아요. 단어와 짧은 예문만 단어장에 남습니다.
+            원문 전체는 저장하지 않아요. 단어와 짧은 예문만 노트에 남습니다.
           </p>
         </section>
 
