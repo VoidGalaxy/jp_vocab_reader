@@ -3647,6 +3647,10 @@ input.reading-vocab-item-checkbox {
   gap: 16px;
 }
 
+.shared-hero-card {
+  border-top: 3px solid var(--screen-accent, var(--accent));
+}
+
 /* One "shelf" of cards under a small heading -- a display-only grouping of
    the same fetched deck list (recommended / mine / everyone else's), so the
    grid reads as a sorted bookshelf instead of one undifferentiated pile. */
@@ -3895,10 +3899,16 @@ input.reading-vocab-item-checkbox {
   white-space: nowrap;
 }
 
+/* Small rotated "가져옴" stamp -- dashed border + slight tilt echoes the
+   completion stamp used elsewhere (.brand-stamp) so "already imported"
+   reads as a little postmark on the card rather than a plain status pill,
+   while keeping its own success-green color (this badge means "done in a
+   good way", not the same thing .brand-stamp's screen-accent tint means
+   elsewhere). */
 .shared-deck-imported-badge {
   display: inline-flex;
   align-items: center;
-  border: 1px solid #bfe3cc;
+  border: 1.5px dashed #7fbd97;
   border-radius: 999px;
   padding: 3px 10px;
   background: #f1faf4;
@@ -3906,6 +3916,7 @@ input.reading-vocab-item-checkbox {
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
+  transform: rotate(-2deg);
 }
 
 .shared-deck-description {

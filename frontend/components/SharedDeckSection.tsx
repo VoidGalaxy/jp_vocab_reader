@@ -205,7 +205,7 @@ export function SharedDeckSection({
               ? "가져오는 중..."
               : alreadyImported
                 ? "다시 가져오기"
-                : "내 덱으로 가져오기"}
+                : "내 노트에 가져오기"}
           </button>
           {deck.is_owner ? (
             <button
@@ -302,7 +302,7 @@ export function SharedDeckSection({
           <>
             {recommendedDecks.length > 0 ? (
               <div className="shared-deck-shelf">
-                <h3 className="shared-deck-shelf-title">추천 어휘 덱</h3>
+                <h3 className="shared-deck-shelf-title">JLPT 추천 어휘 서가</h3>
                 <div className="shared-deck-grid">
                   {recommendedDecks.map(renderDeckCard)}
                 </div>
@@ -316,7 +316,7 @@ export function SharedDeckSection({
             ) : null}
             {otherDecks.length > 0 ? (
               <div className="shared-deck-shelf">
-                <h3 className="shared-deck-shelf-title">공개 공유덱</h3>
+                <h3 className="shared-deck-shelf-title">다른 학습자의 덱</h3>
                 <div className="shared-deck-grid">{otherDecks.map(renderDeckCard)}</div>
               </div>
             ) : null}
@@ -390,7 +390,7 @@ export function SharedDeckSection({
                   ? "가져오는 중..."
                   : selectedAlreadyImported
                     ? "다시 가져오기"
-                    : "내 덱으로 가져오기"}
+                    : "내 노트에 가져오기"}
               </button>
               {selectedDeck.is_owner ? (
                 <button
