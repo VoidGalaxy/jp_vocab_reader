@@ -1,11 +1,11 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { BrandEmptyIllustration } from "./BrandElements";
+import { BrandEmptyIllustration, StudyCompanion } from "./BrandElements";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
-import { CheckCircleIcon, ShieldIcon, SparkleIcon } from "./icons";
+import { ShieldIcon, SparkleIcon } from "./icons";
 import { getDisplayMeaning, StatusSelect, statusLabels } from "./shared";
 import type {
   Deck,
@@ -105,7 +105,7 @@ export function AnalyzeSection({
     : "";
 
   return (
-    <section className="tab-panel" aria-live="polite">
+    <section className="tab-panel analyze-panel" aria-live="polite">
       <div className="reading-hero">
         <h2 className="reading-hero-title">단어 카드로 빠르게 분류하기</h2>
         <p className="reading-hero-subtitle">
@@ -333,7 +333,8 @@ export function AnalyzeSection({
               </div>
             ) : (
               <div className="classification-complete">
-                <CheckCircleIcon className="complete-card-icon" />
+                <StudyCompanion mood="done" />
+                <span className="brand-stamp">완료</span>
                 <h3>분류 완료</h3>
                 <div className="classification-summary final-summary">
                   <span>{statusLabels.known} {knownCount}개</span>

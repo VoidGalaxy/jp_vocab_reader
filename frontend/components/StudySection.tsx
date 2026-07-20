@@ -1,6 +1,6 @@
 "use client";
 
-import { BrandEmptyIllustration } from "./BrandElements";
+import { BrandEmptyIllustration, StudyCompanion } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import type {
   Deck,
@@ -18,7 +18,6 @@ import {
   CardsIcon,
   CheckCircleIcon,
   ClockIcon,
-  InboxIcon,
   RotateIcon,
   ShareIcon,
   ZapIcon,
@@ -293,7 +292,7 @@ export function StudySection({
   const isReviewingActive = Boolean(currentItem) && !isComplete;
 
   return (
-    <section className="tab-panel" aria-live="polite">
+    <section className="tab-panel study-panel" aria-live="polite">
       {!isReviewingActive ? (
         <>
           <StudyCompactStats stats={stats} />
@@ -398,7 +397,7 @@ export function StudySection({
 
       {hasStarted && !currentItem && !isComplete ? (
         <div className="study-card study-ready-card">
-          <BrandEmptyIllustration icon={InboxIcon} />
+          <StudyCompanion mood="empty" />
           <h3>{emptyMessages[studyMode]}</h3>
           <p>{emptySecondaryMessages[studyMode]}</p>
           <div className="study-actions">
@@ -563,8 +562,8 @@ export function StudySection({
 
       {isComplete ? (
         <div className="study-card complete-card">
-          <CheckCircleIcon className="complete-card-icon" />
-          <span className="memo-label">완료</span>
+          <StudyCompanion mood="done" />
+          <span className="brand-stamp">완료</span>
           <h3>
             {studyMode === "recent" ? "방금 저장한 단어 학습 완료!" : "오늘 학습 완료!"}
           </h3>

@@ -4,6 +4,7 @@ import {
   BrandEmptyIllustration,
   BrandReadingFlowIllustration,
   BrandSectionBadge,
+  StudyCompanion,
 } from "./BrandElements";
 import {
   BookIcon,
@@ -171,7 +172,14 @@ export function HomeDashboard({
                   </button>
                 </div>
               </div>
-              <BrandReadingFlowIllustration />
+              <div className="home-hero-illustration-wrap">
+                <StudyCompanion
+                  mood="welcome"
+                  size="md"
+                  className="home-hero-companion"
+                />
+                <BrandReadingFlowIllustration />
+              </div>
             </div>
           </section>
 

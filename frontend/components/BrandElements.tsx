@@ -55,6 +55,76 @@ export function BrandReadingFlowIllustration() {
   );
 }
 
+// The brand character: a small "bookmark companion" that reuses the same
+// ribbon-notch shape as BrandReadingFlowIllustration's bookmark tab (one
+// consistent bookmark motif, not two unrelated shapes) with a plain paper
+// "face plate" and a two-dot-and-one-line expression on top. Deliberately
+// primitive (polygon + rect + circles + one path) instead of a detailed
+// illustration -- a small recurring companion, not artwork that competes
+// with the screen's actual content. Mood only changes the mouth curve and,
+// for the two "positive" moods, adds one tiny sparkle -- keeps every
+// variant reading as the same character instead of drifting per screen.
+export type CompanionMood =
+  | "welcome"
+  | "reading"
+  | "empty"
+  | "review"
+  | "done"
+  | "feedback"
+  | "error";
+
+const companionMouthPaths: Record<CompanionMood, string> = {
+  welcome: "M23 44q5 6 10 0",
+  reading: "M25 45q4 3 8 0",
+  empty: "M24 46h10",
+  review: "M23 45q5 5 10 0",
+  done: "M21 43q7 8 14 0",
+  feedback: "M25 44q4 4 8 0",
+  error: "M24 47q5 -3 10 0",
+};
+
+export function StudyCompanion({
+  mood = "empty",
+  size = "sm",
+  className,
+}: {
+  mood?: CompanionMood;
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}) {
+  const showSpark = mood === "welcome" || mood === "done";
+  return (
+    <span
+      className={`study-companion study-companion-${size}${className ? ` ${className}` : ""}`}
+      aria-hidden="true"
+    >
+      <svg viewBox="0 0 64 88" className="study-companion-svg">
+        <polygon
+          className="study-companion-body"
+          points="4,2 60,2 60,84 32,64 4,84"
+        />
+        <rect
+          className="study-companion-face"
+          x="12"
+          y="14"
+          width="40"
+          height="34"
+          rx="12"
+        />
+        <circle className="study-companion-eye" cx="26" cy="32" r="2.6" />
+        <circle className="study-companion-eye" cx="38" cy="32" r="2.6" />
+        <path className="study-companion-mouth" d={companionMouthPaths[mood]} />
+        {showSpark ? (
+          <path
+            className="study-companion-spark"
+            d="M52 6 L54 11 L59 12 L54 13 L52 18 L50 13 L45 12 L50 11 Z"
+          />
+        ) : null}
+      </svg>
+    </span>
+  );
+}
+
 export type DeckCoverTone = "recommended" | "mine" | "shared";
 
 const deckCoverLabels: Record<DeckCoverTone, string> = {

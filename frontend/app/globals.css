@@ -45,6 +45,18 @@
   --status-unknown-bg: #fdf1f1;
   --status-unclassified-fg: var(--muted);
   --status-unclassified-line: #cebfa0;
+  /* Per-screen accent tones (design improvement: 화면별 포인트 컬러) -- each
+     tab wraps itself in a scope class below that sets --screen-accent /
+     --screen-accent-soft from these. Every consumer falls back to the
+     existing --primary/--soft-bg pair, so screens that don't opt in (or
+     any rule added before this) look exactly as before -- this only adds
+     variation, it never replaces the shared base palette. */
+  --tone-amber: #c98a2c;
+  --tone-ink-green: #3f6b4a;
+  --tone-coral: #c1694a;
+  --tone-indigo: #5a55a0;
+  --tone-ink-brown: #6b4a30;
+  --tone-dusty-blue: #4f7089;
   /* Spacing/radius scale -- most rules in this file still hardcode their
      own values (pre-existing, left as-is to avoid a risky mass rename),
      but new shared primitives below use this scale so they stay
@@ -63,6 +75,43 @@
     "Yu Gothic",
     "Malgun Gothic",
     sans-serif;
+}
+
+/* Per-screen accent scopes -- see --tone-* tokens above. Each tab's root
+   section carries one of these classes so its section badges, empty-state
+   icon, and brand character pick up a screen-specific tint instead of the
+   single app-wide --primary everywhere. Kept to the accent + its soft
+   background only -- text, borders, cards and status colors stay on the
+   shared tokens so readability and the app's one warm surface are
+   unaffected. */
+.home-dashboard {
+  --screen-accent: var(--tone-amber);
+  --screen-accent-soft: #f7ecd6;
+}
+
+.reading-panel {
+  --screen-accent: var(--tone-ink-green);
+  --screen-accent-soft: #e9f2ea;
+}
+
+.analyze-panel {
+  --screen-accent: var(--tone-coral);
+  --screen-accent-soft: #f7e9e2;
+}
+
+.study-panel {
+  --screen-accent: var(--tone-indigo);
+  --screen-accent-soft: #ece9fa;
+}
+
+.vocab-panel {
+  --screen-accent: var(--tone-ink-brown);
+  --screen-accent-soft: #f1e7da;
+}
+
+.shared-deck-section {
+  --screen-accent: var(--tone-dusty-blue);
+  --screen-accent-soft: #e7eef3;
 }
 
 * {
@@ -732,6 +781,25 @@ button {
   padding: 12px 20px 26px 6px;
 }
 
+/* Wraps the companion + flow-preview illustration together so both hide as
+   one unit on mobile (design constraint: character never competes with the
+   hero's actual CTAs on small screens). */
+.home-hero-illustration-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+/* The companion peeks out from the flow-preview card's top-left corner,
+   like a bookmark left sticking out of a small stack of notes -- echoes
+   the same "loose pile of paper" feel as the tilted step cards below it
+   without covering any of them. */
+.home-hero-companion {
+  position: absolute;
+  top: -10px;
+  left: -14px;
+  z-index: 1;
+}
+
 .home-hero-preview {
   display: flex;
   align-items: center;
@@ -1154,7 +1222,7 @@ button {
      illustration (steps, word-card, bookmark) is a wide-screen extra, not
      essential content, so it's dropped rather than stacked underneath the
      CTAs. */
-  .home-hero-illustration {
+  .home-hero-illustration-wrap {
     display: none;
   }
 
@@ -1340,8 +1408,8 @@ button {
   height: 13px;
   padding: 5px;
   border-radius: 999px;
-  background: var(--soft-bg);
-  color: var(--primary);
+  background: var(--screen-accent-soft, var(--soft-bg));
+  color: var(--screen-accent, var(--primary));
 }
 
 .panel-card-description {
@@ -1932,11 +2000,90 @@ select {
   margin-bottom: 6px;
   padding: 11px;
   border-radius: 999px;
-  background: var(--soft-bg);
+  background: var(--screen-accent-soft, var(--soft-bg));
   box-shadow:
     0 6px 14px rgba(120, 98, 40, 0.1),
     inset 0 0 0 1px var(--border);
-  color: var(--primary);
+  color: var(--screen-accent, var(--primary));
+}
+
+/* Brand character (StudyCompanion) -- a small recurring bookmark-shaped
+   mascot with a plain paper face plate and a two-dot/one-line expression.
+   Sized in three tiers (sm/md/lg) so it can drop into a tight empty-state
+   card or a roomier hero without a bespoke size per call site. Purely
+   decorative (aria-hidden on the wrapper). --screen-accent tints its body
+   the same way brand-empty-illustration/-section-badge do, so the
+   character and the rest of a screen's brand marks always match. */
+.study-companion {
+  display: inline-flex;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.study-companion-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 4px 8px rgba(120, 98, 40, 0.16));
+}
+
+.study-companion-sm {
+  width: 40px;
+  height: 55px;
+}
+
+.study-companion-md {
+  width: 56px;
+  height: 77px;
+}
+
+.study-companion-lg {
+  width: 76px;
+  height: 104px;
+}
+
+.study-companion-body {
+  fill: var(--screen-accent, var(--accent));
+}
+
+.study-companion-face {
+  fill: var(--panel-bg);
+  stroke: var(--paper-border);
+  stroke-width: 1;
+}
+
+.study-companion-eye {
+  fill: var(--text);
+}
+
+.study-companion-mouth {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.study-companion-spark {
+  fill: var(--warning);
+}
+
+/* Small rotated dashed "완료" stamp -- an alternative to .memo-label for
+   completion moments (study session done, classification done) so those
+   screens get a bit of the "post-mark stamped in a notebook" flourish
+   requested for reward/completion states, without a new illustration. */
+.brand-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 12px;
+  border: 1.5px dashed var(--screen-accent, var(--accent));
+  border-radius: 999px;
+  color: var(--screen-accent, var(--accent));
+  background: transparent;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  transform: rotate(-3deg);
 }
 
 .study-control-panel {
@@ -5461,8 +5608,20 @@ input.reading-vocab-item-checkbox {
 .feedback-modal-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
+}
+
+.feedback-modal-header > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.feedback-modal-close {
+  margin-left: auto;
+}
+
+.feedback-modal-companion {
+  flex: 0 0 auto;
 }
 
 .feedback-modal-title {

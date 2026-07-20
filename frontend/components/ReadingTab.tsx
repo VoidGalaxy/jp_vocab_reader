@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { BrandEmptyIllustration } from "./BrandElements";
+import { BrandEmptyIllustration, StudyCompanion } from "./BrandElements";
 import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import { classifyMessageTone, computeReadingSaveSummary } from "./coverageUtils";
 import type { ReadingSaveMode } from "./coverageUtils";
-import { BookIcon, CardsIcon, ShieldIcon, SparkleIcon } from "./icons";
+import { CardsIcon, ShieldIcon, SparkleIcon } from "./icons";
 import type { ChunkAnalyzeProgress } from "./readingChunkAnalyze";
 import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 
@@ -168,7 +168,7 @@ export function ReadingTab({
   const messageTone = classifyMessageTone(message);
 
   return (
-    <section className="tab-panel" aria-live="polite">
+    <section className="tab-panel reading-panel" aria-live="polite">
       <div className="reading-hero">
         <h2 className="reading-hero-title">원문으로 읽고 바로 단어장에 담기</h2>
         <p className="reading-hero-subtitle">
@@ -229,7 +229,7 @@ export function ReadingTab({
             <>
               {!hasResult && !text.trim() ? (
                 <div className="reading-empty-guide">
-                  <BrandEmptyIllustration icon={BookIcon} />
+                  <StudyCompanion mood="reading" />
                   <p>읽고 싶은 일본어 문장을 붙여넣고 분석해보세요.</p>
                   <p className="muted-text">
                     모르는 단어를 클릭해 뜻과 읽기를 확인할 수 있습니다.

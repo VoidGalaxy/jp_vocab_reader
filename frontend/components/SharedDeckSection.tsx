@@ -2,6 +2,7 @@ import {
   BrandDeckCover,
   BrandEmptyIllustration,
   BrandSectionBadge,
+  StudyCompanion,
 } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import { BookIcon, FolderIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
@@ -326,7 +327,7 @@ export function SharedDeckSection({
         )
       ) : (
         <div className="empty-guide">
-          <BrandEmptyIllustration icon={ShareIcon} />
+          <StudyCompanion mood="reading" />
           <p>아직 공유된 덱이 없습니다.</p>
           <p className="muted-text">
             내 단어장을 공유하거나, 단어장 탭에서 JLPT 추천 어휘 덱을 가져와
