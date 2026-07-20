@@ -3994,9 +3994,25 @@ input.reading-vocab-item-checkbox {
 .vocab-action-group {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
+}
+
+/* Groups "이 덱 학습하기" with its one-line caption so the pair reads as
+   the row's clear primary action, not an equal-weight button next to
+   "+ 단어 직접 추가" / "덱/공유 관리". */
+.vocab-action-group-primary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.vocab-action-group-hint {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 /* Vocab tab hero -- "내 학습 라이브러리" framing above the search/filter
@@ -4007,6 +4023,11 @@ input.reading-vocab-item-checkbox {
   border-color: var(--paper-border);
   background: var(--paper-bg);
   box-shadow: 0 14px 32px var(--paper-shadow);
+}
+
+.vocab-hero-deck-label {
+  justify-self: start;
+  margin-top: 2px;
 }
 
 .vocab-hero-stats {
@@ -4134,6 +4155,7 @@ input.reading-vocab-item-checkbox {
   align-content: start;
   gap: 8px;
   border: 1px solid var(--border);
+  border-left: 3px solid var(--screen-accent, var(--accent));
   border-radius: 12px;
   padding: 14px;
   background: var(--panel-bg);
@@ -4142,7 +4164,9 @@ input.reading-vocab-item-checkbox {
 }
 
 .vocab-item-card:hover {
-  border-color: var(--border-strong);
+  border-top-color: var(--border-strong);
+  border-right-color: var(--border-strong);
+  border-bottom-color: var(--border-strong);
   box-shadow: 0 10px 22px rgba(120, 98, 40, 0.08);
   transform: translateY(-2px);
 }
@@ -4242,9 +4266,17 @@ input.reading-vocab-item-checkbox {
 }
 
 .vocab-item-review-badge-accent {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   border-color: var(--border-strong);
   background: var(--paper-bg);
   color: var(--primary-dark);
+}
+
+.vocab-item-review-badge-icon {
+  width: 11px;
+  height: 11px;
 }
 
 .vocab-item-review-badge-muted {
@@ -4281,6 +4313,13 @@ input.reading-vocab-item-checkbox {
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.vocab-item-example-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
 }
 
 .vocab-item-actions {
@@ -4692,6 +4731,11 @@ input.reading-vocab-item-checkbox {
   }
 
   .vocab-action-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vocab-action-group-primary {
     flex-direction: column;
     align-items: stretch;
   }

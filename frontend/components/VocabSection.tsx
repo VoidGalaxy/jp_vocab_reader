@@ -4,7 +4,7 @@ import { Fragment, useState } from "react";
 import { BrandEmptyIllustration, BrandSectionBadge, StudyCompanion } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
-import { BookIcon, CardsIcon, FolderIcon, SearchIcon, ShareIcon } from "./icons";
+import { BookIcon, CardsIcon, ClockIcon, FolderIcon, SearchIcon, ShareIcon } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 import {
   formatDateTime,
@@ -228,6 +228,11 @@ export function VocabSection({
     onDueOnlyChange(false);
   }
 
+  const selectedDeckLabel =
+    selectedDeckId === "all"
+      ? "전체 단어장"
+      : decks.find((deck) => String(deck.id) === selectedDeckId)?.name ?? "전체 단어장";
+
   return (
     <section className="tab-panel vocab-panel" aria-live="polite">
       <section className="panel-card hero-card vocab-hero-card">
@@ -236,6 +241,7 @@ export function VocabSection({
           <p className="panel-card-description">
             읽으면서 담은 단어들이 쌓이는 곳입니다.
           </p>
+          <span className="memo-label vocab-hero-deck-label">{selectedDeckLabel}</span>
         </div>
         <div className="landing-hero-actions">
           <button type="button" onClick={onGoToReading}>
@@ -245,6 +251,10 @@ export function VocabSection({
           <button type="button" className="secondary-button" onClick={onGoToStudyToday}>
             <CardsIcon className="button-icon" />
             오늘 복습하기
+          </button>
+          <button type="button" className="ghost-button" onClick={onGoToShared}>
+            <ShareIcon className="button-icon" />
+            덱 책장
           </button>
         </div>
         <hr className="dotted-divider" />
@@ -336,19 +346,24 @@ export function VocabSection({
         </div>
 
         <div className="vocab-action-group">
-          <button
-            type="button"
-            onClick={onStudySelectedDeck}
-            disabled={selectedDeckId === "all"}
-            title={
-              selectedDeckId === "all"
-                ? "학습할 특정 덱을 먼저 선택해 주세요."
-                : undefined
-            }
-          >
-            <CardsIcon className="button-icon" />
-            이 덱 학습하기
-          </button>
+          <span className="vocab-action-group-primary">
+            <button
+              type="button"
+              onClick={onStudySelectedDeck}
+              disabled={selectedDeckId === "all"}
+              title={
+                selectedDeckId === "all"
+                  ? "학습할 특정 덱을 먼저 선택해 주세요."
+                  : undefined
+              }
+            >
+              <CardsIcon className="button-icon" />
+              이 덱 학습하기
+            </button>
+            <span className="vocab-action-group-hint">
+              저장한 단어를 문맥 예문과 함께 복습해요.
+            </span>
+          </span>
           <button
             type="button"
             className="ghost-button"
@@ -795,6 +810,7 @@ export function VocabSection({
                   맞음 {item.correct_count} · 다시 {item.wrong_count}
                 </span>
                 <span className="vocab-item-review-badge vocab-item-review-badge-accent">
+                  <ClockIcon className="vocab-item-review-badge-icon" />
                   {formatNextReview(item.next_review_at)}
                 </span>
                 {item.last_reviewed_at ? (
@@ -816,7 +832,9 @@ export function VocabSection({
                     />
                   </p>
                 </div>
-              ) : null}
+              ) : (
+                <p className="vocab-item-example-empty">저장된 예문이 없어요.</p>
+              )}
 
               <div className="vocab-item-actions">
                 <MeaningQuickEdit
@@ -930,7 +948,7 @@ export function VocabSection({
               onClick={onGoToShared}
             >
               <ShareIcon className="button-icon" />
-              공유덱 둘러보기
+              덱 책장 둘러보기
             </button>
           </div>
         </div>
