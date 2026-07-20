@@ -123,6 +123,11 @@
   --screen-accent-soft: #e7eef3;
 }
 
+.records-panel {
+  --screen-accent: var(--sage-green);
+  --screen-accent-soft: #eef6f0;
+}
+
 /* Motion -- shared keyframes + utility animation classes. Deliberately
    small movements (2-8px, opacity, or a light scale) so state screens and
    companion illustrations settle into place instead of jumping in; nothing
