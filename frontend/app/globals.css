@@ -3445,6 +3445,26 @@ input.reading-vocab-item-checkbox {
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* Secondary "어휘 노트 보기" link under the quick-start tiles -- kept as a
+   low-emphasis ghost button so it never competes with "오늘 복습 시작". */
+.study-hero-secondary-link {
+  justify-self: center;
+  min-width: 0;
+}
+
+/* Compact per-rating feedback ("5분 후 다시 볼게요." etc.) shown while a
+   review card is on screen -- deliberately smaller/quieter than the app's
+   default .message banner so it reads as a brief toast next to the card,
+   not a page-level alert competing with Focus Mode. */
+.study-rating-toast {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(140px, 1fr));

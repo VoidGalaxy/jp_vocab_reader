@@ -71,25 +71,25 @@ const studyModeLabels: Record<StudyMode, string> = {
   unknown: "모르는 단어",
   all: "전체 학습",
   new: "새 단어 학습",
-  recent: "방금 저장한 단어 복습",
+  recent: "방금 담은 단어 복습",
 };
 
 const emptyMessages: Record<StudyMode, string> = {
-  today: "오늘 복습할 단어가 없습니다.",
-  uncertain: "헷갈리는 단어가 없습니다.",
-  unknown: "모르는 단어가 없습니다.",
-  all: "학습할 모르는 단어와 헷갈리는 단어가 없습니다.",
-  new: "새로 학습할 단어가 없습니다.",
-  recent: "방금 저장한 단어를 찾을 수 없습니다.",
+  today: "오늘은 복습할 단어가 없어요.",
+  uncertain: "헷갈리는 단어가 없어요.",
+  unknown: "모르는 단어가 없어요.",
+  all: "학습할 모르는 단어와 헷갈리는 단어가 없어요.",
+  new: "새로 학습할 단어가 없어요.",
+  recent: "방금 담은 단어를 찾을 수 없어요.",
 };
 
 const emptySecondaryMessages: Record<StudyMode, string> = {
-  today: "새 원문을 읽고 단어를 추가하거나 전체 학습을 시작해보세요.",
-  uncertain: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
-  unknown: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
-  all: "단어장 탭에서 단어를 추가하거나 분석 탭에서 새 단어를 저장해보세요.",
-  new: "읽기나 분석 탭에서 단어를 저장하면 이곳에서 바로 학습할 수 있습니다.",
-  recent: "읽기 탭에서 단어를 다시 저장해 보세요.",
+  today: "새 원문을 읽고 모르는 단어를 노트에 담아보세요.",
+  uncertain: "어휘 노트에서 단어를 추가하거나 원문을 읽고 새 단어를 담아보세요.",
+  unknown: "어휘 노트에서 단어를 추가하거나 원문을 읽고 새 단어를 담아보세요.",
+  all: "어휘 노트에서 단어를 추가하거나 원문을 읽고 새 단어를 담아보세요.",
+  new: "원문을 읽으며 단어를 담으면 이곳에서 바로 복습할 수 있어요.",
+  recent: "원문 읽기에서 단어를 다시 담아보세요.",
 };
 
 const quickStartCta: Array<{
@@ -141,69 +141,51 @@ const ratingButtons: Array<{
   },
 ];
 
-function StudyCompactStats({ stats }: { stats: StudyStats | null }) {
-  if (!stats) {
-    return null;
-  }
-  const completed = stats.reviewed_today_count;
-  const total = completed + stats.due_today_count;
-  const percent = total > 0 ? Math.min(Math.round((completed / total) * 100), 100) : 0;
-
-  return (
-    <div className="study-compact-stats" role="group" aria-label="오늘 학습 요약">
-      <div className="study-compact-stat-row">
-        <div className="study-compact-stat">
-          <span>오늘 복습</span>
-          <strong>{stats.due_today_count}</strong>
-        </div>
-        <div className="study-compact-stat">
-          <span>오늘 완료</span>
-          <strong>{stats.reviewed_today_count}</strong>
-        </div>
-        <div className="study-compact-stat">
-          <span>어려운 단어</span>
-          <strong>{stats.hard_count}</strong>
-        </div>
-        <div className="study-compact-stat">
-          <span>새 단어</span>
-          <strong>{stats.new_count}</strong>
-        </div>
-      </div>
-      <div className="study-compact-progress">
-        <div
-          className="progress-bar study-compact-progress-bar"
-          role="progressbar"
-          aria-label="오늘 학습 진행률"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={percent}
-        >
-          <div style={{ width: `${percent}%` }} />
-        </div>
-        <span className="study-compact-progress-label">
-          {completed} / {total} 완료
-        </span>
-      </div>
-    </div>
-  );
-}
-
+// "오늘의 복습 준비" hero -- the one card the tab wants seen first. Each
+// quick-start tile already shows its own count (오늘 복습/새 단어/어려운
+// 단어/전체), so a separate stat-dashboard strip above it would just repeat
+// the same numbers twice; the only number that isn't already on a tile is
+// "오늘 완료", folded in here as a single compact progress line instead of
+// its own stat-grid section.
 function StudyQuickStartHero({
   stats,
   onQuickStart,
+  onGoToVocab,
 }: {
   stats: StudyStats | null;
   onQuickStart: (mode: StudyMode) => void;
+  onGoToVocab: () => void;
 }) {
+  const completed = stats?.reviewed_today_count ?? 0;
+  const total = completed + (stats?.due_today_count ?? 0);
+  const percent = total > 0 ? Math.min(Math.round((completed / total) * 100), 100) : 0;
+
   return (
     <section className="study-hero-card hero-card">
       <div className="study-hero-header">
         <CardsIcon className="study-hero-icon" />
         <div>
-          <h2>복습 시작</h2>
+          <h2>오늘의 복습</h2>
           <p>저장한 단어를 문맥 예문과 함께 다시 확인해요.</p>
         </div>
       </div>
+      {total > 0 ? (
+        <div className="study-compact-progress">
+          <div
+            className="progress-bar study-compact-progress-bar"
+            role="progressbar"
+            aria-label="오늘 학습 진행률"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percent}
+          >
+            <div style={{ width: `${percent}%` }} />
+          </div>
+          <span className="study-compact-progress-label">
+            오늘 {completed} / {total} 완료
+          </span>
+        </div>
+      ) : null}
       <div className="study-cta-grid" role="group" aria-label="오늘 학습 시작">
         {quickStartCta.map(({ mode, label, countKey, primary }) => (
           <button
@@ -219,6 +201,13 @@ function StudyQuickStartHero({
           </button>
         ))}
       </div>
+      <button
+        type="button"
+        className="ghost-button compact-button study-hero-secondary-link"
+        onClick={onGoToVocab}
+      >
+        어휘 노트 보기
+      </button>
     </section>
   );
 }
@@ -295,8 +284,11 @@ export function StudySection({
     <section className="tab-panel study-panel" aria-live="polite">
       {!isReviewingActive ? (
         <>
-          <StudyCompactStats stats={stats} />
-          <StudyQuickStartHero stats={stats} onQuickStart={onQuickStart} />
+          <StudyQuickStartHero
+            stats={stats}
+            onQuickStart={onQuickStart}
+            onGoToVocab={onGoToVocab}
+          />
 
           <section className="study-control-panel study-control-panel-compact">
             <div className="study-control-heading">
@@ -379,7 +371,11 @@ export function StudySection({
       ) : null}
 
       {message ? (
-        <p className={`message message--${classifyMessageTone(message)}`}>
+        <p
+          className={`message message--${classifyMessageTone(message)}${
+            isReviewingActive ? " study-rating-toast" : ""
+          }`}
+        >
           {message}
         </p>
       ) : null}
@@ -406,11 +402,11 @@ export function StudySection({
               원문 읽기 시작
             </button>
             <button type="button" className="secondary-button" onClick={onGoToVocab}>
-              내 단어장 보기
+              어휘 노트 보기
             </button>
             <button type="button" className="ghost-button" onClick={onGoToShared}>
               <ShareIcon className="button-icon" />
-              공유덱 둘러보기
+              덱 책장 둘러보기
             </button>
           </div>
         </div>
@@ -428,7 +424,7 @@ export function StudySection({
           </div>
           {studyMode === "recent" ? (
             <p className="study-card-recent-hint">
-              읽기 탭에서 저장한 단어를 바로 복습합니다. ({items.length}개 단어)
+              원문 읽기에서 담은 단어를 바로 복습해요. ({items.length}개 단어)
             </p>
           ) : null}
           <div
@@ -510,9 +506,9 @@ export function StudySection({
                 ) : null}
               </div>
               {currentItem.example_sentence ? (
-                <div className="study-example-callout">
+                <div className="study-example-callout paper-corner">
                   <div className="study-example-heading">
-                    <span className="study-example-label">문맥 예문</span>
+                    <span className="memo-label">예문</span>
                     <span className="study-example-sublabel">
                       이 단어가 나온 문장
                     </span>
@@ -565,7 +561,9 @@ export function StudySection({
           <StudyCompanion mood="done" />
           <span className="brand-stamp">완료</span>
           <h3>
-            {studyMode === "recent" ? "방금 저장한 단어 학습 완료!" : "오늘 학습 완료!"}
+            {studyMode === "recent"
+              ? "방금 담은 단어 복습을 마쳤어요."
+              : "오늘 복습을 마쳤어요."}
           </h3>
           <div className="study-complete-stats">
             <div className="study-complete-stat study-complete-stat-again">
@@ -597,19 +595,14 @@ export function StudySection({
           </p>
           <div className="study-actions">
             <button type="button" onClick={onRestart}>
-              다시 학습하기
+              한 번 더 복습
             </button>
-            {studyMode === "recent" ? (
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={onGoToReading}
-              >
-                읽기 탭으로 돌아가기
-              </button>
-            ) : null}
-            <button type="button" className="secondary-button" onClick={onGoToVocab}>
-              단어장으로 가기
+            <button type="button" className="secondary-button" onClick={onGoToReading}>
+              <BookIcon className="button-icon" />
+              원문 읽기 시작
+            </button>
+            <button type="button" className="ghost-button" onClick={onGoToVocab}>
+              어휘 노트 보기
             </button>
             {studyMode === "recent" ? (
               <button
@@ -620,9 +613,6 @@ export function StudySection({
                 오늘 복습 보기
               </button>
             ) : null}
-            <button type="button" className="ghost-button" onClick={onGoToAnalyze}>
-              분석 탭으로 가기
-            </button>
           </div>
         </div>
       ) : null}
