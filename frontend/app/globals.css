@@ -3590,9 +3590,9 @@ input.reading-vocab-item-checkbox {
   margin: 0;
   overflow: hidden;
   color: var(--muted);
-  line-height: 1.55;
+  line-height: 1.5;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   overflow-wrap: anywhere;
 }
 

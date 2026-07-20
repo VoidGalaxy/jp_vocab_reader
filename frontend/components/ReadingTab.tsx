@@ -542,24 +542,6 @@ export function ReadingTab({
             </span>
           </div>
 
-          <div className="save-tray-stats" role="group" aria-label="상태별 단어 수">
-            <span className="save-tray-stat-pill save-tray-stat-new">
-              새 단어 {summary.newCount}개
-            </span>
-            <span className="save-tray-stat-pill save-tray-stat-unknown">
-              모르는 단어 {summary.unknownCount}개
-            </span>
-            <span className="save-tray-stat-pill save-tray-stat-uncertain">
-              헷갈리는 단어 {summary.uncertainCount}개
-            </span>
-            <span className="save-tray-stat-pill save-tray-stat-unclassified">
-              미분류 {summary.unclassifiedCount}개
-            </span>
-            <span className="save-tray-stat-pill save-tray-stat-known">
-              아는 단어 {summary.knownCount}개
-            </span>
-          </div>
-
           <button
             type="button"
             className="save-tray-primary-button"
@@ -590,20 +572,43 @@ export function ReadingTab({
               빠르게 전체 저장
             </button>
             {isQuickSaveOpen ? (
-              <div className="reading-summary-actions">
-                {saveButtons.map(({ mode, label, hint, variant }) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    className={`${variant === "ghost" ? "ghost-button" : "secondary-button"} reading-summary-save-button`}
-                    onClick={() => onSaveBatch(mode)}
-                    disabled={isSavingBatch || summary.saveableCount === 0}
-                    title={hint}
-                  >
-                    {isSavingBatch ? "저장 중..." : label}
-                  </button>
-                ))}
-              </div>
+              <>
+                <div
+                  className="save-tray-stats"
+                  role="group"
+                  aria-label="상태별 단어 수"
+                >
+                  <span className="save-tray-stat-pill save-tray-stat-new">
+                    새 단어 {summary.newCount}개
+                  </span>
+                  <span className="save-tray-stat-pill save-tray-stat-unknown">
+                    모르는 단어 {summary.unknownCount}개
+                  </span>
+                  <span className="save-tray-stat-pill save-tray-stat-uncertain">
+                    헷갈리는 단어 {summary.uncertainCount}개
+                  </span>
+                  <span className="save-tray-stat-pill save-tray-stat-unclassified">
+                    미분류 {summary.unclassifiedCount}개
+                  </span>
+                  <span className="save-tray-stat-pill save-tray-stat-known">
+                    아는 단어 {summary.knownCount}개
+                  </span>
+                </div>
+                <div className="reading-summary-actions">
+                  {saveButtons.map(({ mode, label, hint, variant }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      className={`${variant === "ghost" ? "ghost-button" : "secondary-button"} reading-summary-save-button`}
+                      onClick={() => onSaveBatch(mode)}
+                      disabled={isSavingBatch || summary.saveableCount === 0}
+                      title={hint}
+                    >
+                      {isSavingBatch ? "저장 중..." : label}
+                    </button>
+                  ))}
+                </div>
+              </>
             ) : null}
           </div>
 
