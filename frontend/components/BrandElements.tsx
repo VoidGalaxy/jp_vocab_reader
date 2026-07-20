@@ -56,33 +56,17 @@ export function BrandReadingFlowIllustration() {
   );
 }
 
-// The brand character: a small "bookmark companion" that reuses the same
-// ribbon-notch shape as BrandReadingFlowIllustration's bookmark tab (one
-// consistent bookmark motif, not two unrelated shapes) with a plain paper
-// "face plate" and a two-dot-and-one-line expression on top. Deliberately
-// primitive (polygon + rect + circles + one path) instead of a detailed
-// illustration -- a small recurring companion, not artwork that competes
-// with the screen's actual content. Mood only changes the mouth curve and,
-// for the two "positive" moods, adds one tiny sparkle -- keeps every
-// variant reading as the same character instead of drifting per screen.
-export type CompanionMood =
-  | "welcome"
-  | "reading"
-  | "empty"
-  | "review"
-  | "done"
-  | "feedback"
-  | "error";
-
-const companionMouthPaths: Record<CompanionMood, string> = {
-  welcome: "M23 44q5 6 10 0",
-  reading: "M25 45q4 3 8 0",
-  empty: "M24 46h10",
-  review: "M23 45q5 5 10 0",
-  done: "M21 43q7 8 14 0",
-  feedback: "M25 44q4 4 8 0",
-  error: "M24 47q5 -3 10 0",
-};
+// Shiori, the brand symbol -- a quiet bookmark silhouette, not a mascot.
+// Deliberately just three shapes (one rounded-corner ribbon path, one paper
+// face plate, two eye dots) and nothing else: no mouth, no expression, no
+// per-mood accessory. "mood" is kept only because ~8 call sites across the
+// app already pass one (reading/empty/done/feedback) and a synced rename
+// isn't worth the risk -- it now does exactly one thing, adding a small
+// quiet fold-highlight for "done" (a completed-stamp feel) and nothing for
+// every other mood, so the symbol reads identically everywhere except that
+// one moment. Kept as the same component name (StudyCompanion) so none of
+// those imports need touching.
+export type CompanionMood = "reading" | "empty" | "done" | "feedback";
 
 export function StudyCompanion({
   mood = "empty",
@@ -93,32 +77,34 @@ export function StudyCompanion({
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
-  const showSpark = mood === "welcome" || mood === "done";
   return (
     <span
       className={`study-companion study-companion-${size}${className ? ` ${className}` : ""}`}
       aria-hidden="true"
     >
       <svg viewBox="0 0 64 88" className="study-companion-svg">
-        <polygon
+        {/* Rounded-top bookmark ribbon with a V-notch tail -- the same
+            silhouette language as .home-hero-bookmark/.brand-deck-cover
+            elsewhere in the app, just standalone instead of a page
+            accent. */}
+        <path
           className="study-companion-body"
-          points="4,2 60,2 60,84 32,64 4,84"
+          d="M14 2 H50 A12 12 0 0 1 62 14 V84 L32 63 L2 84 V14 A12 12 0 0 1 14 2 Z"
         />
         <rect
           className="study-companion-face"
-          x="12"
-          y="14"
-          width="40"
-          height="34"
-          rx="12"
+          x="14"
+          y="16"
+          width="36"
+          height="28"
+          rx="10"
         />
-        <circle className="study-companion-eye" cx="26" cy="32" r="2.6" />
-        <circle className="study-companion-eye" cx="38" cy="32" r="2.6" />
-        <path className="study-companion-mouth" d={companionMouthPaths[mood]} />
-        {showSpark ? (
+        <circle className="study-companion-eye" cx="26" cy="30" r="2.2" />
+        <circle className="study-companion-eye" cx="38" cy="30" r="2.2" />
+        {mood === "done" ? (
           <path
-            className="study-companion-spark"
-            d="M52 6 L54 11 L59 12 L54 13 L52 18 L50 13 L45 12 L50 11 Z"
+            className="study-companion-highlight"
+            d="M46 8 L48 12 L52 13 L48 14 L46 18 L44 14 L40 13 L44 12 Z"
           />
         ) : null}
       </svg>

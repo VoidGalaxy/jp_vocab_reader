@@ -1777,19 +1777,22 @@ select {
   filter: drop-shadow(0 4px 8px rgba(120, 98, 40, 0.16));
 }
 
+/* Sizes match the "quiet symbol, not a mascot" scale (sm ~24-32px wide, md
+   ~40-56px, lg well under 100px) -- previously sm alone (40px) was already
+   as big as this scale's md tier. */
 .study-companion-sm {
-  width: 40px;
-  height: 55px;
+  width: 28px;
+  height: 38px;
 }
 
 .study-companion-md {
-  width: 56px;
-  height: 77px;
+  width: 44px;
+  height: 60px;
 }
 
 .study-companion-lg {
-  width: 76px;
-  height: 104px;
+  width: 70px;
+  height: 96px;
 }
 
 .study-companion-body {
@@ -1806,14 +1809,10 @@ select {
   fill: var(--text);
 }
 
-.study-companion-mouth {
-  fill: none;
-  stroke: var(--text);
-  stroke-width: 2.4;
-  stroke-linecap: round;
-}
-
-.study-companion-spark {
+/* "done" mood only -- a tiny highlight mark instead of a facial expression,
+   in the same warm amber the app already uses elsewhere for a small "this
+   just completed" accent. */
+.study-companion-highlight {
   fill: var(--warning);
 }
 
