@@ -11,7 +11,13 @@ import {
   getTokenGroupKey,
 } from "./coverageUtils";
 import type { ReadingSaveMode, ReadingVocabEntry } from "./coverageUtils";
-import { CardsIcon, FolderIcon, ShieldIcon, SparkleIcon } from "./icons";
+import {
+  CardsIcon,
+  ChevronDownIcon,
+  FolderIcon,
+  ShieldIcon,
+  SparkleIcon,
+} from "./icons";
 import type { ChunkAnalyzeProgress } from "./readingChunkAnalyze";
 import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 
@@ -177,6 +183,10 @@ export function ReadingTab({
   const [selectedWordKeys, setSelectedWordKeys] = useState<Set<string>>(
     () => new Set(),
   );
+  // Bulk "빠르게 전체 저장" is a secondary path (구현4: 클릭 저장/선택 저장이
+  // 우선, 일괄 저장은 보조) -- collapsed by default, same
+  // toggle-button-with-chevron pattern as ReadingVocabPanel's candidate list.
+  const [isQuickSaveOpen, setIsQuickSaveOpen] = useState(false);
   // Reconciles the raw key Set against what's actually selectable right now
   // (a re-analysis can swap tokens out from under an already-built
   // selection) -- every count/action below only ever sees valid, currently
@@ -566,21 +576,35 @@ export function ReadingTab({
           </button>
 
           <div className="save-tray-quick-save">
-            <span className="save-tray-quick-save-label">빠르게 전체 저장</span>
-            <div className="reading-summary-actions">
-              {saveButtons.map(({ mode, label, hint, variant }) => (
-                <button
-                  key={mode}
-                  type="button"
-                  className={`${variant === "ghost" ? "ghost-button" : "secondary-button"} reading-summary-save-button`}
-                  onClick={() => onSaveBatch(mode)}
-                  disabled={isSavingBatch || summary.saveableCount === 0}
-                  title={hint}
-                >
-                  {isSavingBatch ? "저장 중..." : label}
-                </button>
-              ))}
-            </div>
+            <button
+              type="button"
+              className="ghost-button compact-button save-tray-quick-save-toggle"
+              onClick={() => setIsQuickSaveOpen((value) => !value)}
+              aria-expanded={isQuickSaveOpen}
+            >
+              <ChevronDownIcon
+                className={`reading-vocab-collapse-icon${
+                  isQuickSaveOpen ? "" : " reading-vocab-collapse-icon-collapsed"
+                }`}
+              />
+              빠르게 전체 저장
+            </button>
+            {isQuickSaveOpen ? (
+              <div className="reading-summary-actions">
+                {saveButtons.map(({ mode, label, hint, variant }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={`${variant === "ghost" ? "ghost-button" : "secondary-button"} reading-summary-save-button`}
+                    onClick={() => onSaveBatch(mode)}
+                    disabled={isSavingBatch || summary.saveableCount === 0}
+                    title={hint}
+                  >
+                    {isSavingBatch ? "저장 중..." : label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           {summary.saveableCount === 0 ? (

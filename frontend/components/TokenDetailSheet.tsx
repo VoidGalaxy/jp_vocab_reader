@@ -155,37 +155,27 @@ export function TokenDetailSheet({
             {isInBasket ? "저장 바구니에서 빼기" : "저장 바구니에 담기"}
           </button>
         ) : null}
-        <dl className="classify-details token-sheet-secondary-details">
-          <div>
-            <dt>기본형</dt>
-            <dd>{token.base_form || "-"}</dd>
-          </div>
-          <div>
-            <dt>품사</dt>
-            <dd>{token.part_of_speech || "-"}</dd>
-          </div>
-          <div>
-            <dt>등장 횟수</dt>
-            <dd>{token.occurrence_count || 1}회</dd>
-          </div>
-          <div className="classify-example">
-            <dt>JLPT 추천 레벨</dt>
-            <dd>
-              {token.jlpt_level ? (
-                <>
-                  {token.jlpt_level}
-                  <span className="jlpt-detail-hint">
-                    {" "}
-                    · JLPT 추천 어휘 기준이며, 공식 JLPT 어휘 목록은
-                    아닙니다.
-                  </span>
-                </>
-              ) : (
-                "-"
-              )}
-            </dd>
-          </div>
-        </dl>
+        <div className="token-sheet-meta-row">
+          {token.base_form && token.base_form !== label ? (
+            <span className="token-sheet-meta-tag">기본형 {token.base_form}</span>
+          ) : null}
+          {token.part_of_speech ? (
+            <span className="token-sheet-meta-tag">{token.part_of_speech}</span>
+          ) : null}
+          <span className="token-sheet-meta-tag">
+            {token.occurrence_count || 1}회 등장
+          </span>
+          {token.jlpt_level ? (
+            <span className="token-sheet-meta-tag">
+              JLPT 추천 {token.jlpt_level}
+            </span>
+          ) : null}
+        </div>
+        {token.jlpt_level ? (
+          <p className="jlpt-detail-hint">
+            JLPT 추천 어휘 기준이며, 공식 JLPT 어휘 목록은 아닙니다.
+          </p>
+        ) : null}
         <div className="context-example-block">
           <p className="context-example-label">문맥 예문</p>
           {token.savedExampleSentence ? (
@@ -235,8 +225,14 @@ export function TokenDetailSheet({
             >
               다음 →
             </button>
-          </div>
-          <div className="token-sheet-nav" role="group" aria-label="빠른 이동">
+            <button
+              type="button"
+              className="ghost-button compact-button token-sheet-nav-button"
+              onClick={onNextUnknown}
+              disabled={!canGoNextUnknown}
+            >
+              모르는 단어로
+            </button>
             {token.occurrence_count > 1 ? (
               <button
                 type="button"
@@ -244,17 +240,9 @@ export function TokenDetailSheet({
                 onClick={onFirstOccurrence}
                 disabled={!canGoFirstOccurrence}
               >
-                첫 등장 위치로
+                첫 등장으로
               </button>
             ) : null}
-            <button
-              type="button"
-              className="ghost-button compact-button token-sheet-nav-button"
-              onClick={onNextUnknown}
-              disabled={!canGoNextUnknown}
-            >
-              다음 모르는 단어
-            </button>
           </div>
           <div className="meaning-actions-row">
             {vocabItemId !== null ? (

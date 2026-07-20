@@ -2939,7 +2939,8 @@ input.reading-vocab-item-checkbox {
   padding-top: 4px;
 }
 
-.save-tray-quick-save-label {
+.save-tray-quick-save-toggle {
+  align-self: flex-start;
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
@@ -5067,10 +5068,11 @@ input.reading-vocab-item-checkbox {
 }
 
 .jlpt-detail-hint {
-  display: inline-block;
+  margin: 4px 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 400;
+  line-height: 1.4;
 }
 
 .reader-legend {
@@ -5287,20 +5289,25 @@ input.reading-vocab-item-checkbox {
 
 /* base_form/품사/JLPT now sit below the status pills as secondary,
    lower-emphasis reference info once meaning_ko has top billing above. */
-.token-sheet-secondary-details {
-  margin-top: 14px;
+/* Compact meta row -- replaces the old bordered 4-cell definition-list grid
+   (기본형/품사/등장 횟수/JLPT) with a single line of small tags, in line
+   with "Word Inspector를 작은 단어 카드로" (구현3). */
+.token-sheet-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
 }
 
-.token-sheet-secondary-details div {
-  padding: 10px 12px;
-}
-
-.token-sheet-secondary-details dt {
+.token-sheet-meta-tag {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--text-secondary);
   font-size: 12px;
-}
-
-.token-sheet-secondary-details dd {
-  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Secondary-actions footer: word navigation and meaning edit/report read
@@ -5314,20 +5321,24 @@ input.reading-vocab-item-checkbox {
   border-top: 1px solid var(--border);
 }
 
+/* Up to 4 nav buttons (이전/다음/모르는 단어로/첫 등장으로) now share one
+   wrapping row instead of two fixed rows -- wide enough screens fit all 4
+   on one line, narrow ones wrap 2x2, but the card never reserves two full
+   rows just for navigation. */
 .token-sheet-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
 
 .token-sheet-nav-button {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   width: auto;
-  min-width: 0;
-  min-height: 40px;
-  padding: 10px 14px;
-  font-size: 14px;
+  min-width: 84px;
+  min-height: 38px;
+  padding: 8px 10px;
+  font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
 }
