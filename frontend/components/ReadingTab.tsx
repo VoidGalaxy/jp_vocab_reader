@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { BrandEmptyIllustration, BrandSectionBadge, StudyCompanion } from "./BrandElements";
+import { AppEmptyState, BrandSectionBadge } from "./BrandElements";
 import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import {
@@ -321,12 +321,12 @@ export function ReadingTab({
           {showForm ? (
             <>
               {!hasResult && !text.trim() ? (
-                <div className="reading-empty-guide">
-                  <StudyCompanion mood="reading" />
-                  <p>읽고 싶은 일본어 문장을 붙여넣고 분석해보세요.</p>
-                  <p className="muted-text">
-                    모르는 단어를 클릭해 뜻과 읽기를 확인할 수 있습니다.
-                  </p>
+                <AppEmptyState
+                  mood="reading"
+                  className="reading-empty-guide"
+                  title="원문을 펼쳐볼까요?"
+                  description="일본어 원문을 붙여넣고 모르는 단어를 눌러보세요."
+                >
                   <button
                     type="button"
                     className="ghost-button compact-button"
@@ -335,7 +335,7 @@ export function ReadingTab({
                     <SparkleIcon className="button-icon" />
                     샘플 문장으로 체험
                   </button>
-                </div>
+                </AppEmptyState>
               ) : null}
               <textarea
                 id="reading-source-text"
@@ -436,9 +436,11 @@ export function ReadingTab({
           // message below) -- give it the same icon+text empty-state
           // treatment as every other "nothing here" moment in the app
           // instead of a bare one-line message.
-          <div className="reading-empty-guide">
-            <BrandEmptyIllustration icon={SparkleIcon} />
-            <p>{message}</p>
+          <AppEmptyState
+            icon={SparkleIcon}
+            className="reading-empty-guide"
+            title={message}
+          >
             <button
               type="button"
               className="ghost-button compact-button"
@@ -447,7 +449,7 @@ export function ReadingTab({
               <SparkleIcon className="button-icon" />
               샘플 문장으로 체험
             </button>
-          </div>
+          </AppEmptyState>
         ) : (
           <p className={`message message--${messageTone}`}>{message}</p>
         )
@@ -503,7 +505,7 @@ export function ReadingTab({
       ) : isAnalyzing ? (
         (!analyzeProgress || analyzeProgress.total <= 1) ? (
           <p className="empty reading-loading-hint" role="status">
-            분석 중입니다. 잠시만 기다려주세요...
+            원문을 읽는 중이에요. 잠시만 기다려주세요...
           </p>
         ) : null
       ) : message ? null : (

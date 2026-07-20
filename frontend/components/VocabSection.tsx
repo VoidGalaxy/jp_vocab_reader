@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { BrandEmptyIllustration, BrandSectionBadge, StudyCompanion } from "./BrandElements";
+import { AppEmptyState, BrandSectionBadge } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
 import { BookIcon, CardsIcon, ClockIcon, FolderIcon, SearchIcon, ShareIcon } from "./icons";
@@ -916,10 +916,11 @@ export function VocabSection({
           ))}
         </div>
       ) : hasActiveFilter ? (
-        <div className="empty-guide">
-          <BrandEmptyIllustration icon={FolderIcon} />
-          <p>조건에 맞는 단어가 없습니다.</p>
-          <p className="muted-text">검색어나 필터를 바꿔보세요.</p>
+        <AppEmptyState
+          icon={FolderIcon}
+          title="찾는 단어가 없어요."
+          description="검색어를 바꾸거나 필터를 풀어보세요."
+        >
           <button
             type="button"
             className="ghost-button compact-button"
@@ -927,12 +928,13 @@ export function VocabSection({
           >
             필터 초기화
           </button>
-        </div>
+        </AppEmptyState>
       ) : (
-        <div className="empty-guide">
-          <StudyCompanion mood="empty" />
-          <p>아직 저장한 단어가 없어요.</p>
-          <p className="muted-text">원문 읽기에서 모르는 단어를 담아보세요.</p>
+        <AppEmptyState
+          mood="empty"
+          title="아직 담은 단어가 없어요."
+          description="원문을 읽으며 모르는 단어를 어휘 노트에 쌓아보세요."
+        >
           <div className="study-actions">
             <button
               type="button"
@@ -951,7 +953,7 @@ export function VocabSection({
               덱 책장 둘러보기
             </button>
           </div>
-        </div>
+        </AppEmptyState>
       )}
     </section>
   );

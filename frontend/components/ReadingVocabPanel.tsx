@@ -231,10 +231,10 @@ export function ReadingVocabPanel({
         <p className="muted-text reading-vocab-empty">
           <SearchIcon className="reading-vocab-empty-icon" />
           {search.trim()
-            ? "검색 결과가 없습니다. 다른 단어나 읽기로 검색해보세요."
+            ? "찾는 단어가 없어요. 다른 단어나 읽기로 검색해보세요."
             : filter === "saveable"
-              ? "저장할 새 단어가 없습니다. 이미 저장한 단어는 학습 탭에서 복습할 수 있어요."
-              : "표시할 학습 단어가 없습니다."}
+              ? "담을 수 있는 새 단어가 없어요. 이미 저장한 단어는 복습 탭에서 볼 수 있어요."
+              : "표시할 단어가 없어요."}
         </p>
       ) : (
         <ul className="reading-vocab-list">

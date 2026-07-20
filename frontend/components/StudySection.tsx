@@ -1,6 +1,6 @@
 "use client";
 
-import { BrandEmptyIllustration, StudyCompanion } from "./BrandElements";
+import { AppEmptyState, StudyCompanion } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import type {
   Deck,
@@ -381,21 +381,21 @@ export function StudySection({
       ) : null}
 
       {!hasStarted && !currentItem && !isComplete ? (
-        <div className="study-card study-ready-card">
-          <BrandEmptyIllustration icon={CardsIcon} />
-          <h3>학습할 단어를 불러오세요</h3>
-          <p>
-            덱과 학습 모드를 선택한 뒤 학습 시작을 누르면 저장한 단어를 바로
-            외울 수 있습니다.
-          </p>
-        </div>
+        <AppEmptyState
+          icon={CardsIcon}
+          className="study-card study-ready-card"
+          title="학습할 단어를 불러오세요"
+          description="덱과 학습 모드를 선택한 뒤 학습 시작을 누르면 저장한 단어를 바로 외울 수 있어요."
+        />
       ) : null}
 
       {hasStarted && !currentItem && !isComplete ? (
-        <div className="study-card study-ready-card">
-          <StudyCompanion mood="empty" />
-          <h3>{emptyMessages[studyMode]}</h3>
-          <p>{emptySecondaryMessages[studyMode]}</p>
+        <AppEmptyState
+          mood="empty"
+          className="study-card study-ready-card"
+          title={emptyMessages[studyMode]}
+          description={emptySecondaryMessages[studyMode]}
+        >
           <div className="study-actions">
             <button type="button" onClick={onGoToReading}>
               <BookIcon className="button-icon" />
@@ -409,7 +409,7 @@ export function StudySection({
               덱 책장 둘러보기
             </button>
           </div>
-        </div>
+        </AppEmptyState>
       ) : null}
 
       {currentItem && !isComplete ? (
@@ -542,7 +542,7 @@ export function StudySection({
               </div>
               {isReviewing ? (
                 <p className="study-reviewing-hint" role="status" aria-live="polite">
-                  평가를 저장하는 중입니다...
+                  복습 결과를 저장하는 중이에요...
                 </p>
               ) : null}
             </>

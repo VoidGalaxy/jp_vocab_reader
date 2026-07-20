@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { BrandEmptyIllustration, StudyCompanion } from "./BrandElements";
+import { AppEmptyState, StudyCompanion } from "./BrandElements";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
@@ -418,13 +418,11 @@ export function AnalyzeSection({
             ) : null}
           </>
         ) : (
-          <div className="empty-guide">
-            <BrandEmptyIllustration icon={SparkleIcon} />
-            <p>분석 결과가 아직 없습니다.</p>
-            <p className="muted-text">
-              원문을 붙여넣고 분석하기를 누르면 단어 카드가 여기에 나타나요.
-            </p>
-          </div>
+          <AppEmptyState
+            icon={SparkleIcon}
+            title="아직 분석한 결과가 없어요."
+            description="원문을 붙여넣고 분석하기를 누르면 단어 카드가 여기에 나타나요."
+          />
         )}
       </section>
     </section>

@@ -1,9 +1,4 @@
-import {
-  BrandDeckCover,
-  BrandEmptyIllustration,
-  BrandSectionBadge,
-  StudyCompanion,
-} from "./BrandElements";
+import { AppEmptyState, BrandDeckCover, BrandSectionBadge } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import { BookIcon, FolderIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
 import {
@@ -293,10 +288,7 @@ export function SharedDeckSection({
       ) : null}
 
       {isInitialLoading ? (
-        <div className="empty-guide">
-          <BrandEmptyIllustration icon={ShareIcon} />
-          <p>공유덱을 불러오는 중입니다...</p>
-        </div>
+        <AppEmptyState icon={ShareIcon} title="덱 책장을 불러오는 중이에요..." />
       ) : sortedDecks.length > 0 ? (
         hasGroups ? (
           <>
@@ -324,11 +316,31 @@ export function SharedDeckSection({
         ) : (
           <div className="shared-deck-grid">{sortedDecks.map(renderDeckCard)}</div>
         )
+      ) : messageTone === "error" ? (
+        // Fetch genuinely failed -- shows a retry CTA instead of the
+        // cheerful "둘러보세요" copy below, which would otherwise read as
+        // if the deck shelf is just empty rather than unreachable.
+        <AppEmptyState
+          icon={ShareIcon}
+          title="덱을 불러오지 못했어요."
+          description="잠시 후 다시 시도해주세요."
+        >
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={onRefresh}
+            disabled={isLoading}
+          >
+            <RotateIcon className="button-icon" />
+            {isLoading ? "다시 불러오는 중..." : "다시 불러오기"}
+          </button>
+        </AppEmptyState>
       ) : (
-        <div className="empty-guide">
-          <StudyCompanion mood="reading" />
-          <p>가져올 수 있는 추천 덱을 살펴보세요.</p>
-          <p className="muted-text">내 어휘 노트를 공유하거나 추천 덱을 가져올 수 있어요.</p>
+        <AppEmptyState
+          mood="reading"
+          title="가져올 수 있는 추천 덱을 살펴보세요."
+          description="내 어휘 노트를 공유하거나 추천 덱을 가져올 수 있어요."
+        >
           <button
             type="button"
             className="ghost-button compact-button"
@@ -337,7 +349,7 @@ export function SharedDeckSection({
             <FolderIcon className="button-icon" />
             어휘 노트로 이동
           </button>
-        </div>
+        </AppEmptyState>
       )}
 
       {selectedDeck ? (

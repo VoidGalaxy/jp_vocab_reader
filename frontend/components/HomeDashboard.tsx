@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  BrandEmptyIllustration,
+  AppEmptyState,
   BrandReadingFlowIllustration,
   BrandSectionBadge,
   StudyCompanion,
@@ -334,14 +334,16 @@ export function HomeDashboard({
                 ) : null}
               </ul>
             ) : (
-              <div className="empty-guide home-recent-empty">
-                <BrandEmptyIllustration icon={InboxIcon} />
-                <p>아직 최근 작업이 없어요.</p>
+              <AppEmptyState
+                icon={InboxIcon}
+                className="empty-guide home-recent-empty"
+                title="아직 최근 작업이 없어요."
+              >
                 <button type="button" className="ghost-button compact-button" onClick={onStartReading}>
                   <BookIcon className="button-icon" />
                   원문 읽기 시작
                 </button>
-              </div>
+              </AppEmptyState>
             )}
           </section>
 

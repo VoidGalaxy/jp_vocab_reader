@@ -1147,7 +1147,7 @@ export default function HomePage() {
       });
 
       if (!response.ok) {
-        throw new Error(`분석 요청에 실패했습니다. (${response.status})`);
+        throw new Error(`원문을 분석하지 못했어요. (${response.status})`);
       }
 
       const data = (await response.json()) as AnalyzeResponse;
@@ -1164,7 +1164,7 @@ export default function HomePage() {
       setPendingClassificationDraft(null);
       void loadDeckVocabItemsForCoverage(selectedSaveDeckId);
     } catch (error) {
-      setMessage(getErrorMessage(error, "분석 중 알 수 없는 오류가 발생했습니다."));
+      setMessage(getErrorMessage(error, "원문을 분석하지 못했어요. 잠시 후 다시 시도해주세요."));
       setTokens([]);
       setIgnoredTokenCount(0);
       setCurrentAnalyzeCardIndex(0);
@@ -1219,7 +1219,7 @@ export default function HomePage() {
       setShowAllAnalyzeResults(false);
       await loadVocabItems();
     } catch (error) {
-      setMessage(getAuthAwareErrorMessage(error, "단어 저장 중 오류가 발생했습니다."));
+      setMessage(getAuthAwareErrorMessage(error, "단어를 저장하지 못했어요. 잠시 후 다시 시도해주세요."));
     } finally {
       setIsSaving(false);
     }
@@ -1345,7 +1345,7 @@ export default function HomePage() {
               signal,
             });
             if (!response.ok) {
-              throw new Error(`분석 요청에 실패했습니다. (${response.status})`);
+              throw new Error(`원문을 분석하지 못했어요. (${response.status})`);
             }
             return (await response.json()) as AnalyzeResponse;
           },
@@ -1369,7 +1369,7 @@ export default function HomePage() {
 
       if (outcome.tokens.length === 0 && outcome.failedChunkCount > 0) {
         setReadingMessage(
-          `분석에 실패했습니다. 잠시 후 다시 시도해주세요. (${outcome.failedChunkCount}/${outcome.totalChunkCount} 조각 실패)`,
+          `원문을 분석하지 못했어요. 잠시 후 다시 시도해주세요. (${outcome.failedChunkCount}/${outcome.totalChunkCount} 조각 실패)`,
         );
         setReadingTokens([]);
         return;
@@ -1401,7 +1401,7 @@ export default function HomePage() {
       }
     } catch (error) {
       setReadingMessage(
-        `분석에 실패했습니다. 잠시 후 다시 시도해주세요. (${getErrorMessage(error, "알 수 없는 오류")})`,
+        `원문을 분석하지 못했어요. 잠시 후 다시 시도해주세요. (${getErrorMessage(error, "알 수 없는 문제")})`,
       );
       setReadingTokens([]);
     } finally {
@@ -1902,7 +1902,7 @@ export default function HomePage() {
       const totalImportedCount =
         result.imported_vocab_count + result.imported_custom_term_count;
       setSharedDeckMessage(
-        `${withObjectParticle(sourceTitle)} 내 단어장으로 가져왔습니다. 단어 ${totalImportedCount}개를 담았습니다. 단어장 탭에서 확인할 수 있습니다.`,
+        `${withObjectParticle(sourceTitle)} 내 어휘 노트에 가져왔어요. 단어 ${totalImportedCount}개를 담았어요.`,
       );
       setImportedSharedDeckId(sharedDeckId);
       const importedDeckId = String(result.deck_id);
@@ -1916,7 +1916,7 @@ export default function HomePage() {
       setSharedDeckMessage(
         getAuthAwareErrorMessage(
           error,
-          "공유덱 가져오기에 실패했습니다. 잠시 후 다시 시도해주세요.",
+          "덱을 가져오지 못했어요. 잠시 후 다시 시도해주세요.",
         ),
       );
     } finally {
@@ -1961,7 +1961,7 @@ export default function HomePage() {
           currentDecks.filter((deck) => deck.id !== sharedDeckId),
         );
       } else {
-        setSharedDeckMessage("공유 취소에 실패했습니다.");
+        setSharedDeckMessage("공유를 취소하지 못했어요. 잠시 후 다시 시도해주세요.");
       }
     } finally {
       setUnpublishingSharedDeckId(null);
@@ -2362,7 +2362,7 @@ export default function HomePage() {
           source: meaningFeedbackTarget.source,
         }),
       });
-      setFeedbackMessage("신고가 접수되었습니다. 사전 품질 개선에 참고됩니다.");
+      setFeedbackMessage("신고를 보냈어요. 사전 품질 개선에 참고할게요.");
     } catch (error) {
       setFeedbackMessage(getAuthAwareErrorMessage(error, "신고 접수에 실패했습니다."));
     } finally {
@@ -2403,7 +2403,7 @@ export default function HomePage() {
         }),
       });
       setAppFeedbackDraft("");
-      setAppFeedbackResultMessage("피드백이 접수되었습니다. 베타 개선에 참고할게요.");
+      setAppFeedbackResultMessage("피드백을 보냈어요. 베타 개선에 반영할게요.");
     } catch (error) {
       setAppFeedbackResultMessage(
         getAuthAwareErrorMessage(error, "피드백을 보내지 못했습니다. 잠시 후 다시 시도해주세요."),
@@ -3509,7 +3509,7 @@ function getHttpErrorMessage(status: number, detail: string) {
     return `대상을 찾을 수 없습니다. (${status})${suffix}`;
   }
   if (status >= 500) {
-    return `서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요. (${status})${suffix}`;
+    return `지금은 서버에 연결하기 어려워요. 잠시 후 다시 시도해 주세요. (${status})${suffix}`;
   }
-  return `요청에 실패했습니다. (${status})${suffix}`;
+  return `지금은 처리할 수 없어요. 잠시 후 다시 시도해주세요. (${status})${suffix}`;
 }
