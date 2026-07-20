@@ -736,66 +736,9 @@ button {
   opacity: 0.8;
 }
 
-.account-mode {
-  display: flex;
-  gap: 4px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 4px;
-  background: var(--soft-bg);
-}
-
-.mode-button {
-  min-width: 74px;
-  padding: 8px 10px;
-  color: var(--text-secondary);
-  background: transparent;
-  box-shadow: none;
-}
-
-.active-mode {
-  color: #ffffff;
-  background: var(--primary);
-}
-
 .account-message {
   margin-top: 2px;
   font-size: 13px;
-}
-
-.tab-nav {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px;
-  margin-bottom: 24px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 10px 24px rgba(120, 98, 40, 0.05);
-}
-
-.tab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 0;
-  color: var(--text-secondary);
-  background: transparent;
-  box-shadow: none;
-}
-
-.tab-icon {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-}
-
-.active-tab {
-  color: #ffffff;
-  background: var(--primary);
-  box-shadow: 0 6px 16px rgba(var(--primary-rgb), 0.22);
 }
 
 .tab-panel {
@@ -974,23 +917,6 @@ button {
   box-shadow: 0 4px 10px rgba(217, 122, 74, 0.25);
 }
 
-.landing-trust-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  max-width: 640px;
-  margin: 6px auto 0;
-  padding: 12px 16px;
-  text-align: left;
-  border: 1px solid var(--paper-border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.7);
-  color: #6b5f3f;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.landing-trust-note-icon,
 .info-strip-icon {
   flex: 0 0 auto;
   width: 18px;
@@ -998,11 +924,10 @@ button {
   color: var(--success);
 }
 
-/* Generic one-line policy/trust strip -- same "icon + short text" recipe
-   as .landing-trust-note but without its hero-specific centered max-width,
-   so any screen (reading tab save-policy line, shared-deck import note,
-   vocab card footnote) can drop in a compact strip instead of a paragraph
-   of explanatory text. */
+/* Generic one-line policy/trust strip -- "icon + short text" recipe so any
+   screen (reading tab save-policy line, shared-deck import note, vocab
+   card footnote) can drop in a compact strip instead of a paragraph of
+   explanatory text. */
 .info-strip {
   display: flex;
   align-items: flex-start;
@@ -1015,13 +940,6 @@ button {
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.5;
-}
-
-.info-strip-compact {
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: var(--soft-bg);
-  border-color: transparent;
 }
 
 .landing-steps {
@@ -1157,13 +1075,7 @@ button {
   gap: 10px;
 }
 
-/* .action-card is the generic name for this "icon + title + one-line
-   description" quick-entry recipe (card tier C in the brand card system --
-   Hero / Summary tile / Action card / Notebook card / Catalog card). Kept
-   as an alias on the original .home-quick-entry-card selector, rather than
-   a rename, so any screen can reach for it without redefining the look. */
-.home-quick-entry-card,
-.action-card {
+.home-quick-entry-card {
   display: grid;
   gap: 4px;
   justify-items: start;
@@ -1181,15 +1093,13 @@ button {
     border-color var(--motion-fast) var(--ease-soft);
 }
 
-.home-quick-entry-card:not(:disabled):hover,
-.action-card:not(:disabled):hover {
+.home-quick-entry-card:not(:disabled):hover {
   border-color: var(--border-strong);
   box-shadow: 0 12px 24px rgba(120, 98, 40, 0.08);
   transform: translateY(-2px);
 }
 
-.home-quick-entry-icon-wrap,
-.action-card-icon-wrap {
+.home-quick-entry-icon-wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1201,38 +1111,31 @@ button {
   color: var(--primary);
 }
 
-.home-quick-entry-icon,
-.action-card-icon {
+.home-quick-entry-icon {
   width: 18px;
   height: 18px;
 }
 
-.home-quick-entry-label,
-.action-card-label {
+.home-quick-entry-label {
   font-weight: 700;
   font-size: 14px;
 }
 
-.home-quick-entry-description,
-.action-card-description {
+.home-quick-entry-description {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
 }
 
-/* .summary-tile is the generic name for card tier B -- a small,
-   number-forward stat tile (today's due count, new-word count, etc.).
-   Aliased on the original .home-today-stat selector for the same reason
-   as .action-card above. */
-.home-today-stats,
-.summary-tile-row {
+/* Small, number-forward stat tile (today's due count, new-word count,
+   etc.). */
+.home-today-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.home-today-stat,
-.summary-tile {
+.home-today-stat {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -1242,14 +1145,12 @@ button {
   background: var(--soft-bg);
 }
 
-.home-today-stat span,
-.summary-tile span {
+.home-today-stat span {
   color: var(--muted);
   font-size: 12px;
 }
 
-.home-today-stat strong,
-.summary-tile strong {
+.home-today-stat strong {
   color: var(--text);
   font-size: 18px;
 }
@@ -1403,17 +1304,10 @@ button {
 /* Card hierarchy, applied as an additional class alongside each screen's
    existing hero styling (home/vocab/shared-deck headers) -- a visibly
    larger radius sets the "most important card on this screen" apart from
-   the regular .panel-card / .content-card rhythm around it. */
+   the regular .panel-card rhythm around it. */
 .hero-card {
   border-radius: 20px;
   box-shadow: 0 16px 36px var(--paper-shadow);
-}
-
-/* Compact numeric/summary tiles (stat pills, today-card, hero stat rows) --
-   tighter radius and padding than a full content card so a row of them
-   reads as one dense unit instead of several small cards. */
-.compact-stat-card {
-  border-radius: 10px;
 }
 
 /* Paper-note styling for policy/trust/context-example asides -- an accent
@@ -1422,20 +1316,6 @@ button {
 .note-card {
   border-radius: 12px;
   border-left: 3px solid var(--accent);
-}
-
-/* Repeating "catalog" list rhythm (shared-deck cards, vocab-item cards) --
-   tighter internal spacing and a slightly flatter shadow than .panel-card
-   so a long repeated list reads as one organized shelf instead of a stack
-   of separate content cards. */
-.catalog-card {
-  display: grid;
-  gap: 10px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--panel-bg);
-  box-shadow: 0 6px 16px rgba(120, 98, 40, 0.03);
 }
 
 /* Small brand motifs, reused across screens instead of each one inventing
@@ -2376,13 +2256,6 @@ select {
   height: 6px;
 }
 
-.study-progress {
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 700;
-  text-align: right;
-}
-
 .study-front {
   min-height: 120px;
   display: grid;
@@ -2489,12 +2362,6 @@ select {
   align-items: baseline;
   flex-wrap: wrap;
   gap: 6px;
-}
-
-.study-example-label {
-  color: #8a6d1f;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .study-example-sublabel {
@@ -2610,15 +2477,6 @@ select {
   border-radius: 20px;
   box-shadow: 0 16px 36px var(--paper-shadow);
   animation: app-slide-up var(--motion-slow) var(--ease-soft) both;
-}
-
-.complete-card-icon {
-  width: 40px;
-  height: 40px;
-  padding: 8px;
-  border-radius: 999px;
-  background: var(--soft-bg);
-  color: var(--sage-green);
 }
 
 .study-complete-stats {
@@ -3013,34 +2871,11 @@ select {
   gap: 6px;
 }
 
-/* Separated from the quick-select chips above by a hairline rather than its
-   own bordered box -- reads as one distinct action bar (selection count +
-   save CTA) instead of another panel stacked inside the word list. */
-.reading-vocab-action-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 16px;
-  margin-top: 2px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-
 .reading-vocab-selection-summary {
   margin: 2px 0 0;
   padding-top: 10px;
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 12px;
-}
-
-.reading-vocab-save-selected-button {
-  flex: 0 0 auto;
-}
-
-.reading-vocab-action-hint {
-  margin: 0;
   font-size: 12px;
 }
 
@@ -3214,15 +3049,6 @@ input.reading-vocab-item-checkbox {
   .reading-vocab-item-checkbox-placeholder {
     width: 24px;
     height: 24px;
-  }
-
-  .reading-vocab-action-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .reading-vocab-save-selected-button {
-    flex: 1 1 auto;
   }
 
   /* The app-wide mobile touch-target pass makes every <button> full-width
@@ -3414,13 +3240,6 @@ input.reading-vocab-item-checkbox {
   margin: 0;
 }
 
-.gloss-text {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
 .stats-panel {
   display: grid;
   gap: 14px;
@@ -3429,46 +3248,6 @@ input.reading-vocab-item-checkbox {
   padding: 18px;
   background: var(--panel-bg);
   box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
-}
-
-/* Compact "오늘 학습 요약" strip -- replaces the old 4-card + separate
-   progress-bar dashboard with one dense row so the study tab reads as a
-   study-start screen first, stats second. */
-.study-compact-stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 14px;
-  background: var(--panel-bg);
-  box-shadow: 0 6px 16px rgba(120, 98, 40, 0.04);
-}
-
-.study-compact-stat-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.study-compact-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.study-compact-stat span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.study-compact-stat strong {
-  color: var(--text);
-  font-size: 16px;
 }
 
 .study-compact-progress {
@@ -3682,7 +3461,6 @@ input.reading-vocab-item-checkbox {
   gap: 6px;
 }
 
-.deck-toolbar,
 .deck-create {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto;
@@ -4523,22 +4301,6 @@ input.reading-vocab-item-checkbox {
   align-items: center;
 }
 
-.vocab-filters {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(160px, 0.8fr) auto minmax(160px, 0.8fr);
-  gap: 10px;
-  align-items: flex-end;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-  background: var(--panel-bg);
-}
-
-.collapsible-action {
-  display: flex;
-  justify-content: flex-start;
-}
-
 .custom-term-section {
   display: grid;
   gap: 12px;
@@ -4683,28 +4445,6 @@ input.reading-vocab-item-checkbox {
     gap: 14px;
   }
 
-  .tab-nav {
-    display: flex;
-    gap: 6px;
-    margin: 0 -12px 16px;
-    padding: 6px 12px;
-    overflow-x: auto;
-    border-right: 0;
-    border-left: 0;
-    border-radius: 0;
-    box-shadow: none;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-  }
-
-  .tab {
-    flex: 0 0 auto;
-    min-width: 76px;
-    width: auto;
-    min-height: 44px;
-    padding: 10px 14px;
-  }
-
   .account-summary {
     align-items: center;
     flex-direction: row;
@@ -4747,14 +4487,6 @@ input.reading-vocab-item-checkbox {
     gap: 10px;
     padding: 12px;
     margin-bottom: 12px;
-  }
-
-  .account-mode {
-    width: 100%;
-  }
-
-  .mode-button {
-    flex: 1;
   }
 
   .actions {
@@ -4807,7 +4539,6 @@ input.reading-vocab-item-checkbox {
     flex-direction: column;
   }
 
-  .deck-toolbar,
   .deck-create,
   .deck-share-panel {
     grid-template-columns: 1fr;
@@ -4864,7 +4595,6 @@ input.reading-vocab-item-checkbox {
     padding: 10px;
   }
 
-  .vocab-filters,
   .analyze-options,
   .info-panel,
   .stats-grid,
@@ -4872,8 +4602,7 @@ input.reading-vocab-item-checkbox {
     grid-template-columns: 1fr;
   }
 
-  .vocab-compact-toolbar,
-  .vocab-filters {
+  .vocab-compact-toolbar {
     gap: 8px;
     padding: 10px;
   }
@@ -5022,16 +4751,6 @@ input.reading-vocab-item-checkbox {
     padding: 14px 8px;
   }
 
-  .study-compact-stats {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .study-compact-stat-row {
-    justify-content: space-between;
-    gap: 10px;
-  }
-
   .study-compact-progress {
     max-width: none;
   }
@@ -5043,10 +4762,6 @@ input.reading-vocab-item-checkbox {
   .study-control-footer {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .reading-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .reading-summary-actions,
