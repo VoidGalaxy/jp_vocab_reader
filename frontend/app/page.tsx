@@ -2869,13 +2869,27 @@ export default function HomePage() {
     onClick: openAppFeedback,
   };
 
+  // Lightweight-reader-first nav: the 5 screens the core loop actually
+  // needs (읽기 -> 담기 -> 복습 -> 노트에 쌓임, 덱 책장 for browsing more
+  // words) stay primary on both sidebar and bottom tab. 빠른 분류/기록/
+  // 피드백 are still one tap away (sidebar "더보기" group / mobile more
+  // sheet) -- nothing is removed, only demoted out of the primary row so
+  // it doesn't compete with the actual reading loop.
   const sidebarGroups: NavGroup[] = [
     {
       label: "학습",
-      items: [navFor("home"), navFor("reading"), navFor("analyze"), navFor("study")],
+      items: [
+        navFor("home"),
+        navFor("reading"),
+        navFor("study"),
+        navFor("vocab"),
+        navFor("shared"),
+      ],
     },
-    { label: "서재", items: [navFor("vocab"), navFor("shared")] },
-    { label: "메모", items: [feedbackNav, navFor("info")] },
+    {
+      label: "더보기",
+      items: [navFor("analyze"), navFor("info"), feedbackNav],
+    },
   ];
 
   const mobilePrimaryNavItems: NavAction[] = [
@@ -2883,9 +2897,9 @@ export default function HomePage() {
     navFor("reading", { mobile: true }),
     navFor("study", { mobile: true }),
     navFor("vocab", { mobile: true }),
+    navFor("shared", { mobile: true }),
   ];
   const mobileMoreNavItems: NavAction[] = [
-    navFor("shared", { mobile: true }),
     navFor("analyze", { mobile: true }),
     navFor("info", { mobile: true }),
     feedbackNav,
@@ -2926,8 +2940,6 @@ export default function HomePage() {
             onScrollToAccount={scrollToAccountPanel}
             onStartRecentlySaved={startStudyFromRecentlySaved}
             onGoToVocab={() => void handleTabChange("vocab")}
-            onGoToShared={() => void handleTabChange("shared")}
-            onOpenFeedback={openAppFeedback}
           />
         ) : null}
 

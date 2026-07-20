@@ -419,10 +419,7 @@ export function ReadingTab({
 
         <p className="muted-text copyright-note">
           <ShieldIcon className="copyright-note-icon" />
-          <span>
-            원문 전체는 저장되지 않고 이 브라우저에만 임시 보관돼요. 저장한
-            단어에는 짧은 예문만 남습니다.
-          </span>
+          <span>원문 전체는 서버에 저장하지 않아요.</span>
         </p>
         {storageWarning ? (
           <p className="muted-text reading-storage-warning">{storageWarning}</p>

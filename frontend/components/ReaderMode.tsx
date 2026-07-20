@@ -445,10 +445,7 @@ export function ReaderMode({
       <div className="reader-mode-header-row">
         <div>
           <h3 className="reader-mode-title">읽기 모드</h3>
-          <p className="reader-mode-hint">
-            원문을 읽으면서 단어를 누르면 뜻과 상태를 확인하고 바로 분류할 수
-            있습니다.
-          </p>
+          <p className="reader-mode-hint">모르는 단어를 눌러보세요.</p>
         </div>
         <div className="reader-mode-toggles">
           <label className="checkbox-field reading-focus-toggle">
