@@ -69,6 +69,15 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
+  /* Motion tokens -- one shared timing/easing vocabulary so hover/press/
+     entrance transitions across buttons, cards, and state screens feel
+     like one calm app instead of each component picking its own duration.
+     --ease-soft is a gentle decelerate (fast in, soft settle) -- suits a
+     "quiet library" feel better than a bouncy/elastic curve. */
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 260ms;
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
   font-family:
     Arial,
     "Hiragino Sans",
@@ -112,6 +121,87 @@
 .shared-deck-section {
   --screen-accent: var(--tone-dusty-blue);
   --screen-accent-soft: #e7eef3;
+}
+
+/* Motion -- shared keyframes + utility animation classes. Deliberately
+   small movements (2-8px, opacity, or a light scale) so state screens and
+   companion illustrations settle into place instead of jumping in; nothing
+   here loops or repeats. Reused across many components by applying the
+   class name directly on an existing element (see .empty-guide,
+   .brand-stamp, .study-companion, .message--success, .token-sheet,
+   .feedback-modal below) rather than duplicating an animation prop per
+   call site. */
+@keyframes app-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes app-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes app-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Small rotated "stamped down" settle for .brand-stamp -- starts at its
+   resting -3deg tilt but scaled down and faded, so it reads as a stamp
+   being pressed onto the page rather than a plain fade. */
+@keyframes app-stamp {
+  from {
+    opacity: 0;
+    transform: rotate(-3deg) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-3deg) scale(1);
+  }
+}
+
+.app-fade-in {
+  animation: app-fade-in var(--motion-base) var(--ease-soft) both;
+}
+
+.app-slide-up {
+  animation: app-slide-up var(--motion-base) var(--ease-soft) both;
+}
+
+.app-pop {
+  animation: app-pop var(--motion-base) var(--ease-soft) both;
+}
+
+/* Respect the user's OS-level motion preference -- collapses every
+   animation/transition in the app to effectively instant rather than
+   disabling them outright (some, like a disabled-button state change,
+   still need to visually update; this just removes the movement). Placed
+   once, globally, rather than duplicated per component. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 * {
@@ -1085,7 +1175,10 @@ button {
   background: var(--panel-bg);
   text-align: left;
   box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
-  transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+  transition:
+    box-shadow var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft),
+    border-color var(--motion-fast) var(--ease-soft);
 }
 
 .home-quick-entry-card:not(:disabled):hover,
@@ -1517,9 +1610,9 @@ button {
   cursor: pointer;
   text-align: center;
   transition:
-    background-color 0.16s ease,
-    box-shadow 0.16s ease,
-    transform 0.16s ease;
+    background-color var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft);
 }
 
 button:not(:disabled):hover {
@@ -1527,14 +1620,26 @@ button:not(:disabled):hover {
   transform: translateY(-1px);
 }
 
+/* Press feedback -- a small scale-down reads as "this button just got
+   pushed" on both mouse and touch, on top of the existing translateY
+   settle back to resting position. */
 button:not(:disabled):active {
   box-shadow: 0 2px 6px rgba(120, 98, 40, 0.1);
-  transform: translateY(0);
+  transform: translateY(0) scale(0.97);
 }
 
 button:disabled {
   background: #a89a80;
   cursor: not-allowed;
+}
+
+/* One consistent focus ring for every button in the app (previously
+   relied on each browser's own default outline, which reads inconsistent
+   against these rounded/gradient buttons) -- :focus-visible only shows it
+   for keyboard/assistive navigation, not on every mouse click. */
+button:focus-visible {
+  outline: 3px solid rgba(var(--primary-rgb), 0.4);
+  outline-offset: 2px;
 }
 
 .secondary-button {
@@ -1595,6 +1700,7 @@ button:disabled {
   background: #eaf4f2;
   font-weight: 700;
   line-height: 1.5;
+  animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
 }
 
 /* Icon prefix via CSS mask (currentColor) instead of an inline <svg> per
@@ -1615,6 +1721,10 @@ button:disabled {
   border-color: #bbe6c9;
   color: #14532d;
   background: #eefaf1;
+  /* A touch more life than the plain fade every .message gets -- this is
+     the "단어를 어휘 노트에 담았어요" moment, so it gets the slightly more
+     noticeable settle-in instead of just appearing. */
+  animation: app-pop var(--motion-base) var(--ease-soft) both;
 }
 
 .message--success::before {
@@ -1979,6 +2089,7 @@ select {
   padding: 24px;
   background: var(--panel-bg);
   text-align: center;
+  animation: app-slide-up var(--motion-base) var(--ease-soft) both;
 }
 
 .empty-guide p {
@@ -2024,6 +2135,7 @@ select {
   display: inline-flex;
   flex: 0 0 auto;
   line-height: 0;
+  animation: app-pop var(--motion-base) var(--ease-soft) both;
 }
 
 .study-companion-svg {
@@ -2090,6 +2202,7 @@ select {
   font-weight: 800;
   letter-spacing: 0.02em;
   transform: rotate(-3deg);
+  animation: app-stamp var(--motion-slow) var(--ease-soft) both;
 }
 
 .study-control-panel {
@@ -2317,6 +2430,7 @@ select {
   border-radius: 12px;
   padding: 16px 18px;
   background: var(--soft-bg);
+  animation: app-fade-in var(--motion-base) var(--ease-soft) both;
 }
 
 .study-meaning-label {
@@ -2436,6 +2550,15 @@ select {
   text-align: center;
 }
 
+/* On top of the base button's press-scale, a brief inset ring makes "this
+   is the rating I picked" unambiguous for the instant before the next card
+   replaces it -- since a rating never stays selected (the session moves
+   straight to the next card), this only needs to read during the press
+   itself. */
+.rating-button:not(:disabled):active {
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.55);
+}
+
 .rating-icon {
   width: 18px;
   height: 18px;
@@ -2486,6 +2609,7 @@ select {
   text-align: center;
   border-radius: 20px;
   box-shadow: 0 16px 36px var(--paper-shadow);
+  animation: app-slide-up var(--motion-slow) var(--ease-soft) both;
 }
 
 .complete-card-icon {
@@ -2557,6 +2681,7 @@ select {
 .study-ready-card {
   justify-items: center;
   text-align: center;
+  animation: app-slide-up var(--motion-base) var(--ease-soft) both;
 }
 
 .study-ready-card h3,
@@ -2632,6 +2757,7 @@ select {
   border: 1px dashed var(--border-strong);
   border-radius: 10px;
   background: var(--soft-bg);
+  animation: app-slide-up var(--motion-base) var(--ease-soft) both;
 }
 
 .reading-empty-guide p {
@@ -2736,7 +2862,7 @@ select {
   height: 100%;
   border-radius: 999px;
   background: var(--primary);
-  transition: width 0.2s ease;
+  transition: width var(--motion-slow) var(--ease-soft);
 }
 
 .reading-analyze-progress button {
@@ -3521,6 +3647,7 @@ input.reading-vocab-item-checkbox {
   height: 100%;
   border-radius: inherit;
   background: var(--primary);
+  transition: width var(--motion-slow) var(--ease-soft);
 }
 
 .deck-stats-list {
@@ -3693,7 +3820,9 @@ input.reading-vocab-item-checkbox {
   background: var(--panel-bg);
   padding: 16px;
   box-shadow: 0 8px 20px rgba(120, 98, 40, 0.05);
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  transition:
+    box-shadow var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft);
 }
 
 .shared-deck-card:hover {
@@ -4178,7 +4307,10 @@ input.reading-vocab-item-checkbox {
   padding: 14px;
   background: var(--panel-bg);
   box-shadow: 0 6px 16px rgba(120, 98, 40, 0.04);
-  transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+  transition:
+    box-shadow var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft),
+    border-color var(--motion-fast) var(--ease-soft);
 }
 
 .vocab-item-card:hover {
@@ -5274,7 +5406,7 @@ input.reading-vocab-item-checkbox {
   height: 100%;
   border-radius: 999px;
   background: var(--primary);
-  transition: width 0.15s ease;
+  transition: width var(--motion-base) var(--ease-soft);
 }
 
 .reader-progress-actions {
@@ -5520,6 +5652,7 @@ input.reading-vocab-item-checkbox {
   justify-content: center;
   background: rgba(15, 23, 42, 0.35);
   padding: 0;
+  animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
 }
 
 .token-sheet {
@@ -5531,6 +5664,7 @@ input.reading-vocab-item-checkbox {
   padding: 20px;
   background: var(--panel-bg);
   box-shadow: 0 -8px 30px rgba(120, 98, 40, 0.22);
+  animation: app-slide-up var(--motion-base) var(--ease-soft) both;
 }
 
 /* Idle Word Inspector -- desktop-only "nothing selected yet" placeholder
@@ -5788,6 +5922,7 @@ input.reading-vocab-item-checkbox {
   justify-content: center;
   background: rgba(15, 23, 42, 0.45);
   padding: 24px;
+  animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
 }
 
 .feedback-modal {
@@ -5802,6 +5937,7 @@ input.reading-vocab-item-checkbox {
   padding: 22px;
   background: var(--panel-bg);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  animation: app-slide-up var(--motion-base) var(--ease-soft) both;
 }
 
 /* .wide-field's "grid-column: span 2" (meant for the 2-column

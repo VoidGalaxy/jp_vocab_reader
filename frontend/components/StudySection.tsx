@@ -446,7 +446,7 @@ export function StudySection({
               }}
             />
           </div>
-          <div className="study-front">
+          <div className="study-front app-slide-up" key={currentItem.id}>
             <div className="study-front-word">
               {currentItem.surface || currentItem.base_form}
             </div>
