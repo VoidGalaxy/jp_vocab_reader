@@ -85,6 +85,7 @@ type SharedDeckSectionProps = {
   onImportDeck: (deckId: number) => void;
   onUnpublishDeck: (deckId: number) => void;
   onGoToVocab: () => void;
+  onGoToStudyToday: () => void;
 };
 
 export function SharedDeckSection({
@@ -103,6 +104,7 @@ export function SharedDeckSection({
   onImportDeck,
   onUnpublishDeck,
   onGoToVocab,
+  onGoToStudyToday,
 }: SharedDeckSectionProps) {
   const sortedDecks = sortSharedDecksByJlptLevel(decks);
   const hasJlptDeck = sortedDecks.some((deck) => getJlptLevel(deck.title));
@@ -253,7 +255,7 @@ export function SharedDeckSection({
             덱 책장
           </h2>
           <p className="panel-card-description">
-            추천 어휘 덱을 둘러보고 내 노트에 가져오세요.
+            추천 어휘 덱을 내 노트에 가져와 읽기와 복습에 사용하세요.
           </p>
         </div>
         <div className="landing-hero-actions">
@@ -289,13 +291,24 @@ export function SharedDeckSection({
       {message ? (
         <div className="shared-deck-message">
           <p className={`message message--${messageTone}`}>{message}</p>
-          <button
-            type="button"
-            className="secondary-button compact-button"
-            onClick={onGoToVocab}
-          >
-            어휘 노트로 이동
-          </button>
+          <div className="shared-deck-message-actions">
+            <button
+              type="button"
+              className="secondary-button compact-button"
+              onClick={onGoToVocab}
+            >
+              어휘 노트 보기
+            </button>
+            {messageTone === "success" ? (
+              <button
+                type="button"
+                className="ghost-button compact-button"
+                onClick={onGoToStudyToday}
+              >
+                복습 시작
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

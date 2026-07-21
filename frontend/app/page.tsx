@@ -3161,6 +3161,7 @@ export default function HomePage() {
             onImportDeck={(deckId) => void importSharedDeckToMyDeck(deckId)}
             onUnpublishDeck={(deckId) => void unpublishSharedDeck(deckId)}
             onGoToVocab={goToVocabTab}
+            onGoToStudyToday={goToStudyToday}
           />
         ) : null}
 

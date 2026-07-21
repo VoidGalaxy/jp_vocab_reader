@@ -263,9 +263,9 @@ export function VocabSection({
     <section className="tab-panel vocab-panel" aria-live="polite">
       <section className="panel-card hero-card vocab-hero-card vocab-hero-compact">
         <div className="panel-card-header">
-          <h2 className="panel-card-title">내 단어</h2>
+          <h2 className="panel-card-title">내 단어 노트</h2>
           <p className="panel-card-description">
-            읽으면서 담은 단어를 확인하고 복습하세요.
+            읽으며 담은 단어를 모아두고 다시 복습해요.
           </p>
         </div>
         <div className="vocab-hero-chip-row">
@@ -275,6 +275,9 @@ export function VocabSection({
           </span>
           <span className="vocab-hero-chip vocab-hero-chip-accent">
             복습 예정 {stats ? stats.due_today_count : "-"}개
+          </span>
+          <span className="vocab-hero-chip">
+            어려운 단어 {stats ? stats.hard_count : "-"}개
           </span>
         </div>
         <div className="landing-hero-actions vocab-hero-actions-compact">
@@ -966,6 +969,21 @@ export function VocabSection({
             );
           })}
         </div>
+      ) : dueOnly && !searchText.trim() && statusFilter === "all" ? (
+        <AppEmptyState
+          mood="empty"
+          title="지금 복습할 단어가 없어요."
+          description="새 원문을 읽고 단어를 더 담아보세요."
+        >
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={onGoToReading}
+          >
+            <BookIcon className="button-icon" />
+            원문 읽기
+          </button>
+        </AppEmptyState>
       ) : hasActiveFilter ? (
         <AppEmptyState
           mood="empty"

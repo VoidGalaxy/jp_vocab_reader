@@ -3699,6 +3699,12 @@ input.reading-vocab-item-checkbox {
   margin: 0;
 }
 
+.shared-deck-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .shared-deck-section {
   gap: 16px;
 }
