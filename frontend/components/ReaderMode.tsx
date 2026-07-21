@@ -447,7 +447,7 @@ export function ReaderMode({
   const isAtFirstOccurrence = activeSegmentKey === null;
 
   return (
-    <div className="reader-paper hero-card">
+    <div className="reader-paper hero-card card-stack-surface">
       <div className="reader-mode-header-row">
         <div>
           <h3 className="reader-mode-title">읽기 모드</h3>
@@ -633,7 +633,7 @@ export function ReaderMode({
           className="token-sheet-overlay token-sheet-overlay-idle"
           aria-hidden="true"
         >
-          <div className="bookmark-inspector token-sheet-idle paper-corner">
+          <div className="bookmark-inspector word-index-inspector token-sheet-idle paper-corner card-stack-surface">
             <StudyCompanion mood="reading" size="sm" />
             <p className="token-sheet-idle-text">
               원문에서 모르는 단어를 눌러보세요.

@@ -653,7 +653,7 @@ export function ReadingTab({
           collapsed by default) share one "bound notebook" frame (a dashed
           spine down the left edge) instead of reading as three unrelated
           floating boxes. */}
-      <div className="reader-workspace">
+      <div className="reader-workspace library-card-stage">
         {hasResult ? (
           <ReaderMode
             originalText={analyzedText}

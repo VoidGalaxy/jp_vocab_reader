@@ -373,21 +373,14 @@ button {
 /* V3 library rail -- replaces the old 216px sidebar (full text labels, its
    own repeated app-name block). Book-spine width, icon + tiny label per
    item, no section header text -- reads as a shelf edge, not an admin nav
-   panel. Only the primary 5 screens ever render here; everything else
-   collapses into the "더보기" flyout below instead of a second labeled
-   group eating rail height.
+   panel. All 8 nav items render here as one flat list (no "더보기" flyout
+   layer) -- link min-height/gap/font-size are intentionally tight so the
+   full list still reads as one compact rail rather than a long menu.
 
    Deliberately NOT a rounded/bordered/shadowed floating card -- that read
    as "a small second panel" rather than a rail attached to the page edge.
    Just a flat strip with a hairline right-edge separator, closer to an
    actual book spine sitting next to the page. */
-/* No overflow-y/max-height here on purpose -- the rail only ever holds a
-   fixed 5 primary items + brand + more-button (everything else collapses
-   into the flyout below), so it never needs to scroll. Giving it
-   overflow-y: auto would also force overflow-x: auto per the CSS spec's
-   overflow-x/y coupling rule, which clips the flyout's
-   left: calc(100% + 10px) positioning and makes "더보기" completely
-   unopenable. */
 .library-rail {
   position: sticky;
   top: 24px;
@@ -436,7 +429,7 @@ button {
 .library-rail-nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
 }
 
@@ -445,15 +438,15 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   width: 100%;
-  min-height: 54px;
-  padding: 6px 2px;
+  min-height: 46px;
+  padding: 5px 2px;
   border-radius: 12px;
   color: var(--muted);
   background: transparent;
   font-weight: 700;
-  font-size: 10.5px;
+  font-size: 10px;
   box-shadow: none;
   text-align: center;
 }
@@ -482,58 +475,8 @@ button {
 
 .library-rail-icon {
   flex: 0 0 auto;
-  width: 19px;
-  height: 19px;
-}
-
-.library-rail-more-wrap {
-  position: relative;
-  width: 100%;
-  margin-top: auto;
-}
-
-.library-rail-more-sheet {
-  position: absolute;
-  bottom: 0;
-  left: calc(100% + 10px);
-  z-index: 600;
-  display: grid;
-  gap: 2px;
-  width: max(172px, 100%);
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--panel-bg);
-  box-shadow: 0 14px 30px rgba(120, 98, 40, 0.12);
-  animation: app-slide-up var(--motion-fast) var(--ease-soft) both;
-}
-
-.library-rail-more-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-width: 0;
-  min-height: 42px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  color: var(--text-secondary);
-  background: transparent;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: none;
-  text-align: left;
-}
-
-.library-rail-more-item:not(:disabled):hover {
-  background: var(--soft-bg);
-  box-shadow: none;
-  transform: none;
-}
-
-.library-rail-more-item-active {
-  color: var(--primary);
-  background: var(--soft-bg);
+  width: 18px;
+  height: 18px;
 }
 
 .app-bottom-nav {
@@ -583,11 +526,11 @@ button {
     gap: 2px;
     min-width: 0;
     min-height: 48px;
-    padding: 6px 2px;
+    padding: 6px 1px;
     border-radius: 10px;
     color: var(--muted);
     background: transparent;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     box-shadow: none;
   }
@@ -610,49 +553,8 @@ button {
   }
 
   .app-bottom-nav-icon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .app-bottom-nav-more-wrap {
-    position: relative;
-    display: flex;
-    flex: 1 1 0;
-  }
-
-  .app-bottom-nav-more-sheet {
-    position: absolute;
-    right: 0;
-    bottom: calc(100% + 8px);
-    display: grid;
-    gap: 2px;
-    width: max(160px, 100%);
-    padding: 8px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--panel-bg);
-    box-shadow: 0 -10px 26px rgba(120, 98, 40, 0.14);
-  }
-
-  .app-bottom-nav-more-item {
-    justify-content: flex-start;
-    width: 100%;
-    min-width: 0;
-    min-height: 44px;
-    color: var(--text-secondary);
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .app-bottom-nav-more-item:not(:disabled):hover {
-    background: var(--soft-bg);
-    box-shadow: none;
-    transform: none;
-  }
-
-  .app-bottom-nav-more-item-active {
-    color: var(--primary);
-    background: var(--soft-bg);
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -1228,6 +1130,41 @@ button {
   font-size: 15px;
 }
 
+/* Index Card Study direction -- "최근 담은 단어" as 3 small index cards
+   instead of just a number in a chip, echoing Design Lab Direction B's
+   Home mini-screen. Real data (page.tsx's infoRecentWords, already fetched
+   for the 기록 tab), sliced to 3. */
+.home-recent-index-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.home-recent-index-card {
+  padding: 10px 12px;
+}
+
+.home-recent-index-card-surface {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.home-recent-index-card-reading {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 1px;
+}
+
+.home-recent-index-card-meaning {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
 /* Small sticky-note card wrapping the continue-row -- gives the home
    screen's one "next step" a bit of desk-memo presence (label + paper
    corner + a faint rotation, like a card actually left on the desk)
@@ -1279,6 +1216,17 @@ button {
 }
 
 @media (max-width: 640px) {
+  .library-card-stage {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .card-stack-surface::before,
+  .card-stack-surface::after {
+    left: 4px;
+    right: 4px;
+  }
+
   .meaning-actions-row {
     flex-direction: column;
     align-items: stretch;
@@ -1336,6 +1284,98 @@ button {
 .hero-card {
   border-radius: 20px;
   box-shadow: 0 16px 36px var(--paper-shadow);
+}
+
+/* ==========================================================================
+   Index Card Study direction -- applied from Design Lab Direction B
+   (frontend/app/design-lab/page.tsx). These are shared visual primitives,
+   not a copy-paste of the prototype's own prefixed classes: production
+   call sites add them as additional classes alongside each screen's
+   existing card, so the underlying markup/props/handlers never change.
+   ========================================================================== */
+
+/* card-stack-surface -- a modifier class (add alongside an existing card)
+   that adds two faint card-shaped layers behind it via ::before/::after,
+   reading as "one card sitting on top of a small stack" instead of a
+   single flat card floating on empty page background. Needs the host to
+   already have (or here sets) position:relative and its own opaque
+   background/border-radius for the illusion to read correctly. */
+.card-stack-surface {
+  position: relative;
+}
+
+.card-stack-surface::before,
+.card-stack-surface::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 6px;
+  right: 6px;
+  height: 100%;
+  border-radius: inherit;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  pointer-events: none;
+}
+
+.card-stack-surface::before {
+  z-index: -1;
+  transform: translateY(7px) scale(0.98);
+  opacity: 0.65;
+}
+
+.card-stack-surface::after {
+  z-index: -2;
+  transform: translateY(14px) scale(0.96);
+  opacity: 0.35;
+}
+
+/* index-card-shell -- base "this is an index card" treatment (thin border,
+   small radius, soft shadow, optional colored top tab via
+   .index-card-shell-tab) reused wherever a single word/deck/word-panel
+   needs to read as a physical index card rather than a generic bordered
+   box. */
+.index-card-shell {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: 0 8px 18px rgba(120, 98, 40, 0.1);
+}
+
+.index-card-shell-tab {
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  padding: 3px 12px;
+  border-radius: 4px 4px 0 0;
+  background: var(--screen-accent, var(--primary));
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  z-index: 3;
+}
+
+/* library-card-stage -- very subtle "card catalog drawer" backdrop (faint
+   horizontal bands), much lower-contrast than Design Lab's own prototype
+   striping since this is meant to sit quietly behind real content, not
+   demonstrate the texture. Used as an additional wrapper class around a
+   handful of "stage" containers (reader workspace, classify stage, review
+   focus card) rather than applied to the whole page background, so it
+   stays "은은한 서재 책상" rather than a heavy paper skin. */
+.library-card-stage {
+  position: relative;
+  border-radius: 20px;
+  background: repeating-linear-gradient(
+      to bottom,
+      rgba(120, 98, 40, 0.03) 0px,
+      rgba(120, 98, 40, 0.03) 34px,
+      transparent 34px,
+      transparent 36px
+    ),
+    var(--soft-bg);
+  padding: 20px;
 }
 
 /* Paper-note styling for policy/trust/context-example asides -- an accent

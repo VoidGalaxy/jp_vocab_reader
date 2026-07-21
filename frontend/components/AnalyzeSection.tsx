@@ -248,7 +248,7 @@ function ClassifyStageIntro({
   onDiscardDraft,
 }: ClassifyStageIntroProps) {
   return (
-    <section className="classify-stage hero-card">
+    <section className="classify-stage hero-card library-card-stage">
       <div className="classify-hero-header">
         <StudyCompanion
           mood="reading"
@@ -450,7 +450,7 @@ function ClassifyCardStage({
         </p>
       ) : null}
 
-      <div className="classify-word-card">
+      <div className="classify-word-card card-stack-surface">
         <div className="classify-progress">
           {currentCardIndex + 1} / {totalCount}
         </div>
@@ -502,7 +502,7 @@ function ClassifyResultSummary({
   onGoToVocab,
 }: ClassifyResultSummaryProps) {
   return (
-    <div className="classify-result-summary">
+    <div className="classify-result-summary index-card-shell">
       <StudyCompanion mood="done" />
       <span className="brand-stamp">완료</span>
       <h3>단어 나누기를 마쳤어요.</h3>

@@ -28,8 +28,8 @@ type StudyLogPageProps = {
 function StudyLogHero() {
   return (
     <div className="reading-hero">
-      <h2 className="reading-hero-title">학습 기록장</h2>
-      <p className="reading-hero-subtitle">읽고 담고 복습한 흐름을 차분히 돌아보세요.</p>
+      <h2 className="reading-hero-title">학습 통계</h2>
+      <p className="reading-hero-subtitle">오늘까지의 학습 현황을 한눈에 확인하세요.</p>
     </div>
   );
 }
@@ -112,7 +112,7 @@ function DeckProgressJournal({ deckStats }: { deckStats: DeckStats[] }) {
   }
   return (
     <section className="study-log-entry deck-progress-journal">
-      <h3 className="records-log-title">서가별 기록</h3>
+      <h3 className="records-log-title">서가별 통계</h3>
       <div className="records-deck-log">
         {deckStats.map((deck) => (
           <div className="records-deck-row paper-corner" key={deck.deck_id}>

@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AccountMenu } from "../components/AccountMenu";
 import { AnalyzeSection } from "../components/AnalyzeSection";
-import { AppShell, type NavAction, type NavGroup } from "../components/AppShell";
+import { AppShell, type NavAction } from "../components/AppShell";
 import { GlobalFeedbackModal } from "../components/GlobalFeedbackModal";
 import {
   classifyMessageTone,
@@ -183,7 +183,7 @@ const tabs: Array<{
   { key: "vocab", label: "어휘 노트", mobileLabel: "노트", icon: CardFileIcon },
   { key: "study", label: "복습", icon: CardsIcon },
   { key: "shared", label: "덱 책장", mobileLabel: "덱", icon: BookshelfIcon },
-  { key: "info", label: "기록", icon: ClockIcon },
+  { key: "info", label: "통계", icon: ClockIcon },
 ];
 
 function createEmptySessionCounts(): SessionReviewCounts {
@@ -930,10 +930,14 @@ export default function HomePage() {
   // the study tab does, so it needs stats fetched up front rather than only
   // on a study-tab visit. Reuses the existing /stats fetch + state --
   // failures already surface as studyStatsMessage without throwing, so a
-  // failed request here can't break the home screen.
+  // failed request here can't break the home screen. Also reuses
+  // loadInfoWordHighlights (already built for the 기록 tab's "최근 담은
+  // 단어" list) so Home's own index-card teaser has real words instead of
+  // just a count -- same /vocab-items?sort=created_desc read, no new call.
   useEffect(() => {
     if (activeTab === "home") {
       void loadStudyStats(selectedStudyDeckId);
+      void loadInfoWordHighlights();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
@@ -2886,11 +2890,11 @@ export default function HomePage() {
   }
 
   // Builds one NavAction from the existing `tabs` entry for `key` --
-  // sidebar/bottom-nav/more-sheet all resolve through handleTabChange, so
-  // there is exactly one place tab switches actually happen. `mobile: true`
-  // swaps in the tab's shorter mobileLabel (falling back to the full label
-  // when none is set) for the bottom tab bar, which has much less width to
-  // work with than the sidebar.
+  // sidebar/bottom-nav both resolve through handleTabChange, so there is
+  // exactly one place tab switches actually happen. `mobile: true` swaps in
+  // the tab's shorter mobileLabel (falling back to the full label when none
+  // is set) -- both the rail and the bottom tab bar are width-constrained,
+  // so every nav item uses the short label now.
   function navFor(key: TabKey, options?: { mobile?: boolean }): NavAction {
     const tab = tabs.find((item) => item.key === key)!;
     return {
@@ -2909,37 +2913,16 @@ export default function HomePage() {
     onClick: openAppFeedback,
   };
 
-  // Lightweight-reader-first nav: the 5 screens the core loop actually
-  // needs (읽기 -> 담기 -> 복습 -> 노트에 쌓임, 덱 책장 for browsing more
-  // words) stay primary on both sidebar and bottom tab. 빠른 분류/기록/
-  // 피드백 are still one tap away (sidebar "더보기" group / mobile more
-  // sheet) -- nothing is removed, only demoted out of the primary row so
-  // it doesn't compete with the actual reading loop.
-  const sidebarGroups: NavGroup[] = [
-    {
-      label: "학습",
-      items: [
-        navFor("home"),
-        navFor("reading"),
-        navFor("study"),
-        navFor("vocab"),
-        navFor("shared"),
-      ],
-    },
-    {
-      label: "더보기",
-      items: [navFor("analyze"), navFor("info"), feedbackNav],
-    },
-  ];
-
-  const mobilePrimaryNavItems: NavAction[] = [
+  // Flat nav: all 8 items (학습 루프 5개 + 빠른 분류/통계/피드백) render as
+  // one ordered list on both the sidebar rail and the mobile bottom bar --
+  // no "더보기" flyout/toggle layer anymore, so there is exactly one place
+  // to look for any screen.
+  const navItems: NavAction[] = [
     navFor("home", { mobile: true }),
     navFor("reading", { mobile: true }),
     navFor("study", { mobile: true }),
     navFor("vocab", { mobile: true }),
     navFor("shared", { mobile: true }),
-  ];
-  const mobileMoreNavItems: NavAction[] = [
     navFor("analyze", { mobile: true }),
     navFor("info", { mobile: true }),
     feedbackNav,
@@ -2948,9 +2931,7 @@ export default function HomePage() {
   return (
     <main className="page">
       <AppShell
-        groups={sidebarGroups}
-        mobilePrimaryItems={mobilePrimaryNavItems}
-        mobileMoreItems={mobileMoreNavItems}
+        navItems={navItems}
         feedbackSlot={
           <button
             type="button"
@@ -2997,6 +2978,7 @@ export default function HomePage() {
             onOpenAccount={openAccountMenu}
             onStartRecentlySaved={startStudyFromRecentlySaved}
             onGoToVocab={() => void handleTabChange("vocab")}
+            recentWords={infoRecentWords.slice(0, 3)}
           />
         ) : null}
 

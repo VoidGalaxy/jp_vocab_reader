@@ -72,7 +72,7 @@ export function TokenDetailSheet({
   return (
     <div className="token-sheet-overlay" role="presentation" onClick={onClose}>
       <div
-        className="bookmark-inspector paper-corner"
+        className="bookmark-inspector word-index-inspector paper-corner card-stack-surface"
         role="dialog"
         aria-modal="true"
         aria-label={`${label} 단어 정보`}

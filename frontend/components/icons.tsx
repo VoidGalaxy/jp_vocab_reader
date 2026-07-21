@@ -63,16 +63,6 @@ export function CloseIcon(props: IconProps) {
   );
 }
 
-export function MoreIcon(props: IconProps) {
-  return (
-    <svg {...baseProps(props)}>
-      <circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
 export function BookIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>

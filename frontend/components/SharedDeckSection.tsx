@@ -2,7 +2,6 @@ import {
   AppEmptyState,
   BrandDeckCover,
   BrandSectionBadge,
-  StudyCompanion,
 } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import { BookshelfIcon, CardFileIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
@@ -138,8 +137,8 @@ export function SharedDeckSection({
         key={deck.id}
         className={
           isSelected
-            ? "shared-deck-card selected-shared-deck-card"
-            : "shared-deck-card"
+            ? "shared-deck-card selected-shared-deck-card card-stack-surface"
+            : "shared-deck-card card-stack-surface"
         }
       >
         <BrandDeckCover {...getDeckCoverProps(deck, level)} />
@@ -147,13 +146,6 @@ export function SharedDeckSection({
           <div className="shared-deck-title-row">
             <h3>{getDisplayTitle(deck, level)}</h3>
             {level ? <JlptLevelTag level={level} /> : null}
-            {level ? (
-              <StudyCompanion
-                mood="reading"
-                size="sm"
-                className="shared-deck-recommend-mark"
-              />
-            ) : null}
           </div>
           <div className="shared-deck-meta-row">
             <span className="shared-deck-word-count-badge">

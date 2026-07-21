@@ -1,6 +1,7 @@
 "use client";
 
 import { LibraryHeroIllustration, StudyCompanion } from "./BrandElements";
+import { getDisplayMeaning } from "./shared";
 import {
   BookIcon,
   CardFileIcon,
@@ -11,7 +12,7 @@ import {
   ShieldIcon,
   SparkleIcon,
 } from "./icons";
-import type { StudyStats } from "./types";
+import type { StudyStats, VocabItem } from "./types";
 
 type HomeDashboardProps = {
   isDevUser: boolean;
@@ -25,6 +26,10 @@ type HomeDashboardProps = {
   onOpenAccount: () => void;
   onStartRecentlySaved: () => void;
   onGoToVocab: () => void;
+  // Index Card Study direction: up to 3 recently-saved words shown as
+  // small index cards (same data page.tsx already fetches for the 기록
+  // tab's "최근 담은 단어" list -- reused here, no new API call).
+  recentWords: VocabItem[];
 };
 
 // Lightweight-reader-first home: a hero (title + 1-line subcopy + the 3
@@ -47,6 +52,7 @@ export function HomeDashboard({
   onOpenAccount,
   onStartRecentlySaved,
   onGoToVocab,
+  recentWords,
 }: HomeDashboardProps) {
   const continueRow = recentlySavedVocabItemIdsCount > 0
     ? {
@@ -68,7 +74,7 @@ export function HomeDashboard({
 
   return (
     <section className="tab-panel home-dashboard" aria-live="polite">
-      <section className="panel-card hero-card home-hero-card">
+      <section className="panel-card hero-card home-hero-card card-stack-surface">
         <div className="home-hero-main">
           <div className="home-hero-greeting">
             <span className="home-hero-badge">
@@ -153,6 +159,22 @@ export function HomeDashboard({
           </strong>
         </span>
       </div>
+
+      {recentWords.length > 0 ? (
+        <div className="home-recent-index-row" aria-label="최근 담은 단어">
+          {recentWords.map((item) => (
+            <div className="index-card-shell home-recent-index-card" key={item.id}>
+              <span className="home-recent-index-card-surface">{item.surface}</span>
+              {item.reading && item.reading !== item.surface ? (
+                <span className="home-recent-index-card-reading">{item.reading}</span>
+              ) : null}
+              <span className="home-recent-index-card-meaning">
+                {getDisplayMeaning(item.meaning_ko)}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       <div className="home-desk-memo paper-corner">
         <span className="memo-label">책상 메모</span>

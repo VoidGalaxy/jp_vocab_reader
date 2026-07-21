@@ -442,7 +442,7 @@ export function StudySection({
       ) : null}
 
       {currentItem && !isComplete ? (
-        <div className="study-card hero-card paper-corner">
+        <div className="study-card hero-card paper-corner card-stack-surface">
           <div
             className={`study-card-header${
               studyMode === "recent" ? " study-card-header-recent" : ""
@@ -590,7 +590,7 @@ export function StudySection({
       ) : null}
 
       {isComplete ? (
-        <div className="study-card complete-card">
+        <div className="study-card complete-card card-stack-surface index-card-shell">
           <StudyCompanion mood="done" />
           <span className="brand-stamp">완료</span>
           <h3>
