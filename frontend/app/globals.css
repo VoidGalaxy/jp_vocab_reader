@@ -123,7 +123,7 @@
   --screen-accent-soft: #e7eef3;
 }
 
-.records-panel {
+.study-log-page {
   --screen-accent: var(--sage-green);
   --screen-accent-soft: #eef6f0;
 }
@@ -133,7 +133,7 @@
    companion illustrations settle into place instead of jumping in; nothing
    here loops or repeats. Reused across many components by applying the
    class name directly on an existing element (see .empty-guide,
-   .brand-stamp, .study-companion, .message--success, .token-sheet,
+   .brand-stamp, .study-companion, .message--success, .bookmark-inspector,
    .feedback-modal below) rather than duplicating an animation prop per
    call site. */
 @keyframes app-fade-in {
@@ -258,15 +258,47 @@ body {
       rgba(61, 47, 20, 0.045) 0%,
       rgba(61, 47, 20, 0) 70%
     ),
+    /* V3 content-canvas pass: faint repeating "book spine" columns --
+       opaque cards/panels sit on top and hide it completely, so this only
+       ever shows through in the wide empty gutters beside the centered
+       workspace, reading as a distant bookshelf instead of blank page. */
+    repeating-linear-gradient(
+      90deg,
+      rgba(61, 47, 20, 0.04) 0px,
+      rgba(61, 47, 20, 0.04) 2px,
+      transparent 2px,
+      transparent 34px
+    ),
     linear-gradient(180deg, #fbf8f0 0, var(--page-bg) 260px);
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat-x,
+    no-repeat;
   background-size:
     24px 24px,
     auto,
     auto,
     auto,
     auto,
+    auto,
     auto;
+}
+
+@media (max-width: 640px) {
+  /* Decorative layers stay minimal on mobile (dot texture + top/bottom
+     glow only) -- the book-spine columns and desk-surface pool have no
+     empty gutters to live in on a single-column phone layout, so they're
+     dropped rather than shown compressed. */
+  body {
+    background-image:
+      radial-gradient(circle, rgba(61, 47, 20, 0.05) 1px, transparent 1.4px),
+      radial-gradient(
+        ellipse 900px 480px at 50% -80px,
+        rgba(255, 250, 235, 0.9) 0%,
+        rgba(255, 250, 235, 0) 70%
+      ),
+      linear-gradient(180deg, #fbf8f0 0, var(--page-bg) 260px);
+    background-repeat: repeat, no-repeat, no-repeat;
+    background-size: 24px 24px, auto, auto;
+  }
 }
 
 button,
@@ -301,21 +333,25 @@ button {
   padding: 28px 20px 40px;
 }
 
-/* V3: the rail shrank from 216px to 76px, which freed up real width -- but
-   .workspace staying capped at 1080px just moved the old "dead space next
-   to a wide sidebar" complaint into "dead space on both sides of a still-
-   narrow centered column". Widened the shared cap, and a couple of screens
-   that most benefit from the extra room (읽기's reader canvas, 덱 책장's
-   shelf grid) get a further per-tab bump via the workspace-${activeTab}
-   hook below -- additive only, every other tab keeps the same centered
-   card-column feel it already had. */
-.workspace {
+/* V3 final reset: renamed from .workspace to .library-canvas -- this is
+   the "which room of the library am I in" wrapper, not a generic content
+   container, so each screen's width/rhythm variant (library-canvas-reading,
+   -shared, -vocab, ...) reads as a deliberate per-room layout choice
+   rather than one shared admin-page content column. The rail shrank from
+   216px to 76px, which freed up real width -- but a single fixed cap here
+   just moved the old "dead space next to a wide sidebar" complaint into
+   "dead space on both sides of a still-narrow centered column", so the
+   per-tab hook below widens the screens that most benefit from the extra
+   room (읽기's reader canvas, 노트's index-card drawer, 덱 책장's shelf
+   grid). */
+.library-canvas {
   width: min(1240px, 100%);
   margin: 0 auto;
 }
 
-.workspace-reading,
-.workspace-shared {
+.library-canvas-reading,
+.library-canvas-shared,
+.library-canvas-vocab {
   width: min(1360px, 100%);
 }
 
@@ -823,6 +859,16 @@ button {
   line-height: 1.45;
 }
 
+/* Wide desktop only: the hero card now spans the full (widened) workspace,
+   so a 26px title left a lot of unused vertical/visual weight next to the
+   illustration -- bumped up so the hero fills its own card with intent
+   instead of reading as "a small card floating in a big one". */
+@media (min-width: 900px) {
+  .landing-hero-title {
+    font-size: 32px;
+  }
+}
+
 .landing-hero-subtitle {
   margin: 0;
   color: #6b6248;
@@ -847,18 +893,29 @@ button {
   display: grid;
   gap: 10px;
   flex: 1 1 380px;
+  max-width: 560px;
   min-width: 0;
 }
 
 /* Hero card becomes a row (copy left, desk illustration right) -- two
    classes so this wins over .panel-card's own `display: grid` regardless
-   of stylesheet order. */
+   of stylesheet order. justify-content: flex-start (not space-between) on
+   purpose: with the workspace widened for V3, space-between pinned the
+   copy and the illustration to opposite edges of a now much wider card,
+   leaving a dead gap in the middle -- flex-start + a fixed gap keeps them
+   reading as one balanced group instead of two islands. */
 .home-hero-card.hero-card {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 20px;
+}
+
+@media (min-width: 900px) {
+  .home-hero-card.hero-card {
+    gap: 48px;
+  }
 }
 
 /* "서재 히어로 비주얼" -- small flat-lay desk scene (LibraryHeroIllustration)
@@ -879,6 +936,12 @@ button {
   width: 220px;
   height: auto;
   filter: drop-shadow(0 10px 18px rgba(120, 98, 40, 0.14));
+}
+
+@media (min-width: 900px) {
+  .library-hero-illustration {
+    width: 268px;
+  }
 }
 
 .library-hero-book-cover {
@@ -1165,6 +1228,24 @@ button {
   font-size: 15px;
 }
 
+/* Small sticky-note card wrapping the continue-row -- gives the home
+   screen's one "next step" a bit of desk-memo presence (label + paper
+   corner + a faint rotation, like a card actually left on the desk)
+   instead of just another plain full-width button competing with the
+   hero for attention. Deliberately still just the one button underneath;
+   no new content/feature card added. */
+.home-desk-memo {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 14px 16px;
+  border: 1px solid var(--paper-border);
+  border-radius: 12px;
+  background: var(--paper-bg);
+  box-shadow: 0 8px 18px var(--paper-shadow);
+  transform: rotate(-0.4deg);
+}
+
 /* One-line "continue" action -- replaces the old full card (icon + title +
    description + button) with a single tappable row, since there's only
    ever one next step to offer here. */
@@ -1175,7 +1256,7 @@ button {
   width: 100%;
   justify-content: flex-start;
   color: var(--text);
-  background: var(--panel-bg);
+  background: var(--soft-bg);
   border: 1px solid var(--border);
 }
 
@@ -1640,13 +1721,13 @@ button:focus-visible {
   gap: 6px;
 }
 
-.result-section {
+/* classify-stage-outer (renamed from the now-unused .result-section) --
+   deliberately no border/background of its own: the word card underneath
+   already carries the strong paper treatment, so wrapping it in a second
+   bordered box just read as boxy nesting. Plain layout spacing only. */
+.classify-stage-outer {
   display: grid;
   gap: 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.72);
 }
 
 .classification-summary {
@@ -1666,12 +1747,14 @@ button:focus-visible {
   font-weight: 700;
 }
 
-/* Flashcard-tier card (hero-card scale) instead of a plain 10px-radius box
-   -- this is the one card the Analyze tab wants seen as immersive, not a
-   form. The screen-accent top edge ties it to the tab's coral accent, same
-   language .shared-hero-card/.reader-mode already use. */
-.classify-card,
-.classification-complete {
+/* classify-word-card / classify-result-summary (renamed from .classify-card
+   / .classification-complete) -- flashcard-tier card (hero-card scale)
+   instead of a plain 10px-radius box, since this is the one card the
+   Analyze tab wants seen as immersive, not a form. The screen-accent top
+   edge ties it to the tab's coral accent, same language
+   .shared-hero-card/.reader-paper already use. */
+.classify-word-card,
+.classify-result-summary {
   width: min(720px, 100%);
   display: grid;
   gap: 16px;
@@ -1752,6 +1835,11 @@ td .term-badge {
   line-height: 1.55;
 }
 
+/* .classify-actions is shared with .bookmark-inspector's own 2x2 status
+   group below -- Quick Classify's word card additionally carries
+   .classify-action-grid as a semantic co-class (same element, same rules)
+   so the "이 4개는 하나의 분류 결정 그리드다" concept has its own name
+   without forking the shared layout rules. */
 .classify-actions {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1789,12 +1877,12 @@ td .term-badge {
   justify-content: flex-start;
 }
 
-.classification-complete {
+.classify-result-summary {
   justify-items: center;
   text-align: center;
 }
 
-.classification-complete h3 {
+.classify-result-summary h3 {
   margin: 0;
   color: var(--text);
   font-size: 22px;
@@ -1967,7 +2055,11 @@ select {
    card or a roomier hero without a bespoke size per call site. Purely
    decorative (aria-hidden on the wrapper). --screen-accent tints its body
    the same way brand-empty-illustration/-section-badge do, so the
-   character and the rest of a screen's brand marks always match. */
+   character and the rest of a screen's brand marks always match.
+   Every instance also carries .shiori-bookmark-guide as a semantic
+   co-class (this is Shiori the bookmark guide character, not a decorative
+   icon) -- kept separate from .study-companion itself since that name is
+   already threaded through 15+ style rules and 4 component files. */
 .study-companion {
   display: inline-flex;
   flex: 0 0 auto;
@@ -2217,7 +2309,54 @@ select {
   color: #ffffff;
 }
 
+/* desk-surface -- the reusable "sitting on a desk, not bare page
+   background" gradient/shadow recipe. .desk-surface-stage (복습 focus-card
+   backdrop) is the first consumer, extending it with stage-specific
+   padding/radius/edge-line; any other screen that wants the same desk
+   feel can add the base class without the stage-only padding. */
+.desk-surface {
+  position: relative;
+  background: radial-gradient(
+      ellipse 65% 55% at 50% 28%,
+      rgba(255, 255, 255, 0.55) 0%,
+      transparent 72%
+    ),
+    var(--soft-bg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -16px 26px -20px rgba(120, 98, 40, 0.28);
+}
+
+/* Desk stage backdrop -- the 640px-wide .study-card inside still centers
+   itself, but now sits on a soft desk-surface panel instead of bare page
+   background, so the margins on either side read as "desk around the
+   card" rather than unfinished empty space. A faint horizontal line near
+   the bottom stands in for a desk edge; kept low-contrast so it never
+   competes with the card or its rating buttons. */
+.desk-surface-stage {
+  padding: 28px 16px 40px;
+  border-radius: 28px;
+}
+
+.desk-surface-stage::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 22px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--border-strong) 50%,
+    transparent
+  );
+  opacity: 0.6;
+}
+
 .study-card {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 20px;
   width: min(640px, 100%);
@@ -2611,20 +2750,6 @@ select {
   color: var(--success);
 }
 
-.reading-input-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.reading-input-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 /* First-time / empty guidance shown above the textarea before any text is
    entered -- points at the next action instead of leaving blank space. */
 .reading-empty-guide {
@@ -2665,19 +2790,49 @@ select {
   color: var(--muted);
 }
 
-.reading-restored-banner {
+/* V3 final polish: 복원 안내/원문 입력 토글/초기화/저장 가능·바구니 chip
+   used to be a stacked hero title + full-width banner + header-actions row
+   + separate chip row above the reader -- now one compact wrapping
+   toolbar, so the reader canvas sits much closer to the top of the screen
+   once a result exists. */
+.reader-compact-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 8px;
+}
+
+/* Small pill (not a full-width banner) for the "restored" notice -- same
+   information, far less vertical/visual weight. */
+.reading-restored-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 12px;
   border: 1px solid var(--paper-border);
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--paper-bg);
   color: #6b5f3f;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reading-restored-chip-dismiss {
+  min-height: 0;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #6b5f3f;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.reading-restored-chip-dismiss:hover {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: none;
+  transform: none;
 }
 
 /* Open-page input area -- deliberately NOT another bordered .panel-card
@@ -2843,12 +2998,13 @@ select {
   justify-self: start;
 }
 
-/* Candidate Drawer -- the 4th and lightest treatment in the reading tab's
-   box hierarchy (hero reader > flat save-dock > this drawer pull). Closed
-   state has no card chrome at all, just a flush row that reads as a
-   drawer handle; opening it reveals content below a hairline rule instead
-   of inside a bordered box, so the "어휘 후보" list never competes with the
-   reader for visual weight. */
+/* Candidate Drawer (also carries the .candidate-drawer semantic co-class,
+   see ReadingVocabPanel.tsx) -- the 4th and lightest treatment in the
+   reading tab's box hierarchy (hero reader > flat save-dock > this drawer
+   pull). Closed state has no card chrome at all, just a flush row that
+   reads as a drawer handle; opening it reveals content below a hairline
+   rule instead of inside a bordered box, so the "어휘 후보" list never
+   competes with the reader for visual weight. */
 .reading-vocab-drawer {
   border-top: 1px solid var(--border);
 }
@@ -3241,7 +3397,7 @@ input.reading-vocab-item-checkbox {
    drawer-pull below it, so the reading tab isn't four stacked look-alike
    boxes. Quick-save/message/next-actions still stack inside it, just
    without their own card frame. */
-.save-dock {
+.reader-save-dock {
   display: grid;
   gap: 10px;
   padding: 14px 4px 6px;
@@ -3485,6 +3641,73 @@ input.reading-vocab-item-checkbox {
   font-size: 13px;
 }
 
+/* classify-stage (renamed from .classify-hero-card) -- Quick Classify's
+   ClassifyStageIntro component, same hero-card recipe as
+   StudyQuickStartHero, deliberately NOT the reading tab's open-notebook
+   textarea form. A bare textarea+deck-picker+checkbox row still reads as
+   an analysis tool no matter the copy, so this wraps it in a stage: title
+   + description + Shiori stay visible the whole time (previously the
+   guide/illustration only showed while the textarea was still empty, so
+   typing collapsed the screen back into "just a textarea"). */
+.classify-stage {
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+}
+
+.classify-hero-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.classify-hero-companion {
+  flex: 0 0 auto;
+}
+
+.classify-hero-header h2 {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.classify-hero-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* classify-paper-input (renamed from .classify-hero-form) -- the
+   ClassifyPaperInput component's "stage" variant. */
+.classify-paper-input {
+  display: grid;
+  gap: 12px;
+}
+
+/* Textarea styled as a loose paper note (dashed border, tinted, capped
+   height) instead of a full bordered business-form input box. */
+.classify-hero-textarea {
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 12px;
+  background: var(--soft-bg);
+}
+
+.classify-hero-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.classify-hero-cta-row {
+  justify-content: center;
+}
+
+.classify-hero-cta-row .reading-open-button {
+  min-width: 200px;
+}
+
 .study-cta-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3645,6 +3868,240 @@ input.reading-vocab-item-checkbox {
   gap: 6px;
 }
 
+/* study-log-page/study-log-entry (renamed from .records-panel/
+   .records-log-section) -- "학습 기록장/서재 로그" 재구성. 이전엔
+   .stats-panel의 7칸 stat-card 그리드 + .deck-stat-row 테이블형 목록이라
+   관리자 대시보드처럼 보였다. 이 화면만 별도로 섹션 단위 로그 레이아웃을
+   쓰고, .stats-panel/.stat-card 자체는 학습(복습) 탭의 접혀있는
+   "학습 현황 자세히 보기" 안에서 그대로 재사용되므로 변경하지 않는다. */
+.study-log-entry {
+  display: grid;
+  gap: 10px;
+}
+
+.records-log-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.records-log-hint {
+  margin: -4px 0 0;
+}
+
+.records-today-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Small vertical bar-log (not a chart-library dashboard) -- one thin bar
+   per review level, height only, no axis/legend/gridlines. */
+.records-level-strip {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 96px;
+  padding: 12px 14px 8px;
+  border: 1px solid var(--paper-border);
+  border-radius: 12px;
+  background: var(--paper-bg);
+}
+
+.records-level-bar {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  height: 100%;
+  min-width: 0;
+}
+
+.records-level-bar-count {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.records-level-bar-fill {
+  width: 100%;
+  max-width: 28px;
+  border-radius: 6px 6px 2px 2px;
+  background: var(--screen-accent, var(--accent));
+  opacity: 0.85;
+}
+
+.records-level-bar-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.records-deck-log {
+  display: grid;
+  gap: 8px;
+}
+
+/* Same "paper-corner index card" language as the vocab notebook rows --
+   the deck breakdown reads as shelf log entries, not table rows. */
+.records-deck-row {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: 0 2px 6px rgba(120, 98, 40, 0.05);
+}
+
+.records-deck-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text);
+}
+
+.records-deck-row-head span {
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+
+.records-deck-progress {
+  height: 6px;
+}
+
+/* Primary-visible row: 오늘 복습 N / 모르는 단어 N -- 전체/아는 단어/헷갈리는
+   단어 등 상세 숫자만 아래 <details>로 접혀 있다. */
+.records-deck-row-primary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.records-deck-row-due,
+.records-deck-row-unknown {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.records-deck-row-unknown {
+  color: var(--status-unknown-fg);
+}
+
+.records-deck-detail {
+  margin-top: 2px;
+}
+
+.records-deck-detail summary {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.records-deck-detail summary::-webkit-details-marker {
+  display: none;
+}
+
+.records-deck-detail summary::before {
+  content: "▸ ";
+}
+
+.records-deck-detail[open] summary::before {
+  content: "▾ ";
+}
+
+.records-deck-row-meta {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* study-log-journal -- short diary-style lines instead of another stat
+   block, so the same underlying numbers (오늘 복습/최근 담은 단어/자주
+   틀린 단어) also read as "what happened", not just counts. */
+.study-log-journal-list {
+  display: grid;
+  gap: 8px;
+}
+
+.study-log-journal-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--paper-border);
+  border-radius: 10px;
+  background: var(--paper-bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.study-log-journal-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--screen-accent, var(--accent));
+}
+
+.records-word-log {
+  display: grid;
+  gap: 8px;
+}
+
+.records-word-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: 0 2px 6px rgba(120, 98, 40, 0.05);
+}
+
+.records-word-surface {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.records-word-reading {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.records-word-meaning {
+  flex: 1 1 140px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.records-word-wrong-badge {
+  flex: 0 0 auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--status-unknown-bg);
+  color: var(--status-unknown-fg);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .deck-create {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto;
@@ -3756,14 +4213,14 @@ input.reading-vocab-item-checkbox {
 /* One "shelf" of cards under a small heading -- a display-only grouping of
    the same fetched deck list (recommended / mine / everyone else's), so the
    grid reads as a sorted bookshelf instead of one undifferentiated pile. */
-.shared-deck-shelf {
+.shelf-section {
   display: grid;
   gap: 10px;
 }
 
 /* A small ledge line under each shelf label -- reads as the shelf edge the
    cards below sit on, tying the "서가" name to an actual shelf visual. */
-.shared-deck-shelf-title {
+.shelf-section-title {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -3775,7 +4232,7 @@ input.reading-vocab-item-checkbox {
   font-weight: 700;
 }
 
-.shared-deck-shelf-icon {
+.shelf-section-icon {
   flex: 0 0 auto;
   width: 15px;
   height: 15px;
@@ -3783,6 +4240,7 @@ input.reading-vocab-item-checkbox {
 }
 
 .shared-deck-grid {
+  position: relative;
   display: grid;
   /* 280px (not 260px) gives the 3-button owner-card footer ("상세 보기" /
      "가져오기" / "공유 취소") more room to stay on one line, so owner cards
@@ -3790,6 +4248,39 @@ input.reading-vocab-item-checkbox {
      them. */
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 14px;
+  padding-bottom: 18px;
+}
+
+/* Shelf ledge -- a thin wood-toned line plus a soft shadow under the row
+   of book-cover cards, so the grid reads as books resting on a shelf
+   rather than cards floating on plain background. */
+.shared-deck-grid::before {
+  content: "";
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  bottom: 8px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--border-strong) 12%,
+    var(--border-strong) 88%,
+    transparent
+  );
+  opacity: 0.6;
+}
+
+.shared-deck-grid::after {
+  content: "";
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  bottom: 11px;
+  height: 16px;
+  background: linear-gradient(180deg, rgba(120, 98, 40, 0.1), transparent);
+  pointer-events: none;
 }
 
 .shared-deck-card,
@@ -4119,13 +4610,26 @@ input.reading-vocab-item-checkbox {
   color: var(--text);
 }
 
-.vocab-compact-toolbar {
+/* Drawer-tab framing instead of a plain bordered admin filter box -- a
+   dashed top edge + small "카드함 필터" label reads as pulling open a card
+   drawer's filter tab, not an admin data-table toolbar. */
+.index-card-filter {
   display: grid;
   gap: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 4px 4px 10px 10px;
   padding: 12px;
-  background: var(--panel-bg);
+  background: var(--soft-bg);
+}
+
+.vocab-toolbar-label {
+  justify-self: start;
+  margin-bottom: -2px;
+}
+
+.vocab-toolbar-label-icon {
+  width: 12px;
+  height: 12px;
 }
 
 /* Filters (덱/검색/상태/정렬) and actions (학습하기/추가/관리) read as two
@@ -4135,6 +4639,20 @@ input.reading-vocab-item-checkbox {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 10px;
+}
+
+/* V3 final polish: bare <select> elements fall back to native browser
+   chrome (no border-radius/border rule targets `select` app-wide), so the
+   덱/정렬 selects looked like plain OS form controls next to the already
+   pill-styled search input. Matching their border/radius/background here
+   makes the whole row read as one "카드함 필터" tab group instead of two
+   different control styles side by side. */
+.vocab-filter-group select {
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: var(--panel-bg);
 }
 
 .vocab-action-group {
@@ -4285,12 +4803,12 @@ input.reading-vocab-item-checkbox {
    per screen and the note reads as a list to skim, not a card gallery.
    Divider lines between rows replace per-card borders/shadows; a row only
    grows once its own detail panel is expanded (.vocab-row-expanded). */
-/* Screenshot QA: one continuous bordered box with dashed row-dividers still
-   read as "a list", not a card box. Switched to a tinted drawer (soft-bg,
-   accent-topped) holding individually-carded rows with a real gap between
-   them, so it reads as index cards sitting in a card file instead of table
-   rows. */
-.vocab-list-compact {
+/* index-card-drawer (renamed from .vocab-list-compact): one continuous
+   bordered box with dashed row-dividers read as "a list", not a card box
+   -- this is a tinted drawer (soft-bg, accent-topped) holding
+   individually-carded rows with a real gap between them, so it reads as
+   index cards sitting in a card file instead of database table rows. */
+.index-card-drawer {
   display: grid;
   gap: 8px;
   padding: 8px;
@@ -4299,7 +4817,11 @@ input.reading-vocab-item-checkbox {
   background: var(--soft-bg);
 }
 
-.vocab-row {
+/* vocabulary-index-row (renamed from .vocab-row) -- the outer row identity;
+   vocab-row-* sub-classes below (headword/meaning/badges/detail/status)
+   keep their existing names, same pattern as .reader-paper keeping its
+   reader-mode-* header sub-classes. */
+.vocabulary-index-row {
   position: relative;
   overflow: hidden;
   padding: 10px 14px 10px 20px;
@@ -4312,7 +4834,7 @@ input.reading-vocab-item-checkbox {
     box-shadow var(--motion-fast) var(--ease-soft);
 }
 
-.vocab-row:hover {
+.vocabulary-index-row:hover {
   background: var(--panel-bg);
   box-shadow: 0 5px 14px rgba(120, 98, 40, 0.1);
 }
@@ -4325,7 +4847,7 @@ input.reading-vocab-item-checkbox {
 /* Small colored index-card tab down the row's left edge, keyed to the
    word's saved status -- the same "file card drawer" cue a physical index
    card box uses, so status reads at a glance without opening the row. */
-.vocab-row::before {
+.vocabulary-index-row::before {
   content: "";
   position: absolute;
   top: 9px;
@@ -4727,7 +5249,7 @@ input.reading-vocab-item-checkbox {
     padding: 18px 12px 32px;
   }
 
-  .workspace {
+  .library-canvas {
     width: 100%;
   }
 
@@ -4834,6 +5356,16 @@ input.reading-vocab-item-checkbox {
   .shared-deck-grid {
     grid-template-columns: 1fr;
     gap: 10px;
+    padding-bottom: 0;
+  }
+
+  /* The desktop shelf-ledge line reads as "books resting on a shelf" under
+     a horizontal row of cards -- stacked single-column on mobile there's
+     no row to sit under, so it's just a stray line under the last card.
+     Dropped rather than shown compressed. */
+  .shared-deck-grid::before,
+  .shared-deck-grid::after {
+    display: none;
   }
 
   /* Slightly shorter book-cover band on narrow screens -- the desktop
@@ -4863,7 +5395,20 @@ input.reading-vocab-item-checkbox {
     grid-template-columns: 1fr;
   }
 
-  .vocab-compact-toolbar {
+  .records-level-strip {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .records-level-bar {
+    min-width: 28px;
+  }
+
+  .records-word-row {
+    align-items: flex-start;
+  }
+
+  .index-card-filter {
     gap: 8px;
     padding: 10px;
   }
@@ -4906,13 +5451,21 @@ input.reading-vocab-item-checkbox {
     padding: 7px 12px;
   }
 
+  /* Same opt-out for the reading toolbar row's buttons -- otherwise each
+     one stretches full-width and the compact one-row toolbar becomes a
+     tall stack of full-width buttons again on mobile. */
+  .reader-compact-toolbar button {
+    width: auto;
+    min-width: 0;
+  }
+
   .management-actions {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .classify-card,
-  .classification-complete {
+  .classify-word-card,
+  .classify-result-summary {
     gap: 14px;
     padding: 16px;
   }
@@ -4969,6 +5522,20 @@ input.reading-vocab-item-checkbox {
   .study-card {
     gap: 16px;
     min-height: 0;
+  }
+
+  /* Tighter desk-stage padding on mobile -- the card already goes near
+     edge-to-edge, so the surrounding backdrop only needs a small margin,
+     not the desktop-scale "wide empty space" allowance. */
+  .desk-surface-stage {
+    padding: 12px 6px 20px;
+    border-radius: 16px;
+  }
+
+  .desk-surface-stage::after {
+    left: 5%;
+    right: 5%;
+    bottom: 12px;
   }
 
   .study-mode-grid {
@@ -5303,14 +5870,14 @@ input.reading-vocab-item-checkbox {
    workspace instead of unrelated floating boxes. Each section keeps its
    own card-tier styling (reader stays the "hero", tray/list stay
    "section") -- this only adds a connecting thread behind them. */
-.reading-workspace {
+.reader-workspace {
   position: relative;
   display: grid;
   gap: 14px;
   padding-left: 18px;
 }
 
-.reading-workspace::before {
+.reader-workspace::before {
   content: "";
   position: absolute;
   top: 8px;
@@ -5328,7 +5895,11 @@ input.reading-vocab-item-checkbox {
   opacity: 0.45;
 }
 
-.reader-mode {
+/* reader-paper -- the reader canvas itself (renamed from .reader-mode,
+   which now only prefixes the mode's own header/toggle sub-parts below).
+   This is the screen's one hero surface: reader-first layout means this
+   card, not the toolbar above it, is what a first glance should land on. */
+.reader-paper {
   border: 1px solid var(--paper-border);
   padding: 28px;
   background: var(--paper-bg);
@@ -5354,6 +5925,31 @@ input.reading-vocab-item-checkbox {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+/* Reader-first layout: the focus/JLPT display toggles now open as a small
+   popover anchored under the "옵션 열기" button instead of sitting inline
+   in the reader header at all times -- one compact affordance instead of
+   two persistent checkboxes competing with the reader paper's own title. */
+.reader-mode-options-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.reader-mode-options-wrap .reader-mode-toggles {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  min-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: 0 14px 30px rgba(120, 98, 40, 0.12);
+  animation: app-slide-up var(--motion-fast) var(--ease-soft) both;
 }
 
 .reader-mode-toggles {
@@ -5667,11 +6263,16 @@ input.reading-vocab-item-checkbox {
   animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
 }
 
-/* A warm accent top edge ties the panel to the reader paper/screen-accent
-   underneath it, same "attached note" language .classify-card already
-   uses -- reads as a memo pinned to the current page, not an unrelated
-   inspector modal floating over it. */
-.token-sheet {
+/* bookmark-inspector (renamed from .token-sheet) -- the word panel is a
+   bookmark memo tucked next to the reader paper, not a dev-tools/inspector
+   modal, so the outer wrapper's name now says so. A warm accent top edge
+   ties the panel to the reader paper/screen-accent underneath it, same
+   "attached note" language .classify-card already uses -- reads as a memo
+   pinned to the current page, not an unrelated inspector floating over
+   it. All of this card's inner part classes (token-sheet-header,
+   token-sheet-meaning-block, ...) keep their existing names -- only the
+   outer wrapper token changed. */
+.bookmark-inspector {
   width: 100%;
   max-width: 480px;
   max-height: 85vh;
@@ -5836,12 +6437,13 @@ input.reading-vocab-item-checkbox {
 /* Status pills read as chips (fully rounded) in a 2x2 grid -- wider columns
    than the Analyze tab's 4-across layout so a label like "완벽히 아는 단어"
    fits on one line inside a pill instead of wrapping character-by-character.
-   Scoped to .token-sheet so the Analyze tab's classify-card is untouched. */
-.token-sheet .classify-actions {
+   Scoped to .bookmark-inspector so the Analyze tab's classify-card is
+   untouched. */
+.bookmark-inspector .classify-actions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.token-sheet .classify-actions button {
+.bookmark-inspector .classify-actions button {
   border-radius: 999px;
   word-break: keep-all;
 }
@@ -6121,7 +6723,7 @@ input.reading-vocab-item-checkbox {
     background: transparent;
   }
 
-  .token-sheet {
+  .bookmark-inspector {
     width: 100%;
     max-width: 380px;
     max-height: min(640px, calc(100vh - 48px));
@@ -6138,7 +6740,7 @@ input.reading-vocab-item-checkbox {
 }
 
 @media (max-width: 640px) {
-  .reader-mode {
+  .reader-paper {
     padding: 14px;
   }
 
@@ -6178,7 +6780,7 @@ input.reading-vocab-item-checkbox {
     font-size: 22px;
   }
 
-  .token-sheet {
+  .bookmark-inspector {
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
   }
 
@@ -6202,11 +6804,11 @@ input.reading-vocab-item-checkbox {
      comes before the word list/select-save panel (요약 -> 단어 목록 순).
      Desktop keeps its existing DOM order (summary before the reader)
      untouched -- `order` only changes visual position, not markup. */
-  .reader-mode {
+  .reader-paper {
     order: 2;
   }
 
-  .save-dock {
+  .reader-save-dock {
     order: 3;
   }
 

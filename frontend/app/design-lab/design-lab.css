@@ -1,0 +1,951 @@
+/* ==========================================================================
+   Design Lab -- static, isolated prototype styles only.
+
+   Scope: every rule in this file is prefixed (design-lab, design-direction,
+   direction-xxx) so it can never collide with or leak into the real apps
+   globals.css screens. This file is only ever imported by
+   frontend/app/design-lab/page.tsx -- no real route imports it.
+
+   This version compares 3 fully distinct visual directions
+   (Desk Reader / Index Card Study / Quiet Library), each rendering the
+   same 4 mini-screens (Home/Reader/Classify/StudyLog) so they can be
+   judged side by side. Nothing here is wired to any API/DB/SRS logic --
+   every number is fixture data.
+   ========================================================================== */
+
+.design-lab {
+  min-height: 100vh;
+  padding: 32px 24px 100px;
+  overflow-x: hidden;
+  background: #f7f3ea;
+}
+
+.design-lab-banner {
+  max-width: 1320px;
+  margin: 0 auto 32px;
+  padding: 10px 16px;
+  border: 1px dashed #d8c9a0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  color: #7c7160;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------------------
+   Shared direction/section scaffolding
+   -------------------------------------------------------------------------- */
+.design-direction {
+  max-width: 1320px;
+  margin: 0 auto 64px;
+}
+
+.design-direction-header {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.design-direction-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #2f2a24;
+  color: #f7f3ea;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.design-direction-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #2f2a24;
+}
+
+.design-direction-concept {
+  margin: 0;
+  max-width: 640px;
+  color: #7c7160;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.design-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* align-items: start (not the grid default "stretch") -- otherwise a
+     taller mini-screen in a row forces its shorter row-mate to stretch to
+     match, leaving a big empty block at the bottom of the shorter one.
+     Each mini-screen should only ever be as tall as its own content. */
+  align-items: start;
+  gap: 18px;
+}
+
+.design-mini-screen {
+  position: relative;
+  padding: 20px;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.design-mini-screen-label {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  z-index: 2;
+}
+
+/* Shared Shiori SVG paint rules -- geometry only changes via wrapper
+   transforms per direction, not per-direction duplicate paths. */
+.shiori-character-svg {
+  display: block;
+}
+
+.shiori-character-body {
+  fill: #f2ead9;
+  stroke: #2f6470;
+  stroke-width: 1.5;
+}
+
+.shiori-character-face {
+  fill: #2f6470;
+}
+
+.shiori-character-eye {
+  fill: #f2ead9;
+}
+
+.shiori-character-mouth {
+  fill: none;
+  stroke: #f2ead9;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.shiori-character-tassel {
+  stroke: #d97a4a;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.shiori-character-bead {
+  fill: #d97a4a;
+}
+
+/* ==========================================================================
+   Direction A -- Desk Reader
+   Warm wood-desk surface, physical paper/book objects, pencil + sticky
+   notes, a bookmark literally clipped to the page edge.
+   ========================================================================== */
+.direction-desk-reader .design-mini-screen {
+  background:
+    repeating-linear-gradient(
+      100deg,
+      rgba(120, 90, 50, 0.05) 0px,
+      rgba(120, 90, 50, 0.05) 2px,
+      transparent 2px,
+      transparent 26px
+    ),
+    linear-gradient(160deg, #e9d9b8 0%, #dcc79d 100%);
+  box-shadow: inset 0 0 0 1px rgba(120, 90, 50, 0.18);
+}
+
+.desk-reader-paper-sheet {
+  position: relative;
+  height: 100%;
+  padding: 18px 16px;
+  border-radius: 3px;
+  background: #fffdf8;
+  box-shadow:
+    3px 4px 0 rgba(120, 90, 50, 0.12),
+    0 10px 20px rgba(60, 40, 10, 0.15);
+}
+
+.desk-reader-paper-sheet::before {
+  /* torn/deckled top edge */
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: repeating-linear-gradient(
+    90deg,
+    #fffdf8 0px,
+    #fffdf8 8px,
+    transparent 8px,
+    transparent 10px
+  );
+}
+
+.desk-reader-title {
+  margin: 0 0 8px;
+  font-size: 21px;
+  font-weight: 800;
+  color: #2f2a24;
+  line-height: 1.35;
+}
+
+.desk-reader-sub {
+  margin: 0 0 14px;
+  color: #7c7160;
+  font-size: 12px;
+}
+
+.desk-reader-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.desk-reader-cta-primary,
+.desk-reader-cta-secondary {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+}
+
+.desk-reader-cta-primary {
+  color: #ffffff;
+  background: #2f6470;
+}
+
+.desk-reader-cta-secondary {
+  color: #2f6470;
+  background: #eaf2f2;
+  border: 1px solid #bcdad3;
+}
+
+.desk-reader-bookmark-clip {
+  position: absolute;
+  top: -6px;
+  right: 22px;
+  transform: rotate(8deg);
+  z-index: 3;
+  filter: drop-shadow(0 6px 8px rgba(60, 40, 10, 0.25));
+}
+
+.desk-reader-sticky {
+  position: absolute;
+  bottom: 14px;
+  right: 16px;
+  width: 84px;
+  padding: 8px;
+  background: #fdf0c6;
+  box-shadow: 1px 2px 6px rgba(60, 40, 10, 0.2);
+  transform: rotate(-4deg);
+  font-size: 10px;
+  color: #6b5f3f;
+}
+
+.desk-reader-pencil {
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  width: 70px;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #dba054, #c98a2c);
+  transform: rotate(-20deg);
+}
+
+.desk-reader-text {
+  font-size: 14px;
+  line-height: 2.1;
+  color: #2f2a24;
+}
+
+.desk-reader-word-hi {
+  background: rgba(217, 122, 74, 0.16);
+  border-radius: 3px;
+}
+
+.desk-reader-word-selected {
+  outline: 1.5px solid #2f6470;
+  border-radius: 3px;
+  background: rgba(47, 100, 112, 0.12);
+}
+
+.desk-reader-note-card {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #f2ead9;
+  border-left: 3px solid #2f6470;
+  box-shadow: 2px 3px 0 rgba(120, 90, 50, 0.1);
+}
+
+.desk-reader-note-surface {
+  font-size: 18px;
+  font-weight: 800;
+  color: #2f2a24;
+}
+
+.desk-reader-note-reading {
+  font-size: 11px;
+  color: #7c7160;
+  margin-left: 6px;
+}
+
+.desk-reader-note-meaning {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2f2a24;
+}
+
+.desk-reader-note-example {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #6b5f3f;
+  font-style: italic;
+}
+
+.desk-reader-note-save {
+  margin-top: 8px;
+  padding: 5px 10px;
+  border: 1px dashed #d97a4a;
+  color: #d97a4a;
+  font-size: 11px;
+  font-weight: 700;
+  background: transparent;
+}
+
+.desk-reader-memo-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.desk-reader-memo-line {
+  padding: 6px 10px;
+  background: #fdf0c6;
+  box-shadow: 1px 2px 0 rgba(120, 90, 50, 0.1);
+  font-size: 11px;
+  color: #6b5f3f;
+  transform: rotate(-1deg);
+}
+
+.desk-reader-memo-line:nth-child(2) { transform: rotate(0.6deg); }
+.desk-reader-memo-line:nth-child(3) { transform: rotate(-0.4deg); }
+
+.desk-reader-journal-lines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 21px,
+    rgba(120, 90, 50, 0.16) 22px
+  );
+  padding-top: 2px;
+}
+
+.desk-reader-card-on-desk {
+  position: relative;
+  width: 220px;
+  margin: 20px auto 0;
+  padding: 16px;
+  background: #fffdf8;
+  box-shadow: 4px 6px 0 rgba(120, 90, 50, 0.12), 0 14px 24px rgba(60, 40, 10, 0.18);
+  text-align: center;
+}
+
+.desk-reader-card-progress {
+  font-size: 11px;
+  color: #7c7160;
+  font-weight: 700;
+}
+
+.desk-reader-card-surface {
+  font-size: 30px;
+  font-weight: 800;
+  color: #2f2a24;
+  margin: 4px 0;
+}
+
+.desk-reader-card-reading {
+  font-size: 12px;
+  color: #7c7160;
+}
+
+.desk-reader-card-meaning {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2f6470;
+}
+
+.desk-reader-card-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.desk-reader-card-actions button {
+  padding: 7px 4px;
+  border: none;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.desk-reader-deck-row {
+  margin-top: 8px;
+  padding: 8px 10px 10px;
+  background: #fdf9ee;
+  border-left: 2px solid #d8c9a0;
+}
+
+.desk-reader-deck-bar {
+  height: 4px;
+  margin-top: 6px;
+  background: #e9d9b8;
+}
+
+.desk-reader-deck-bar-fill {
+  height: 100%;
+  background: #2f6470;
+}
+
+/* ==========================================================================
+   Direction B -- Index Card Study
+   Card-catalog drawer feel: stacked index cards, colored tabs, compact
+   drawer rows.
+   ========================================================================== */
+.direction-index-card .design-mini-screen {
+  background: repeating-linear-gradient(
+      to bottom,
+      #efe4c8 0px,
+      #efe4c8 38px,
+      #e6d8b6 38px,
+      #e6d8b6 40px
+    );
+  box-shadow: inset 0 0 0 1px rgba(120, 90, 50, 0.15);
+}
+
+.index-card-stack {
+  position: relative;
+  padding-top: 10px;
+}
+
+.index-card-stack::before,
+.index-card-stack::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 100%;
+  border: 1px solid #d8c9a0;
+  background: #fffdf8;
+  border-radius: 8px;
+}
+
+.index-card-stack::before {
+  top: 10px;
+  transform: translateY(6px) scale(0.98);
+  opacity: 0.7;
+}
+
+.index-card-stack::after {
+  top: 10px;
+  transform: translateY(12px) scale(0.96);
+  opacity: 0.4;
+}
+
+.index-card-main {
+  position: relative;
+  z-index: 2;
+  padding: 16px;
+  border: 1px solid #d8c9a0;
+  border-radius: 8px;
+  background: #fffdf8;
+  box-shadow: 0 8px 18px rgba(120, 98, 40, 0.12);
+}
+
+.index-card-tab {
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  padding: 3px 12px;
+  border-radius: 4px 4px 0 0;
+  background: #2f6470;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  z-index: 3;
+}
+
+.index-card-home-title {
+  margin: 6px 0 4px;
+  font-size: 19px;
+  font-weight: 800;
+  color: #2f2a24;
+}
+
+.index-card-home-sub {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #7c7160;
+}
+
+.index-card-cta {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  background: #d97a4a;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.index-card-mini-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.index-card-mini {
+  flex: 1 1 0;
+  padding: 8px;
+  border: 1px solid #ecdfb8;
+  border-top: 3px solid #dba054;
+  border-radius: 4px;
+  background: #fdf9ee;
+  font-size: 10px;
+  text-align: center;
+}
+
+.index-card-mini strong {
+  display: block;
+  font-size: 14px;
+  color: #2f2a24;
+}
+
+.index-card-reader-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 10px;
+}
+
+.index-card-reader-text {
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: #2f2a24;
+}
+
+.index-card-popout {
+  position: relative;
+  padding: 8px;
+  border: 1px solid #d8c9a0;
+  border-radius: 6px;
+  background: #fffdf8;
+  box-shadow: -3px 3px 0 rgba(217, 122, 74, 0.2);
+  transform: rotate(2deg);
+  font-size: 10px;
+}
+
+.index-card-popout-surface {
+  font-size: 18px;
+  font-weight: 800;
+  color: #2f2a24;
+}
+
+.index-card-popout-reading {
+  color: #7c7160;
+  font-size: 10px;
+}
+
+.index-card-popout-meaning {
+  margin-top: 4px;
+  font-weight: 700;
+  color: #2f6470;
+}
+
+.index-card-popout-save {
+  display: block;
+  margin-top: 6px;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 4px;
+  background: #f2ead9;
+  color: #6b5f3f;
+  font-size: 9.5px;
+  font-weight: 700;
+}
+
+.index-card-drawer-slot {
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px dashed #d8c9a0;
+  border-radius: 4px;
+  font-size: 9.5px;
+  color: #7c7160;
+  text-align: center;
+}
+
+.index-card-classify-progress {
+  text-align: right;
+  font-size: 10px;
+  color: #7c7160;
+  font-weight: 700;
+}
+
+.index-card-classify-surface {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: #2f2a24;
+  margin: 4px 0;
+}
+
+.index-card-classify-reading {
+  text-align: center;
+  font-size: 11px;
+  color: #7c7160;
+}
+
+.index-card-classify-meaning {
+  text-align: center;
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2f6470;
+}
+
+.index-card-label-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.index-card-label-grid button {
+  padding: 6px 2px;
+  border: none;
+  border-radius: 3px;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.index-card-summary-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.index-card-summary-chip {
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: #f2ead9;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #6b5f3f;
+}
+
+.index-card-drawer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: #fffdf8;
+  border: 1px solid #ecdfb8;
+  border-radius: 4px;
+}
+
+.index-card-drawer-row-tab {
+  flex: 0 0 auto;
+  width: 4px;
+  align-self: stretch;
+  border-radius: 2px;
+  background: #4f8c66;
+}
+
+.index-card-drawer-row-body {
+  flex: 1 1 auto;
+  font-size: 11px;
+}
+
+.index-card-drawer-row-body strong {
+  display: block;
+  font-size: 12px;
+  color: #2f2a24;
+}
+
+/* ==========================================================================
+   Direction C -- Quiet Library
+   Minimal whitespace, hairline rules, large type, near-flat surfaces.
+   ========================================================================== */
+.direction-quiet-library .design-mini-screen {
+  background: #fdfbf6;
+  box-shadow: inset 0 0 0 1px #ece4d0;
+}
+
+.quiet-lib-eyebrow {
+  color: #9c9182;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quiet-lib-title {
+  margin: 6px 0 10px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #2f2a24;
+  line-height: 1.3;
+}
+
+.quiet-lib-hairline {
+  height: 1px;
+  background: #ece4d0;
+  margin: 12px 0;
+  border: none;
+}
+
+.quiet-lib-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.quiet-lib-cta-primary {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2f6470;
+  font-size: 13px;
+  font-weight: 800;
+  border-bottom: 2px solid #2f6470;
+  padding-bottom: 2px;
+}
+
+.quiet-lib-cta-secondary {
+  border: none;
+  background: none;
+  color: #9c9182;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quiet-lib-shiori-mark {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.quiet-lib-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.quiet-lib-list-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1ead9;
+  font-size: 12px;
+  color: #2f2a24;
+}
+
+.quiet-lib-list-row span:last-child {
+  color: #9c9182;
+}
+
+.quiet-lib-reader-text {
+  font-size: 16px;
+  line-height: 2.3;
+  color: #2f2a24;
+}
+
+.quiet-lib-word-mark {
+  border-bottom: 2px solid #2f6470;
+}
+
+.quiet-lib-word-soft {
+  color: #b5714f;
+}
+
+.quiet-lib-note-column {
+  margin-top: 14px;
+  padding-left: 12px;
+  border-left: 1px solid #ece4d0;
+}
+
+.quiet-lib-note-surface {
+  font-size: 18px;
+  font-weight: 800;
+  color: #2f2a24;
+}
+
+.quiet-lib-note-reading {
+  font-size: 11px;
+  color: #9c9182;
+  margin-left: 6px;
+}
+
+.quiet-lib-note-meaning {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #2f6470;
+  font-weight: 700;
+}
+
+.quiet-lib-note-example {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #9c9182;
+}
+
+.quiet-lib-note-save {
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #b5714f;
+  font-size: 11px;
+  font-weight: 700;
+  border-bottom: 1px solid #b5714f;
+}
+
+.quiet-lib-flashcard {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.quiet-lib-flashcard-progress {
+  font-size: 11px;
+  color: #9c9182;
+  font-weight: 700;
+}
+
+.quiet-lib-flashcard-surface {
+  font-size: 34px;
+  font-weight: 800;
+  color: #2f2a24;
+  margin: 6px 0 2px;
+}
+
+.quiet-lib-flashcard-reading {
+  font-size: 12px;
+  color: #9c9182;
+}
+
+.quiet-lib-flashcard-meaning {
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #2f6470;
+}
+
+.quiet-lib-flashcard-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.quiet-lib-flashcard-actions button {
+  padding: 0 0 2px;
+  border: none;
+  background: none;
+  border-bottom: 1.5px solid currentColor;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.quiet-lib-action-known { color: #4f8c66; }
+.quiet-lib-action-uncertain { color: #b5843f; }
+.quiet-lib-action-unknown { color: #b5714f; }
+.quiet-lib-action-skip { color: #9c9182; }
+
+.quiet-lib-journal-line {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #2f2a24;
+  line-height: 1.6;
+}
+
+.quiet-lib-deck-row {
+  margin-top: 10px;
+}
+
+.quiet-lib-deck-row-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #2f2a24;
+  font-weight: 700;
+}
+
+.quiet-lib-deck-bar {
+  height: 1px;
+  margin-top: 6px;
+  background: #ece4d0;
+  position: relative;
+}
+
+.quiet-lib-deck-bar-fill {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  height: 3px;
+  background: #2f6470;
+}
+
+/* --------------------------------------------------------------------------
+   Mobile -- 1 mini-screen per row, no horizontal scroll.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .design-mini-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .design-lab {
+    padding: 20px 14px 60px;
+  }
+
+  .design-direction {
+    margin-bottom: 44px;
+  }
+
+  .design-mini-screen {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .index-card-reader-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .desk-reader-card-actions,
+  .index-card-label-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .quiet-lib-flashcard-actions {
+    justify-content: space-between;
+  }
+}
