@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BrandSectionBadge } from "./BrandElements";
 import {
   filterReadingVocabEntries,
   getTokenGroupKey,
@@ -113,44 +112,31 @@ export function ReadingVocabPanel({
   );
 
   return (
-    <section className="panel-card reading-vocab-panel">
-      <div className="panel-card-header reading-vocab-panel-header">
-        <div>
-          <h3 className="panel-card-title">
-            <BrandSectionBadge icon={SearchIcon} />
-            어휘 후보
-          </h3>
-          <p className="panel-card-description">
-            단어를 누르면 원문 위치로 이동하고, 체크박스로 바구니에 담을 수 있어요.
-          </p>
-          <div className="reading-vocab-stats-row">
-            <span className="reading-vocab-stat-pill">
-              전체 단어 {entries.length}개
-            </span>
-            <span className="reading-vocab-stat-pill">
-              바구니에 담음 {selectedCount}개
-            </span>
-            <span className="reading-vocab-stat-pill reading-vocab-stat-pill-accent">
-              저장 가능 {saveableCount}개
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="ghost-button compact-button reading-vocab-collapse-toggle"
-          onClick={() => setIsCollapsed((value) => !value)}
-          aria-expanded={!isCollapsed}
-        >
-          <ChevronDownIcon
-            className={`reading-vocab-collapse-icon${
-              isCollapsed ? " reading-vocab-collapse-icon-collapsed" : ""
-            }`}
-          />
-          {isCollapsed ? "어휘 후보 보기" : "접기"}
-        </button>
-      </div>
+    <section
+      className={`reading-vocab-drawer${isCollapsed ? "" : " reading-vocab-drawer-open"}`}
+    >
+      <button
+        type="button"
+        className="reading-vocab-drawer-pull"
+        onClick={() => setIsCollapsed((value) => !value)}
+        aria-expanded={!isCollapsed}
+      >
+        <SearchIcon className="reading-vocab-drawer-pull-icon" />
+        <span className="reading-vocab-drawer-pull-label">
+          어휘 후보 {entries.length}개
+          {saveableCount > 0 ? ` · 담을 수 있는 단어 ${saveableCount}개` : ""}
+        </span>
+        <ChevronDownIcon
+          className={`reading-vocab-collapse-icon${
+            isCollapsed ? " reading-vocab-collapse-icon-collapsed" : ""
+          }`}
+        />
+      </button>
       {isCollapsed ? null : (
-        <>
+        <div className="reading-vocab-drawer-body">
+      <p className="reading-vocab-drawer-hint">
+        단어를 누르면 원문 위치로 이동하고, 체크박스로 바구니에 담을 수 있어요.
+      </p>
       <div className="reading-vocab-controls">
         <div className="reading-vocab-search-wrap">
           <SearchIcon className="reading-vocab-search-icon" />
@@ -310,7 +296,7 @@ export function ReadingVocabPanel({
           })}
         </ul>
       )}
-        </>
+        </div>
       )}
     </section>
   );

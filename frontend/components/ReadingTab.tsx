@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { AppEmptyState, BrandSectionBadge, StudyCompanion } from "./BrandElements";
+import { AppEmptyState, StudyCompanion } from "./BrandElements";
 import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import {
@@ -296,16 +296,20 @@ export function ReadingTab({
         </div>
       ) : null}
 
-      <section className="panel-card reading-input-card">
-        <div className="panel-card-header">
-          <h3 className="panel-card-title">원문 입력</h3>
-          <p className="panel-card-description">
-            읽고 싶은 일본어 문장을 붙여넣으세요.
-          </p>
+      <section className="reading-input-open">
+        <div className="reading-input-open-header">
+          <span className="reading-input-eyebrow">원문 읽기</span>
+          {!hasResult && !text.trim() ? null : (
+            <h3 className="reading-input-open-title">
+              {hasResult ? "원문" : "읽을 원문을 붙여넣어 주세요"}
+            </h3>
+          )}
         </div>
         <form className="analyze-form" onSubmit={onAnalyze}>
           <div className="reading-input-header">
-            <label htmlFor="reading-source-text">원문</label>
+            <label htmlFor="reading-source-text" className="sr-only-label">
+              원문
+            </label>
             <div className="reading-input-header-actions">
               {hasResult ? (
                 <button
@@ -354,12 +358,13 @@ export function ReadingTab({
                 placeholder="彼は闇の中で声を聞いた。少女は約束を思い出した。"
                 rows={6}
               />
-              <div className="analyze-options">
-                <label className="inline-field">
-                  읽기 덱
+              <div className="reading-input-footer">
+                <label className="reading-deck-picker">
+                  <FolderIcon className="reading-deck-picker-icon" />
                   <select
                     value={selectedDeckId}
                     onChange={(event) => onSelectedDeckChange(event.target.value)}
+                    aria-label="읽기 덱"
                   >
                     {decks.map((deck) => (
                       <option key={deck.id} value={String(deck.id)}>
@@ -368,23 +373,22 @@ export function ReadingTab({
                     ))}
                   </select>
                 </label>
-              </div>
-              <div className="actions actions-with-hint">
                 <button
                   type="submit"
+                  className="reading-open-button"
                   disabled={isAnalyzing || !selectedDeckId || !text.trim()}
                 >
                   {isAnalyzing ? (
-                    "분석 중..."
+                    "펼치는 중..."
                   ) : (
                     <>
                       <SparkleIcon className="button-icon" />
-                      읽기 분석
+                      원문 펼치기
                     </>
                   )}
                 </button>
-                {analyzeHint ? <p className="action-hint">{analyzeHint}</p> : null}
               </div>
+              {analyzeHint ? <p className="action-hint">{analyzeHint}</p> : null}
             </>
           ) : null}
         </form>
@@ -532,25 +536,17 @@ export function ReadingTab({
       )}
 
       {summary ? (
-        <section className="panel-card save-tray">
-          <div className="panel-card-header save-tray-header">
-            <div>
-              <h3 className="panel-card-title">
-                <BrandSectionBadge icon={FolderIcon} />
-                저장 바구니
-              </h3>
-              <p className="panel-card-description">
-                담은 단어를 확인하고 저장하세요.
-              </p>
-            </div>
-            <span className="save-tray-count-badge">
-              {selectedCount}개 담음
+        <section className="save-dock" aria-label="저장 바구니">
+          <div className="save-dock-count">
+            <FolderIcon className="save-dock-icon" />
+            <span>
+              담은 단어 <strong>{selectedCount}</strong>개
             </span>
           </div>
 
           <button
             type="button"
-            className="save-tray-primary-button"
+            className="save-dock-primary-button"
             onClick={() => void handleSaveSelected()}
             disabled={selectedCount === 0 || isSavingBatch}
             title={

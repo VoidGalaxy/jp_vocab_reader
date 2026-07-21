@@ -2574,24 +2574,120 @@ select {
   font-weight: 600;
 }
 
-/* Scoped overrides so the reading tab's input form sits inside one
-   .panel-card shell (title + description + form + notice) instead of
-   nesting two card borders. .analyze-form itself is untouched -- the
-   Analyze tab uses the same class and keeps its own card look. */
-.reading-input-card .analyze-form {
+/* Open-page input area -- deliberately NOT another bordered .panel-card
+   rectangle. Reader/save-dock/candidate-drawer below already differ in
+   weight (hero card / flat dock / drawer pull); this is the 4th distinct
+   treatment: no box at all, just an open page that blends into the app's
+   paper background, so the reading tab doesn't read as a stack of
+   identical rounded rectangles. */
+.reading-input-open {
+  display: grid;
+  gap: 12px;
+  padding: 4px 2px 18px;
+  border-bottom: 1px dashed var(--paper-border);
+}
+
+.reading-input-open-header {
+  display: grid;
+  gap: 2px;
+}
+
+.reading-input-eyebrow {
+  color: var(--screen-accent, var(--muted));
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.reading-input-open-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.reading-input-open-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sr-only-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.reading-input-open .analyze-form {
   border: none;
   box-shadow: none;
   padding: 0;
   background: transparent;
 }
 
-.reading-input-card .copyright-note {
+.reading-input-open textarea {
+  border: none;
+  border-bottom: 2px solid var(--border-strong);
+  border-radius: 0;
+  padding: 10px 2px 16px;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1.9;
+}
+
+.reading-input-open textarea:focus {
+  border-bottom-color: var(--screen-accent, var(--primary));
+  outline: none;
+}
+
+.reading-input-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reading-deck-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+}
+
+.reading-deck-picker-icon {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+}
+
+.reading-deck-picker select {
+  min-width: 0;
+  width: auto;
+  max-width: 200px;
+  border: none;
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 4px 20px 4px 2px;
+  background: transparent;
+  font-weight: 700;
+}
+
+.reading-open-button {
+  flex: 0 0 auto;
+}
+
+.reading-input-open .copyright-note {
   margin: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--paper-border);
-  border-radius: 10px;
-  background: var(--paper-bg);
-  color: #6b5f3f;
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -2641,50 +2737,62 @@ select {
   justify-self: start;
 }
 
-.reading-vocab-panel {
-  gap: 12px;
+/* Candidate Drawer -- the 4th and lightest treatment in the reading tab's
+   box hierarchy (hero reader > flat save-dock > this drawer pull). Closed
+   state has no card chrome at all, just a flush row that reads as a
+   drawer handle; opening it reveals content below a hairline rule instead
+   of inside a bordered box, so the "어휘 후보" list never competes with the
+   reader for visual weight. */
+.reading-vocab-drawer {
+  border-top: 1px solid var(--border);
 }
 
-.reading-vocab-panel-header {
+.reading-vocab-drawer-open {
+  padding-bottom: 4px;
+}
+
+.reading-vocab-drawer-pull {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.reading-vocab-panel-header > div {
-  min-width: 0;
-  flex: 1 1 220px;
-}
-
-.reading-vocab-stats-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.reading-vocab-stat-pill {
-  padding: 3px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--soft-bg);
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 4px;
   color: var(--text-secondary);
-  font-size: 12px;
+  background: transparent;
+  box-shadow: none;
+  font-size: 13px;
   font-weight: 700;
-  white-space: nowrap;
+  text-align: left;
 }
 
-.reading-vocab-stat-pill-accent {
-  border-color: var(--border-strong);
-  background: var(--paper-bg);
-  color: var(--primary-dark);
+.reading-vocab-drawer-pull:not(:disabled):hover {
+  color: var(--text);
+  box-shadow: none;
+  transform: none;
 }
 
-.reading-vocab-collapse-toggle {
+.reading-vocab-drawer-pull-icon {
   flex: 0 0 auto;
-  white-space: nowrap;
+  width: 15px;
+  height: 15px;
+  color: var(--screen-accent, var(--muted));
+}
+
+.reading-vocab-drawer-pull-label {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.reading-vocab-drawer-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 4px 6px;
+}
+
+.reading-vocab-drawer-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .reading-vocab-collapse-icon {
@@ -3021,14 +3129,42 @@ input.reading-vocab-item-checkbox {
   color: #ffffff;
 }
 
-/* Save Tray / Word Basket -- replaces the old big "이 텍스트 학습 요약" grid
-   card with a compact tray: how many words are in the basket, a status
-   breakdown as small pills (not boxes), one primary "담은 단어 저장" CTA,
-   and the bulk quick-save buttons demoted to a smaller secondary row so the
-   basket-based save reads as the primary path (design brief: 저장 버튼이
-   너무 많아 보이지 않게, 위계를 정리). */
-.save-tray {
-  border-top: 3px solid var(--screen-accent, var(--accent));
+/* Save Dock -- deliberately NOT a titled .panel-card. A slim shelf-like
+   strip (count + one primary CTA on the same line) sitting right under the
+   reader, distinct in weight from the reader hero-card above it and the
+   drawer-pull below it, so the reading tab isn't four stacked look-alike
+   boxes. Quick-save/message/next-actions still stack inside it, just
+   without their own card frame. */
+.save-dock {
+  display: grid;
+  gap: 10px;
+  padding: 14px 4px 6px;
+  border-top: 1px dashed var(--paper-border);
+}
+
+.save-dock-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.save-dock-count strong {
+  color: var(--screen-accent, var(--primary-dark));
+  font-size: 16px;
+}
+
+.save-dock-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--screen-accent, var(--accent));
+}
+
+.save-dock-primary-button {
+  width: 100%;
 }
 
 .save-tray-header {
@@ -5877,11 +6013,11 @@ input.reading-vocab-item-checkbox {
     order: 2;
   }
 
-  .save-tray {
+  .save-dock {
     order: 3;
   }
 
-  .reading-vocab-panel {
+  .reading-vocab-drawer {
     order: 4;
   }
 

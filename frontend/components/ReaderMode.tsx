@@ -615,7 +615,7 @@ export function ReaderMode({
           className="token-sheet-overlay token-sheet-overlay-idle"
           aria-hidden="true"
         >
-          <div className="token-sheet token-sheet-idle">
+          <div className="token-sheet token-sheet-idle paper-corner">
             <StudyCompanion mood="reading" size="sm" />
             <p className="token-sheet-idle-text">
               원문에서 모르는 단어를 눌러보세요.
