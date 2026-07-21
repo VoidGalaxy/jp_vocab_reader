@@ -3326,8 +3326,18 @@ function clearAccessToken() {
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
 }
 
+// Technical detail (HTTP status, raw backend `detail` text) is useful for
+// debugging but was previously shown to the user verbatim via
+// `error.message` -- e.g. "지금은 처리할 수 없어요. (400) value is not a
+// valid email address". Every call site already passes a friendly,
+// action-specific `fallback` string for exactly this case, so this now
+// always shows that instead and keeps the technical detail in the console
+// only (개발용 상세 오류는 console에만 유지, 사용자에게는 노출하지 않음).
 function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
+  if (error instanceof Error) {
+    console.error(error);
+  }
+  return fallback;
 }
 
 // Same as getErrorMessage, but for actions that only work for a signed-in
