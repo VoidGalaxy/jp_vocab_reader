@@ -178,6 +178,15 @@ export function SparkleIcon(props: IconProps) {
   );
 }
 
+export function UserIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-3.9 3.6-7 8-7s8 3.1 8 7" />
+    </svg>
+  );
+}
+
 export function InboxIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>

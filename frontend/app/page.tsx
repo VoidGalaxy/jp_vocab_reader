@@ -1,9 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { AccountMenu } from "../components/AccountMenu";
 import { AnalyzeSection } from "../components/AnalyzeSection";
 import { AppShell, type NavAction, type NavGroup } from "../components/AppShell";
-import { BrandReadingFlowIllustration } from "../components/BrandElements";
 import { GlobalFeedbackModal } from "../components/GlobalFeedbackModal";
 import {
   classifyMessageTone,
@@ -23,7 +23,6 @@ import {
   FolderIcon,
   HomeIcon,
   ShareIcon,
-  ShieldIcon,
 } from "../components/icons";
 import { InfoSection } from "../components/InfoSection";
 import { MeaningFeedbackModal } from "../components/MeaningFeedbackModal";
@@ -731,6 +730,7 @@ export default function HomePage() {
   const [isLoadingInfoStats, setIsLoadingInfoStats] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoadingCurrentUser, setIsLoadingCurrentUser] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
@@ -1033,6 +1033,7 @@ export default function HomePage() {
           ? "로그인했습니다."
           : "회원가입이 완료되었습니다.",
       );
+      setIsAccountMenuOpen(false);
       await refreshUserScopedData();
     } catch (error) {
       if (isHttpError(error, 401)) {
@@ -2823,14 +2824,12 @@ export default function HomePage() {
   const isStudyComplete =
     hasStartedStudy && studyItems.length > 0 && currentStudyIndex >= studyItems.length;
 
-  // Same "not really signed in" check AccountPanel uses internally, lifted
+  // Same "not really signed in" check AccountMenu uses internally, lifted
   // up so the landing hero's CTAs can vary by auth state too.
   const isDevUser = !currentUser || currentUser.auth_provider === "dev";
 
-  function scrollToAccountPanel() {
-    document
-      .getElementById("account-panel")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  function openAccountMenu() {
+    setIsAccountMenuOpen(true);
   }
 
   const currentScreenLabel =
@@ -2911,22 +2910,39 @@ export default function HomePage() {
         groups={sidebarGroups}
         mobilePrimaryItems={mobilePrimaryNavItems}
         mobileMoreItems={mobileMoreNavItems}
-      >
-      <section className="workspace">
-        <header className="header">
-          <div>
-            <h1>일본어 단어장</h1>
-          </div>
+        feedbackSlot={
           <button
             type="button"
-            className="secondary-button compact-button header-feedback-button"
+            className="ghost-button compact-button app-topbar-feedback-button"
             onClick={openAppFeedback}
+            aria-label="베타 피드백 보내기"
           >
             <ChatIcon className="button-icon" />
-            피드백
+            <span className="app-topbar-feedback-label">피드백</span>
           </button>
-        </header>
-
+        }
+        accountSlot={
+          <AccountMenu
+            user={currentUser}
+            isOpen={isAccountMenuOpen}
+            onOpenChange={setIsAccountMenuOpen}
+            authMode={authMode}
+            email={authEmail}
+            password={authPassword}
+            displayName={authDisplayName}
+            message={authMessage}
+            isLoadingUser={isLoadingCurrentUser}
+            isSubmitting={isSubmittingAuth}
+            onAuthModeChange={setAuthMode}
+            onEmailChange={setAuthEmail}
+            onPasswordChange={setAuthPassword}
+            onDisplayNameChange={setAuthDisplayName}
+            onSubmit={handleAuthSubmit}
+            onLogout={() => void handleLogout()}
+          />
+        }
+      >
+      <section className="workspace">
         {activeTab === "home" ? (
           <HomeDashboard
             isDevUser={isDevUser}
@@ -2937,28 +2953,11 @@ export default function HomePage() {
             onStartReading={() => void handleTabChange("reading")}
             onTryWithSample={startSampleReadingFromHome}
             onStartTodayReview={goToStudyToday}
-            onScrollToAccount={scrollToAccountPanel}
+            onOpenAccount={openAccountMenu}
             onStartRecentlySaved={startStudyFromRecentlySaved}
             onGoToVocab={() => void handleTabChange("vocab")}
           />
         ) : null}
-
-        <AccountPanel
-          user={currentUser}
-          authMode={authMode}
-          email={authEmail}
-          password={authPassword}
-          displayName={authDisplayName}
-          message={authMessage}
-          isLoadingUser={isLoadingCurrentUser}
-          isSubmitting={isSubmittingAuth}
-          onAuthModeChange={setAuthMode}
-          onEmailChange={setAuthEmail}
-          onPasswordChange={setAuthPassword}
-          onDisplayNameChange={setAuthDisplayName}
-          onSubmit={handleAuthSubmit}
-          onLogout={() => void handleLogout()}
-        />
 
         {activeTab === "analyze" ? (
           <AnalyzeSection
@@ -3257,158 +3256,6 @@ export default function HomePage() {
         />
       ) : null}
     </main>
-  );
-}
-
-type AccountPanelProps = {
-  user: CurrentUser | null;
-  authMode: "login" | "register";
-  email: string;
-  password: string;
-  displayName: string;
-  message: string;
-  isLoadingUser: boolean;
-  isSubmitting: boolean;
-  onAuthModeChange: (mode: "login" | "register") => void;
-  onEmailChange: (value: string) => void;
-  onPasswordChange: (value: string) => void;
-  onDisplayNameChange: (value: string) => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onLogout: () => void;
-};
-
-function AccountPanel({
-  user,
-  authMode,
-  email,
-  password,
-  displayName,
-  message,
-  isLoadingUser,
-  isSubmitting,
-  onAuthModeChange,
-  onEmailChange,
-  onPasswordChange,
-  onDisplayNameChange,
-  onSubmit,
-  onLogout,
-}: AccountPanelProps) {
-  const isDevUser = !user || user.auth_provider === "dev";
-  const messageTone = classifyMessageTone(message);
-
-  return (
-    <section id="account-panel" className="account-panel" aria-label="계정">
-      {isDevUser ? (
-        <div className="account-panel-cards">
-          <div className="account-info-card">
-            <BookIcon className="account-info-icon" aria-hidden="true" />
-            <div className="account-info-copy">
-              <p className="account-info-lead">
-                저장한 단어와 복습 기록을 이어서 보려면 로그인하세요.
-              </p>
-              <p className="account-info-detail">
-                가입하면 내 단어장, 복습 기록, 가져온 공유덱이 계정에
-                저장됩니다.
-              </p>
-              <p className="account-info-privacy">
-                <ShieldIcon className="account-info-privacy-icon" aria-hidden="true" />
-                원문 전체는 서버에 저장하지 않고, 단어와 짧은 문맥 예문만
-                저장합니다.
-              </p>
-            </div>
-            <div className="account-info-illustration">
-              <BrandReadingFlowIllustration />
-            </div>
-          </div>
-
-          <form className="account-form" onSubmit={onSubmit} noValidate>
-            <h3 className="account-form-title">
-              {authMode === "login" ? "로그인" : "회원가입"}
-            </h3>
-            <label>
-              이메일
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => onEmailChange(event.target.value)}
-                placeholder="test@example.com"
-                autoComplete="email"
-              />
-            </label>
-            <label>
-              비밀번호
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => onPasswordChange(event.target.value)}
-                placeholder="8자 이상"
-                autoComplete={
-                  authMode === "login" ? "current-password" : "new-password"
-                }
-              />
-            </label>
-            {authMode === "register" ? (
-              <label>
-                표시 이름
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(event) => onDisplayNameChange(event.target.value)}
-                  placeholder="비우면 이메일 앞부분"
-                  autoComplete="nickname"
-                />
-              </label>
-            ) : null}
-            <button
-              type="submit"
-              className="primary-button account-submit-button"
-              disabled={isSubmitting}
-            >
-              {isSubmitting
-                ? "처리 중"
-                : authMode === "login"
-                  ? "로그인"
-                  : "가입하고 시작하기"}
-            </button>
-            <button
-              type="button"
-              className="account-mode-switch"
-              onClick={() =>
-                onAuthModeChange(authMode === "login" ? "register" : "login")
-              }
-            >
-              {authMode === "login"
-                ? "계정이 없나요? 회원가입"
-                : "이미 계정이 있나요? 로그인"}
-            </button>
-            {message ? (
-              <p className={`account-message message message--${messageTone}`}>
-                {message}
-              </p>
-            ) : null}
-          </form>
-        </div>
-      ) : (
-        <div className="account-summary">
-          <div>
-            <strong>{user.display_name}</strong>
-            <span>{`${user.email} · 저장한 단어와 복습 기록이 이 계정에 보관됩니다.`}</span>
-          </div>
-          <button type="button" className="secondary-button" onClick={onLogout}>
-            로그아웃
-          </button>
-        </div>
-      )}
-
-      {!isDevUser && message ? (
-        <p className={`account-message message message--${messageTone}`}>
-          {message}
-        </p>
-      ) : null}
-      {isDevUser && isLoadingUser ? (
-        <p className="account-message">사용자 확인 중</p>
-      ) : null}
-    </section>
   );
 }
 

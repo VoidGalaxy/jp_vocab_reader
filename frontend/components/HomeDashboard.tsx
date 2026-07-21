@@ -1,6 +1,6 @@
 "use client";
 
-import { StudyCompanion } from "./BrandElements";
+import { LibraryHeroIllustration, StudyCompanion } from "./BrandElements";
 import {
   BookIcon,
   CardsIcon,
@@ -20,7 +20,7 @@ type HomeDashboardProps = {
   onStartReading: () => void;
   onTryWithSample: () => void;
   onStartTodayReview: () => void;
-  onScrollToAccount: () => void;
+  onOpenAccount: () => void;
   onStartRecentlySaved: () => void;
   onGoToVocab: () => void;
 };
@@ -42,7 +42,7 @@ export function HomeDashboard({
   onStartReading,
   onTryWithSample,
   onStartTodayReview,
-  onScrollToAccount,
+  onOpenAccount,
   onStartRecentlySaved,
   onGoToVocab,
 }: HomeDashboardProps) {
@@ -95,7 +95,7 @@ export function HomeDashboard({
             <button
               type="button"
               className="secondary-button"
-              onClick={isDevUser ? onScrollToAccount : onStartTodayReview}
+              onClick={isDevUser ? onOpenAccount : onStartTodayReview}
             >
               <CardsIcon className="button-icon" />
               오늘 복습하기
@@ -124,6 +124,9 @@ export function HomeDashboard({
               복습
             </span>
           </div>
+        </div>
+        <div className="home-hero-visual" aria-hidden="true">
+          <LibraryHeroIllustration />
         </div>
       </section>
 

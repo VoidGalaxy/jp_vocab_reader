@@ -567,178 +567,50 @@ button {
   }
 }
 
-.header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 22px;
-  padding: 2px 2px 0;
-}
-
-.header h1 {
-  margin: 0 0 8px;
-  color: var(--text);
-  font-size: 32px;
-  line-height: 1.2;
-}
-
-.header p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 16px;
-}
-
-.header-feedback-button {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
 .feedback-screen-label {
   margin: -4px 0 0;
   font-size: 13px;
 }
 
-.account-panel {
-  display: grid;
-  gap: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 10px 24px rgba(120, 98, 40, 0.04);
-}
-
-.account-summary {
+/* App Shell V2 top bar -- replaces the old per-screen "일본어 단어장" h1 +
+   the always-visible login/account card that used to repeat above every
+   tab's content. Small brand mark on the left (the sidebar already carries
+   the full brand block on desktop; this is what mobile has instead once
+   the sidebar is hidden), feedback + account menu on the right. */
+.app-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+  margin-bottom: 18px;
 }
 
-.account-summary > div {
-  display: grid;
-  gap: 4px;
+.app-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
-}
-
-.account-summary strong {
-  color: var(--text);
-  font-size: 16px;
-}
-
-.account-summary span {
-  overflow-wrap: anywhere;
   color: var(--muted);
   font-size: 13px;
+  font-weight: 700;
 }
 
-/* Login card (left) + value-prop/info card (right) side by side on wide
-   screens; the info card explains what gets saved and reassures learners
-   original text isn't stored, so it sits beside the form rather than
-   inside it. */
-.account-panel-cards {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-  gap: 16px;
-  align-items: start;
-}
-
-.account-info-card {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 10px 12px;
-  padding: 14px;
-  border: 1px dashed var(--border);
-  border-radius: 10px;
-  background: var(--soft-bg);
-}
-
-.account-info-icon {
-  width: 22px;
-  height: 22px;
+.app-topbar-brand-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
   color: var(--primary);
 }
 
-.account-info-copy {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-
-.account-info-lead {
-  margin: 0;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-.account-info-detail {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-
-.account-info-privacy {
+.app-topbar-end {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.account-info-privacy-icon {
+  align-items: center;
+  gap: 8px;
   flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  margin-top: 2px;
-  color: var(--muted);
 }
 
-.account-info-illustration {
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: center;
-  padding-top: 4px;
-}
-
-.account-form {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.6);
-}
-
-.account-form-title {
-  margin: 0;
-  color: var(--text);
-  font-size: 15px;
-}
-
-.account-form label {
-  display: grid;
-  gap: 6px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.account-form input {
-  min-height: 44px;
-}
-
-.account-submit-button {
-  width: 100%;
-  min-height: 46px;
+.app-topbar-feedback-button {
+  min-width: 0;
 }
 
 .account-mode-switch {
@@ -762,6 +634,140 @@ button {
 .account-message {
   margin-top: 2px;
   font-size: 13px;
+}
+
+/* Compact top-right account entry point (AccountMenu) -- one small trigger
+   (avatar/initial + label) that opens a small popover with either the
+   login/register form or the signed-in summary + 로그아웃, instead of a
+   full-width card repeating above every screen. */
+.account-menu {
+  position: relative;
+}
+
+.account-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 12px 6px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--panel-bg);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.account-menu-trigger:not(:disabled):hover {
+  background: var(--soft-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.account-menu-avatar {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.account-menu-avatar-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.account-menu-trigger-label {
+  max-width: 120px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.account-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 600;
+  display: grid;
+  gap: 10px;
+  width: min(300px, 88vw);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: 0 16px 36px rgba(120, 98, 40, 0.14);
+  animation: app-slide-up var(--motion-fast) var(--ease-soft) both;
+}
+
+.account-menu-form {
+  display: grid;
+  gap: 10px;
+}
+
+.account-menu-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.account-menu-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.account-menu-hint-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  color: var(--muted);
+}
+
+.account-menu-form label {
+  display: grid;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.account-menu-form input {
+  min-height: 40px;
+}
+
+.account-menu-submit {
+  width: 100%;
+  min-height: 42px;
+}
+
+.account-menu-profile {
+  display: grid;
+  gap: 6px;
+}
+
+.account-menu-email {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.account-menu-logout {
+  justify-self: start;
 }
 
 .tab-panel {
@@ -807,6 +813,89 @@ button {
   gap: 10px;
   flex: 1 1 380px;
   min-width: 0;
+}
+
+/* Hero card becomes a row (copy left, desk illustration right) -- two
+   classes so this wins over .panel-card's own `display: grid` regardless
+   of stylesheet order. */
+.home-hero-card.hero-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+/* "서재 히어로 비주얼" -- small flat-lay desk scene (LibraryHeroIllustration)
+   beside the hero copy on wide screens. Shrinks (not hides) on mobile, per
+   design brief: a quiet illustration, never one that crowds out the CTAs. */
+.home-hero-visual {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.library-hero-illustration {
+  display: block;
+  width: 148px;
+  height: auto;
+  filter: drop-shadow(0 10px 18px rgba(120, 98, 40, 0.14));
+}
+
+.library-hero-book-cover {
+  fill: var(--screen-accent-soft, var(--soft-bg));
+  stroke: var(--paper-border);
+  stroke-width: 1;
+}
+
+.library-hero-book-page {
+  fill: var(--panel-bg);
+  stroke: var(--paper-border);
+  stroke-width: 1;
+}
+
+.library-hero-spine {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.library-hero-bookmark {
+  fill: var(--screen-accent, var(--accent));
+}
+
+.library-hero-pencil-body {
+  fill: var(--sand-amber);
+  stroke: var(--paper-border);
+  stroke-width: 1;
+}
+
+.library-hero-pencil-band {
+  fill: var(--text-secondary);
+}
+
+.library-hero-pencil-tip {
+  fill: var(--text);
+}
+
+.library-hero-memo {
+  fill: var(--panel-bg);
+  stroke: var(--paper-border);
+  stroke-width: 1;
+}
+
+.library-hero-memo-line {
+  fill: var(--border-strong);
+}
+
+.library-hero-word-chip {
+  fill: var(--panel-bg);
+  stroke: var(--screen-accent, var(--accent));
+  stroke-width: 1.5;
+}
+
+.library-hero-word-chip-text {
+  fill: var(--text);
+  font-size: 14px;
+  font-weight: 800;
 }
 
 /* Badge + Shiori share the hero's top line -- Shiori greets the screen (one
@@ -1075,6 +1164,16 @@ button {
   .home-hero-card {
     gap: 12px;
     padding: 20px;
+  }
+
+  .home-hero-visual {
+    order: 2;
+    align-self: center;
+    margin: 0 auto;
+  }
+
+  .library-hero-illustration {
+    width: 108px;
   }
 
   .landing-hero-title {
@@ -4373,48 +4472,12 @@ input.reading-vocab-item-checkbox {
     gap: 14px;
   }
 
-  .account-summary {
-    align-items: center;
-    flex-direction: row;
-    flex-wrap: wrap;
+  .account-menu-trigger-label {
+    max-width: 72px;
   }
 
-  .account-summary > div {
-    flex: 1 1 180px;
-  }
-
-  .account-summary strong {
-    font-size: 15px;
-  }
-
-  .account-summary span {
-    font-size: 12px;
-  }
-
-  .account-panel-cards {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .account-info-card {
-    grid-template-columns: auto 1fr;
-    padding: 12px;
-  }
-
-  .account-info-illustration {
-    display: none;
-  }
-
-  .account-form {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 12px;
-  }
-
-  .account-panel {
-    gap: 10px;
-    padding: 12px;
-    margin-bottom: 12px;
+  .account-menu-panel {
+    width: min(280px, 92vw);
   }
 
   .actions {

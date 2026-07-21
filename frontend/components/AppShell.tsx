@@ -20,6 +20,8 @@ type AppShellProps = {
   groups: NavGroup[];
   mobilePrimaryItems: NavAction[];
   mobileMoreItems: NavAction[];
+  accountSlot: React.ReactNode;
+  feedbackSlot: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -33,6 +35,8 @@ export function AppShell({
   groups,
   mobilePrimaryItems,
   mobileMoreItems,
+  accountSlot,
+  feedbackSlot,
   children,
 }: AppShellProps) {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
@@ -97,7 +101,19 @@ export function AppShell({
         ))}
       </aside>
 
-      <div className="app-shell-content">{children}</div>
+      <div className="app-shell-content">
+        <header className="app-topbar">
+          <div className="app-topbar-brand" aria-hidden="true">
+            <BookIcon className="app-topbar-brand-icon" />
+            <span>일본어 단어장</span>
+          </div>
+          <div className="app-topbar-end">
+            {feedbackSlot}
+            {accountSlot}
+          </div>
+        </header>
+        {children}
+      </div>
 
       <nav className="app-bottom-nav" aria-label="주요 메뉴">
         {mobilePrimaryItems.map((item) => (

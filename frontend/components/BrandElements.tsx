@@ -56,6 +56,112 @@ export function BrandReadingFlowIllustration() {
   );
 }
 
+// Home hero's "서재 히어로 비주얼" -- a small flat-lay desk scene (open book,
+// pencil, memo card, a peeking bookmark ribbon, one word card) built from
+// plain shapes/paths in the same warm palette as the rest of the brand
+// system. No external image asset. Deliberately a handful of simple flat
+// shapes, not a detailed drawing -- reads as "quiet reading desk" at a
+// glance rather than competing with the hero's title/CTAs for attention.
+export function LibraryHeroIllustration({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 180 150"
+      className={`library-hero-illustration${className ? ` ${className}` : ""}`}
+      aria-hidden="true"
+    >
+      {/* Open book */}
+      <g transform="rotate(-4 76 92)">
+        <rect
+          className="library-hero-book-cover"
+          x="21"
+          y="58"
+          width="110"
+          height="68"
+          rx="10"
+        />
+        <rect
+          className="library-hero-book-page"
+          x="29"
+          y="64"
+          width="94"
+          height="56"
+          rx="6"
+        />
+        <line
+          className="library-hero-spine"
+          x1="76"
+          y1="64"
+          x2="76"
+          y2="120"
+        />
+      </g>
+
+      {/* Bookmark ribbon peeking out from the spine */}
+      <path
+        className="library-hero-bookmark"
+        d="M68 26 H84 A6 6 0 0 1 90 32 V66 L76 57 L62 66 V32 A6 6 0 0 1 68 26 Z"
+      />
+
+      {/* Pencil resting diagonally across the book */}
+      <g transform="rotate(-27 118 44)">
+        <rect
+          className="library-hero-pencil-body"
+          x="88"
+          y="39"
+          width="62"
+          height="10"
+          rx="5"
+        />
+        <rect
+          className="library-hero-pencil-band"
+          x="140"
+          y="39"
+          width="8"
+          height="10"
+        />
+        <polygon
+          className="library-hero-pencil-tip"
+          points="150,39 160,44 150,49"
+        />
+      </g>
+
+      {/* Memo card with two lines of "text" */}
+      <g transform="rotate(6 128 34)">
+        <rect
+          className="library-hero-memo"
+          x="105"
+          y="17"
+          width="46"
+          height="34"
+          rx="6"
+        />
+        <rect className="library-hero-memo-line" x="113" y="27" width="30" height="3" rx="1.5" />
+        <rect className="library-hero-memo-line" x="113" y="35" width="22" height="3" rx="1.5" />
+      </g>
+
+      {/* Small saved-word card */}
+      <g transform="rotate(-5 34 114)">
+        <rect
+          className="library-hero-word-chip"
+          x="14"
+          y="99"
+          width="42"
+          height="28"
+          rx="7"
+        />
+        <text
+          className="library-hero-word-chip-text"
+          x="35"
+          y="118"
+          textAnchor="middle"
+        >
+          読
+        </text>
+      </g>
+    </svg>
+  );
+}
+
 // Shiori (시오리) -- the app's bookmark-fairy guide character. Reads as a
 // bookmark first (the shape is instantly a ribbon/bookmark), and as a quiet
 // companion second (two eyes, a warm screen-tinted body). Appears at 5
