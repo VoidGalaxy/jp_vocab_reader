@@ -339,7 +339,12 @@ button {
    item, no section header text -- reads as a shelf edge, not an admin nav
    panel. Only the primary 5 screens ever render here; everything else
    collapses into the "더보기" flyout below instead of a second labeled
-   group eating rail height. */
+   group eating rail height.
+
+   Deliberately NOT a rounded/bordered/shadowed floating card -- that read
+   as "a small second panel" rather than a rail attached to the page edge.
+   Just a flat strip with a hairline right-edge separator, closer to an
+   actual book spine sitting next to the page. */
 /* No overflow-y/max-height here on purpose -- the rail only ever holds a
    fixed 5 primary items + brand + more-button (everything else collapses
    into the flyout below), so it never needs to scroll. Giving it
@@ -350,33 +355,46 @@ button {
 .library-rail {
   position: sticky;
   top: 24px;
-  flex: 0 0 76px;
+  flex: 0 0 68px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  padding: 16px 8px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--panel-bg);
-  box-shadow: 0 10px 24px rgba(120, 98, 40, 0.05);
+  gap: 10px;
+  padding: 14px 6px;
+  border-right: 1px solid var(--border);
+  background: transparent;
 }
 
 .library-rail-brand {
-  display: inline-flex;
+  display: flex;
   flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 4px;
+}
+
+.library-rail-brand-icon {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   background: var(--primary);
   color: #ffffff;
 }
 
-.library-rail-brand svg {
-  width: 18px;
-  height: 18px;
+.library-rail-brand-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.library-rail-brand-name {
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .library-rail-nav {

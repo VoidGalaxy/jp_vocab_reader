@@ -105,7 +105,10 @@ export function AppShell({
     <div className="app-shell">
       <aside className="library-rail" aria-label="일본어 단어장 주요 메뉴">
         <span className="library-rail-brand" aria-hidden="true">
-          <BookIcon />
+          <span className="library-rail-brand-icon">
+            <BookIcon />
+          </span>
+          <span className="library-rail-brand-name">책갈피</span>
         </span>
         <nav className="library-rail-nav">
           {/* Rail buttons reuse the same short mobileLabel set the bottom

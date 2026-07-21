@@ -165,14 +165,12 @@ export function AnalyzeSection({
       <section className="reading-input-open">
         <div className="reading-input-open-header">
           <span className="reading-input-eyebrow">빠른 분류</span>
-          {!hasResult && !text.trim() ? null : (
-            <h2 className="reading-input-open-title">
-              {hasResult ? "원문" : "단어를 빠르게 나눠볼까요?"}
-            </h2>
-          )}
+          <h2 className="reading-input-open-title">
+            {hasResult ? "원문" : "단어를 빠르게 나눠볼까요?"}
+          </h2>
           {!hasResult ? (
             <p className="reading-input-open-hint">
-              아는 단어와 모르는 단어를 카드처럼 넘기며 정리해요.
+              원문에서 뽑은 단어를 카드처럼 넘기며 정리해요.
             </p>
           ) : null}
         </div>
