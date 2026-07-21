@@ -1,0 +1,133 @@
+/* ============================================================================
+   Shiori Design Lab preview -- layout-only styles for this page's own
+   grid/section scaffolding. Everything Shiori-shaped on this page renders
+   through the real components/Shiori.tsx + globals.css production classes
+   (.shiori-character, .shiori-mark, .shiori-stamp, .shiori-guide-card) --
+   this stylesheet never redefines those. Every class here is prefixed
+   dl-shiori-preview- so nothing here can collide with production classes
+   or with the sibling /design-lab page's own dl- prefixed sketch styles.
+   ============================================================================ */
+
+.dl-shiori-preview-page {
+  display: grid;
+  gap: 28px;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  background: #f2ead9;
+  min-height: 100vh;
+}
+
+.dl-shiori-preview-header {
+  display: grid;
+  gap: 4px;
+}
+
+.dl-shiori-preview-header h1 {
+  margin: 0;
+  font-size: 22px;
+  color: #2f2a24;
+}
+
+.dl-shiori-preview-header p {
+  margin: 0;
+  color: #7c7160;
+  font-size: 13px;
+}
+
+.dl-shiori-preview-section {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid #e4d9c2;
+  border-radius: 16px;
+  background: #fffdf8;
+}
+
+.dl-shiori-preview-section h2 {
+  margin: 0;
+  font-size: 15px;
+  color: #2f2a24;
+}
+
+.dl-shiori-preview-section-hint {
+  margin: -8px 0 0;
+  color: #7c7160;
+  font-size: 12px;
+}
+
+.dl-shiori-preview-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 24px;
+}
+
+.dl-shiori-preview-cell {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 64px;
+}
+
+.dl-shiori-preview-cell-label {
+  color: #7c7160;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.dl-shiori-preview-hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+/* Home hero mini-example -- same shiori-hero-scene composition the real
+   HomeDashboard uses, just at a smaller fixed width so it fits this
+   preview grid instead of a full hero card. */
+.dl-shiori-preview-home-mock {
+  position: relative;
+  width: 220px;
+  margin: 0 auto;
+}
+
+/* Classify-stage mini-example -- mirrors ClassifyStageIntro's header row
+   (glow + character + title/description) at 1:1 scale, no fixture logic. */
+.dl-shiori-preview-classify-mock {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #f2ead9;
+}
+
+.dl-shiori-preview-classify-mock h3 {
+  margin: 0 0 2px;
+  font-size: 16px;
+  color: #2f2a24;
+}
+
+.dl-shiori-preview-classify-mock p {
+  margin: 0;
+  font-size: 12px;
+  color: #7c7160;
+}
+
+.dl-shiori-preview-review-mock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #f2ead9;
+}
+
+.dl-shiori-preview-review-mock p {
+  margin: 0;
+  font-size: 13px;
+  color: #2f2a24;
+  font-weight: 700;
+}

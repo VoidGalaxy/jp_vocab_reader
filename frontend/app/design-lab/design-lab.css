@@ -107,39 +107,43 @@
 }
 
 /* Shared Shiori SVG paint rules -- geometry only changes via wrapper
-   transforms per direction, not per-direction duplicate paths. */
-.shiori-character-svg {
+   transforms per direction, not per-direction duplicate paths.
+   dl- prefix keeps this old comparison sketch's classes from ever
+   colliding with the real components/Shiori.tsx production classes
+   (.shiori-character-*, defined in globals.css, active app-wide including
+   this page) now that a real Shiori exists. */
+.dl-shiori-svg {
   display: block;
 }
 
-.shiori-character-body {
+.dl-shiori-body {
   fill: #f2ead9;
   stroke: #2f6470;
   stroke-width: 1.5;
 }
 
-.shiori-character-face {
+.dl-shiori-face {
   fill: #2f6470;
 }
 
-.shiori-character-eye {
+.dl-shiori-eye {
   fill: #f2ead9;
 }
 
-.shiori-character-mouth {
+.dl-shiori-mouth {
   fill: none;
   stroke: #f2ead9;
   stroke-width: 2;
   stroke-linecap: round;
 }
 
-.shiori-character-tassel {
+.dl-shiori-tassel {
   stroke: #d97a4a;
   stroke-width: 2;
   stroke-linecap: round;
 }
 
-.shiori-character-bead {
+.dl-shiori-bead {
   fill: #d97a4a;
 }
 

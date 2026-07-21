@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { AppEmptyState, StudyCompanion } from "./BrandElements";
+import { AppEmptyState } from "./BrandElements";
+import { ShioriStamp } from "./Shiori";
 import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import {
@@ -282,11 +283,11 @@ function ReaderSaveDock({
       {message ? (
         <p
           className={`message message--${messageTone} reading-summary-message${
-            messageTone === "success" ? " reading-summary-message-stamped" : ""
+            messageTone === "success" ? " message-stamped" : ""
           }`}
         >
           {messageTone === "success" ? (
-            <StudyCompanion mood="done" size="sm" className="reading-summary-message-stamp" />
+            <ShioriStamp variant="save" className="reading-summary-message-stamp" />
           ) : null}
           <span>{message}</span>
         </p>

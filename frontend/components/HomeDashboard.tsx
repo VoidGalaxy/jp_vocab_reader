@@ -1,6 +1,7 @@
 "use client";
 
-import { LibraryHeroIllustration, StudyCompanion } from "./BrandElements";
+import { LibraryHeroIllustration } from "./BrandElements";
+import { ShioriCharacter } from "./Shiori";
 import { getDisplayMeaning } from "./shared";
 import {
   BookIcon,
@@ -81,11 +82,6 @@ export function HomeDashboard({
               <BookIcon className="home-hero-badge-icon" />
               오늘의 책상
             </span>
-            <StudyCompanion
-              mood="reading"
-              size="md"
-              className="study-companion-glow home-hero-companion"
-            />
           </div>
           <h2 className="landing-hero-title">
             오늘 읽을 원문을
@@ -133,8 +129,13 @@ export function HomeDashboard({
             </span>
           </div>
         </div>
-        <div className="home-hero-visual" aria-hidden="true">
+        <div className="home-hero-visual shiori-hero-scene" aria-hidden="true">
           <LibraryHeroIllustration />
+          <ShioriCharacter
+            variant="reading"
+            size="hero"
+            className="shiori-hero-scene-character"
+          />
         </div>
       </section>
 

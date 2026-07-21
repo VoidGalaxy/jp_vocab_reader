@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { BookIcon, FolderIcon, ShareIcon } from "./icons";
+import { ShioriCharacter, type ShioriVariant } from "./Shiori";
 
 // Small, reusable "brand illustration" pieces shared across the app --
 // consolidates decoration that used to be hand-rolled per screen
@@ -162,107 +163,6 @@ export function LibraryHeroIllustration({ className }: { className?: string }) {
   );
 }
 
-// Shiori (시오리) -- the app's bookmark-fairy guide character. Locked
-// character system (2026-07-21 brand-direction pass): reads as a bookmark
-// first (rounded-top ribbon, V-notch tail), a quiet companion second (two
-// eyes + one simple mouth, warm screen-tinted body). Appears at the same
-// deliberate spots as before: home hero, reading empty/idle state, save
-// success, study quick-start hero, review complete, and other empty
-// states -- never as constant decoration on a loaded/busy screen.
-//
-// Each mood now has its own simple expression (previously only "done" had
-// any facial change at all, which read as ambiguous rather than as a
-// character) -- still just plain geometric shapes, never a detailed face,
-// per the locked design rules: no complex face, no full human body, no
-// chibi/anime styling, identical proportions on every screen (this is the
-// one component every call site shares, so that's automatic).
-//   reading  (환영/힌트)   -- warm open smile, greets/guides the screen.
-//   empty    (빈 상태)     -- resting half-closed eyes + flat mouth, calm
-//                             rather than sad -- "nothing waiting right now".
-//   done     (저장완료/복습응원) -- the widest smile plus the existing
-//                             corner sparkle -- a small celebration.
-//   feedback (경청)        -- same attentive smile as reading, head tilted
-//                             a few degrees to read as "listening in".
-export type CompanionMood = "reading" | "empty" | "done" | "feedback";
-
-const companionMouthByMood: Record<CompanionMood, string> = {
-  reading: "M26 36 Q32 41 38 36",
-  feedback: "M26 36 Q32 41 38 36",
-  done: "M25 35.5 Q32 44.5 39 35.5",
-  empty: "M28 37.5 H36",
-};
-
-export function StudyCompanion({
-  mood = "empty",
-  size = "sm",
-  className,
-}: {
-  mood?: CompanionMood;
-  size?: "sm" | "md" | "lg";
-  className?: string;
-}) {
-  const isResting = mood === "empty";
-
-  return (
-    <span
-      className={`study-companion shiori-bookmark-guide study-companion-${size} study-companion-mood-${mood}${className ? ` ${className}` : ""}`}
-      aria-hidden="true"
-    >
-      <svg viewBox="0 0 64 88" className="study-companion-svg">
-        {/* Rounded-top bookmark ribbon with a V-notch tail -- the same
-            silhouette language as .home-hero-bookmark/.brand-deck-cover
-            elsewhere in the app, just standalone instead of a page
-            accent. */}
-        <path
-          className="study-companion-body"
-          d="M14 2 H50 A12 12 0 0 1 62 14 V84 L32 63 L2 84 V14 A12 12 0 0 1 14 2 Z"
-        />
-        <rect
-          className="study-companion-face"
-          x="14"
-          y="16"
-          width="36"
-          height="28"
-          rx="10"
-        />
-        {isResting ? (
-          <>
-            <line
-              className="study-companion-eye-closed"
-              x1="23"
-              y1="30"
-              x2="29"
-              y2="30"
-            />
-            <line
-              className="study-companion-eye-closed"
-              x1="35"
-              y1="30"
-              x2="41"
-              y2="30"
-            />
-          </>
-        ) : (
-          <>
-            <circle className="study-companion-eye" cx="26" cy="30" r="2.2" />
-            <circle className="study-companion-eye" cx="38" cy="30" r="2.2" />
-          </>
-        )}
-        <path
-          className="study-companion-mouth"
-          d={companionMouthByMood[mood]}
-        />
-        {mood === "done" ? (
-          <path
-            className="study-companion-highlight"
-            d="M46 8 L48 12 L52 13 L48 14 L46 18 L44 14 L40 13 L44 12 Z"
-          />
-        ) : null}
-      </svg>
-    </span>
-  );
-}
-
 // Shared "nothing here yet" body -- every empty/no-result state in the app
 // (읽기 첫 진입, 오늘 복습 없음, 어휘 노트 비어 있음/검색 없음, 덱 책장 없음,
 // 홈 최근 활동 없음, ...) already followed this exact shape by convention
@@ -282,7 +182,7 @@ export function AppEmptyState({
   className = "empty-guide",
   children,
 }: {
-  mood?: CompanionMood;
+  mood?: ShioriVariant;
   icon?: IconComponent;
   title: string;
   description?: string;
@@ -292,7 +192,7 @@ export function AppEmptyState({
   return (
     <div className={className}>
       {mood ? (
-        <StudyCompanion mood={mood} />
+        <ShioriCharacter variant={mood} size="sm" />
       ) : icon ? (
         <BrandEmptyIllustration icon={icon} />
       ) : null}

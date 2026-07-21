@@ -5,6 +5,7 @@ import { getDisplayMeaning, statusLabels } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 import { BookmarkIcon, CloseIcon } from "./icons";
+import { ShioriMark } from "./Shiori";
 
 type TokenDetailSheetProps = {
   token: TokenWithStatus;
@@ -80,7 +81,7 @@ export function TokenDetailSheet({
       >
         <div className="token-sheet-header">
           <div className="token-sheet-title-group">
-            <BookmarkIcon className="token-sheet-bookmark-icon" />
+            <ShioriMark className="token-sheet-bookmark-icon" />
             <span className="token-sheet-word">{label}</span>
             {token.reading && token.reading !== label ? (
               <span className="token-sheet-reading">{token.reading}</span>

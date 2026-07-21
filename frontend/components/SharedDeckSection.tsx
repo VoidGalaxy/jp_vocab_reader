@@ -3,6 +3,7 @@ import {
   BrandDeckCover,
   BrandSectionBadge,
 } from "./BrandElements";
+import { ShioriStamp } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
 import { BookshelfIcon, CardFileIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
 import {
@@ -289,7 +290,16 @@ export function SharedDeckSection({
 
       {message ? (
         <div className="shared-deck-message">
-          <p className={`message message--${messageTone}`}>{message}</p>
+          <p
+            className={`message message--${messageTone}${
+              messageTone === "success" ? " message-stamped" : ""
+            }`}
+          >
+            {messageTone === "success" ? (
+              <ShioriStamp variant="save" className="shared-deck-message-stamp" />
+            ) : null}
+            <span>{message}</span>
+          </p>
           <div className="shared-deck-message-actions">
             <button
               type="button"
@@ -312,7 +322,7 @@ export function SharedDeckSection({
       ) : null}
 
       {isInitialLoading ? (
-        <AppEmptyState icon={BookshelfIcon} title="덱 책장을 불러오는 중이에요..." />
+        <AppEmptyState mood="loading" title="덱 책장을 불러오는 중이에요..." />
       ) : sortedDecks.length > 0 ? (
         hasGroups ? (
           <>

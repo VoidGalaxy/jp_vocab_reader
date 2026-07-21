@@ -1,6 +1,7 @@
 "use client";
 
-import { AppEmptyState, StudyCompanion } from "./BrandElements";
+import { AppEmptyState } from "./BrandElements";
+import { ShioriCharacter, ShioriStamp } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
 import type {
   Deck,
@@ -174,10 +175,10 @@ function StudyQuickStartHero({
           <h2>오늘 복습을 시작해볼까요?</h2>
           <p>담아둔 단어를 문맥 예문과 함께 다시 확인해요.</p>
         </div>
-        <StudyCompanion
-          mood="reading"
-          size="md"
-          className="study-companion-glow study-hero-companion"
+        <ShioriCharacter
+          variant="review"
+          size="sm"
+          className="shiori-glow study-hero-companion"
         />
       </div>
       {total > 0 ? (
@@ -591,8 +592,7 @@ export function StudySection({
 
       {isComplete ? (
         <div className="study-card complete-card card-stack-surface index-card-shell">
-          <StudyCompanion mood="done" />
-          <span className="brand-stamp">완료</span>
+          <ShioriStamp variant="review" label="완료" />
           <h3>
             {studyMode === "recent"
               ? "방금 담은 단어 복습을 마쳤어요."

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { StudyCompanion } from "./BrandElements";
+import { ShioriCharacter, ShioriStamp } from "./Shiori";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import type { CoverageStats } from "./types";
@@ -250,10 +250,10 @@ function ClassifyStageIntro({
   return (
     <section className="classify-stage hero-card library-card-stage">
       <div className="classify-hero-header">
-        <StudyCompanion
-          mood="reading"
+        <ShioriCharacter
+          variant="classify"
           size="md"
-          className="study-companion-glow classify-hero-companion"
+          className="shiori-glow classify-hero-companion"
         />
         <div>
           <span className="reading-input-eyebrow">빠른 분류</span>
@@ -503,8 +503,7 @@ function ClassifyResultSummary({
 }: ClassifyResultSummaryProps) {
   return (
     <div className="classify-result-summary index-card-shell">
-      <StudyCompanion mood="done" />
-      <span className="brand-stamp">완료</span>
+      <ShioriStamp variant="success" label="완료" />
       <h3>단어 나누기를 마쳤어요.</h3>
       <CoverageSummary stats={coverageStats} />
       <div className="classification-summary final-summary">

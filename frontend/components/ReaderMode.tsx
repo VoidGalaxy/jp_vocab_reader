@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
-import { StudyCompanion } from "./BrandElements";
+import { ShioriGuideCard } from "./Shiori";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet } from "./TokenDetailSheet";
 import { buildReaderLayout, getNavigableTokenIndexes } from "./readerLayout";
@@ -634,10 +634,10 @@ export function ReaderMode({
           aria-hidden="true"
         >
           <div className="bookmark-inspector word-index-inspector token-sheet-idle paper-corner card-stack-surface">
-            <StudyCompanion mood="reading" size="sm" />
-            <p className="token-sheet-idle-text">
-              원문에서 모르는 단어를 눌러보세요.
-            </p>
+            <ShioriGuideCard
+              variant="reading"
+              message="원문에서 모르는 단어를 눌러보세요."
+            />
           </div>
         </div>
       )}

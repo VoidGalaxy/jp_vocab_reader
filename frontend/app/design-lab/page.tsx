@@ -30,20 +30,20 @@ function Shiori({
       viewBox="0 0 64 88"
       width={size}
       height={(size * 88) / 64}
-      className="shiori-character-svg"
+      className="dl-shiori-svg"
       style={{ transform: `rotate(${rotate}deg)` }}
       aria-hidden="true"
     >
       <path
-        className="shiori-character-body"
+        className="dl-shiori-body"
         d="M14 2 H50 A12 12 0 0 1 62 14 V84 L32 63 L2 84 V14 A12 12 0 0 1 14 2 Z"
       />
-      <rect className="shiori-character-face" x="14" y="16" width="36" height="28" rx="10" />
-      <circle className="shiori-character-eye" cx="26" cy="30" r="2.2" />
-      <circle className="shiori-character-eye" cx="38" cy="30" r="2.2" />
-      <path className="shiori-character-mouth" d="M26 36 Q32 41 38 36" />
-      <line className="shiori-character-tassel" x1="32" y1="63" x2="32" y2="78" />
-      <circle className="shiori-character-bead" cx="32" cy="81" r="3" />
+      <rect className="dl-shiori-face" x="14" y="16" width="36" height="28" rx="10" />
+      <circle className="dl-shiori-eye" cx="26" cy="30" r="2.2" />
+      <circle className="dl-shiori-eye" cx="38" cy="30" r="2.2" />
+      <path className="dl-shiori-mouth" d="M26 36 Q32 41 38 36" />
+      <line className="dl-shiori-tassel" x1="32" y1="63" x2="32" y2="78" />
+      <circle className="dl-shiori-bead" cx="32" cy="81" r="3" />
     </svg>
   );
 }

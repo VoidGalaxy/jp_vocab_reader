@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { StudyCompanion } from "./BrandElements";
+import { ShioriCharacter } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
 import type { AppFeedbackCategory } from "./types";
 
@@ -120,7 +120,7 @@ export function GlobalFeedbackModal({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="feedback-modal-header">
-          <StudyCompanion mood="feedback" className="feedback-modal-companion" />
+          <ShioriCharacter variant="default" className="feedback-modal-companion" />
           <div>
             <h2 className="feedback-modal-title">베타 피드백</h2>
             <p className="muted-text feedback-modal-subtitle">

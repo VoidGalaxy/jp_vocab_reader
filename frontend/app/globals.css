@@ -133,9 +133,9 @@
    companion illustrations settle into place instead of jumping in; nothing
    here loops or repeats. Reused across many components by applying the
    class name directly on an existing element (see .empty-guide,
-   .brand-stamp, .study-companion, .message--success, .bookmark-inspector,
-   .feedback-modal below) rather than duplicating an animation prop per
-   call site. */
+   .shiori-stamp--labeled, .shiori-character, .message--success,
+   .bookmark-inspector, .feedback-modal below) rather than duplicating an
+   animation prop per call site. */
 @keyframes app-fade-in {
   from {
     opacity: 0;
@@ -903,18 +903,11 @@ button {
   font-weight: 800;
 }
 
-/* Badge + Shiori share the hero's top line -- Shiori greets the screen (one
-   of her 5 designated spots) without pushing the title/CTAs down, since she
-   sits beside the badge rather than adding her own row. */
 .home-hero-greeting {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-}
-
-.home-hero-companion {
-  margin: -8px -10px 0 0;
 }
 
 .home-hero-badge {
@@ -1250,6 +1243,14 @@ button {
 
   .library-hero-illustration {
     width: 150px;
+  }
+
+  /* Tighter cap than the base clamp() -- keeps Shiori from reading as
+     oversized against the shrunk 150px desk illustration on a phone. */
+  .shiori-hero-scene-character {
+    width: clamp(72px, 24vw, 96px);
+    height: clamp(98px, 32vw, 130px);
+    top: -4px;
   }
 
   .landing-hero-title {
@@ -2089,55 +2090,62 @@ select {
   color: var(--screen-accent, var(--primary));
 }
 
-/* Brand character (StudyCompanion) -- a small recurring bookmark-shaped
-   mascot with a plain paper face plate and a two-dot/one-line expression.
-   Sized in three tiers (sm/md/lg) so it can drop into a tight empty-state
-   card or a roomier hero without a bespoke size per call site. Purely
-   decorative (aria-hidden on the wrapper). --screen-accent tints its body
-   the same way brand-empty-illustration/-section-badge do, so the
-   character and the rest of a screen's brand marks always match.
-   Every instance also carries .shiori-bookmark-guide as a semantic
-   co-class (this is Shiori the bookmark guide character, not a decorative
-   icon) -- kept separate from .study-companion itself since that name is
-   already threaded through 15+ style rules and 4 component files. */
-.study-companion {
+/* ==========================================================================
+   Shiori character system -- one shared geometry (tassel + bookmark body +
+   face + eyes) reused by every piece (ShioriCharacter/ShioriMark/
+   ShioriStamp/ShioriGuideCard, see components/Shiori.tsx) so the character
+   reads as the same brand face everywhere, just a different size/small
+   expression. Fixed brand palette everywhere -- deliberately NOT
+   var(--screen-accent) (screenshot QA on the previous character caught it
+   turning purple on 복습, blue on 덱 책장, etc. by inheriting whatever accent
+   tone that screen happened to use). One constant look: cream ribbon body
+   with a deep-teal outline, a deep-teal face plate, amber/coral reserved
+   for small per-variant accents only -- never the whole character.
+   ========================================================================== */
+.shiori-character {
   display: inline-flex;
   flex: 0 0 auto;
   line-height: 0;
   animation: app-pop var(--motion-base) var(--ease-soft) both;
 }
 
-.study-companion-svg {
+.shiori-character-svg {
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
   filter: drop-shadow(0 4px 8px rgba(120, 98, 40, 0.16));
 }
 
-/* Sizes match the "quiet symbol, not a mascot" scale (sm ~24-32px wide, md
-   ~40-56px, lg well under 100px) -- previously sm alone (40px) was already
-   as big as this scale's md tier. */
-.study-companion-sm {
+/* Sizes stay the "quiet symbol, not a mascot" scale (sm ~24-32px wide, md
+   ~40-56px, lg well under 100px) except "hero" -- the one tier meant to
+   actually anchor a scene (home hero) -- which clamps to vw so it never
+   grows past a sensible cap on a narrow phone viewport. */
+.shiori-character-sm {
   width: 28px;
   height: 38px;
 }
 
-.study-companion-md {
+.shiori-character-md {
   width: 44px;
   height: 60px;
 }
 
-.study-companion-lg {
+.shiori-character-lg {
   width: 70px;
   height: 96px;
 }
 
-/* Hero-level presence badge -- a soft round glow behind Shiori for the two
-   "guide" spots (home hero, study quick-start hero) so the character reads
-   as a deliberate brand mascot greeting the screen rather than a small
-   inline icon. CSS radial-gradient only, no new asset; the ribbon SVG
-   itself is unchanged. */
-.study-companion-glow {
+.shiori-character-hero {
+  width: clamp(84px, 20vw, 132px);
+  height: clamp(114px, 27vw, 180px);
+}
+
+/* Presence glow -- a soft round light behind Shiori for the small "guide"
+   spots (classify intro, study quick-start) so the character reads as a
+   deliberate greeting rather than a plain inline icon. CSS radial-gradient
+   only, no new asset. */
+.shiori-glow {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2147,82 +2155,190 @@ select {
   background: radial-gradient(circle, #f7ecd6 0%, transparent 72%);
 }
 
-/* Shiori's palette is fixed brand colors everywhere -- deliberately NOT
-   var(--screen-accent) (screenshot QA caught the character turning purple
-   on 복습, blue on 덱 책장, etc. by inheriting whatever accent tone that
-   screen happened to use). A recurring named character needs one constant
-   look regardless of screen: cream ribbon body with a deep-teal outline,
-   a deep-teal face plate, and the warm amber/coral tones reserved for
-   small accents (the "done" sparkle) rather than the whole character. */
-.study-companion-body {
+/* Loop + tassel at the top of the ribbon -- the one piece the previous
+   bookmark-only silhouette was missing, so the shape reads as "a bookmark
+   with a tassel" at a glance instead of just a rounded ribbon. */
+.shiori-tassel {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.shiori-bookmark-body {
   fill: var(--soft-bg);
   stroke: var(--primary);
   stroke-width: 1.5;
 }
 
-.study-companion-face {
+.shiori-face {
   fill: var(--primary);
   stroke: var(--primary-dark);
   stroke-width: 1;
 }
 
-.study-companion-eye {
+.shiori-eye {
   fill: var(--soft-bg);
 }
 
-/* "empty" mood's resting/half-closed eyes -- short lines instead of the
-   round dots, reads as calm/quiet rather than the alert "reading" look. */
-.study-companion-eye-closed {
+/* "empty"/"loading" resting eyes -- short lines instead of round dots,
+   reads as calm/quiet rather than the alert open-eyed look every other
+   variant uses. */
+.shiori-eye-closed {
   stroke: var(--soft-bg);
   stroke-width: 2.2;
   stroke-linecap: round;
 }
 
-/* One shared mouth per mood (see companionMouthByMood) -- the one piece
-   that used to be entirely missing, so every mood looked the same except
-   "done". Kept to a single simple stroke path, never a filled/detailed
-   shape. */
-.study-companion-mouth {
+.shiori-mouth {
   fill: none;
   stroke: var(--soft-bg);
   stroke-width: 2.2;
   stroke-linecap: round;
 }
 
-/* "feedback" (경청) reuses the same warm smile as "reading" but tilts the
-   whole character a few degrees, like it's leaning in to listen --
-   transform-origin centers the tilt on the character rather than its
-   corner so it reads as a lean, not a fall. */
-.study-companion-mood-feedback .study-companion-svg {
-  transform: rotate(-6deg);
-  transform-origin: 50% 55%;
-}
-
-/* "done" mood only -- a tiny highlight mark instead of a facial expression,
-   in the same warm amber the app already uses elsewhere for a small "this
-   just completed" accent. */
-.study-companion-highlight {
+/* Per-variant accents -- one small mark at most, so the character stays
+   "one calm expression + a tiny detail" rather than a busier drawing. */
+.shiori-accent-sparkle {
   fill: var(--warning);
 }
 
-/* Small rotated dashed "완료" stamp -- an alternative to .memo-label for
-   completion moments (study session done, classification done) so those
-   screens get a bit of the "post-mark stamped in a notebook" flourish
-   requested for reward/completion states, without a new illustration. */
-.brand-stamp {
+.shiori-accent-check {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.shiori-accent-dot {
+  fill: var(--accent);
+}
+
+.shiori-accent-card {
+  fill: var(--accent);
+  opacity: 0.85;
+}
+
+/* "classify" variant's small pointer -- deliberately just a short curved
+   stroke (a stub, not articulated fingers) so it reads as "about to flip a
+   card" without becoming a full limb. */
+.shiori-hand {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.shiori-loading-dots circle {
+  fill: var(--muted);
+  animation: shiori-loading-pulse 1.2s ease-in-out infinite;
+}
+
+.shiori-loading-dots circle:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.shiori-loading-dots circle:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes shiori-loading-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 0.9;
+  }
+}
+
+/* ShioriMark -- compact inline "brand mark" form (bookmark + calm face, no
+   tassel/accessory) for a slot that used to hold a plain generic bookmark
+   glyph, e.g. the selected-word panel's title icon. */
+.shiori-mark {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 20px;
+  line-height: 0;
+}
+
+.shiori-mark-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ShioriStamp -- bare (no label) is just the small character, for an
+   inline "this just saved" accent next to a message line. With a label it
+   picks up a dashed-pill "postmark" treatment, rotated a couple degrees
+   like a real notebook stamp -- the completion-moment flourish the old
+   standalone .brand-stamp used to provide on its own. */
+.shiori-stamp {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 12px;
-  border: 1.5px dashed var(--screen-accent, var(--accent));
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.shiori-stamp--labeled {
+  padding: 3px 10px 3px 6px;
+  border: 1.5px dashed var(--accent);
   border-radius: 999px;
-  color: var(--screen-accent, var(--accent));
-  background: transparent;
+  transform: rotate(-3deg);
+  animation: app-stamp var(--motion-slow) var(--ease-soft) both;
+}
+
+.shiori-stamp--review.shiori-stamp--labeled {
+  border-color: var(--primary);
+}
+
+.shiori-stamp-character {
+  width: 18px;
+  height: 25px;
+}
+
+.shiori-stamp-label {
+  color: var(--text);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.02em;
-  transform: rotate(-3deg);
-  animation: app-stamp var(--motion-slow) var(--ease-soft) both;
+}
+
+/* ShioriGuideCard -- one quiet inline line ("Shiori says X"), icon left,
+   message right. Deliberately distinct from AppEmptyState's fuller
+   icon-top/title/description/actions stack below -- this is for a single
+   inline hint (reading word-inspector idle state), not a full empty-state
+   card with its own actions. */
+.shiori-guide-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.shiori-guide-card-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Home hero scene -- layers a hero-size Shiori over the existing desk
+   illustration so the character reads as bookmarked into the book, not a
+   separate icon next to the title. Position is tuned to sit roughly where
+   a real bookmark ribbon would peek out of the spine. */
+.shiori-hero-scene {
+  position: relative;
+}
+
+.shiori-hero-scene-character {
+  position: absolute;
+  top: -6px;
+  right: 18%;
+  filter: drop-shadow(0 10px 16px rgba(120, 98, 40, 0.22));
 }
 
 .study-control-panel {
@@ -3593,17 +3709,15 @@ input.reading-vocab-item-checkbox {
   margin: 0;
 }
 
-/* Save-success gets Shiori's small "done" stamp instead of the generic
-   .message::before checkmark -- one of the character's 5 designated spots
-   (단어 저장 완료). Swaps the icon rather than showing both. */
-.reading-summary-message-stamped::before {
+/* Save-success gets Shiori's small ShioriStamp instead of the generic
+   .message::before checkmark -- reused on both the reading save-success
+   message and the deck-import success message. Swaps the icon rather than
+   showing both. */
+.message-stamped::before {
   display: none;
 }
 
 .reading-summary-message-stamp {
-  flex: 0 0 auto;
-  width: 18px;
-  height: 24px;
   margin-top: -3px;
 }
 
@@ -3929,6 +4043,11 @@ input.reading-vocab-item-checkbox {
   font-weight: 700;
 }
 
+.records-log-title-mark {
+  width: 14px;
+  height: 19px;
+}
+
 .records-log-hint {
   margin: -4px 0 0;
 }
@@ -4236,6 +4355,10 @@ input.reading-vocab-item-checkbox {
   margin: 0;
 }
 
+.shared-deck-message-stamp {
+  margin-top: -3px;
+}
+
 .shared-deck-message-actions {
   display: flex;
   flex-wrap: wrap;
@@ -4505,15 +4628,6 @@ input.reading-vocab-item-checkbox {
   margin: 0;
 }
 
-/* Small "시오리 추천" mark next to the JLPT level tag -- shrunk further
-   than .study-companion-sm since it sits inline with a small pill tag, not
-   as a standalone hero/empty-state symbol. Purely a quiet endorsement
-   glance, not a repeated mascot. */
-.shared-deck-recommend-mark {
-  width: 16px;
-  height: 22px;
-  margin-left: -2px;
-}
 
 .jlpt-level-tag {
   display: inline-flex;
@@ -6338,20 +6452,14 @@ input.reading-vocab-item-checkbox {
   background: transparent;
 }
 
+/* Content is a ShioriGuideCard now (icon + one line) -- this wrapper just
+   centers that strip in the panel; the icon+text arrangement itself is
+   ShioriGuideCard's own. */
 .token-sheet-idle {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
+  display: flex;
+  justify-content: center;
   padding: 28px 20px;
-  text-align: center;
   pointer-events: none;
-}
-
-.token-sheet-idle-text {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
 }
 
 .token-sheet-header {
@@ -6370,16 +6478,16 @@ input.reading-vocab-item-checkbox {
   min-width: 0;
 }
 
-/* Small bookmark glyph ahead of the word -- the one visual cue (besides
-   the top accent edge) that marks this as "a bookmark note about this
-   word", not a generic word-detail inspector. Sized/aligned to sit inline
-   with the word's baseline rather than towering over it. */
+/* Small Shiori mark ahead of the word -- the one visual cue (besides the
+   top accent edge) that marks this as "a bookmark note about this word",
+   not a generic word-detail inspector. Sized/aligned to sit inline with
+   the word's baseline rather than towering over it; width/height override
+   ShioriMark's own default size but keep its bookmark aspect ratio. */
 .token-sheet-bookmark-icon {
   flex: 0 0 auto;
   align-self: center;
-  width: 18px;
-  height: 18px;
-  color: var(--screen-accent, var(--accent));
+  width: 16px;
+  height: 22px;
 }
 
 .token-sheet-word {
