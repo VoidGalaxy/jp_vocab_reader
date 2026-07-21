@@ -1,11 +1,20 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { AppEmptyState, BrandSectionBadge, StudyCompanion } from "./BrandElements";
+import { useState, type FormEvent } from "react";
+import { AppEmptyState, StudyCompanion } from "./BrandElements";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
-import { ShieldIcon, SparkleIcon } from "./icons";
+import {
+  BookmarkIcon,
+  BookIcon,
+  CardFileIcon,
+  CheckCircleIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  ShieldIcon,
+  SparkleIcon,
+} from "./icons";
 import { getDisplayMeaning, StatusSelect, statusLabels } from "./shared";
 import type {
   Deck,
@@ -46,7 +55,49 @@ type AnalyzeSectionProps = {
   onRestoreDraft: () => void;
   onDiscardDraft: () => void;
   onViewInReadingTab: () => void;
+  onGoToVocab: () => void;
 };
+
+// Each classify action gets its own icon+hint, not just its own color --
+// 아는 (차분한 확인) / 헷갈리는 (곧 다시) / 모르는 (책갈피처럼 담기) / 건너뛰기
+// (그냥 지나가기) -- so the 4-way decision reads as four different actions,
+// reusing the same rating-button visual recipe review cards already use.
+const classifyRatingButtons: Array<{
+  status: TokenStatus;
+  label: string;
+  hint: string;
+  className: string;
+  icon: (props: { className?: string }) => JSX.Element;
+}> = [
+  {
+    status: "known",
+    label: "아는 단어",
+    hint: "이미 알아요",
+    className: "rating-classify-known",
+    icon: CheckCircleIcon,
+  },
+  {
+    status: "uncertain",
+    label: "헷갈리는 단어",
+    hint: "다시 볼래요",
+    className: "rating-classify-uncertain",
+    icon: ClockIcon,
+  },
+  {
+    status: "unknown",
+    label: "모르는 단어",
+    hint: "노트에 담을래요",
+    className: "rating-classify-unknown",
+    icon: BookmarkIcon,
+  },
+  {
+    status: "unclassified",
+    label: "건너뛰기",
+    hint: "나중에 볼게요",
+    className: "rating-classify-skip",
+    icon: ChevronRightIcon,
+  },
+];
 
 export function AnalyzeSection({
   text,
@@ -75,7 +126,9 @@ export function AnalyzeSection({
   onRestoreDraft,
   onDiscardDraft,
   onViewInReadingTab,
+  onGoToVocab,
 }: AnalyzeSectionProps) {
+  const [isInputExpanded, setIsInputExpanded] = useState(false);
   const currentToken = tokens[currentCardIndex];
   const classifiedCount = tokens.filter((token) => token.isClassified).length;
   const remainingCount = Math.max(tokens.length - classifiedCount, 0);
@@ -104,63 +157,96 @@ export function AnalyzeSection({
       })
     : "";
 
+  const hasResult = tokens.length > 0;
+  const showInputForm = !hasResult || isInputExpanded;
+
   return (
     <section className="tab-panel analyze-panel" aria-live="polite">
-      <div className="reading-hero">
-        <h2 className="reading-hero-title">단어 카드로 빠르게 분류하기</h2>
-        <p className="reading-hero-subtitle">
-          추출된 단어를 아는/헷갈리는/모르는 단어로 빠르게 나눠보세요.
-        </p>
-      </div>
-
-      <section className="panel-card reading-input-card">
-        <div className="panel-card-header">
-          <h3 className="panel-card-title">
-            <BrandSectionBadge icon={SparkleIcon} />
-            원문 입력
-          </h3>
-          <p className="panel-card-description">
-            읽고 싶은 일본어 문장을 붙여넣으세요.
-          </p>
+      <section className="reading-input-open">
+        <div className="reading-input-open-header">
+          <span className="reading-input-eyebrow">빠른 분류</span>
+          {!hasResult && !text.trim() ? null : (
+            <h2 className="reading-input-open-title">
+              {hasResult ? "원문" : "단어를 빠르게 나눠볼까요?"}
+            </h2>
+          )}
+          {!hasResult ? (
+            <p className="reading-input-open-hint">
+              아는 단어와 모르는 단어를 카드처럼 넘기며 정리해요.
+            </p>
+          ) : null}
         </div>
-        <form className="analyze-form" onSubmit={onAnalyze}>
-          <label htmlFor="source-text">원문</label>
-          <textarea
-            id="source-text"
-            value={text}
-            onChange={(event) => onTextChange(event.target.value)}
-            placeholder="彼は怠惰であることを自覚していた。"
-            rows={8}
-          />
-          <div className="analyze-options">
-            <label className="inline-field">
-              분석/저장 덱
-              <select
-                value={selectedDeckId}
-                onChange={(event) => onSelectedDeckChange(event.target.value)}
-              >
-                {decks.map((deck) => (
-                  <option key={deck.id} value={String(deck.id)}>
-                    {deck.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="checkbox-field analyze-checkbox">
-              <input
-                type="checkbox"
-                checked={includeKnown}
-                onChange={(event) => onIncludeKnownChange(event.target.checked)}
+
+        {hasResult ? (
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={() => setIsInputExpanded((value) => !value)}
+          >
+            {isInputExpanded ? "원문 접기" : "원문 수정"}
+          </button>
+        ) : null}
+
+        {showInputForm ? (
+          <form className="analyze-form" onSubmit={onAnalyze}>
+            {!hasResult && !text.trim() ? (
+              <AppEmptyState
+                mood="reading"
+                className="reading-empty-guide"
+                title="분류할 원문을 붙여넣어 주세요"
+                description="추출된 단어를 아는/헷갈리는/모르는 단어로 빠르게 나눠요."
               />
-              완벽히 아는 단어도 표시
+            ) : null}
+            <label htmlFor="source-text" className="sr-only-label">
+              원문
             </label>
-          </div>
-          <div className="actions">
-            <button type="submit" disabled={isAnalyzing}>
-              {isAnalyzing ? "분석 중..." : "분석하기"}
-            </button>
-          </div>
-        </form>
+            <textarea
+              id="source-text"
+              value={text}
+              onChange={(event) => onTextChange(event.target.value)}
+              placeholder="彼は怠惰であることを自覚していた。"
+              rows={6}
+            />
+            <div className="reading-input-footer">
+              <label className="reading-deck-picker">
+                <CardFileIcon className="reading-deck-picker-icon" />
+                <select
+                  value={selectedDeckId}
+                  onChange={(event) => onSelectedDeckChange(event.target.value)}
+                  aria-label="분석/저장 덱"
+                >
+                  {decks.map((deck) => (
+                    <option key={deck.id} value={String(deck.id)}>
+                      {deck.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="checkbox-field analyze-checkbox">
+                <input
+                  type="checkbox"
+                  checked={includeKnown}
+                  onChange={(event) => onIncludeKnownChange(event.target.checked)}
+                />
+                완벽히 아는 단어도 표시
+              </label>
+              <button
+                type="submit"
+                className="reading-open-button"
+                disabled={isAnalyzing}
+              >
+                {isAnalyzing ? (
+                  "나누는 중..."
+                ) : (
+                  <>
+                    <SparkleIcon className="button-icon" />
+                    분류 시작
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        ) : null}
 
         <p className="muted-text copyright-note">
           <ShieldIcon className="copyright-note-icon" />
@@ -315,35 +401,19 @@ export function AnalyzeSection({
                   )}
                 </div>
 
-                <div className="classify-actions">
-                  <button
-                    type="button"
-                    className="success-button"
-                    onClick={() => onClassifyCurrent("known")}
-                  >
-                    완벽히 아는 단어
-                  </button>
-                  <button
-                    type="button"
-                    className="warning-button"
-                    onClick={() => onClassifyCurrent("uncertain")}
-                  >
-                    헷갈리는 단어
-                  </button>
-                  <button
-                    type="button"
-                    className="danger-button"
-                    onClick={() => onClassifyCurrent("unknown")}
-                  >
-                    모르는 단어
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => onClassifyCurrent("unclassified")}
-                  >
-                    건너뛰기
-                  </button>
+                <div className="classify-actions" role="group" aria-label="단어 분류">
+                  {classifyRatingButtons.map(({ status, label, hint, className, icon: Icon }) => (
+                    <button
+                      key={status}
+                      type="button"
+                      className={`rating-button ${className}`}
+                      onClick={() => onClassifyCurrent(status)}
+                    >
+                      <Icon className="rating-icon" />
+                      <span className="rating-label">{label}</span>
+                      <span className="rating-hint">{hint}</span>
+                    </button>
+                  ))}
                 </div>
                 <div className="card-navigation">
                   <button
@@ -360,7 +430,7 @@ export function AnalyzeSection({
               <div className="classification-complete">
                 <StudyCompanion mood="done" />
                 <span className="brand-stamp">완료</span>
-                <h3>분류 완료</h3>
+                <h3>단어 나누기를 마쳤어요.</h3>
                 <div className="classification-summary final-summary">
                   <span>{statusLabels.known} {knownCount}개</span>
                   <span>{statusLabels.uncertain} {uncertainCount}개</span>
@@ -380,6 +450,24 @@ export function AnalyzeSection({
                 <p className="muted-text">
                   분류한 단어 저장 시 임시 저장이 삭제됩니다.
                 </p>
+                <div className="study-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={onViewInReadingTab}
+                  >
+                    <BookIcon className="button-icon" />
+                    원문 읽기로 이동
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={onGoToVocab}
+                  >
+                    <CardFileIcon className="button-icon" />
+                    어휘 노트 보기
+                  </button>
+                </div>
               </div>
             )}
 

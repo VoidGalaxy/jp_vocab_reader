@@ -1,6 +1,11 @@
-import { AppEmptyState, BrandDeckCover, BrandSectionBadge } from "./BrandElements";
+import {
+  AppEmptyState,
+  BrandDeckCover,
+  BrandSectionBadge,
+  StudyCompanion,
+} from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
-import { BookIcon, FolderIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
+import { BookshelfIcon, CardFileIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
 import {
   formatDateTime,
   getDisplayMeaning,
@@ -140,6 +145,13 @@ export function SharedDeckSection({
           <div className="shared-deck-title-row">
             <h3>{getDisplayTitle(deck, level)}</h3>
             {level ? <JlptLevelTag level={level} /> : null}
+            {level ? (
+              <StudyCompanion
+                mood="reading"
+                size="sm"
+                className="shared-deck-recommend-mark"
+              />
+            ) : null}
           </div>
           <div className="shared-deck-meta-row">
             <span className="shared-deck-word-count-badge">
@@ -237,7 +249,7 @@ export function SharedDeckSection({
       <section className="panel-card hero-card shared-hero-card">
         <div className="panel-card-header">
           <h2 className="panel-card-title">
-            <BrandSectionBadge icon={BookIcon} />
+            <BrandSectionBadge icon={BookshelfIcon} />
             덱 책장
           </h2>
           <p className="panel-card-description">
@@ -249,7 +261,7 @@ export function SharedDeckSection({
             <ShareIcon className="button-icon" />어휘 노트 공유하기
           </button>
           <button type="button" className="secondary-button" onClick={onGoToVocab}>
-            <FolderIcon className="button-icon" />어휘 노트 보기
+            <CardFileIcon className="button-icon" />어휘 노트 보기
           </button>
           <button
             type="button"
@@ -288,14 +300,14 @@ export function SharedDeckSection({
       ) : null}
 
       {isInitialLoading ? (
-        <AppEmptyState icon={ShareIcon} title="덱 책장을 불러오는 중이에요..." />
+        <AppEmptyState icon={BookshelfIcon} title="덱 책장을 불러오는 중이에요..." />
       ) : sortedDecks.length > 0 ? (
         hasGroups ? (
           <>
             {recommendedDecks.length > 0 ? (
               <div className="shared-deck-shelf">
                 <h3 className="shared-deck-shelf-title">
-                  <BookIcon className="shared-deck-shelf-icon" />
+                  <BookshelfIcon className="shared-deck-shelf-icon" />
                   JLPT 추천 어휘 서가
                 </h3>
                 <div className="shared-deck-grid">
@@ -306,7 +318,7 @@ export function SharedDeckSection({
             {myDecks.length > 0 ? (
               <div className="shared-deck-shelf">
                 <h3 className="shared-deck-shelf-title">
-                  <BookIcon className="shared-deck-shelf-icon" />
+                  <BookshelfIcon className="shared-deck-shelf-icon" />
                   내가 공유한 덱
                 </h3>
                 <div className="shared-deck-grid">{myDecks.map(renderDeckCard)}</div>
@@ -315,7 +327,7 @@ export function SharedDeckSection({
             {otherDecks.length > 0 ? (
               <div className="shared-deck-shelf">
                 <h3 className="shared-deck-shelf-title">
-                  <BookIcon className="shared-deck-shelf-icon" />
+                  <BookshelfIcon className="shared-deck-shelf-icon" />
                   다른 학습자의 덱
                 </h3>
                 <div className="shared-deck-grid">{otherDecks.map(renderDeckCard)}</div>
@@ -330,7 +342,7 @@ export function SharedDeckSection({
         // cheerful "둘러보세요" copy below, which would otherwise read as
         // if the deck shelf is just empty rather than unreachable.
         <AppEmptyState
-          icon={ShareIcon}
+          icon={BookshelfIcon}
           title="덱을 불러오지 못했어요."
           description="잠시 후 다시 시도해주세요."
         >
@@ -355,7 +367,7 @@ export function SharedDeckSection({
             className="ghost-button compact-button"
             onClick={onGoToVocab}
           >
-            <FolderIcon className="button-icon" />
+            <CardFileIcon className="button-icon" />
             어휘 노트로 이동
           </button>
         </AppEmptyState>

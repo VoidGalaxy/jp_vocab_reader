@@ -16,13 +16,13 @@ import type { ReadingSaveMode, ReadingSaveTarget } from "../components/coverageU
 import { HomeDashboard } from "../components/HomeDashboard";
 import {
   BookIcon,
+  BookshelfIcon,
+  CardFileIcon,
   CardsIcon,
   ChatIcon,
   CheckCircleIcon,
   ClockIcon,
-  FolderIcon,
   HomeIcon,
-  ShareIcon,
 } from "../components/icons";
 import { InfoSection } from "../components/InfoSection";
 import { MeaningFeedbackModal } from "../components/MeaningFeedbackModal";
@@ -180,9 +180,9 @@ const tabs: Array<{
   { key: "home", label: "오늘의 책상", mobileLabel: "책상", icon: HomeIcon },
   { key: "analyze", label: "빠른 분류", mobileLabel: "분류", icon: CheckCircleIcon },
   { key: "reading", label: "원문 읽기", mobileLabel: "읽기", icon: BookIcon },
-  { key: "vocab", label: "어휘 노트", mobileLabel: "노트", icon: FolderIcon },
+  { key: "vocab", label: "어휘 노트", mobileLabel: "노트", icon: CardFileIcon },
   { key: "study", label: "복습", icon: CardsIcon },
-  { key: "shared", label: "덱 책장", mobileLabel: "덱", icon: ShareIcon },
+  { key: "shared", label: "덱 책장", mobileLabel: "덱", icon: BookshelfIcon },
   { key: "info", label: "기록", icon: ClockIcon },
 ];
 
@@ -2987,6 +2987,7 @@ export default function HomePage() {
             onRestoreDraft={restoreClassificationDraft}
             onDiscardDraft={clearClassificationDraft}
             onViewInReadingTab={viewCurrentTextInReadingTab}
+            onGoToVocab={() => void handleTabChange("vocab")}
           />
         ) : null}
 

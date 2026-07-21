@@ -6,12 +6,12 @@ import { classifyMessageTone } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
 import {
   BookIcon,
+  BookshelfIcon,
+  CardFileIcon,
   CardsIcon,
   ChevronDownIcon,
   ClockIcon,
-  FolderIcon,
   SearchIcon,
-  ShareIcon,
 } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 import {
@@ -309,7 +309,7 @@ export function VocabSection({
             className="ghost-button compact-button"
             onClick={onGoToShared}
           >
-            <ShareIcon className="button-icon" />
+            <BookshelfIcon className="button-icon" />
             덱 책장
           </button>
         </div>
@@ -754,7 +754,7 @@ export function VocabSection({
       <div className="result-heading">
         <div>
           <h2 className="section-title-with-icon">
-            <BrandSectionBadge icon={FolderIcon} />
+            <BrandSectionBadge icon={CardFileIcon} />
             저장된 단어장
           </h2>
           <span>{items.length}개</span>
@@ -828,7 +828,7 @@ export function VocabSection({
                         isExpanded ? "" : " reading-vocab-collapse-icon-collapsed"
                       }`}
                     />
-                    상세
+                    {isExpanded ? "접기" : "펼치기"}
                   </button>
                 </div>
 
@@ -1000,7 +1000,7 @@ export function VocabSection({
               className="ghost-button compact-button"
               onClick={onGoToShared}
             >
-              <ShareIcon className="button-icon" />
+              <BookshelfIcon className="button-icon" />
               덱 책장 둘러보기
             </button>
           </div>

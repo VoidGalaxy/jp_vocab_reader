@@ -15,12 +15,12 @@ import { formatNextReview, getDisplayMeaning } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
 import {
   BookIcon,
+  BookmarkIcon,
+  BookshelfIcon,
   CardsIcon,
   CheckCircleIcon,
-  ClockIcon,
-  RotateIcon,
-  ShareIcon,
-  ZapIcon,
+  PencilIcon,
+  SparkleIcon,
 } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 
@@ -104,6 +104,10 @@ const quickStartCta: Array<{
   { mode: "all", label: "덱별 학습", countKey: "total_vocab_count" },
 ];
 
+// Each rating gets its own icon meaning, not just its own color -- 다시
+// (책갈피를 다시 꽂아둔다), 어려움 (연필로 메모해 둔다), 보통 (확인 체크),
+// 쉬움 (반짝 스탬프) -- so the 4-way choice reads as four different actions
+// at a glance, not four same-shape buttons in different colors.
 const ratingButtons: Array<{
   result: ReviewResult;
   label: string;
@@ -114,30 +118,30 @@ const ratingButtons: Array<{
   {
     result: "again",
     label: "다시",
-    hint: "오늘 다시 보기",
+    hint: "곧 다시 보기",
     className: "rating-again",
-    icon: RotateIcon,
+    icon: BookmarkIcon,
   },
   {
     result: "hard",
     label: "어려움",
     hint: "짧게 복습",
     className: "rating-hard",
-    icon: ClockIcon,
+    icon: PencilIcon,
   },
   {
     result: "good",
     label: "보통",
-    hint: "예정 간격 증가",
+    hint: "다음 복습 예약",
     className: "rating-good",
     icon: CheckCircleIcon,
   },
   {
     result: "easy",
     label: "쉬움",
-    hint: "더 길게 미루기",
+    hint: "간격 늘리기",
     className: "rating-easy",
-    icon: ZapIcon,
+    icon: SparkleIcon,
   },
 ];
 
@@ -151,10 +155,12 @@ function StudyQuickStartHero({
   stats,
   onQuickStart,
   onGoToVocab,
+  onGoToReading,
 }: {
   stats: StudyStats | null;
   onQuickStart: (mode: StudyMode) => void;
   onGoToVocab: () => void;
+  onGoToReading: () => void;
 }) {
   const completed = stats?.reviewed_today_count ?? 0;
   const total = completed + (stats?.due_today_count ?? 0);
@@ -165,8 +171,8 @@ function StudyQuickStartHero({
       <div className="study-hero-header">
         <CardsIcon className="study-hero-icon" />
         <div>
-          <h2>오늘의 복습</h2>
-          <p>저장한 단어를 문맥 예문과 함께 다시 확인해요.</p>
+          <h2>오늘 복습을 시작해볼까요?</h2>
+          <p>담아둔 단어를 문맥 예문과 함께 다시 확인해요.</p>
         </div>
         <StudyCompanion
           mood="reading"
@@ -206,13 +212,23 @@ function StudyQuickStartHero({
           </button>
         ))}
       </div>
-      <button
-        type="button"
-        className="ghost-button compact-button study-hero-secondary-link"
-        onClick={onGoToVocab}
-      >
-        어휘 노트 보기
-      </button>
+      <div className="study-hero-secondary-links">
+        <button
+          type="button"
+          className="ghost-button compact-button study-hero-secondary-link"
+          onClick={onGoToReading}
+        >
+          <BookIcon className="button-icon" />
+          원문 읽기
+        </button>
+        <button
+          type="button"
+          className="ghost-button compact-button study-hero-secondary-link"
+          onClick={onGoToVocab}
+        >
+          어휘 노트 보기
+        </button>
+      </div>
     </section>
   );
 }
@@ -293,6 +309,7 @@ export function StudySection({
             stats={stats}
             onQuickStart={onQuickStart}
             onGoToVocab={onGoToVocab}
+            onGoToReading={onGoToReading}
           />
 
           <section className="study-control-panel study-control-panel-compact">
@@ -410,7 +427,7 @@ export function StudySection({
               어휘 노트 보기
             </button>
             <button type="button" className="ghost-button" onClick={onGoToShared}>
-              <ShareIcon className="button-icon" />
+              <BookshelfIcon className="button-icon" />
               덱 책장 둘러보기
             </button>
           </div>
@@ -418,7 +435,7 @@ export function StudySection({
       ) : null}
 
       {currentItem && !isComplete ? (
-        <div className="study-card hero-card">
+        <div className="study-card hero-card paper-corner">
           <div
             className={`study-card-header${
               studyMode === "recent" ? " study-card-header-recent" : ""

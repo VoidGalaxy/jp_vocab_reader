@@ -12,6 +12,7 @@ import {
 } from "./coverageUtils";
 import type { ReadingSaveMode, ReadingVocabEntry } from "./coverageUtils";
 import {
+  CardFileIcon,
   CardsIcon,
   ChevronDownIcon,
   FolderIcon,
@@ -656,6 +657,7 @@ export function ReadingTab({
               className="secondary-button reading-summary-cta-button"
               onClick={onGoToVocab}
             >
+              <CardFileIcon className="button-icon" />
               어휘 노트 보기
             </button>
           </div>

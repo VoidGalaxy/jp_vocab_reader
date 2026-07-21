@@ -88,6 +88,44 @@ export function FolderIcon(props: IconProps) {
   );
 }
 
+// A small index-card box with one card peeking above the rim -- the
+// "어휘 노트" nav item/section's own icon, distinct from the generic
+// FolderIcon still used elsewhere for the plain "save into a folder"
+// action (홈 flow strip, 저장 바구니 등).
+export function CardFileIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M4 11h16v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8z" />
+      <path d="M8.5 11V6.5a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1V11" />
+      <path d="M4 11h16" />
+    </svg>
+  );
+}
+
+// Classic ribbon bookmark (rounded-rect body, V-notch bottom) -- same
+// silhouette language as Shiori's own body shape. Used for the "다시"
+// review rating (책갈피를 되돌려 놓는다 -- put the bookmark back for later)
+// so the four rating buttons read as four different actions, not four
+// same-shape buttons in different colors.
+export function BookmarkIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />
+    </svg>
+  );
+}
+
+// A short pencil stroke -- the "어려움" review rating (연필로 메모해두는
+// 느낌 -- jotting a note to come back to this one soon).
+export function PencilIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
 export function ShareIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>
@@ -95,6 +133,23 @@ export function ShareIcon(props: IconProps) {
       <circle cx="6" cy="12" r="2.5" />
       <circle cx="18" cy="19" r="2.5" />
       <path d="M8.2 10.7 15.8 6.3M8.2 13.3l7.6 4.4" />
+    </svg>
+  );
+}
+
+// A shelf of uneven book spines -- the "덱 책장" (deck bookshelf) screen's
+// own icon, distinct from the generic share/nodes glyph ShareIcon was
+// previously overloaded to also represent. Used for the bookshelf nav
+// item/empty states/"go to shelf" buttons; ShareIcon stays reserved for
+// actual share actions (어휘 노트 공유하기 등).
+export function BookshelfIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M3 20h18" />
+      <rect x="4.5" y="7" width="3" height="13" rx="0.6" />
+      <rect x="9" y="4" width="3" height="16" rx="0.6" />
+      <rect x="13.5" y="9" width="3" height="11" rx="0.6" />
+      <rect x="18" y="6" width="2.5" height="14" rx="0.6" />
     </svg>
   );
 }

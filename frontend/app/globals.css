@@ -1099,12 +1099,19 @@ button {
 
 .home-summary-chip {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
   padding: 8px 14px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--panel-bg);
+}
+
+.home-summary-chip-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--screen-accent, var(--muted));
 }
 
 .home-summary-chip span {
@@ -1991,6 +1998,34 @@ select {
   fill: var(--text);
 }
 
+/* "empty" mood's resting/half-closed eyes -- short lines instead of the
+   round dots, reads as calm/quiet rather than the alert "reading" look. */
+.study-companion-eye-closed {
+  stroke: var(--text);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+/* One shared mouth per mood (see companionMouthByMood) -- the one piece
+   that used to be entirely missing, so every mood looked the same except
+   "done". Kept to a single simple stroke path, never a filled/detailed
+   shape. */
+.study-companion-mouth {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+/* "feedback" (경청) reuses the same warm smile as "reading" but tilts the
+   whole character a few degrees, like it's leaning in to listen --
+   transform-origin centers the tilt on the character rather than its
+   corner so it reads as a lean, not a fall. */
+.study-companion-mood-feedback .study-companion-svg {
+  transform: rotate(-6deg);
+  transform-origin: 50% 55%;
+}
+
 /* "done" mood only -- a tiny highlight mark instead of a facial expression,
    in the same warm amber the app already uses elsewhere for a small "this
    just completed" accent. */
@@ -2380,6 +2415,37 @@ select {
 
 .rating-easy {
   background: var(--sage-green);
+}
+
+/* 빠른 분류 (AnalyzeSection) reuses the same icon+label+hint rating-button
+   recipe as review, with its own semantic ramp instead of the review-result
+   colors: 아는=차분한 sage, 헷갈리는=amber(같은 sand-amber), 모르는=coral/
+   terracotta accent, 건너뛰기=조용한 ghost (필채우기 없이 태두리만). */
+.rating-classify-known {
+  background: var(--sage-green);
+}
+
+.rating-classify-uncertain {
+  color: #4a2f06;
+  background: var(--sand-amber);
+}
+
+.rating-classify-uncertain .rating-hint {
+  color: rgba(74, 47, 6, 0.75);
+}
+
+.rating-classify-unknown {
+  background: var(--accent);
+}
+
+.rating-classify-skip {
+  color: var(--muted);
+  background: var(--soft-bg);
+  border: 1px solid var(--border);
+}
+
+.rating-classify-skip .rating-hint {
+  color: var(--muted);
 }
 
 /* Completion gets the same hero radius/shadow tier as the active flashcard
@@ -3427,10 +3493,18 @@ input.reading-vocab-item-checkbox {
   color: rgba(255, 255, 255, 0.85);
 }
 
-/* Secondary "어휘 노트 보기" link under the quick-start tiles -- kept as a
-   low-emphasis ghost button so it never competes with "오늘 복습 시작". */
-.study-hero-secondary-link {
+/* Secondary "원문 읽기" / "어휘 노트 보기" links under the quick-start tiles
+   -- kept as low-emphasis ghost buttons so neither competes with "오늘 복습
+   시작". */
+.study-hero-secondary-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   justify-self: center;
+  gap: 8px;
+}
+
+.study-hero-secondary-link {
   min-width: 0;
 }
 
@@ -3852,6 +3926,16 @@ input.reading-vocab-item-checkbox {
 .shared-deck-title-row h2,
 .shared-deck-title-row h3 {
   margin: 0;
+}
+
+/* Small "시오리 추천" mark next to the JLPT level tag -- shrunk further
+   than .study-companion-sm since it sits inline with a small pill tag, not
+   as a standalone hero/empty-state symbol. Purely a quiet endorsement
+   glance, not a repeated mascot. */
+.shared-deck-recommend-mark {
+  width: 16px;
+  height: 22px;
+  margin-left: -2px;
 }
 
 .jlpt-level-tag {
@@ -4292,21 +4376,25 @@ input.reading-vocab-item-checkbox {
 }
 
 /* Wraps the (still fully functional) native <select> in the same warm
-   status tint used by reader highlights/status badges elsewhere, so the
-   status control reads as a colored badge rather than a plain dropdown. */
+   status tint used by reader highlights/status badges elsewhere -- shaped
+   as a small bookmark-flag tag (clip-path only paints this wrapper's own
+   background; the <select> child underneath keeps its normal full
+   rectangular hit box, so click/tap targeting is unaffected) instead of a
+   plain rounded pill, so status reads as a little bookmark sticker rather
+   than a form control. Same notch language as .home-hero-bookmark/
+   .library-hero-bookmark elsewhere in the brand system. */
 .vocab-item-status-wrap {
   flex: 0 0 auto;
-  border-radius: 999px;
-  overflow: hidden;
+  clip-path: polygon(0 0, 82% 0, 100% 50%, 82% 100%, 0 100%);
 }
 
 .vocab-item-status-wrap select {
   width: auto;
   min-width: 0;
   min-height: 0;
-  padding: 5px 10px;
+  padding: 5px 18px 5px 10px;
   border: none;
-  border-radius: 999px;
+  border-radius: 0;
   background: transparent;
   color: inherit;
   font-size: 12px;
@@ -4789,9 +4877,15 @@ input.reading-vocab-item-checkbox {
     overflow-wrap: anywhere;
   }
 
-  .classify-details,
-  .classify-actions {
+  .classify-details {
     grid-template-columns: 1fr;
+  }
+
+  /* 2x2 (not a single stacked column) so all 4 classify/rating actions stay
+     reachable with a thumb without a long scroll -- explicit brief ask for
+     both 빠른 분류 and 복습's rating grids. */
+  .classify-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .classify-details div {

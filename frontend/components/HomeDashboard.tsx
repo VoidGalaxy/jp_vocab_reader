@@ -3,8 +3,10 @@
 import { LibraryHeroIllustration, StudyCompanion } from "./BrandElements";
 import {
   BookIcon,
+  CardFileIcon,
   CardsIcon,
   ChevronRightIcon,
+  ClockIcon,
   FolderIcon,
   ShieldIcon,
   SparkleIcon,
@@ -132,16 +134,19 @@ export function HomeDashboard({
 
       <div className="home-summary-row" role="group" aria-label="오늘 학습 요약">
         <span className="home-summary-chip">
+          <CardsIcon className="home-summary-chip-icon" />
           <span>오늘 복습</span>
           <strong>
             {isStudyStatsLoading ? "-" : (studyStats?.due_today_count ?? 0)}
           </strong>
         </span>
         <span className="home-summary-chip">
+          <CardFileIcon className="home-summary-chip-icon" />
           <span>최근 담은 단어</span>
           <strong>{recentlySavedVocabItemIdsCount}</strong>
         </span>
         <span className="home-summary-chip">
+          <ClockIcon className="home-summary-chip-icon" />
           <span>어려운 단어</span>
           <strong>
             {isStudyStatsLoading ? "-" : (studyStats?.hard_count ?? 0)}
