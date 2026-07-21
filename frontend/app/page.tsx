@@ -2942,7 +2942,7 @@ export default function HomePage() {
           />
         }
       >
-      <section className="workspace">
+      <section className={`workspace workspace-${activeTab}`}>
         {activeTab === "home" ? (
           <HomeDashboard
             isDevUser={isDevUser}

@@ -25,12 +25,18 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
-// Desktop: a left sidebar (grouped nav) next to the main content column.
-// Mobile: the sidebar is simply not rendered in that layout slot (CSS hides
-// it below the breakpoint) and a fixed bottom tab bar takes over instead --
-// both read from the same NavAction data the caller built from the existing
-// tabs/activeTab/handleTabChange state, so there is exactly one source of
-// truth for "what page am I on" regardless of which nav is visible.
+// Desktop: a slim "library rail" (icon + tiny label, book-spine width) next
+// to the main content column -- V3 replaces the old wide sidebar (216px,
+// full text labels, its own repeated app-name block) with something that
+// reads as a shelf edge, not an admin-panel menu. Only the primary 5 nav
+// items ever show on the rail itself; everything in later `groups` entries
+// (빠른 분류/기록/피드백) collapses behind one "더보기" flyout instead of
+// eating rail height with a whole second labeled section.
+// Mobile: the rail is hidden (CSS) and the fixed bottom tab bar takes over
+// instead -- both still read from the same NavAction data the caller built
+// from the existing tabs/activeTab/handleTabChange state, so there is
+// exactly one source of truth for "what page am I on" regardless of which
+// nav is visible.
 export function AppShell({
   groups,
   mobilePrimaryItems,
@@ -41,6 +47,8 @@ export function AppShell({
 }: AppShellProps) {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const moreRef = useRef<HTMLDivElement | null>(null);
+  const [isRailMoreOpen, setIsRailMoreOpen] = useState(false);
+  const railMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!isMoreOpen) {
@@ -64,49 +72,108 @@ export function AppShell({
     };
   }, [isMoreOpen]);
 
+  useEffect(() => {
+    if (!isRailMoreOpen) {
+      return;
+    }
+    function handlePointerDown(event: MouseEvent) {
+      if (!railMoreRef.current?.contains(event.target as Node)) {
+        setIsRailMoreOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsRailMoreOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isRailMoreOpen]);
+
   const isMoreActive = mobileMoreItems.some((item) => item.isActive);
+  // The rail's "더보기" flyout has room to spare (unlike the narrow rail
+  // buttons above), so it keeps the full desktop labels (groups[1..])
+  // instead of the bottom-tab bar's short mobileLabel set.
+  const secondaryItems = groups.slice(1).flatMap((group) => group.items);
+  const isRailMoreActive = secondaryItems.some((item) => item.isActive);
 
   return (
     <div className="app-shell">
-      <aside className="app-sidebar" aria-label="주요 메뉴">
-        <div className="app-sidebar-brand">
-          <span className="app-sidebar-brand-icon" aria-hidden="true">
-            <BookIcon />
-          </span>
-          <div className="app-sidebar-brand-text">
-            <strong>일본어 단어장</strong>
-            <span>조용한 서재의 학습 책상</span>
+      <aside className="library-rail" aria-label="일본어 단어장 주요 메뉴">
+        <span className="library-rail-brand" aria-hidden="true">
+          <BookIcon />
+        </span>
+        <nav className="library-rail-nav">
+          {/* Rail buttons reuse the same short mobileLabel set the bottom
+              tab bar already uses (책상/읽기/복습/노트/덱) -- the rail is
+              too narrow for full labels like "어휘 노트" without wrapping
+              or truncating. */}
+          {mobilePrimaryItems.map((item) => (
+            <button
+              key={item.key}
+              type="button"
+              className={
+                item.isActive
+                  ? "library-rail-link library-rail-link-active"
+                  : "library-rail-link"
+              }
+              aria-current={item.isActive ? "page" : undefined}
+              onClick={item.onClick}
+            >
+              <item.icon className="library-rail-icon" />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        {secondaryItems.length > 0 ? (
+          <div className="library-rail-more-wrap" ref={railMoreRef}>
+            {isRailMoreOpen ? (
+              <div className="library-rail-more-sheet" role="menu">
+                {secondaryItems.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    role="menuitem"
+                    className={
+                      item.isActive
+                        ? "library-rail-more-item library-rail-more-item-active"
+                        : "library-rail-more-item"
+                    }
+                    onClick={() => {
+                      setIsRailMoreOpen(false);
+                      item.onClick();
+                    }}
+                  >
+                    <item.icon className="button-icon" />
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className={
+                isRailMoreActive
+                  ? "library-rail-link library-rail-link-active"
+                  : "library-rail-link"
+              }
+              aria-haspopup="menu"
+              aria-expanded={isRailMoreOpen}
+              onClick={() => setIsRailMoreOpen((open) => !open)}
+            >
+              <MoreIcon className="library-rail-icon" />
+              <span>더보기</span>
+            </button>
           </div>
-        </div>
-        {groups.map((group) => (
-          <div className="app-sidebar-group" key={group.label}>
-            <span className="app-sidebar-group-label">{group.label}</span>
-            {group.items.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                className={
-                  item.isActive
-                    ? "app-sidebar-link app-sidebar-link-active"
-                    : "app-sidebar-link"
-                }
-                aria-current={item.isActive ? "page" : undefined}
-                onClick={item.onClick}
-              >
-                <item.icon className="app-sidebar-icon" />
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
-        ))}
+        ) : null}
       </aside>
 
       <div className="app-shell-content">
         <header className="app-topbar">
-          <div className="app-topbar-brand" aria-hidden="true">
-            <BookIcon className="app-topbar-brand-icon" />
-            <span>일본어 단어장</span>
-          </div>
           <div className="app-topbar-end">
             {feedbackSlot}
             {accountSlot}

@@ -249,10 +249,20 @@ body {
       rgba(47, 100, 112, 0.05) 0%,
       rgba(47, 100, 112, 0) 70%
     ),
+    /* V3: a soft "desk surface" pool low on the page -- with the sidebar
+       shrunk to a rail, more of this layer shows on wide screens, so this
+       one extra low, wide, very faint shadow gives the content a sense of
+       sitting on a surface rather than floating over an empty page. */
+    radial-gradient(
+      ellipse 1400px 420px at 50% 120%,
+      rgba(61, 47, 20, 0.045) 0%,
+      rgba(61, 47, 20, 0) 70%
+    ),
     linear-gradient(180deg, #fbf8f0 0, var(--page-bg) 260px);
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
   background-size:
     24px 24px,
+    auto,
     auto,
     auto,
     auto,
@@ -291,9 +301,22 @@ button {
   padding: 28px 20px 40px;
 }
 
+/* V3: the rail shrank from 216px to 76px, which freed up real width -- but
+   .workspace staying capped at 1080px just moved the old "dead space next
+   to a wide sidebar" complaint into "dead space on both sides of a still-
+   narrow centered column". Widened the shared cap, and a couple of screens
+   that most benefit from the extra room (읽기's reader canvas, 덱 책장's
+   shelf grid) get a further per-tab bump via the workspace-${activeTab}
+   hook below -- additive only, every other tab keeps the same centered
+   card-column feel it already had. */
 .workspace {
-  width: min(1080px, 100%);
+  width: min(1240px, 100%);
   margin: 0 auto;
+}
+
+.workspace-reading,
+.workspace-shared {
+  width: min(1360px, 100%);
 }
 
 /* App shell: desktop = sticky left sidebar + main content column, sharing
@@ -311,37 +334,35 @@ button {
   min-width: 0;
 }
 
-.app-sidebar {
+/* V3 library rail -- replaces the old 216px sidebar (full text labels, its
+   own repeated app-name block). Book-spine width, icon + tiny label per
+   item, no section header text -- reads as a shelf edge, not an admin nav
+   panel. Only the primary 5 screens ever render here; everything else
+   collapses into the "더보기" flyout below instead of a second labeled
+   group eating rail height. */
+/* No overflow-y/max-height here on purpose -- the rail only ever holds a
+   fixed 5 primary items + brand + more-button (everything else collapses
+   into the flyout below), so it never needs to scroll. Giving it
+   overflow-y: auto would also force overflow-x: auto per the CSS spec's
+   overflow-x/y coupling rule, which clips the flyout's
+   left: calc(100% + 10px) positioning and makes "더보기" completely
+   unopenable. */
+.library-rail {
   position: sticky;
   top: 24px;
-  flex: 0 0 216px;
+  flex: 0 0 76px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  max-height: calc(100vh - 48px);
-  padding: 18px 12px;
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--panel-bg);
-  box-shadow: 0 10px 24px rgba(120, 98, 40, 0.04);
-}
-
-/* Small brand block above the nav groups -- gives the sidebar its own
-   identity instead of reading as a bare menu list. The app's title already
-   exists as the page <h1>; this doesn't replace that, it's the sidebar's
-   own "which app is this" anchor, matched to the reference dashboards'
-   logo-block-over-nav structure. */
-.app-sidebar-brand {
-  display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 2px 8px 14px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--border);
+  gap: 14px;
+  padding: 16px 8px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel-bg);
+  box-shadow: 0 10px 24px rgba(120, 98, 40, 0.05);
 }
 
-.app-sidebar-brand-icon {
+.library-rail-brand {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
@@ -353,98 +374,112 @@ button {
   color: #ffffff;
 }
 
-.app-sidebar-brand-icon svg {
+.library-rail-brand svg {
   width: 18px;
   height: 18px;
 }
 
-.app-sidebar-brand-text {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-
-.app-sidebar-brand-text strong {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.app-sidebar-brand-text span {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.3;
-}
-
-.app-sidebar-group {
-  display: grid;
-  gap: 2px;
-}
-
-.app-sidebar-group-label {
-  margin: 4px 10px 6px;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-/* Secondary nav group (빠른 분류/기록/피드백) reads quieter than the primary
-   학습 group above it -- a hairline separator plus slightly smaller links,
-   not a different color/interaction, so it's still clearly one sidebar. */
-.app-sidebar-group:last-of-type {
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-
-.app-sidebar-group:last-of-type .app-sidebar-link {
-  padding: 8px 10px;
-  font-size: 13px;
-}
-
-.app-sidebar-group:last-of-type .app-sidebar-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.app-sidebar-link {
+.library-rail-nav {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  min-width: 0;
-  padding: 10px 10px;
-  border-radius: 10px;
-  color: var(--text-secondary);
-  background: transparent;
-  font-weight: 600;
-  font-size: 14px;
-  box-shadow: none;
-  text-align: left;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
 }
 
-.app-sidebar-link:not(:disabled):hover {
+.library-rail-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 54px;
+  padding: 6px 2px;
+  border-radius: 12px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 700;
+  font-size: 10.5px;
+  box-shadow: none;
+  text-align: center;
+}
+
+.library-rail-link span {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.library-rail-link:not(:disabled):hover {
   background: var(--soft-bg);
   box-shadow: none;
   transform: none;
 }
 
-.app-sidebar-link-active {
+.library-rail-link-active {
   color: #ffffff;
   background: var(--primary);
 }
 
-.app-sidebar-link-active:not(:disabled):hover {
+.library-rail-link-active:not(:disabled):hover {
   background: var(--primary);
 }
 
-.app-sidebar-icon {
+.library-rail-icon {
   flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
+  width: 19px;
+  height: 19px;
+}
+
+.library-rail-more-wrap {
+  position: relative;
+  width: 100%;
+  margin-top: auto;
+}
+
+.library-rail-more-sheet {
+  position: absolute;
+  bottom: 0;
+  left: calc(100% + 10px);
+  z-index: 600;
+  display: grid;
+  gap: 2px;
+  width: max(172px, 100%);
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-bg);
+  box-shadow: 0 14px 30px rgba(120, 98, 40, 0.12);
+  animation: app-slide-up var(--motion-fast) var(--ease-soft) both;
+}
+
+.library-rail-more-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: none;
+  text-align: left;
+}
+
+.library-rail-more-item:not(:disabled):hover {
+  background: var(--soft-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.library-rail-more-item-active {
+  color: var(--primary);
+  background: var(--soft-bg);
 }
 
 .app-bottom-nav {
@@ -452,7 +487,7 @@ button {
 }
 
 @media (max-width: 640px) {
-  .app-sidebar {
+  .library-rail {
     display: none;
   }
 
@@ -572,34 +607,16 @@ button {
   font-size: 13px;
 }
 
-/* App Shell V2 top bar -- replaces the old per-screen "일본어 단어장" h1 +
-   the always-visible login/account card that used to repeat above every
-   tab's content. Small brand mark on the left (the sidebar already carries
-   the full brand block on desktop; this is what mobile has instead once
-   the sidebar is hidden), feedback + account menu on the right. */
+/* App Shell V3 top bar -- V2 kept a small repeated "일본어 단어장" text
+   mark here; V3 drops it entirely (the rail's brand badge already answers
+   "which app is this" once, not on every screen) so this is now just a
+   slim utility strip for feedback + account, right-aligned. */
 .app-topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   margin-bottom: 18px;
-}
-
-.app-topbar-brand {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.app-topbar-brand-icon {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  color: var(--primary);
 }
 
 .app-topbar-end {
@@ -836,7 +853,12 @@ button {
 
 .library-hero-illustration {
   display: block;
-  width: 148px;
+  /* Bumped up from 148px -- screenshot QA found the home hero's one real
+     "this is a library app" visual reading as a small corner ornament next
+     to the copy/CTAs instead of carrying real brand weight. Still yields
+     to the CTAs (they stay left, full-width, first in reading order), but
+     needs to be big enough to register on first glance. */
+  width: 220px;
   height: auto;
   filter: drop-shadow(0 10px 18px rgba(120, 98, 40, 0.14));
 }
@@ -1180,7 +1202,7 @@ button {
   }
 
   .library-hero-illustration {
-    width: 108px;
+    width: 150px;
   }
 
   .landing-hero-title {
@@ -1572,37 +1594,32 @@ button:focus-visible {
   font-size: 12px;
 }
 
-.draft-panel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border: 1px solid #bcdad3;
-  border-radius: 10px;
-  padding: 14px;
-  color: #1b4a4f;
-  background: #eaf4f2;
-}
-
-.draft-panel > div:first-child {
-  display: grid;
-  gap: 4px;
-}
-
-.draft-panel span,
 .draft-status {
   color: var(--muted);
   font-size: 13px;
-}
-
-.draft-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.draft-status {
   margin: -4px 0 14px;
   text-align: center;
+}
+
+/* Intro-stage CTA pair (분류 카드 만들기 + 이전 분류 이어하기) -- primary and
+   secondary sit side by side instead of the secondary living in its own
+   boxed "draft panel" below the form, so the intro reads as one CTA
+   decision rather than a form plus a separate status widget. */
+.analyze-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Card Stage's only chrome above the flashcard itself -- two small ghost
+   links, not a "분석 결과" dashboard heading, so mid-classification still
+   reads as a card stack rather than a results screen with an escape hatch
+   bolted on. */
+.classify-stage-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .result-section {
@@ -1977,31 +1994,36 @@ select {
   flex: 0 0 auto;
   padding: 10px 16px;
   border-radius: 999px;
-  background: radial-gradient(
-    circle,
-    var(--screen-accent-soft, var(--soft-bg)) 0%,
-    transparent 72%
-  );
+  background: radial-gradient(circle, #f7ecd6 0%, transparent 72%);
 }
 
+/* Shiori's palette is fixed brand colors everywhere -- deliberately NOT
+   var(--screen-accent) (screenshot QA caught the character turning purple
+   on 복습, blue on 덱 책장, etc. by inheriting whatever accent tone that
+   screen happened to use). A recurring named character needs one constant
+   look regardless of screen: cream ribbon body with a deep-teal outline,
+   a deep-teal face plate, and the warm amber/coral tones reserved for
+   small accents (the "done" sparkle) rather than the whole character. */
 .study-companion-body {
-  fill: var(--screen-accent, var(--accent));
+  fill: var(--soft-bg);
+  stroke: var(--primary);
+  stroke-width: 1.5;
 }
 
 .study-companion-face {
-  fill: var(--panel-bg);
-  stroke: var(--paper-border);
+  fill: var(--primary);
+  stroke: var(--primary-dark);
   stroke-width: 1;
 }
 
 .study-companion-eye {
-  fill: var(--text);
+  fill: var(--soft-bg);
 }
 
 /* "empty" mood's resting/half-closed eyes -- short lines instead of the
    round dots, reads as calm/quiet rather than the alert "reading" look. */
 .study-companion-eye-closed {
-  stroke: var(--text);
+  stroke: var(--soft-bg);
   stroke-width: 2.2;
   stroke-linecap: round;
 }
@@ -2012,7 +2034,7 @@ select {
    shape. */
 .study-companion-mouth {
   fill: none;
-  stroke: var(--text);
+  stroke: var(--soft-bg);
   stroke-width: 2.2;
   stroke-linecap: round;
 }
@@ -4245,35 +4267,41 @@ input.reading-vocab-item-checkbox {
    per screen and the note reads as a list to skim, not a card gallery.
    Divider lines between rows replace per-card borders/shadows; a row only
    grows once its own detail panel is expanded (.vocab-row-expanded). */
+/* Screenshot QA: one continuous bordered box with dashed row-dividers still
+   read as "a list", not a card box. Switched to a tinted drawer (soft-bg,
+   accent-topped) holding individually-carded rows with a real gap between
+   them, so it reads as index cards sitting in a card file instead of table
+   rows. */
 .vocab-list-compact {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
+  display: grid;
+  gap: 8px;
+  padding: 8px;
   border-top: 3px solid var(--screen-accent, var(--accent));
   border-radius: 12px;
-  overflow: hidden;
-  background: var(--panel-bg);
+  background: var(--soft-bg);
 }
 
 .vocab-row {
   position: relative;
+  overflow: hidden;
   padding: 10px 14px 10px 20px;
-  /* Dashed "ruled paper" rule instead of a solid table row-line -- same
-     motif as .dotted-divider, so the list reads as ruled notebook paper. */
-  border-bottom: 1px dashed var(--border-strong);
-  transition: background var(--motion-fast) var(--ease-soft);
-}
-
-.vocab-row:last-child {
-  border-bottom: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: 0 2px 6px rgba(120, 98, 40, 0.05);
+  transition:
+    background var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
 }
 
 .vocab-row:hover {
-  background: var(--soft-bg);
+  background: var(--panel-bg);
+  box-shadow: 0 5px 14px rgba(120, 98, 40, 0.1);
 }
 
 .vocab-row-expanded {
-  background: var(--soft-bg);
+  border-color: var(--border-strong);
+  box-shadow: 0 5px 14px rgba(120, 98, 40, 0.1);
 }
 
 /* Small colored index-card tab down the row's left edge, keyed to the
@@ -4754,12 +4782,6 @@ input.reading-vocab-item-checkbox {
     align-items: stretch;
   }
 
-  .draft-panel,
-  .draft-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
   .deck-create,
   .deck-share-panel {
     grid-template-columns: 1fr;
@@ -5056,10 +5078,19 @@ input.reading-vocab-item-checkbox {
   }
 
   .message,
-  .empty,
-  .draft-panel {
+  .empty {
     padding: 12px;
     line-height: 1.55;
+  }
+
+  .analyze-cta-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .classify-stage-toolbar {
+    justify-content: center;
+    flex-wrap: wrap;
   }
 }
 
@@ -5618,11 +5649,16 @@ input.reading-vocab-item-checkbox {
   animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
 }
 
+/* A warm accent top edge ties the panel to the reader paper/screen-accent
+   underneath it, same "attached note" language .classify-card already
+   uses -- reads as a memo pinned to the current page, not an unrelated
+   inspector modal floating over it. */
 .token-sheet {
   width: 100%;
   max-width: 480px;
   max-height: 85vh;
   overflow-y: auto;
+  border-top: 3px solid var(--screen-accent, var(--accent));
   border-radius: 16px 16px 0 0;
   padding: 20px;
   background: var(--panel-bg);
@@ -5675,6 +5711,18 @@ input.reading-vocab-item-checkbox {
   min-width: 0;
 }
 
+/* Small bookmark glyph ahead of the word -- the one visual cue (besides
+   the top accent edge) that marks this as "a bookmark note about this
+   word", not a generic word-detail inspector. Sized/aligned to sit inline
+   with the word's baseline rather than towering over it. */
+.token-sheet-bookmark-icon {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 18px;
+  height: 18px;
+  color: var(--screen-accent, var(--accent));
+}
+
 .token-sheet-word {
   color: var(--text);
   font-size: 30px;
@@ -5700,21 +5748,48 @@ input.reading-vocab-item-checkbox {
   white-space: nowrap;
 }
 
+/* De-emphasized icon-only close (was a bordered "닫기" text pill) -- the
+   panel is dismissed just as easily by clicking the reader text again or
+   picking another word, so "닫기" doesn't need to compete visually with
+   the word/meaning it sits next to. */
 .token-sheet-close {
   flex: 0 0 auto;
-  width: auto;
-  min-width: auto;
-  padding: 8px 14px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
+}
+
+.token-sheet-close:hover {
+  color: var(--text);
+  background: var(--soft-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.token-sheet-close-icon {
+  width: 16px;
+  height: 16px;
 }
 
 /* The single most practically useful fact on the card -- called out with
    its own tinted block, ahead of the (comparatively secondary) base_form/
    POS/JLPT details below, and read on entry before anything else. */
+/* Left accent stripe gives this the same "memo/definition card" language
+   as .context-example-block's amber sticky-note strip below it, so the
+   two read as a matched pair of notes rather than one plain bordered box
+   and one accented one. */
 .token-sheet-meaning-block {
   margin: 2px 0 4px;
   padding: 14px 16px;
   border: 1px solid var(--border-strong);
-  border-radius: 12px;
+  border-left: 4px solid var(--screen-accent, var(--accent));
+  border-radius: 4px 12px 12px 4px;
   background: var(--soft-bg);
 }
 

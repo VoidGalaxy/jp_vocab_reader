@@ -4,6 +4,7 @@ import type { TokenStatus, TokenWithStatus } from "./types";
 import { getDisplayMeaning, statusLabels } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
+import { BookmarkIcon, CloseIcon } from "./icons";
 
 type TokenDetailSheetProps = {
   token: TokenWithStatus;
@@ -79,6 +80,7 @@ export function TokenDetailSheet({
       >
         <div className="token-sheet-header">
           <div className="token-sheet-title-group">
+            <BookmarkIcon className="token-sheet-bookmark-icon" />
             <span className="token-sheet-word">{label}</span>
             {token.reading && token.reading !== label ? (
               <span className="token-sheet-reading">{token.reading}</span>
@@ -91,11 +93,11 @@ export function TokenDetailSheet({
           </div>
           <button
             type="button"
-            className="secondary-button token-sheet-close"
+            className="token-sheet-close"
             onClick={onClose}
             aria-label="단어 카드 닫기"
           >
-            닫기
+            <CloseIcon className="token-sheet-close-icon" />
           </button>
         </div>
         <div className="token-sheet-meaning-block">
@@ -152,6 +154,7 @@ export function TokenDetailSheet({
             onClick={onToggleBasket}
             aria-pressed={isInBasket}
           >
+            <BookmarkIcon className="button-icon" />
             {isInBasket ? "저장 바구니에서 빼기" : "저장 바구니에 담기"}
           </button>
         ) : null}

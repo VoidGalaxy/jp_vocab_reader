@@ -230,22 +230,53 @@ export function AnalyzeSection({
                 />
                 완벽히 아는 단어도 표시
               </label>
-              <button
-                type="submit"
-                className="reading-open-button"
-                disabled={isAnalyzing}
-              >
-                {isAnalyzing ? (
-                  "나누는 중..."
-                ) : (
-                  <>
-                    <SparkleIcon className="button-icon" />
-                    분류 시작
-                  </>
-                )}
-              </button>
+              <div className="analyze-cta-row">
+                <button
+                  type="submit"
+                  className="reading-open-button"
+                  disabled={isAnalyzing}
+                >
+                  {isAnalyzing ? (
+                    "나누는 중..."
+                  ) : (
+                    <>
+                      <SparkleIcon className="button-icon" />
+                      {hasResult ? "다시 분류하기" : "분류 카드 만들기"}
+                    </>
+                  )}
+                </button>
+                {!hasResult && pendingDraft ? (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={onRestoreDraft}
+                  >
+                    이전 분류 이어하기
+                  </button>
+                ) : null}
+              </div>
             </div>
           </form>
+        ) : null}
+
+        {!hasResult && pendingDraft ? (
+          <p className="draft-status">
+            이전 분류 저장:{" "}
+            {new Date(pendingDraft.saved_at).toLocaleString("ko-KR", {
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            ·{" "}
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onDiscardDraft}
+            >
+              삭제하고 새로 시작
+            </button>
+          </p>
         ) : null}
 
         <p className="muted-text copyright-note">
@@ -260,89 +291,39 @@ export function AnalyzeSection({
         </p>
       ) : null}
 
-      {pendingDraft ? (
-        <div className="draft-panel">
-          <div>
-            <strong>이전에 분류하던 분석 결과가 있습니다.</strong>
-            <span>
-              마지막 저장:{" "}
-              {new Date(pendingDraft.saved_at).toLocaleString("ko-KR", {
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-          </div>
-          <div className="draft-actions">
-            <button type="button" onClick={onRestoreDraft}>
-              이어하기
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={onDiscardDraft}
-            >
-              삭제하고 새로 시작
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {tokens.length > 0 ? (
+        <section className="result-section">
+          {!isClassificationComplete ? (
+            <>
+              <div className="classify-stage-toolbar">
+                <button
+                  type="button"
+                  className="ghost-button compact-button"
+                  onClick={onViewInReadingTab}
+                >
+                  읽기 탭에서 보기
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button compact-button"
+                  onClick={onSaveSelected}
+                  disabled={isSaving || !selectedDeckId}
+                  title={
+                    !selectedDeckId ? "저장할 덱을 선택해 주세요." : undefined
+                  }
+                >
+                  {isSaving ? "저장 중..." : "지금까지 저장"}
+                </button>
+              </div>
+              {savedAtText ? (
+                <p className="draft-status">
+                  분류 진행상태 자동 저장 중 · 마지막 저장: {savedAtText}
+                </p>
+              ) : null}
+            </>
+          ) : null}
 
-      <section className="result-section">
-        <div className="result-heading">
-          <div>
-            <h2>분석 결과</h2>
-            <span>
-              {tokens.length > 0
-                ? `${Math.min(currentCardIndex + 1, tokens.length)} / ${tokens.length}`
-                : "0개"}
-            </span>
-          </div>
-          <div className="heading-actions">
-            {tokens.length > 0 ? (
-              <button
-                type="button"
-                className="secondary-button compact-button"
-                onClick={onViewInReadingTab}
-              >
-                이 원문을 읽기 탭에서 보기
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={onSaveSelected}
-              disabled={isSaving || tokens.length === 0 || !selectedDeckId}
-              title={
-                !selectedDeckId
-                  ? "저장할 덱을 선택해 주세요."
-                  : tokens.length === 0
-                    ? "먼저 원문을 분석해 주세요."
-                    : undefined
-              }
-            >
-              {isSaving ? "저장 중..." : "분류한 단어 저장"}
-            </button>
-          </div>
-        </div>
-
-        {tokens.length > 0 ? (
           <>
-            <CoverageSummary stats={coverageStats} />
-
-            <div className="classification-summary">
-              <span>분류 완료 {classifiedCount}개</span>
-              <span>남은 단어 {remainingCount}개</span>
-              <span>{statusLabels.known} {knownCount}개</span>
-              <span>{statusLabels.uncertain} {uncertainCount}개</span>
-              <span>{statusLabels.unknown} {unknownCount}개</span>
-            </div>
-            {savedAtText ? (
-              <p className="draft-status">
-                분류 진행상태 자동 저장 중 · 마지막 저장: {savedAtText}
-              </p>
-            ) : null}
-
             {!isClassificationComplete && currentToken ? (
               <div className="classify-card">
                 <div className="classify-progress">
@@ -431,6 +412,7 @@ export function AnalyzeSection({
                 <StudyCompanion mood="done" />
                 <span className="brand-stamp">완료</span>
                 <h3>단어 나누기를 마쳤어요.</h3>
+                <CoverageSummary stats={coverageStats} />
                 <div className="classification-summary final-summary">
                   <span>{statusLabels.known} {knownCount}개</span>
                   <span>{statusLabels.uncertain} {uncertainCount}개</span>
@@ -445,10 +427,10 @@ export function AnalyzeSection({
                     !selectedDeckId ? "저장할 덱을 선택해 주세요." : undefined
                   }
                 >
-                  {isSaving ? "저장 중..." : "분류한 단어 저장"}
+                  {isSaving ? "저장 중..." : "모르는 단어 노트에 담기"}
                 </button>
                 <p className="muted-text">
-                  분류한 단어 저장 시 임시 저장이 삭제됩니다.
+                  저장 시 임시 저장이 삭제됩니다.
                 </p>
                 <div className="study-actions">
                   <button
@@ -470,75 +452,69 @@ export function AnalyzeSection({
                 </div>
               </div>
             )}
-
-            <label className="checkbox-field show-results-toggle">
-              <input
-                type="checkbox"
-                checked={showAllResults}
-                onChange={(event) => onShowAllResultsChange(event.target.checked)}
-              />
-              전체 결과 보기
-            </label>
-
-            {showAllResults ? (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>단어</th>
-                      <th>기본형</th>
-                      <th>읽기</th>
-                      <th>품사</th>
-                      <th>뜻</th>
-                      <th>예문</th>
-                      <th>상태</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tokens.map((token, index) => (
-                      <tr key={`${token.base_form}-${token.reading}-${index}`}>
-                        <td>
-                          <div>{token.surface}</div>
-                          <QualityBadge qualityTag={token.quality_tag} />
-                        </td>
-                        <td>{token.base_form}</td>
-                        <td>{token.reading}</td>
-                        <td>{token.part_of_speech}</td>
-                        <td>
-                          <div>{getDisplayMeaning(token.meaning_ko)}</div>
-                        </td>
-                        <td>
-                          <span className="example-text">
-                            <HighlightedExample
-                              sentence={token.example_sentence}
-                              surface={token.surface}
-                              baseForm={token.base_form}
-                              normalizedForm={token.normalized_form}
-                            />
-                          </span>
-                        </td>
-                        <td>
-                          <StatusSelect
-                            value={token.status}
-                            label={`${token.surface} 상태`}
-                            onChange={(status) => onStatusChange(index, status)}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : null}
           </>
-        ) : (
-          <AppEmptyState
-            icon={SparkleIcon}
-            title="아직 분석한 결과가 없어요."
-            description="원문을 붙여넣고 분석하기를 누르면 단어 카드가 여기에 나타나요."
-          />
-        )}
-      </section>
+
+          <label className="checkbox-field show-results-toggle">
+            <input
+              type="checkbox"
+              checked={showAllResults}
+              onChange={(event) => onShowAllResultsChange(event.target.checked)}
+            />
+            전체 결과를 목록으로 보기
+          </label>
+
+          {showAllResults ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>단어</th>
+                    <th>기본형</th>
+                    <th>읽기</th>
+                    <th>품사</th>
+                    <th>뜻</th>
+                    <th>예문</th>
+                    <th>상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tokens.map((token, index) => (
+                    <tr key={`${token.base_form}-${token.reading}-${index}`}>
+                      <td>
+                        <div>{token.surface}</div>
+                        <QualityBadge qualityTag={token.quality_tag} />
+                      </td>
+                      <td>{token.base_form}</td>
+                      <td>{token.reading}</td>
+                      <td>{token.part_of_speech}</td>
+                      <td>
+                        <div>{getDisplayMeaning(token.meaning_ko)}</div>
+                      </td>
+                      <td>
+                        <span className="example-text">
+                          <HighlightedExample
+                            sentence={token.example_sentence}
+                            surface={token.surface}
+                            baseForm={token.base_form}
+                            normalizedForm={token.normalized_form}
+                          />
+                        </span>
+                      </td>
+                      <td>
+                        <StatusSelect
+                          value={token.status}
+                          label={`${token.surface} 상태`}
+                          onChange={(status) => onStatusChange(index, status)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
     </section>
   );
 }

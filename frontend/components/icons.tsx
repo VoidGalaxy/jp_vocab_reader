@@ -52,6 +52,17 @@ export function HomeIcon(props: IconProps) {
   );
 }
 
+// Plain X -- used where "닫기" needs to read as a quiet corner affordance
+// (small icon-only button) instead of a full text pill competing with the
+// panel's actual content, e.g. the reading word panel's close control.
+export function CloseIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  );
+}
+
 export function MoreIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>
