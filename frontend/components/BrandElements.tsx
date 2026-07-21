@@ -205,7 +205,7 @@ export function StudyCompanion({
 
   return (
     <span
-      className={`study-companion study-companion-${size} study-companion-mood-${mood}${className ? ` ${className}` : ""}`}
+      className={`study-companion shiori-bookmark-guide study-companion-${size} study-companion-mood-${mood}${className ? ` ${className}` : ""}`}
       aria-hidden="true"
     >
       <svg viewBox="0 0 64 88" className="study-companion-svg">

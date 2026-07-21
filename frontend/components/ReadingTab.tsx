@@ -10,7 +10,7 @@ import {
   computeReadingVocabEntries,
   getTokenGroupKey,
 } from "./coverageUtils";
-import type { ReadingSaveMode, ReadingVocabEntry } from "./coverageUtils";
+import type { ReadingSaveMode, ReadingSaveSummary, ReadingVocabEntry } from "./coverageUtils";
 import {
   CardFileIcon,
   CardsIcon,
@@ -100,6 +100,222 @@ const saveButtons: Array<{
   },
 ];
 
+// ---------------------------------------------------------------------------
+// ReaderRestoreBanner -- was a full-width banner, now a small dismissible
+// pill that lives inside ReaderCompactToolbar instead of its own stacked
+// row above everything else.
+// ---------------------------------------------------------------------------
+function ReaderRestoreBanner({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <span className="reading-restored-chip">
+      이전 작업 복원됨
+      <button
+        type="button"
+        className="reading-restored-chip-dismiss"
+        onClick={onDismiss}
+      >
+        확인
+      </button>
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ReaderCompactToolbar -- everything that used to compete with the reader
+// for first-glance attention (복원 안내, 원문 입력 토글, 새 원문, 저장 가능/
+// 바구니 chip) lives in this one compact row instead of a stacked hero
+// title + banner + header-actions row + chip row, so ReaderPaper sits much
+// closer to the top of the screen once a result exists.
+// ---------------------------------------------------------------------------
+type ReaderCompactToolbarProps = {
+  isSessionRestored: boolean;
+  onDismissRestoredNotice: () => void;
+  isTextCollapsed: boolean;
+  onToggleTextCollapsed: () => void;
+  onResetSession: () => void;
+  summary: ReadingSaveSummary | null;
+  selectedCount: number;
+};
+
+function ReaderCompactToolbar({
+  isSessionRestored,
+  onDismissRestoredNotice,
+  isTextCollapsed,
+  onToggleTextCollapsed,
+  onResetSession,
+  summary,
+  selectedCount,
+}: ReaderCompactToolbarProps) {
+  return (
+    <div className="reader-compact-toolbar" role="group" aria-label="읽기 도구">
+      {isSessionRestored ? <ReaderRestoreBanner onDismiss={onDismissRestoredNotice} /> : null}
+      <button
+        type="button"
+        className="ghost-button compact-button"
+        onClick={onToggleTextCollapsed}
+      >
+        {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
+      </button>
+      <button type="button" className="ghost-button compact-button" onClick={onResetSession}>
+        새 원문
+      </button>
+      {summary ? (
+        <>
+          <span className="reader-toolbar-chip">저장 가능 {summary.saveableCount}개</span>
+          <span className="reader-toolbar-chip reader-toolbar-chip-accent">
+            바구니에 담음 {selectedCount}개
+          </span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ReaderSaveDock -- deliberately not a titled panel-card, a slim shelf-like
+// strip sitting right under ReaderPaper. Owns its own "빠르게 전체 저장"
+// disclosure state -- nothing outside this component needs it.
+// ---------------------------------------------------------------------------
+type ReaderSaveDockProps = {
+  summary: ReadingSaveSummary;
+  selectedCount: number;
+  isSavingBatch: boolean;
+  onSaveSelected: () => void;
+  onSaveBatch: (mode: ReadingSaveMode) => void;
+  canStartFromSaved: boolean;
+  onStartStudyFromSaved: () => void;
+  onGoToVocab: () => void;
+  message: string;
+  messageTone: ReturnType<typeof classifyMessageTone>;
+};
+
+function ReaderSaveDock({
+  summary,
+  selectedCount,
+  isSavingBatch,
+  onSaveSelected,
+  onSaveBatch,
+  canStartFromSaved,
+  onStartStudyFromSaved,
+  onGoToVocab,
+  message,
+  messageTone,
+}: ReaderSaveDockProps) {
+  const [isQuickSaveOpen, setIsQuickSaveOpen] = useState(false);
+
+  return (
+    <section className="reader-save-dock" aria-label="저장 바구니">
+      <div className="save-dock-count">
+        <FolderIcon className="save-dock-icon" />
+        <span>
+          담은 단어 <strong>{selectedCount}</strong>개
+        </span>
+      </div>
+
+      <button
+        type="button"
+        className="save-dock-primary-button"
+        onClick={onSaveSelected}
+        disabled={selectedCount === 0 || isSavingBatch}
+        title={selectedCount === 0 ? "원문에서 단어를 눌러 바구니에 담아주세요." : undefined}
+      >
+        <FolderIcon className="button-icon" />
+        {isSavingBatch ? "저장 중..." : `담은 단어 저장 (${selectedCount})`}
+      </button>
+
+      <div className="save-tray-quick-save">
+        <button
+          type="button"
+          className="ghost-button compact-button save-tray-quick-save-toggle"
+          onClick={() => setIsQuickSaveOpen((value) => !value)}
+          aria-expanded={isQuickSaveOpen}
+        >
+          <ChevronDownIcon
+            className={`reading-vocab-collapse-icon${
+              isQuickSaveOpen ? "" : " reading-vocab-collapse-icon-collapsed"
+            }`}
+          />
+          빠르게 전체 저장
+        </button>
+        {isQuickSaveOpen ? (
+          <>
+            <div className="save-tray-stats" role="group" aria-label="상태별 단어 수">
+              <span className="save-tray-stat-pill save-tray-stat-new">
+                새 단어 {summary.newCount}개
+              </span>
+              <span className="save-tray-stat-pill save-tray-stat-unknown">
+                모르는 단어 {summary.unknownCount}개
+              </span>
+              <span className="save-tray-stat-pill save-tray-stat-uncertain">
+                헷갈리는 단어 {summary.uncertainCount}개
+              </span>
+              <span className="save-tray-stat-pill save-tray-stat-unclassified">
+                미분류 {summary.unclassifiedCount}개
+              </span>
+              <span className="save-tray-stat-pill save-tray-stat-known">
+                아는 단어 {summary.knownCount}개
+              </span>
+            </div>
+            <div className="reading-summary-actions">
+              {saveButtons.map(({ mode, label, hint, variant }) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`${variant === "ghost" ? "ghost-button" : "secondary-button"} reading-summary-save-button`}
+                  onClick={() => onSaveBatch(mode)}
+                  disabled={isSavingBatch || summary.saveableCount === 0}
+                  title={hint}
+                >
+                  {isSavingBatch ? "저장 중..." : label}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null}
+      </div>
+
+      {summary.saveableCount === 0 ? (
+        <p className="muted-text reading-summary-hint">
+          저장 가능한 단어가 없어요. 이미 학습 중인 단어일 수 있습니다.
+        </p>
+      ) : null}
+      {message ? (
+        <p
+          className={`message message--${messageTone} reading-summary-message${
+            messageTone === "success" ? " reading-summary-message-stamped" : ""
+          }`}
+        >
+          {messageTone === "success" ? (
+            <StudyCompanion mood="done" size="sm" className="reading-summary-message-stamp" />
+          ) : null}
+          <span>{message}</span>
+        </p>
+      ) : null}
+
+      <div className="reading-summary-next-actions">
+        <button
+          type="button"
+          className="reading-summary-cta-button"
+          onClick={onStartStudyFromSaved}
+          disabled={!canStartFromSaved}
+          title={
+            canStartFromSaved
+              ? undefined
+              : "먼저 단어를 저장하면 바로 학습으로 이동할 수 있습니다."
+          }
+        >
+          <CardsIcon className="button-icon" />
+          저장한 단어로 바로 학습
+        </button>
+        <button type="button" className="secondary-button reading-summary-cta-button" onClick={onGoToVocab}>
+          <CardFileIcon className="button-icon" />
+          어휘 노트 보기
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export function ReadingTab({
   text,
   analyzedText,
@@ -184,14 +400,6 @@ export function ReadingTab({
   const [selectedWordKeys, setSelectedWordKeys] = useState<Set<string>>(
     () => new Set(),
   );
-  // Bulk "빠르게 전체 저장" is a secondary path (구현4: 클릭 저장/선택 저장이
-  // 우선, 일괄 저장은 보조) -- collapsed by default, same
-  // toggle-button-with-chevron pattern as ReadingVocabPanel's candidate list.
-  const [isQuickSaveOpen, setIsQuickSaveOpen] = useState(false);
-  // Reconciles the raw key Set against what's actually selectable right now
-  // (a re-analysis can swap tokens out from under an already-built
-  // selection) -- every count/action below only ever sees valid, currently
-  // saveable entries.
   const selectedEntries = useMemo(() => {
     if (selectedWordKeys.size === 0) {
       return [];
@@ -274,64 +482,40 @@ export function ReadingTab({
 
   return (
     <section className="tab-panel reading-panel" aria-live="polite">
-      <div className="reading-hero">
-        <h2 className="reading-hero-title">원문으로 읽고 바로 노트에 담기</h2>
-        <p className="reading-hero-subtitle">
-          원문을 붙여넣고 모르는 단어를 바로 담아보세요.
-        </p>
-      </div>
-
-      {isSessionRestored && hasResult ? (
-        <div className="reading-restored-banner">
-          <span>
-            이전 작업이 복원되었습니다. 원문·분석 결과·선택한 단어와 마지막
-            읽던 위치를 이어서 볼 수 있습니다.
-          </span>
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={onDismissRestoredNotice}
-          >
-            확인
-          </button>
+      {!hasResult ? (
+        <div className="reading-hero">
+          <h2 className="reading-hero-title">원문으로 읽고 바로 노트에 담기</h2>
+          <p className="reading-hero-subtitle">
+            원문을 붙여넣고 모르는 단어를 바로 담아보세요.
+          </p>
         </div>
       ) : null}
 
+      {hasResult ? (
+        <ReaderCompactToolbar
+          isSessionRestored={isSessionRestored}
+          onDismissRestoredNotice={onDismissRestoredNotice}
+          isTextCollapsed={isTextCollapsed}
+          onToggleTextCollapsed={onToggleTextCollapsed}
+          onResetSession={onResetSession}
+          summary={summary}
+          selectedCount={selectedCount}
+        />
+      ) : null}
+
       <section className="reading-input-open">
-        <div className="reading-input-open-header">
-          <span className="reading-input-eyebrow">원문 읽기</span>
-          {!hasResult && !text.trim() ? null : (
-            <h3 className="reading-input-open-title">
-              {hasResult ? "원문" : "읽을 원문을 붙여넣어 주세요"}
-            </h3>
-          )}
-        </div>
-        <form className="analyze-form" onSubmit={onAnalyze}>
-          <div className="reading-input-header">
-            <label htmlFor="reading-source-text" className="sr-only-label">
-              원문
-            </label>
-            <div className="reading-input-header-actions">
-              {hasResult ? (
-                <button
-                  type="button"
-                  className="ghost-button compact-button"
-                  onClick={onToggleTextCollapsed}
-                >
-                  {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
-                </button>
-              ) : null}
-              {hasResult || text ? (
-                <button
-                  type="button"
-                  className="ghost-button compact-button"
-                  onClick={onResetSession}
-                >
-                  현재 읽기 작업 초기화
-                </button>
-              ) : null}
-            </div>
+        {!hasResult ? (
+          <div className="reading-input-open-header">
+            <span className="reading-input-eyebrow">원문 읽기</span>
+            {!text.trim() ? null : (
+              <h3 className="reading-input-open-title">읽을 원문을 붙여넣어 주세요</h3>
+            )}
           </div>
+        ) : null}
+        <form className="analyze-form" onSubmit={onAnalyze}>
+          <label htmlFor="reading-source-text" className="sr-only-label">
+            원문
+          </label>
 
           {showForm ? (
             <>
@@ -395,11 +579,7 @@ export function ReadingTab({
         </form>
 
         {isAnalyzing && analyzeProgress && analyzeProgress.total > 1 ? (
-          <div
-            className="reading-analyze-progress"
-            role="status"
-            aria-live="polite"
-          >
+          <div className="reading-analyze-progress" role="status" aria-live="polite">
             <p className="reading-analyze-progress-label">
               긴 원문을 문단·문장 단위로 나눠 분석하고 있습니다.
             </p>
@@ -443,16 +623,7 @@ export function ReadingTab({
 
       {!summary && message ? (
         !hasResult && !isAnalyzing && messageTone === "info" ? (
-          // Analysis genuinely ran and found nothing learnable (as opposed
-          // to a network/analysis error, which keeps the plain inline
-          // message below) -- give it the same icon+text empty-state
-          // treatment as every other "nothing here" moment in the app
-          // instead of a bare one-line message.
-          <AppEmptyState
-            icon={SparkleIcon}
-            className="reading-empty-guide"
-            title={message}
-          >
+          <AppEmptyState icon={SparkleIcon} className="reading-empty-guide" title={message}>
             <button
               type="button"
               className="ghost-button compact-button"
@@ -470,216 +641,83 @@ export function ReadingTab({
       {summary && isSampleText ? (
         <div className="panel-card note-card reading-onboarding-note">
           <span className="memo-label">가이드</span>
-          <p className="reading-onboarding-note-title">
-            샘플로 핵심 흐름을 체험해보세요
-          </p>
+          <p className="reading-onboarding-note-title">샘플로 핵심 흐름을 체험해보세요</p>
           <p className="muted-text">
-            1 단어 클릭해 뜻 확인 → 2 모르는 단어 저장 → 3 저장한 단어로
-            바로 학습
+            1 단어 클릭해 뜻 확인 → 2 모르는 단어 저장 → 3 저장한 단어로 바로 학습
           </p>
         </div>
       ) : null}
 
-      {summary ? (
-        <div className="reader-toolbar" role="group" aria-label="읽기 작업 상태">
-          <span className="reader-toolbar-chip">
-            저장 가능 {summary.saveableCount}개
-          </span>
-          <span className="reader-toolbar-chip reader-toolbar-chip-accent">
-            바구니에 담음 {selectedCount}개
-          </span>
-        </div>
-      ) : null}
-
-      {/* Reader / save tray / candidate list share one "bound notebook"
-          frame (a dashed spine down the left edge, see .reading-workspace)
-          instead of reading as three unrelated floating boxes -- each still
-          keeps its own card tier (reader = hero, tray/list = section) so
-          the visual hierarchy from design improvement 1 isn't flattened. */}
-      <div className="reading-workspace">
-      {hasResult ? (
-        <ReaderMode
-          originalText={analyzedText}
-          tokens={tokens}
-          onStatusChange={onStatusChange}
-          initialSelectedTokenKey={selectedTokenKey}
-          onSelectedTokenKeyChange={onSelectedTokenKeyChange}
-          initialScrollFraction={scrollFraction}
-          onScrollProgressChange={onScrollProgressChange}
-          externalSelectRequest={externalSelectRequest}
-          isTokenInBasket={isTokenInBasket}
-          canAddToBasket={canAddToBasket}
-          onToggleBasket={onToggleBasket}
-          meaningEditItemId={meaningEditItemId}
-          meaningEditDraft={meaningEditDraft}
-          isSavingMeaningEdit={isSavingMeaningEdit}
-          meaningEditMessage={meaningEditMessage}
-          onStartMeaningEdit={onStartMeaningEdit}
-          onMeaningEditDraftChange={onMeaningEditDraftChange}
-          onSaveMeaningEdit={onSaveMeaningEdit}
-          onCancelMeaningEdit={onCancelMeaningEdit}
-          onReportMeaning={onReportMeaning}
-        />
-      ) : isAnalyzing ? (
-        (!analyzeProgress || analyzeProgress.total <= 1) ? (
-          <p className="empty reading-loading-hint" role="status">
-            원문을 읽는 중이에요. 잠시만 기다려주세요...
-          </p>
-        ) : null
-      ) : message ? null : (
-        // Whenever there's a message (analysis failed, found zero words,
-        // sample just loaded, session reset, ...), it already explains
-        // what happened -- this generic "please analyze" prompt would
-        // otherwise sit right below it and contradict it.
-        <p className="empty">
-          덱을 선택하고 원문을 입력한 뒤 읽기 분석을 눌러주세요.
-        </p>
-      )}
-
-      {summary ? (
-        <section className="save-dock" aria-label="저장 바구니">
-          <div className="save-dock-count">
-            <FolderIcon className="save-dock-icon" />
-            <span>
-              담은 단어 <strong>{selectedCount}</strong>개
-            </span>
-          </div>
-
-          <button
-            type="button"
-            className="save-dock-primary-button"
-            onClick={() => void handleSaveSelected()}
-            disabled={selectedCount === 0 || isSavingBatch}
-            title={
-              selectedCount === 0
-                ? "원문에서 단어를 눌러 바구니에 담아주세요."
-                : undefined
-            }
-          >
-            <FolderIcon className="button-icon" />
-            {isSavingBatch ? "저장 중..." : `담은 단어 저장 (${selectedCount})`}
-          </button>
-
-          <div className="save-tray-quick-save">
-            <button
-              type="button"
-              className="ghost-button compact-button save-tray-quick-save-toggle"
-              onClick={() => setIsQuickSaveOpen((value) => !value)}
-              aria-expanded={isQuickSaveOpen}
-            >
-              <ChevronDownIcon
-                className={`reading-vocab-collapse-icon${
-                  isQuickSaveOpen ? "" : " reading-vocab-collapse-icon-collapsed"
-                }`}
-              />
-              빠르게 전체 저장
-            </button>
-            {isQuickSaveOpen ? (
-              <>
-                <div
-                  className="save-tray-stats"
-                  role="group"
-                  aria-label="상태별 단어 수"
-                >
-                  <span className="save-tray-stat-pill save-tray-stat-new">
-                    새 단어 {summary.newCount}개
-                  </span>
-                  <span className="save-tray-stat-pill save-tray-stat-unknown">
-                    모르는 단어 {summary.unknownCount}개
-                  </span>
-                  <span className="save-tray-stat-pill save-tray-stat-uncertain">
-                    헷갈리는 단어 {summary.uncertainCount}개
-                  </span>
-                  <span className="save-tray-stat-pill save-tray-stat-unclassified">
-                    미분류 {summary.unclassifiedCount}개
-                  </span>
-                  <span className="save-tray-stat-pill save-tray-stat-known">
-                    아는 단어 {summary.knownCount}개
-                  </span>
-                </div>
-                <div className="reading-summary-actions">
-                  {saveButtons.map(({ mode, label, hint, variant }) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      className={`${variant === "ghost" ? "ghost-button" : "secondary-button"} reading-summary-save-button`}
-                      onClick={() => onSaveBatch(mode)}
-                      disabled={isSavingBatch || summary.saveableCount === 0}
-                      title={hint}
-                    >
-                      {isSavingBatch ? "저장 중..." : label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : null}
-          </div>
-
-          {summary.saveableCount === 0 ? (
-            <p className="muted-text reading-summary-hint">
-              저장 가능한 단어가 없어요. 이미 학습 중인 단어일 수 있습니다.
+      {/* ReaderWorkspace -- ReaderPaper (reader-paper, hero tier) +
+          ReaderSaveDock (slim strip) + CandidateDrawer (ReadingVocabPanel,
+          collapsed by default) share one "bound notebook" frame (a dashed
+          spine down the left edge) instead of reading as three unrelated
+          floating boxes. */}
+      <div className="reader-workspace">
+        {hasResult ? (
+          <ReaderMode
+            originalText={analyzedText}
+            tokens={tokens}
+            onStatusChange={onStatusChange}
+            initialSelectedTokenKey={selectedTokenKey}
+            onSelectedTokenKeyChange={onSelectedTokenKeyChange}
+            initialScrollFraction={scrollFraction}
+            onScrollProgressChange={onScrollProgressChange}
+            externalSelectRequest={externalSelectRequest}
+            isTokenInBasket={isTokenInBasket}
+            canAddToBasket={canAddToBasket}
+            onToggleBasket={onToggleBasket}
+            meaningEditItemId={meaningEditItemId}
+            meaningEditDraft={meaningEditDraft}
+            isSavingMeaningEdit={isSavingMeaningEdit}
+            meaningEditMessage={meaningEditMessage}
+            onStartMeaningEdit={onStartMeaningEdit}
+            onMeaningEditDraftChange={onMeaningEditDraftChange}
+            onSaveMeaningEdit={onSaveMeaningEdit}
+            onCancelMeaningEdit={onCancelMeaningEdit}
+            onReportMeaning={onReportMeaning}
+          />
+        ) : isAnalyzing ? (
+          !analyzeProgress || analyzeProgress.total <= 1 ? (
+            <p className="empty reading-loading-hint" role="status">
+              원문을 읽는 중이에요. 잠시만 기다려주세요...
             </p>
-          ) : null}
-          {message ? (
-            <p
-              className={`message message--${messageTone} reading-summary-message${
-                messageTone === "success" ? " reading-summary-message-stamped" : ""
-              }`}
-            >
-              {messageTone === "success" ? (
-                <StudyCompanion
-                  mood="done"
-                  size="sm"
-                  className="reading-summary-message-stamp"
-                />
-              ) : null}
-              <span>{message}</span>
-            </p>
-          ) : null}
+          ) : null
+        ) : message ? null : (
+          <p className="empty">덱을 선택하고 원문을 입력한 뒤 읽기 분석을 눌러주세요.</p>
+        )}
 
-          <div className="reading-summary-next-actions">
-            <button
-              type="button"
-              className="reading-summary-cta-button"
-              onClick={onStartStudyFromSaved}
-              disabled={!canStartFromSaved}
-              title={
-                canStartFromSaved
-                  ? undefined
-                  : "먼저 단어를 저장하면 바로 학습으로 이동할 수 있습니다."
-              }
-            >
-              <CardsIcon className="button-icon" />
-              저장한 단어로 바로 학습
-            </button>
-            <button
-              type="button"
-              className="secondary-button reading-summary-cta-button"
-              onClick={onGoToVocab}
-            >
-              <CardFileIcon className="button-icon" />
-              어휘 노트 보기
-            </button>
-          </div>
-        </section>
-      ) : null}
+        {summary ? (
+          <ReaderSaveDock
+            summary={summary}
+            selectedCount={selectedCount}
+            isSavingBatch={isSavingBatch}
+            onSaveSelected={() => void handleSaveSelected()}
+            onSaveBatch={onSaveBatch}
+            canStartFromSaved={canStartFromSaved}
+            onStartStudyFromSaved={onStartStudyFromSaved}
+            onGoToVocab={onGoToVocab}
+            message={message}
+            messageTone={messageTone}
+          />
+        ) : null}
 
-      {/* Word list follows the reading card and save tray, not before them
-          -- for long chunk-analyzed texts a dense candidate list would
-          otherwise push the actual reading experience (the core screen)
-          far down the page. Collapsed by default (design: word list is a
-          secondary/reference panel, not the main event). */}
-      {hasResult ? (
-        <ReadingVocabPanel
-          entries={entries}
-          selectedTokenKey={selectedTokenKey}
-          onSelectToken={handleVocabPanelSelect}
-          selectedWordKeys={selectedWordKeys}
-          onToggleSelect={toggleSelect}
-          onReplaceSelection={replaceSelection}
-          onClearSelection={clearSelection}
-        />
-      ) : null}
+        {/* CandidateDrawer (ReadingVocabPanel) follows the reader card and
+            save tray, not before them -- for long chunk-analyzed texts a
+            dense candidate list would otherwise push the actual reading
+            experience (the core screen) far down the page. Collapsed by
+            default: search/filter/bulk actions only show once opened. */}
+        {hasResult ? (
+          <ReadingVocabPanel
+            entries={entries}
+            selectedTokenKey={selectedTokenKey}
+            onSelectToken={handleVocabPanelSelect}
+            selectedWordKeys={selectedWordKeys}
+            onToggleSelect={toggleSelect}
+            onReplaceSelection={replaceSelection}
+            onClearSelection={clearSelection}
+          />
+        ) : null}
       </div>
     </section>
   );

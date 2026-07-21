@@ -402,6 +402,13 @@ export function StudySection({
         </p>
       ) : null}
 
+      {/* Desk stage: every "focused single card" state (ready/empty/active/
+          complete) shares one wide backdrop instead of each .study-card
+          floating alone in the workspace's empty margins -- keeps the card
+          itself at its existing centered width/size, just gives the space
+          around it a subtle desk surface instead of reading as unfinished
+          empty page. */}
+      <div className="desk-surface desk-surface-stage">
       {!hasStarted && !currentItem && !isComplete ? (
         <AppEmptyState
           icon={CardsIcon}
@@ -642,6 +649,7 @@ export function StudySection({
           </div>
         </div>
       ) : null}
+      </div>
     </section>
   );
 }

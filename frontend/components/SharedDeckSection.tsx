@@ -210,11 +210,18 @@ export function SharedDeckSection({
                 : undefined
             }
           >
-            {isImporting
-              ? "가져오는 중..."
-              : alreadyImported
-                ? "다시 가져오기"
-                : "내 노트에 가져오기"}
+            {isImporting ? (
+              "가져오는 중..."
+            ) : alreadyImported ? (
+              <>
+                <RotateIcon className="button-icon" />
+                다시 가져오기
+              </>
+            ) : (
+              <>
+                <CardFileIcon className="button-icon" />내 노트에 가져오기
+              </>
+            )}
           </button>
           {deck.is_owner ? (
             <button
@@ -318,9 +325,9 @@ export function SharedDeckSection({
         hasGroups ? (
           <>
             {recommendedDecks.length > 0 ? (
-              <div className="shared-deck-shelf">
-                <h3 className="shared-deck-shelf-title">
-                  <BookshelfIcon className="shared-deck-shelf-icon" />
+              <div className="shelf-section">
+                <h3 className="shelf-section-title">
+                  <BookshelfIcon className="shelf-section-icon" />
                   JLPT 추천 어휘 서가
                 </h3>
                 <div className="shared-deck-grid">
@@ -329,18 +336,18 @@ export function SharedDeckSection({
               </div>
             ) : null}
             {myDecks.length > 0 ? (
-              <div className="shared-deck-shelf">
-                <h3 className="shared-deck-shelf-title">
-                  <BookshelfIcon className="shared-deck-shelf-icon" />
+              <div className="shelf-section">
+                <h3 className="shelf-section-title">
+                  <BookshelfIcon className="shelf-section-icon" />
                   내가 공유한 덱
                 </h3>
                 <div className="shared-deck-grid">{myDecks.map(renderDeckCard)}</div>
               </div>
             ) : null}
             {otherDecks.length > 0 ? (
-              <div className="shared-deck-shelf">
-                <h3 className="shared-deck-shelf-title">
-                  <BookshelfIcon className="shared-deck-shelf-icon" />
+              <div className="shelf-section">
+                <h3 className="shelf-section-title">
+                  <BookshelfIcon className="shelf-section-icon" />
                   다른 학습자의 덱
                 </h3>
                 <div className="shared-deck-grid">{otherDecks.map(renderDeckCard)}</div>

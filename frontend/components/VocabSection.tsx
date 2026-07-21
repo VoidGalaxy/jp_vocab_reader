@@ -318,7 +318,11 @@ export function VocabSection({
         </div>
       </section>
 
-      <div className="vocab-compact-toolbar">
+      <div className="index-card-filter">
+        <span className="memo-label vocab-toolbar-label">
+          <SearchIcon className="vocab-toolbar-label-icon" />
+          카드함 필터
+        </span>
         <div className="vocab-filter-group">
           <label className="inline-field">
             덱
@@ -781,7 +785,7 @@ export function VocabSection({
       ) : null}
 
       {items.length > 0 ? (
-        <div className="vocab-list vocab-list-compact">
+        <div className="vocab-list index-card-drawer">
           {items.map((item) => {
             const isExpanded =
               expandedItemIds.has(item.id) || editingItemId === item.id;
@@ -791,7 +795,7 @@ export function VocabSection({
 
             return (
               <div
-                className={`vocab-row vocab-row-status-${item.status}${isExpanded ? " vocab-row-expanded" : ""}`}
+                className={`vocabulary-index-row paper-corner vocab-row-status-${item.status}${isExpanded ? " vocab-row-expanded" : ""}`}
                 key={item.id}
               >
                 <div className="vocab-row-main">

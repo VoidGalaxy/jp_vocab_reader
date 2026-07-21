@@ -113,7 +113,7 @@ export function ReadingVocabPanel({
 
   return (
     <section
-      className={`reading-vocab-drawer${isCollapsed ? "" : " reading-vocab-drawer-open"}`}
+      className={`candidate-drawer reading-vocab-drawer${isCollapsed ? "" : " reading-vocab-drawer-open"}`}
     >
       <button
         type="button"

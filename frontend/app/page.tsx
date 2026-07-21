@@ -24,7 +24,7 @@ import {
   ClockIcon,
   HomeIcon,
 } from "../components/icons";
-import { InfoSection } from "../components/InfoSection";
+import { StudyLogPage } from "../components/InfoSection";
 import { MeaningFeedbackModal } from "../components/MeaningFeedbackModal";
 import {
   analyzeLongTextInChunks,
@@ -651,7 +651,15 @@ export default function HomePage() {
   // Soft, separate notice for "couldn't persist to localStorage" -- kept out
   // of readingMessage so it never clobbers the analyze/save result message.
   const [readingStorageWarning, setReadingStorageWarning] = useState("");
-  const [isReadingTextCollapsed, setIsReadingTextCollapsed] = useState(false);
+  // V3 content-canvas pass: default true (was false) -- previously the
+  // input textarea/deck-picker stayed expanded above the reader by default
+  // even after a successful analyze, so the "입력창" outweighed the reader
+  // paper on first read. showForm in ReadingTab is `!hasResult ||
+  // !isTextCollapsed`, so this only affects the state *after* a result
+  // exists -- the very first empty-state input (hasResult === false) still
+  // always shows regardless of this value. A restored session's own saved
+  // isTextCollapsed value still overrides this on load below.
+  const [isReadingTextCollapsed, setIsReadingTextCollapsed] = useState(true);
   const [isSavingReadingBatch, setIsSavingReadingBatch] = useState(false);
   const [recentlySavedVocabItemIds, setRecentlySavedVocabItemIds] = useState<
     number[]
@@ -716,6 +724,16 @@ export default function HomePage() {
   const [studyItems, setStudyItems] = useState<VocabItem[]>([]);
   const [studyStats, setStudyStats] = useState<StudyStats | null>(null);
   const [infoStats, setInfoStats] = useState<StudyStats | null>(null);
+  // 기록 탭 전용 read-only word highlights ("최근 담은 단어" / "자주 틀린
+  // 단어") -- deliberately separate state from the Vocab tab's own
+  // `vocabItems` (and its search/status/dueOnly/sort filters) so visiting
+  // 기록 never re-triggers or overwrites whatever the Vocab tab's list/
+  // filters currently show. Same existing /vocab-items endpoint and sort
+  // values the Vocab tab already uses (created_desc/wrong_desc), just a
+  // second, independent read of it for this screen's log-style summary.
+  const [infoRecentWords, setInfoRecentWords] = useState<VocabItem[]>([]);
+  const [infoHardWords, setInfoHardWords] = useState<VocabItem[]>([]);
+  const [isLoadingInfoWords, setIsLoadingInfoWords] = useState(false);
   const [currentStudyIndex, setCurrentStudyIndex] = useState(0);
   const [isAnswerVisible, setIsAnswerVisible] = useState(false);
   const [sessionCounts, setSessionCounts] = useState<SessionReviewCounts>(
@@ -933,6 +951,7 @@ export default function HomePage() {
     }
     if (tab === "info") {
       void loadInfoStats();
+      void loadInfoWordHighlights();
     }
   }
 
@@ -944,6 +963,7 @@ export default function HomePage() {
     await loadCustomTerms("all");
     await loadStudyStats("all");
     await loadInfoStats();
+    await loadInfoWordHighlights();
     await loadSharedDecks();
     resetStudySession();
   }
@@ -1785,6 +1805,27 @@ export default function HomePage() {
       );
     } finally {
       setIsLoadingInfoStats(false);
+    }
+  }
+
+  // 기록 탭의 "최근 담은 단어" / "자주 틀린 단어" -- 이미 존재하는
+  // /vocab-items 정렬 옵션(created_desc/wrong_desc)을 그대로 재사용해 상위
+  // 몇 개만 뽑아온다. 실패해도 조용히 빈 목록으로 두고 나머지 기록 화면은
+  // 그대로 보여준다 (통계 요약이 이미 핵심 내용이라 이 목록은 보조 정보).
+  async function loadInfoWordHighlights() {
+    setIsLoadingInfoWords(true);
+    try {
+      const [recentData, hardData] = await Promise.all([
+        requestJson<VocabItemsResponse>("/vocab-items?sort=created_desc"),
+        requestJson<VocabItemsResponse>("/vocab-items?sort=wrong_desc"),
+      ]);
+      setInfoRecentWords(recentData.items.slice(0, 5));
+      setInfoHardWords(hardData.items.filter((item) => item.wrong_count > 0).slice(0, 5));
+    } catch {
+      setInfoRecentWords([]);
+      setInfoHardWords([]);
+    } finally {
+      setIsLoadingInfoWords(false);
     }
   }
 
@@ -2942,7 +2983,7 @@ export default function HomePage() {
           />
         }
       >
-      <section className={`workspace workspace-${activeTab}`}>
+      <section className={`library-canvas library-canvas-${activeTab}`}>
         {activeTab === "home" ? (
           <HomeDashboard
             isDevUser={isDevUser}
@@ -3221,10 +3262,15 @@ export default function HomePage() {
         ) : null}
 
         {activeTab === "info" ? (
-          <InfoSection
+          <StudyLogPage
             stats={infoStats}
             isStatsLoading={isLoadingInfoStats}
             statsMessage={infoStatsMessage}
+            recentWords={infoRecentWords}
+            hardWords={infoHardWords}
+            isWordsLoading={isLoadingInfoWords}
+            onGoToVocab={() => void handleTabChange("vocab")}
+            onGoToReading={() => void handleTabChange("reading")}
           />
         ) : null}
       </section>

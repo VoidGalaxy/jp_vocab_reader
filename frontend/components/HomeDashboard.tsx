@@ -154,15 +154,18 @@ export function HomeDashboard({
         </span>
       </div>
 
-      <button
-        type="button"
-        className="ghost-button home-continue-row"
-        onClick={continueRow.onAction}
-      >
-        <continueRow.icon className="button-icon" />
-        <span>{continueRow.label}</span>
-        <ChevronRightIcon className="home-continue-row-arrow" />
-      </button>
+      <div className="home-desk-memo paper-corner">
+        <span className="memo-label">책상 메모</span>
+        <button
+          type="button"
+          className="ghost-button home-continue-row"
+          onClick={continueRow.onAction}
+        >
+          <continueRow.icon className="button-icon" />
+          <span>{continueRow.label}</span>
+          <ChevronRightIcon className="home-continue-row-arrow" />
+        </button>
+      </div>
 
       <p className="info-strip">
         <ShieldIcon className="info-strip-icon" />

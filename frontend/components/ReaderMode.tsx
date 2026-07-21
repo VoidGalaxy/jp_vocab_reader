@@ -108,6 +108,12 @@ export function ReaderMode({
   );
   const [focusMode, setFocusMode] = useState(false);
   const [showJlptTags, setShowJlptTags] = useState(true);
+  // Reader-first layout: display toggles used to sit inline in the header
+  // row, always visible -- collapsed behind a small "옵션" button instead,
+  // so the reader paper's own header doesn't compete with the paper below
+  // it for attention. Local-only UI state, no effect on the toggles'
+  // values or behavior once opened.
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   // Guards against re-applying a restored selection every time tokens
   // change (e.g. after a status save) -- only ever resolved once, right
   // after a restore, then the user's own clicks take over.
@@ -441,29 +447,41 @@ export function ReaderMode({
   const isAtFirstOccurrence = activeSegmentKey === null;
 
   return (
-    <div className="reader-mode hero-card">
+    <div className="reader-paper hero-card">
       <div className="reader-mode-header-row">
         <div>
           <h3 className="reader-mode-title">읽기 모드</h3>
           <p className="reader-mode-hint">모르는 단어를 눌러보세요.</p>
         </div>
-        <div className="reader-mode-toggles">
-          <label className="checkbox-field reading-focus-toggle">
-            <input
-              type="checkbox"
-              checked={focusMode}
-              onChange={(event) => setFocusMode(event.target.checked)}
-            />
-            모르는/헷갈리는 단어만 강조
-          </label>
-          <label className="checkbox-field reading-jlpt-toggle">
-            <input
-              type="checkbox"
-              checked={showJlptTags}
-              onChange={(event) => setShowJlptTags(event.target.checked)}
-            />
-            JLPT 태그 표시
-          </label>
+        <div className="reader-mode-options-wrap">
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={() => setIsOptionsOpen((value) => !value)}
+            aria-expanded={isOptionsOpen}
+          >
+            {isOptionsOpen ? "옵션 닫기" : "옵션 열기"}
+          </button>
+          {isOptionsOpen ? (
+            <div className="reader-mode-toggles">
+              <label className="checkbox-field reading-focus-toggle">
+                <input
+                  type="checkbox"
+                  checked={focusMode}
+                  onChange={(event) => setFocusMode(event.target.checked)}
+                />
+                모르는/헷갈리는 단어만 강조
+              </label>
+              <label className="checkbox-field reading-jlpt-toggle">
+                <input
+                  type="checkbox"
+                  checked={showJlptTags}
+                  onChange={(event) => setShowJlptTags(event.target.checked)}
+                />
+                JLPT 태그 표시
+              </label>
+            </div>
+          ) : null}
         </div>
       </div>
       <div className="reader-progress-row">
@@ -615,7 +633,7 @@ export function ReaderMode({
           className="token-sheet-overlay token-sheet-overlay-idle"
           aria-hidden="true"
         >
-          <div className="token-sheet token-sheet-idle paper-corner">
+          <div className="bookmark-inspector token-sheet-idle paper-corner">
             <StudyCompanion mood="reading" size="sm" />
             <p className="token-sheet-idle-text">
               원문에서 모르는 단어를 눌러보세요.
