@@ -3,7 +3,7 @@ import {
   BrandDeckCover,
   BrandSectionBadge,
 } from "./BrandElements";
-import { ShioriStamp } from "./Shiori";
+import { ShioriMark, ShioriStamp } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
 import { BookshelfIcon, CardFileIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
 import {
@@ -251,6 +251,7 @@ export function SharedDeckSection({
       <section className="panel-card hero-card shared-hero-card">
         <div className="panel-card-header">
           <h2 className="panel-card-title">
+            <ShioriMark className="shared-deck-title-mark" />
             <BrandSectionBadge icon={BookshelfIcon} />
             덱 책장
           </h2>
@@ -380,7 +381,7 @@ export function SharedDeckSection({
         </AppEmptyState>
       ) : (
         <AppEmptyState
-          mood="reading"
+          mood="empty"
           title="가져올 수 있는 추천 덱을 살펴보세요."
           description="내 어휘 노트를 공유하거나 추천 덱을 가져올 수 있어요."
         >

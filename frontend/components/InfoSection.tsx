@@ -51,7 +51,7 @@ function TodayStudyMemo({
   return (
     <section className="study-log-entry today-study-memo">
       <h3 className="records-log-title">
-        <ShioriMark className="records-log-title-mark" />
+        <ShioriMark variant="review" className="records-log-title-mark" />
         오늘 학습
       </h3>
       <div className="records-today-row">

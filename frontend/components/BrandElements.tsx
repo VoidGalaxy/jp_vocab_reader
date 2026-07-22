@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { BookIcon, FolderIcon, ShareIcon } from "./icons";
-import { ShioriCharacter, type ShioriVariant } from "./Shiori";
+import { ShioriCharacter, type ShioriSize, type ShioriVariant } from "./Shiori";
 
 // Small, reusable "brand illustration" pieces shared across the app --
 // consolidates decoration that used to be hand-rolled per screen
@@ -176,6 +176,7 @@ export function LibraryHeroIllustration({ className }: { className?: string }) {
 // forcing one wrapper div that would fight several existing layouts.
 export function AppEmptyState({
   mood,
+  moodSize = "sm",
   icon,
   title,
   description,
@@ -183,6 +184,11 @@ export function AppEmptyState({
   children,
 }: {
   mood?: ShioriVariant;
+  // Most empty states are a small aside next to their own title/description
+  // -- only a handful (the notebook's true "nothing saved yet" state) want
+  // Shiori to actually carry the card, so this defaults to the existing
+  // "sm" everywhere and only opts up where a screen asks for it.
+  moodSize?: ShioriSize;
   icon?: IconComponent;
   title: string;
   description?: string;
@@ -192,7 +198,7 @@ export function AppEmptyState({
   return (
     <div className={className}>
       {mood ? (
-        <ShioriCharacter variant={mood} size="sm" />
+        <ShioriCharacter variant={mood} size={moodSize} />
       ) : icon ? (
         <BrandEmptyIllustration icon={icon} />
       ) : null}

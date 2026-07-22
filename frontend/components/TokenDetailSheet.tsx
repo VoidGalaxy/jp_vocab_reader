@@ -5,7 +5,7 @@ import { getDisplayMeaning, statusLabels } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 import { BookmarkIcon, CloseIcon } from "./icons";
-import { ShioriMark } from "./Shiori";
+import { ShioriMark, ShioriStamp } from "./Shiori";
 
 type TokenDetailSheetProps = {
   token: TokenWithStatus;
@@ -81,7 +81,7 @@ export function TokenDetailSheet({
       >
         <div className="token-sheet-header">
           <div className="token-sheet-title-group">
-            <ShioriMark className="token-sheet-bookmark-icon" />
+            <ShioriMark variant="reading" className="token-sheet-bookmark-icon" />
             <span className="token-sheet-word">{label}</span>
             {token.reading && token.reading !== label ? (
               <span className="token-sheet-reading">{token.reading}</span>
@@ -149,15 +149,24 @@ export function TokenDetailSheet({
           </button>
         </div>
         {canAddToBasket ? (
-          <button
-            type="button"
-            className={`token-sheet-basket-button${isInBasket ? " token-sheet-basket-button-active" : ""}`}
-            onClick={onToggleBasket}
-            aria-pressed={isInBasket}
-          >
-            <BookmarkIcon className="button-icon" />
-            {isInBasket ? "저장 바구니에서 빼기" : "저장 바구니에 담기"}
-          </button>
+          <div className="token-sheet-basket-row">
+            <button
+              type="button"
+              className={`token-sheet-basket-button${isInBasket ? " token-sheet-basket-button-active" : ""}`}
+              onClick={onToggleBasket}
+              aria-pressed={isInBasket}
+            >
+              <BookmarkIcon className="button-icon" />
+              {isInBasket ? "저장 바구니에서 빼기" : "저장 바구니에 담기"}
+            </button>
+            {isInBasket ? (
+              <ShioriStamp
+                variant="save"
+                label="노트에 담았어요"
+                className="token-sheet-basket-stamp"
+              />
+            ) : null}
+          </div>
         ) : null}
         <div className="token-sheet-meta-row">
           {token.base_form && token.base_form !== label ? (

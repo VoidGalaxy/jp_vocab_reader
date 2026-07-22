@@ -412,10 +412,10 @@ export function StudySection({
       <div className="desk-surface desk-surface-stage">
       {!hasStarted && !currentItem && !isComplete ? (
         <AppEmptyState
-          icon={CardsIcon}
+          mood="review"
           className="study-card study-ready-card"
           title="학습할 단어를 불러오세요"
-          description="덱과 학습 모드를 선택한 뒤 학습 시작을 누르면 저장한 단어를 바로 외울 수 있어요."
+          description="덱과 학습 모드를 선택한 뒤 복습을 시작할 수 있어요."
         />
       ) : null}
 
@@ -592,7 +592,7 @@ export function StudySection({
 
       {isComplete ? (
         <div className="study-card complete-card card-stack-surface index-card-shell">
-          <ShioriStamp variant="review" label="완료" />
+          <ShioriStamp variant="success" label="완료" />
           <h3>
             {studyMode === "recent"
               ? "방금 담은 단어 복습을 마쳤어요."

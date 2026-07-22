@@ -1005,8 +1005,9 @@ export function VocabSection({
       ) : (
         <AppEmptyState
           mood="empty"
+          moodSize="md"
           title="아직 담은 단어가 없어요."
-          description="원문을 읽으며 모르는 단어를 어휘 노트에 쌓아보세요."
+          description="원문에서 모르는 단어를 눌러 어휘 노트에 쌓아보세요."
         >
           <div className="study-actions">
             <button

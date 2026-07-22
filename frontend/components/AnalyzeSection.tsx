@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ShioriCharacter, ShioriStamp } from "./Shiori";
+import { ShioriCharacter, ShioriMark, ShioriStamp } from "./Shiori";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import type { CoverageStats } from "./types";
@@ -166,7 +166,7 @@ function ClassifyPaperInput({
         value={text}
         onChange={(event) => onTextChange(event.target.value)}
         placeholder="彼は怠惰であることを自覚していた。"
-        rows={isStage ? 5 : 6}
+        rows={isStage ? 4 : 6}
       />
       <div className={isStage ? "classify-hero-footer" : "reading-input-footer"}>
         <label className="reading-deck-picker">
@@ -199,7 +199,7 @@ function ClassifyPaperInput({
           {secondaryAction ? (
             <button
               type="button"
-              className="secondary-button"
+              className="ghost-button compact-button"
               onClick={secondaryAction.onClick}
             >
               {secondaryAction.label}
@@ -252,7 +252,7 @@ function ClassifyStageIntro({
       <div className="classify-hero-header">
         <ShioriCharacter
           variant="classify"
-          size="md"
+          size="lg"
           className="shiori-glow classify-hero-companion"
         />
         <div>
@@ -452,7 +452,10 @@ function ClassifyCardStage({
 
       <div className="classify-word-card card-stack-surface">
         <div className="classify-progress">
-          {currentCardIndex + 1} / {totalCount}
+          <ShioriMark variant="classify" />
+          <span>
+            {currentCardIndex + 1} / {totalCount}
+          </span>
         </div>
         <ClassifyWordCard token={currentToken} />
         <ClassifyActionGrid onClassify={onClassifyCurrent} />

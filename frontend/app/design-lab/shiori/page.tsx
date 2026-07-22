@@ -144,7 +144,7 @@ export default function ShioriDesignLabPage() {
       <section className="dl-shiori-preview-section">
         <h2>빠른 분류 card stage 적용 예시</h2>
         <div className="dl-shiori-preview-classify-mock">
-          <ShioriCharacter variant="classify" size="md" className="shiori-glow" />
+          <ShioriCharacter variant="classify" size="lg" className="shiori-glow" />
           <div>
             <h3>단어를 빠르게 나눠볼까요?</h3>
             <p>원문에서 뽑은 단어를 카드처럼 넘기며 정리해요.</p>
@@ -155,8 +155,30 @@ export default function ShioriDesignLabPage() {
       <section className="dl-shiori-preview-section">
         <h2>복습 완료 stamp 적용 예시</h2>
         <div className="dl-shiori-preview-review-mock">
-          <ShioriStamp variant="review" label="완료" />
+          <ShioriStamp variant="success" label="완료" />
           <p>오늘 복습을 마쳤어요.</p>
+        </div>
+      </section>
+
+      <section className="dl-shiori-preview-section">
+        <h2>분류 카드 진행 표시 (ClassifyCardStage)</h2>
+        <p className="dl-shiori-preview-section-hint">
+          카드 상단 진행 배지 옆에 붙는 축소형 classify mark
+        </p>
+        <div className="dl-shiori-preview-classify-progress-mock">
+          <ShioriMark variant="classify" />
+          <span>3 / 10</span>
+        </div>
+      </section>
+
+      <section className="dl-shiori-preview-section">
+        <h2>저장 바구니 담김 stamp (읽기 단어 카드)</h2>
+        <p className="dl-shiori-preview-section-hint">
+          Word Inspector의 &quot;저장 바구니에서 빼기&quot; 버튼 옆에 붙는 save stamp
+        </p>
+        <div className="dl-shiori-preview-classify-progress-mock">
+          <span>저장 바구니에서 빼기</span>
+          <ShioriStamp variant="save" label="노트에 담았어요" />
         </div>
       </section>
     </div>
