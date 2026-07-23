@@ -4273,6 +4273,25 @@ input.reading-vocab-item-checkbox {
   white-space: nowrap;
 }
 
+/* 사용자 정의 용어 카드함 -- 예전엔 raw <table>이라 관리자 화면처럼 보였던
+   자리를 .records-word-row(다른 곳의 index-card 계열 행)와 같은 카드로
+   맞췄다. flex-wrap 기반이라 좁은 화면에서도 가로 스크롤 없이 줄바꿈된다. */
+.custom-term-card-list {
+  display: grid;
+  gap: 8px;
+}
+
+.custom-term-card-description {
+  flex: 1 1 100%;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.custom-term-card-actions {
+  flex: 1 1 100%;
+  justify-content: flex-end;
+}
+
 .deck-create {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto;
@@ -4833,6 +4852,22 @@ input.reading-vocab-item-checkbox {
   max-height: 520px;
   overflow-y: auto;
   padding-right: 6px;
+}
+
+/* Same "카드함 필터" drawer-tab treatment as .index-card-filter on the 노트
+   tab, reused here so searching/filtering a big recommended deck's word
+   list feels like the same card-file gesture, not a second admin toolbar. */
+.shared-lexeme-word-filter {
+  margin: 10px 0;
+}
+
+.shared-lexeme-word-count-caption {
+  margin: 8px 0 0;
+  font-size: 12px;
+}
+
+.shared-lexeme-load-more {
+  margin-top: 8px;
 }
 
 /* Drawer-tab framing instead of a plain bordered admin filter box -- a

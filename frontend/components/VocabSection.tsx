@@ -684,86 +684,75 @@ export function VocabSection({
         ) : null}
 
         {customTerms.length > 0 ? (
-          <div className="table-wrap custom-term-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>용어</th>
-                  <th>읽기</th>
-                  <th>품사</th>
-                  <th>뜻</th>
-                  <th>덱</th>
-                  <th>설명</th>
-                  <th>관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customTerms.map((term) => (
-                  <Fragment key={term.id}>
-                    <tr>
-                      <td>{term.term}</td>
-                      <td>{term.reading || "-"}</td>
-                      <td>{term.part_of_speech || "-"}</td>
-                      <td>{getDisplayMeaning(term.meaning_ko)}</td>
-                      <td>{term.deck_name || "공통"}</td>
-                      <td>
-                        <span className="example-text">
-                          {term.description || "-"}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="row-actions">
-                          <button
-                            type="button"
-                            className="secondary-button compact-button"
-                            onClick={() => onStartCustomTermEdit(term)}
-                          >
-                            수정
-                          </button>
-                          <button
-                            type="button"
-                            className="danger-button compact-button"
-                            onClick={() => onDeleteCustomTerm(term.id)}
-                          >
-                            삭제
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    {editingCustomTermId === term.id ? (
-                      <tr className="edit-row">
-                        <td colSpan={7}>
-                          <div className="vocab-form-panel inline-edit-form">
-                            <CustomTermForm
-                              form={editCustomTermForm}
-                              decks={decks}
-                              onChange={onEditCustomTermFormChange}
-                            />
-                            <div className="form-actions">
-                              <button
-                                type="button"
-                                onClick={onSaveCustomTermEdit}
-                                disabled={isSavingCustomTerm}
-                              >
-                                {isSavingCustomTerm ? "저장 중..." : "저장"}
-                              </button>
-                              <button
-                                type="button"
-                                className="secondary-button"
-                                onClick={onCancelCustomTermEdit}
-                                disabled={isSavingCustomTerm}
-                              >
-                                취소
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : null}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
+          <div className="custom-term-card-list">
+            {customTerms.map((term) => (
+              <Fragment key={term.id}>
+                <div className="records-word-row custom-term-card paper-corner">
+                  <span className="records-word-surface">{term.term}</span>
+                  {term.reading ? (
+                    <span className="records-word-reading">{term.reading}</span>
+                  ) : null}
+                  {term.part_of_speech ? (
+                    <span className="vocab-item-secondary-tag">
+                      {term.part_of_speech}
+                    </span>
+                  ) : null}
+                  <span className="records-word-meaning">
+                    {getDisplayMeaning(term.meaning_ko)}
+                  </span>
+                  <span className="vocab-item-secondary-tag">
+                    {term.deck_name || "공통"}
+                  </span>
+                  {term.description ? (
+                    <span className="custom-term-card-description">
+                      {term.description}
+                    </span>
+                  ) : null}
+                  <div className="row-actions custom-term-card-actions">
+                    <button
+                      type="button"
+                      className="secondary-button compact-button"
+                      onClick={() => onStartCustomTermEdit(term)}
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      className="danger-button compact-button"
+                      onClick={() => onDeleteCustomTerm(term.id)}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+                {editingCustomTermId === term.id ? (
+                  <div className="vocab-form-panel inline-edit-form">
+                    <CustomTermForm
+                      form={editCustomTermForm}
+                      decks={decks}
+                      onChange={onEditCustomTermFormChange}
+                    />
+                    <div className="form-actions">
+                      <button
+                        type="button"
+                        onClick={onSaveCustomTermEdit}
+                        disabled={isSavingCustomTerm}
+                      >
+                        {isSavingCustomTerm ? "저장 중..." : "저장"}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={onCancelCustomTermEdit}
+                        disabled={isSavingCustomTerm}
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </Fragment>
+            ))}
           </div>
         ) : (
           <p className="empty">
