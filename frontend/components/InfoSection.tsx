@@ -301,7 +301,7 @@ export function StudyLogPage({
             </h2>
           </div>
           <p className="panel-card-description">
-            원문 전체는 저장하지 않아요. 단어와 짧은 예문만 노트에 남습니다.
+            원문 전체는 저장하지 않아요. 단어와 짧은 예문만 노트에 남아요.
           </p>
         </section>
       </div>

@@ -301,7 +301,7 @@ function ClassifyStageIntro({
 
       <p className="muted-text copyright-note">
         <ShieldIcon className="copyright-note-icon" />
-        <span>원문 전체는 서버에 저장하지 않습니다.</span>
+        <span>원문 전체는 서버에 저장하지 않아요.</span>
       </p>
     </section>
   );
@@ -646,7 +646,7 @@ export function AnalyzeSection({
 
           <p className="muted-text copyright-note">
             <ShieldIcon className="copyright-note-icon" />
-            <span>원문 전체는 서버에 저장하지 않습니다.</span>
+            <span>원문 전체는 서버에 저장하지 않아요.</span>
           </p>
         </section>
       )}

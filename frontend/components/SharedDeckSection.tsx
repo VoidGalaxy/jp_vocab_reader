@@ -404,7 +404,7 @@ export function SharedDeckSection({
         </div>
         <p className="info-strip">
           <ShieldIcon className="info-strip-icon" />
-          가져온 덱은 학습 목록에 바로 추가돼요. 원문 전체는 들어가지 않습니다.
+          가져온 덱은 학습 목록에 바로 추가돼요. 원문 전체는 들어가지 않아요.
         </p>
       </section>
 
@@ -715,11 +715,11 @@ export function SharedDeckSection({
                         ) : null}
                       </>
                     ) : (
-                      <p className="empty">검색 결과가 없습니다.</p>
+                      <p className="empty">검색 결과가 없어요.</p>
                     )}
                   </>
                 ) : (
-                  <p className="empty">공유된 단어가 없습니다.</p>
+                  <p className="empty">공유된 단어가 없어요.</p>
                 )}
               </div>
             </div>
@@ -738,7 +738,7 @@ export function SharedDeckSection({
                     ))}
                   </div>
                 ) : (
-                  <p className="empty">공유된 단어가 없습니다.</p>
+                  <p className="empty">공유된 단어가 없어요.</p>
                 )}
               </div>
 
@@ -760,7 +760,7 @@ export function SharedDeckSection({
                     })}
                   </div>
                 ) : (
-                  <p className="empty">공유된 사용자 정의 용어가 없습니다.</p>
+                  <p className="empty">공유된 사용자 정의 용어가 없어요.</p>
                 )}
               </div>
             </div>
