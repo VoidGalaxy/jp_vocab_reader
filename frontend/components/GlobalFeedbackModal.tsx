@@ -28,7 +28,7 @@ const categoryOptions: Array<{
     value: "ux",
     label: "사용성/흐름",
     placeholder:
-      "어느 화면, 어느 단계에서 헷갈렸는지 적어주세요.\n예: 읽기 탭에서 단어 저장 버튼을 찾기 어려웠어요.",
+      "어느 화면에서 무엇이 헷갈렸는지 적어주세요.\n예: 읽기 탭에서 단어 저장 버튼을 찾기 어려웠어요.",
   },
   {
     key: "meaning",
@@ -124,7 +124,7 @@ export function GlobalFeedbackModal({
           <div>
             <h2 className="feedback-modal-title">베타 피드백</h2>
             <p className="muted-text feedback-modal-subtitle">
-              막혔던 부분이나 어색했던 점을 알려주세요.
+              불편했던 점을 짧게 남겨주세요.
             </p>
           </div>
           <button
@@ -168,9 +168,7 @@ export function GlobalFeedbackModal({
           {message.length} / {APP_FEEDBACK_MESSAGE_MAX_LENGTH}자
           {isTooShort ? ` · 최소 ${APP_FEEDBACK_MESSAGE_MIN_LENGTH}자 이상 입력해 주세요.` : ""}
         </p>
-        <p className="meaning-feedback-hint">
-          원문 전체는 자동으로 첨부되지 않아요. 문제가 생긴 단어나 상황만 직접 적어주세요.
-        </p>
+        <p className="meaning-feedback-hint">원문 전체는 첨부되지 않아요.</p>
 
         {resultMessage ? (
           <p className={`message message--${classifyMessageTone(resultMessage)}`}>

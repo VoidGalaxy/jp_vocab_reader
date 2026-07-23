@@ -5,7 +5,7 @@ import {
 } from "./BrandElements";
 import { ShioriMark, ShioriStamp } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
-import { BookshelfIcon, CardFileIcon, RotateIcon, ShareIcon, ShieldIcon } from "./icons";
+import { BookshelfIcon, CardFileIcon, RotateIcon, ShieldIcon } from "./icons";
 import {
   formatDateTime,
   getDisplayMeaning,
@@ -170,11 +170,10 @@ export function SharedDeckSection({
             {getDeckDescription(deck.description, level)}
           </p>
         </div>
-        <p className="shared-deck-byline">
-          {deck.owner_display_name ? `${deck.owner_display_name} · ` : ""}
-          등록일 {formatDateTime(deck.created_at)} · 가져간 횟수{" "}
-          {deck.import_count}회
-        </p>
+        {/* 등록일/작성자/가져간 횟수는 카드마다 항상 보이던 메타데이터였는데,
+            덱 이름/단어 수/설명/가져오기 버튼이 이 카드의 실제 주인공이라
+            "상세 보기"를 열었을 때만 보이도록 옮겼다 (아래 selectedDeck
+            상세 영역의 shared-deck-byline). */}
         <div className="row-actions">
           <button
             type="button"
@@ -260,9 +259,6 @@ export function SharedDeckSection({
           </p>
         </div>
         <div className="landing-hero-actions">
-          <button type="button" onClick={onGoToVocab}>
-            <ShareIcon className="button-icon" />어휘 노트 공유하기
-          </button>
           <button type="button" className="secondary-button" onClick={onGoToVocab}>
             <CardFileIcon className="button-icon" />어휘 노트 보기
           </button>
@@ -283,9 +279,10 @@ export function SharedDeckSection({
       </section>
 
       {hasJlptDeck ? (
-        <p className="shared-deck-disclaimer">
-          JLPT 추천 어휘 덱은 공식 JLPT 어휘 목록이 아니라, 공개 학습 자료와
-          내부 사전 데이터를 바탕으로 구성한 학습용 추천 덱입니다.
+        <p className="info-strip shared-deck-disclaimer">
+          <ShieldIcon className="info-strip-icon" />
+          JLPT 추천 어휘 덱은 학습 참고용 비공식 목록이며, 공개 학습 자료와
+          내부 사전 데이터를 바탕으로 구성했습니다.
         </p>
       ) : null}
 
@@ -323,7 +320,12 @@ export function SharedDeckSection({
       ) : null}
 
       {isInitialLoading ? (
-        <AppEmptyState mood="loading" moodSize="md" title="덱 책장을 불러오는 중이에요..." />
+        <AppEmptyState
+          mood="loading"
+          moodSize="xl"
+          className="shared-deck-loading"
+          title="덱 책장을 불러오는 중이에요..."
+        />
       ) : sortedDecks.length > 0 ? (
         hasGroups ? (
           <>
@@ -382,7 +384,7 @@ export function SharedDeckSection({
       ) : (
         <AppEmptyState
           mood="empty"
-          moodSize="lg"
+          moodSize="xl"
           title="가져올 수 있는 추천 덱을 살펴보세요."
           description="내 어휘 노트를 공유하거나 추천 덱을 가져올 수 있어요."
         >
@@ -425,7 +427,8 @@ export function SharedDeckSection({
                   ? `${selectedDeck.owner_display_name} · `
                   : ""}
                 단어 수 {selectedDeck.vocab_count}개 · 용어 수{" "}
-                {selectedDeck.custom_term_count}개 · 가져간 횟수{" "}
+                {selectedDeck.custom_term_count}개 · 등록일{" "}
+                {formatDateTime(selectedDeck.created_at)} · 가져간 횟수{" "}
                 {selectedDeck.import_count}회
               </span>
             </div>
@@ -467,9 +470,10 @@ export function SharedDeckSection({
             {getDeckDescription(selectedDeck.description, selectedLevel)}
           </p>
           {selectedLevel ? (
-            <p className="shared-deck-disclaimer">
-              JLPT 추천 어휘 덱은 공식 JLPT 어휘 목록이 아니라, 공개 학습
-              자료와 내부 사전 데이터를 바탕으로 구성한 학습용 추천 덱입니다.
+            <p className="info-strip shared-deck-disclaimer">
+              <ShieldIcon className="info-strip-icon" />
+              JLPT 추천 어휘 덱은 학습 참고용 비공식 목록이며, 공개 학습
+              자료와 내부 사전 데이터를 바탕으로 구성했습니다.
             </p>
           ) : null}
           {selectedDeck.is_owner ? (

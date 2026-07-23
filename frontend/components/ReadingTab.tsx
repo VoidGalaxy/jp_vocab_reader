@@ -147,19 +147,40 @@ function ReaderCompactToolbar({
   summary,
   selectedCount,
 }: ReaderCompactToolbarProps) {
+  // "원문 입력 펼치기/접기"와 "새 원문"은 둘 다 자주 쓰는 액션이 아니라
+  // "원문을 어떻게 할지" 계열이라 하나의 토글 뒤로 접어 둔다 -- 기본 노출은
+  // 토글 버튼 하나뿐, 눌렀을 때만 두 액션이 같은 줄에 나타난다.
+  const [isManageOpen, setIsManageOpen] = useState(false);
   return (
     <div className="reader-compact-toolbar" role="group" aria-label="읽기 도구">
       {isSessionRestored ? <ReaderRestoreBanner onDismiss={onDismissRestoredNotice} /> : null}
       <button
         type="button"
         className="ghost-button compact-button"
-        onClick={onToggleTextCollapsed}
+        onClick={() => setIsManageOpen((value) => !value)}
+        aria-expanded={isManageOpen}
       >
-        {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
+        <ChevronDownIcon
+          className={`reading-vocab-collapse-icon${
+            isManageOpen ? "" : " reading-vocab-collapse-icon-collapsed"
+          }`}
+        />
+        원문 관리
       </button>
-      <button type="button" className="ghost-button compact-button" onClick={onResetSession}>
-        새 원문
-      </button>
+      {isManageOpen ? (
+        <>
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={onToggleTextCollapsed}
+          >
+            {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
+          </button>
+          <button type="button" className="ghost-button compact-button" onClick={onResetSession}>
+            새 원문
+          </button>
+        </>
+      ) : null}
       {summary ? (
         <>
           <span className="reader-toolbar-chip">저장 가능 {summary.saveableCount}개</span>
@@ -213,16 +234,21 @@ function ReaderSaveDock({
         </span>
       </div>
 
-      <button
-        type="button"
-        className="save-dock-primary-button"
-        onClick={onSaveSelected}
-        disabled={selectedCount === 0 || isSavingBatch}
-        title={selectedCount === 0 ? "원문에서 단어를 눌러 바구니에 담아주세요." : undefined}
-      >
-        <FolderIcon className="button-icon" />
-        {isSavingBatch ? "저장 중..." : `담은 단어 저장 (${selectedCount})`}
-      </button>
+      {selectedCount > 0 ? (
+        <button
+          type="button"
+          className="save-dock-primary-button"
+          onClick={onSaveSelected}
+          disabled={isSavingBatch}
+        >
+          <FolderIcon className="button-icon" />
+          {isSavingBatch ? "저장 중..." : `담은 단어 저장 (${selectedCount})`}
+        </button>
+      ) : (
+        <p className="save-dock-idle-hint muted-text">
+          원문에서 단어를 눌러 바구니에 담아보세요.
+        </p>
+      )}
 
       <div className="save-tray-quick-save">
         <button
@@ -641,13 +667,15 @@ export function ReadingTab({
       ) : null}
 
       {summary && isSampleText ? (
-        <div className="panel-card note-card reading-onboarding-note">
-          <span className="memo-label">가이드</span>
-          <p className="reading-onboarding-note-title">샘플로 핵심 흐름을 체험해보세요</p>
-          <p className="muted-text">
+        <details className="panel-card note-card reading-onboarding-note">
+          <summary className="reading-onboarding-note-title">
+            <span className="memo-label">가이드</span>
+            샘플로 핵심 흐름을 체험해보세요
+          </summary>
+          <p className="muted-text reading-onboarding-note-steps">
             1 단어 클릭해 뜻 확인 → 2 모르는 단어 저장 → 3 저장한 단어로 바로 학습
           </p>
-        </div>
+        </details>
       ) : null}
 
       {/* ReaderWorkspace -- ReaderPaper (reader-paper, hero tier) +

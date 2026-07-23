@@ -225,6 +225,11 @@ export function VocabSection({
   onGoToShared,
 }: VocabSectionProps) {
   const [isManagementOpen, setIsManagementOpen] = useState(false);
+  // "오늘 복습하기 / 덱 책장 / 단어 직접 추가 / 덱·공유 관리" used to be four
+  // always-on buttons split across the hero and the filter box -- none of
+  // them is the primary "학습하기/원문 읽기" pair this screen actually wants
+  // seen first, so they now live behind one shared "더보기" disclosure.
+  const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
   const [isCustomTermManagerOpen, setIsCustomTermManagerOpen] = useState(false);
   const hasActiveFilter =
     searchText.trim() !== "" || statusFilter !== "all" || dueOnly;
@@ -297,25 +302,55 @@ export function VocabSection({
             <BookIcon className="button-icon" />
             원문 읽기
           </button>
-        </div>
-        <div className="vocab-hero-links">
           <button
             type="button"
-            className="ghost-button compact-button"
-            onClick={onGoToStudyToday}
+            className="ghost-button compact-button vocab-hero-more-toggle"
+            onClick={() => setIsMoreActionsOpen((value) => !value)}
+            aria-expanded={isMoreActionsOpen}
           >
-            <CardsIcon className="button-icon" />
-            오늘 복습하기
-          </button>
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={onGoToShared}
-          >
-            <BookshelfIcon className="button-icon" />
-            덱 책장
+            <ChevronDownIcon
+              className={`reading-vocab-collapse-icon${
+                isMoreActionsOpen ? "" : " reading-vocab-collapse-icon-collapsed"
+              }`}
+            />
+            더보기
           </button>
         </div>
+        {isMoreActionsOpen ? (
+          <div className="vocab-hero-more-menu">
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onGoToStudyToday}
+            >
+              <CardsIcon className="button-icon" />
+              오늘 복습하기
+            </button>
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onGoToShared}
+            >
+              <BookshelfIcon className="button-icon" />
+              덱 책장
+            </button>
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
+            >
+              {isNewVocabFormOpen ? "단어 추가 닫기" : "+ 단어 직접 추가"}
+            </button>
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={() => setIsManagementOpen((open) => !open)}
+              aria-expanded={isManagementOpen}
+            >
+              덱/공유 관리
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <div className="index-card-filter">
@@ -386,24 +421,6 @@ export function VocabSection({
             onClick={() => onDueOnlyChange(!dueOnly)}
           >
             복습 예정만
-          </button>
-        </div>
-
-        <div className="vocab-action-group">
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
-          >
-            {isNewVocabFormOpen ? "단어 추가 닫기" : "+ 단어 직접 추가"}
-          </button>
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={() => setIsManagementOpen((open) => !open)}
-            aria-expanded={isManagementOpen}
-          >
-            덱/공유 관리
           </button>
         </div>
       </div>

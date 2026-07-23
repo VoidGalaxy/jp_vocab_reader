@@ -111,6 +111,10 @@
 .study-panel {
   --screen-accent: var(--tone-indigo);
   --screen-accent-soft: #ece9fa;
+  /* Tighter than the shared .tab-panel rhythm (18px) -- both disclosures
+     above the ready/empty card are collapsed by default now, so the base
+     gap just pushes that card further down than it needs to be. */
+  gap: 12px;
 }
 
 .vocab-panel {
@@ -120,7 +124,7 @@
      screen's own hero card is already compact, so the same gap below it
      just reads as dead space before the filter/list start. Scoped to this
      screen only. */
-  gap: 14px;
+  gap: 10px;
 }
 
 .shared-deck-section {
@@ -1008,10 +1012,19 @@ button {
   line-height: 1.5;
 }
 
+/* Quiet variant -- no card chrome at all, just an icon + caption line. For
+   spots (home tab) where even the plain .info-strip card reads as one more
+   box on a screen that's trying to show as few boxes as possible. */
+.info-strip-quiet {
+  padding: 0 2px;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
 
 .home-hero-card {
   gap: 14px;
-  padding: 28px;
+  padding: 22px;
   border-color: var(--paper-border);
   background: var(--paper-bg);
   box-shadow: 0 14px 32px var(--paper-shadow);
@@ -1107,6 +1120,22 @@ button {
   transform: rotate(-0.4deg);
 }
 
+/* Folds the old standalone "어휘 노트 보기" button (previously alone at the
+   bottom of the tab) into the memo card's own header instead -- one less
+   floating action on the screen, and it now reads as "go see the full
+   note this memo is about" rather than an unrelated fourth CTA. */
+.home-desk-memo-header {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.home-desk-memo-link {
+  flex: 0 0 auto;
+}
+
 /* One-line "continue" action -- replaces the old full card (icon + title +
    description + button) with a single tappable row, since there's only
    ever one next step to offer here. */
@@ -1135,9 +1164,6 @@ button {
   color: var(--muted);
 }
 
-.home-vocab-link {
-  justify-self: start;
-}
 
 @media (max-width: 640px) {
   .library-card-stage {
@@ -1996,6 +2022,15 @@ select {
   margin-top: 6px;
 }
 
+/* Deck shelf's loading moment -- the base .empty-guide padding (24px) plus
+   a bigger, more visible character reads as a tall empty box while the
+   grid is still loading; tighter padding keeps it a brief, compact pause
+   instead of a big blank card. */
+.shared-deck-loading {
+  gap: 4px;
+  padding: 14px;
+}
+
 /* Brand badge tier 2 -- standalone icon illustration (BrandEmptyIllustration)
    used at the top of every empty-state card (.empty-guide,
    .reading-empty-guide, .study-ready-card, and similar) so "nothing here
@@ -2076,8 +2111,8 @@ select {
 }
 
 .shiori-asset--hero {
-  width: clamp(150px, 15vw, 210px);
-  height: clamp(150px, 15vw, 210px);
+  width: clamp(180px, 16vw, 220px);
+  height: clamp(180px, 16vw, 220px);
 }
 
 /* Home hero companion -- a soft radial paper-glow sitting *behind* the
@@ -2184,10 +2219,12 @@ select {
 
 /* Same "floating helper" sizing as .reading-empty-guide -- a visible guide,
    not a small mark, since this is the one companion moment on the reading
-   screen's word-inspector idle state. */
+   screen's word-inspector idle state. Sized to the panel/helper tier
+   (56-80px), not the smaller inline-mark tier, so it actually reads as a
+   companion instead of an ambiguous little icon. */
 .shiori-guide-card .shiori-asset--md {
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
 }
 
 .shiori-guide-card-text {
@@ -2290,6 +2327,55 @@ select {
 }
 
 .study-stats-collapsible .stats-panel {
+  margin-top: 12px;
+}
+
+/* "덱과 모드 직접 선택" used to sit open on the tab by default, right next
+   to the quick-start hero above it -- same choice (which deck/mode to
+   study), shown twice. Folded behind the same native <details> pattern as
+   the stats panel below: the current selection stays visible in the
+   summary line, the picker itself is one tap away instead of always-on. */
+.study-options-collapsible summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  list-style: none;
+}
+
+.study-options-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.study-options-summary-label {
+  flex: 0 0 auto;
+}
+
+.study-options-summary-label::before {
+  content: "▸ ";
+  color: var(--border-strong);
+}
+
+.study-options-collapsible[open] .study-options-summary-label::before {
+  content: "▾ ";
+}
+
+.study-options-summary-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  overflow: hidden;
+  color: var(--muted);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-options-collapsible .study-control-panel {
   margin-top: 12px;
 }
 
@@ -2723,6 +2809,15 @@ select {
   animation: app-slide-up var(--motion-base) var(--ease-soft) both;
 }
 
+/* This is the one companion moment on the whole tab (the review-card flow
+   itself never repeats a big character) -- sized a notch above the shared
+   xl tier so shiori-review reads clearly here, not just "a bit bigger than
+   a mark". */
+.study-ready-card .shiori-asset--xl {
+  width: 120px;
+  height: 120px;
+}
+
 .study-ready-card h3,
 .study-ready-card p,
 .complete-card h3,
@@ -2790,11 +2885,11 @@ select {
 }
 
 /* This guide's companion is a "floating helper" moment, not a generic
-   small mark -- sized a notch above the shared md tier (44-56px target)
-   so Shiori is a visible guide here, not a disappearing icon. */
+   small mark -- sized to the panel/helper tier (56-80px) so Shiori is a
+   visible guide here, not a disappearing icon. */
 .reading-empty-guide .shiori-asset--md {
-  width: 48px;
-  height: 48px;
+  width: 64px;
+  height: 64px;
 }
 
 .reading-empty-guide button {
@@ -3383,16 +3478,45 @@ input.reading-vocab-item-checkbox {
 /* Onboarding-only guide note shown while analyzedText is the sample
    sentence (see ReadingTab's isSampleText) -- small note-card, same
    left-accent-strip language as the home dashboard's guide/trust cards, so
-   it doesn't read as a separate one-off callout. */
+   it doesn't read as a separate one-off callout. Collapsed by default (a
+   native <details>) -- the reader canvas below is the thing this screen
+   wants seen first, not a standing 1-2-3 explainer. */
 .reading-onboarding-note {
-  padding: 12px 16px;
+  padding: 10px 16px;
+}
+
+.reading-onboarding-note[open] {
+  padding-bottom: 12px;
 }
 
 .reading-onboarding-note-title {
-  margin: 0 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
   color: var(--text);
   font-size: 13px;
   font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.reading-onboarding-note-title::-webkit-details-marker {
+  display: none;
+}
+
+.reading-onboarding-note-title::after {
+  content: "▸";
+  margin-left: auto;
+  color: var(--border-strong);
+}
+
+.reading-onboarding-note[open] .reading-onboarding-note-title::after {
+  content: "▾";
+}
+
+.reading-onboarding-note-steps {
+  margin: 8px 0 0;
 }
 
 /* Reader Workspace top toolbar -- compact state chips shown once analysis
@@ -3457,6 +3581,14 @@ input.reading-vocab-item-checkbox {
 
 .save-dock-primary-button {
   width: 100%;
+}
+
+/* Idle state (nothing in the basket yet) -- swaps the full-width primary
+   save button for a quiet one-line hint, so the dock doesn't sit there as
+   a big disabled button before there's anything to save. */
+.save-dock-idle-hint {
+  margin: 0;
+  font-size: 12.5px;
 }
 
 .save-tray-header {
@@ -4059,13 +4191,19 @@ input.reading-vocab-item-checkbox {
 /* study-log-journal -- short diary-style lines instead of another stat
    block, so the same underlying numbers (오늘 복습/최근 담은 단어/자주
    틀린 단어) also read as "what happened", not just counts. */
+/* Wraps as compact chip-like lines instead of full-width grid rows -- a
+   short sentence stretched across the whole tab width used to leave a lot
+   of dead space after the text and read like an empty bar. */
 .study-log-journal-list {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .study-log-journal-line {
   display: flex;
+  flex: 0 1 auto;
+  max-width: 100%;
   align-items: center;
   gap: 8px;
   margin: 0;
@@ -4236,11 +4374,11 @@ input.reading-vocab-item-checkbox {
 }
 
 .shared-deck-section {
-  gap: 16px;
+  gap: 12px;
 }
 
 .shared-hero-card {
-  padding: 16px 20px;
+  padding: 14px 18px;
   border-top: 3px solid var(--screen-accent, var(--accent));
 }
 
@@ -4475,15 +4613,12 @@ input.reading-vocab-item-checkbox {
   -webkit-line-clamp: 2;
 }
 
+/* Now composed on top of .info-strip (icon + quiet caption row) instead of
+   its own bordered box -- this note isn't the thing the screen wants
+   noticed first, so it shouldn't look as heavy as the deck cards below. */
 .shared-deck-disclaimer {
   margin: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--soft-bg);
-  color: var(--muted);
   font-size: 12px;
-  line-height: 1.5;
-  padding: 10px 12px;
 }
 
 .shared-deck-title-row {
@@ -4645,10 +4780,10 @@ input.reading-vocab-item-checkbox {
    drawer's filter tab, not an admin data-table toolbar. */
 .index-card-filter {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   border: 1px dashed var(--border-strong);
   border-radius: 4px 4px 10px 10px;
-  padding: 12px;
+  padding: 10px;
   background: var(--soft-bg);
 }
 
@@ -4685,23 +4820,14 @@ input.reading-vocab-item-checkbox {
   background: var(--panel-bg);
 }
 
-.vocab-action-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-}
-
 /* Vocab tab hero -- "내 학습 라이브러리" framing above the search/filter
    toolbar, reusing the same warm-paper card look and hero-actions layout
    the home dashboard and reading tab already use. */
 .vocab-hero-card {
-  gap: 14px;
-  padding: 16px 20px;
+  gap: 10px;
+  padding: 12px 16px;
   border-color: var(--paper-border);
-  border-top: 3px solid var(--screen-accent, var(--accent));
+  border-top: 2px solid var(--screen-accent, var(--accent));
   background: var(--paper-bg);
   box-shadow: 0 14px 32px var(--paper-shadow);
 }
@@ -4716,7 +4842,7 @@ input.reading-vocab-item-checkbox {
    pair, so the note screen opens light instead of reading as a stats
    dashboard. */
 .vocab-hero-compact {
-  gap: 10px;
+  gap: 8px;
 }
 
 .vocab-hero-chip-row {
@@ -4747,13 +4873,20 @@ input.reading-vocab-item-checkbox {
   margin: 0;
 }
 
-/* "오늘 복습하기" / "덱 책장" -- kept, but demoted below the primary pair
-   as small text links instead of full-size buttons (구현1: 관리 도구처럼
-   보이는 액션 버튼 묶음 줄이기). */
-.vocab-hero-links {
+/* "오늘 복습하기" / "덱 책장" / "단어 직접 추가" / "덱·공유 관리" -- four
+   secondary actions that used to be always-on buttons split across the
+   hero and the filter box below; now share one "더보기" disclosure so the
+   hero only ever shows its 2 primary buttons + this one toggle by default.
+   The toggle itself sits inline in .landing-hero-actions (no separate row)
+   so it doesn't add its own line of height. */
+.vocab-hero-more-toggle {
+  margin-left: auto;
+}
+
+.vocab-hero-more-menu {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
 }
 
 .vocab-search-wrap {
@@ -5454,7 +5587,7 @@ input.reading-vocab-item-checkbox {
     width: 100%;
   }
 
-  .vocab-action-group {
+  .vocab-hero-more-menu {
     flex-direction: column;
     align-items: stretch;
   }

@@ -308,73 +308,75 @@ export function StudySection({
             onGoToReading={onGoToReading}
           />
 
-          <section className="study-control-panel study-control-panel-compact">
-            <div className="study-control-heading">
-              <h3>덱과 모드 직접 선택</h3>
-              <span>
+          <details className="study-options-collapsible">
+            <summary>
+              <span className="study-options-summary-label">학습 옵션</span>
+              <span className="study-options-summary-hint">
                 {selectedDeckName} · {modeLabel}
               </span>
-            </div>
+            </summary>
 
-            <div className="study-mode-grid" role="group" aria-label="학습 모드">
-              {(["today", "uncertain", "unknown", "all"] as StudyMode[]).map((mode) => (
+            <div className="study-control-panel study-control-panel-compact">
+              <div className="study-mode-grid" role="group" aria-label="학습 모드">
+                {(["today", "uncertain", "unknown", "all"] as StudyMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    className={
+                      studyMode === mode
+                        ? "study-mode-button active-study-mode"
+                        : "study-mode-button"
+                    }
+                    onClick={() => onStudyModeChange(mode)}
+                  >
+                    <span>{studyModeLabels[mode]}</span>
+                    <strong>
+                      {mode === "today"
+                        ? dueCount
+                        : mode === "uncertain"
+                          ? uncertainCount
+                          : mode === "unknown"
+                            ? unknownCount
+                            : allStudyCount}
+                      개
+                    </strong>
+                  </button>
+                ))}
+              </div>
+
+              <div className="study-control-footer">
+                <label className="inline-field">
+                  학습 덱
+                  <select
+                    value={selectedDeckId}
+                    onChange={(event) => onSelectedDeckChange(event.target.value)}
+                  >
+                    <option value="all">전체 단어장</option>
+                    {decks.map((deck) => (
+                      <option key={deck.id} value={String(deck.id)}>
+                        {deck.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button
-                  key={mode}
                   type="button"
-                  className={
-                    studyMode === mode
-                      ? "study-mode-button active-study-mode"
-                      : "study-mode-button"
-                  }
-                  onClick={() => onStudyModeChange(mode)}
+                  className="study-start-button"
+                  onClick={onStart}
+                  disabled={isLoading}
                 >
-                  <span>{studyModeLabels[mode]}</span>
-                  <strong>
-                    {mode === "today"
-                      ? dueCount
-                      : mode === "uncertain"
-                        ? uncertainCount
-                        : mode === "unknown"
-                          ? unknownCount
-                          : allStudyCount}
-                    개
-                  </strong>
+                  {isLoading ? (
+                    "불러오는 중..."
+                  ) : (
+                    <>
+                      <CardsIcon className="button-icon" />
+                      학습 시작
+                    </>
+                  )}
                 </button>
-              ))}
+              </div>
             </div>
-
-            <div className="study-control-footer">
-              <label className="inline-field">
-                학습 덱
-                <select
-                  value={selectedDeckId}
-                  onChange={(event) => onSelectedDeckChange(event.target.value)}
-                >
-                  <option value="all">전체 단어장</option>
-                  {decks.map((deck) => (
-                    <option key={deck.id} value={String(deck.id)}>
-                      {deck.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="study-start-button"
-                onClick={onStart}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  "불러오는 중..."
-                ) : (
-                  <>
-                    <CardsIcon className="button-icon" />
-                    학습 시작
-                  </>
-                )}
-              </button>
-            </div>
-          </section>
+          </details>
 
           <details className="study-stats-collapsible">
             <summary>학습 현황 자세히 보기</summary>

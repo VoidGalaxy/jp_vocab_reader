@@ -186,7 +186,7 @@ export function TokenDetailSheet({
         </div>
         {token.jlpt_level ? (
           <p className="jlpt-detail-hint">
-            JLPT 추천 어휘 기준이며, 공식 JLPT 어휘 목록은 아닙니다.
+            JLPT 추천 어휘 기준이며, 비공식 참고용 표시입니다.
           </p>
         ) : null}
         <div className="context-example-block">

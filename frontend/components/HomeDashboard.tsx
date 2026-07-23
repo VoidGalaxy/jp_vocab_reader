@@ -175,7 +175,16 @@ export function HomeDashboard({
       ) : null}
 
       <div className="home-desk-memo paper-corner">
-        <span className="memo-label">책상 메모</span>
+        <div className="home-desk-memo-header">
+          <span className="memo-label">책상 메모</span>
+          <button
+            type="button"
+            className="ghost-button compact-button home-desk-memo-link"
+            onClick={onGoToVocab}
+          >
+            어휘 노트 보기
+          </button>
+        </div>
         <button
           type="button"
           className="ghost-button home-continue-row"
@@ -187,18 +196,10 @@ export function HomeDashboard({
         </button>
       </div>
 
-      <p className="info-strip">
+      <p className="info-strip info-strip-quiet">
         <ShieldIcon className="info-strip-icon" />
         원문 전체는 서버에 저장하지 않아요.
       </p>
-
-      <button
-        type="button"
-        className="ghost-button compact-button home-vocab-link"
-        onClick={onGoToVocab}
-      >
-        어휘 노트 보기
-      </button>
     </section>
   );
 }
