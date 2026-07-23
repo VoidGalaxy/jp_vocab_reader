@@ -284,26 +284,14 @@ is additive merging, not a rewrite of the review flow.
   used; no "복사된 단어" phrasing (there's nothing copied), no "공식
   JLPT" phrasing anywhere in the new code or UI strings.
 
-### review_logs: still vocab-only, lexeme logging is Phase 4
+### review_logs: still vocab-only, lexeme logging now in Phase 4
 
 `review_logs.vocab_item_id` is a `NOT NULL` FK into `vocab_items` -- a
-lexeme rating has no row to point that at. Exactly as phase 1 already
-flagged, this phase **does not** touch `review_logs` at all: a lexeme
-rating updates only `user_word_progress` (`correct_count`/`wrong_count`/
-`review_level`/`next_review_at`/`last_reviewed_at`), with no reviewed-word
-history log written anywhere. Deliberately not attempted this phase --
-forcing a nullable/polymorphic FK onto the existing `review_logs` table
-under time pressure risks corrupting the integrity of every already-logged
-personal review. **Phase 4 TODO**, two candidate designs already identified
-(pick one then, not now):
-
-1. A new, separate `lexeme_review_logs` table (mirrors `review_logs`'
-   columns, FK's into `lexemes`/`user_word_progress` instead of
-   `vocab_items`) -- purely additive, zero risk to the existing table.
-2. Redesigning `review_logs` itself into a polymorphic
-   `item_type`/`item_id` shape that covers both -- more unified, but a real
-   migration of every existing row, which is exactly the kind of
-   destructive-migration risk this phase was told to avoid.
+lexeme rating has no row to point that at. As phase 1 already flagged, this
+phase (3) does not touch `review_logs` at all: a lexeme rating updates only
+`user_word_progress`, with no reviewed-word history log written anywhere
+yet. Phase 4 (see below) adds that log via a new, separate, additive table
+instead of retrofitting `review_logs` itself.
 
 ### stats/dashboard: intentionally not touched this phase
 
@@ -339,6 +327,132 @@ that:
   **one** de-duplicated study card, not two.
 - A shared deck the user never subscribed to never leaks its words into
   the study queue, even if its id is passed explicitly.
+
+## Phase 4: lexeme review logs
+
+Phase 4 gives a subscribed shared-deck/JLPT word's review history somewhere
+to live, without ever touching `review_logs` (the existing, vocab-only
+review-history table phases 1-3 all deliberately left alone -- see above).
+
+### The new table: `lexeme_review_logs`
+
+Purely additive, created via `CREATE TABLE IF NOT EXISTS` in both the
+SQLite and PostgreSQL branches of `ensure_schema`/`create_postgres_tables`
+(`app/database.py`), exactly like every other table this project's lexeme
+storage has added. Never touches or migrates `review_logs`.
+
+| Column | Notes |
+| --- | --- |
+| `id` | PK |
+| `user_id` | FK -> `users(id)` |
+| `lexeme_id` | FK -> `lexemes(id)` |
+| `shared_deck_id` | FK -> `shared_decks(id)`, **nullable** -- which deck the rating was made through, if known |
+| `rating` | `"again"` \| `"hard"` \| `"good"` \| `"easy"` |
+| `previous_review_level` / `new_review_level` | before/after the SRS step this rating applied |
+| `previous_next_review_at` / `new_next_review_at` | before/after `next_review_at` |
+| `previous_status` / `new_status` | before/after `user_word_progress.status` -- currently always equal, since rating a word (lexeme or vocab) has never changed its status in this codebase; logged anyway for schema completeness / in case that ever changes |
+| `created_at` | when this rating was recorded |
+
+Indexes: `(user_id, created_at)`, `(user_id, lexeme_id)`,
+`(user_id, shared_deck_id)`, `(lexeme_id)` -- mirrors `review_logs`' own
+`(user_id, reviewed_at)` / `(vocab_item_id)` index shape, adapted for the
+extra `shared_deck_id` dimension a lexeme rating has that a vocab one
+doesn't.
+
+### `record_lexeme_review()`: one call, two writes
+
+`app/repositories/lexeme_repository.py`'s `record_lexeme_review()` gained
+one new parameter, `shared_deck_id: int | None = None`, and now does two
+things in the same function call (same as `vocab_repository.record_review()`
+already does for `vocab_items` + `review_logs`):
+
+1. Everything it already did in phase 1-3, unchanged: lazily create
+   `user_word_progress` via `get_or_create_progress()` if it doesn't exist,
+   apply `compute_review_schedule()` (same fixed-step SRS ladder as
+   `vocab_items`), `UPDATE user_word_progress`.
+2. **New**: capture `previous_review_level`/`previous_next_review_at`/
+   `previous_status` *before* the update, and `new_review_level`/
+   `new_next_review_at`/`new_status` *after* it, then `INSERT INTO
+   lexeme_review_logs` with both, plus `user_id`/`lexeme_id`/
+   `shared_deck_id`/`rating`/`created_at`.
+
+Both writes happen inside the same `with get_connection() as connection:`
+block as the existing progress update -- a rating always produces both
+rows together, never one without the other. `POST
+/shared-decks/{shared_deck_id}/words/{lexeme_id}/review`
+(`app/main.py`) passes its own path parameter straight through as
+`shared_deck_id`, so a rating made from a specific deck's card is logged
+with that deck's id; a caller with only a `lexeme_id` (no deck context)
+can still log, with `shared_deck_id = NULL`.
+
+**Never created by a read.** `get_or_create_progress()` itself (called
+from `update_word_status()` too, and from listing overlays) does not
+insert into `lexeme_review_logs` -- only `record_lexeme_review()` does,
+and only for an actual rating submission. Listing the study queue
+(`GET /study-items/lexemes`) or opening a subscribed deck's word list
+creates zero `lexeme_review_logs` rows, exactly like it already creates
+zero `user_word_progress` rows.
+
+### API / frontend: unchanged
+
+`LexemeWordProgressResponse` (the response shape of both
+`PATCH .../progress` and `POST .../review`) was **not changed** -- it
+still returns exactly `lexeme_id`, `status`, `review_level`,
+`next_review_at`, `correct_count`, `wrong_count`, `last_reviewed_at`. The
+frontend's phase-3 `submitStudyReview()` lexeme branch (which already
+calls `POST /shared-decks/{shared_deck_id}/words/{lexeme_id}/review` with
+the deck id it already has) required **zero changes** this phase -- the
+request/response contract it was already built against didn't move.
+
+### Storage regression, extended again
+
+`backend/scripts/check_lexeme_review_logs_regression.py` (new) guards, on
+top of everything the phase-1/2/3 scripts already check (all of which
+still pass unchanged):
+
+- Import and merely listing the study queue create **zero**
+  `lexeme_review_logs` rows.
+- One rating creates exactly **one** `user_word_progress` row (lazy
+  create, unchanged from phase 3) **and exactly one** `lexeme_review_logs`
+  row.
+- Rating the *same* lexeme again creates **zero** additional
+  `user_word_progress` rows (updated in place) but **one more**
+  `lexeme_review_logs` row -- the log is per rating *event*, the progress
+  row is per word.
+- `vocab_items` never grows at any point.
+- A rating with no `shared_deck_id` still logs, with `shared_deck_id =
+  NULL`.
+- The existing personal `vocab_items` review flow
+  (`vocab_repository.record_review()`) still logs to `review_logs` exactly
+  as before, and never writes to `lexeme_review_logs`.
+
+### What phase 4 deliberately did not do
+
+- **`/stats` still doesn't read `lexeme_review_logs`.** No lexeme-aware
+  stats/dashboard integration this phase either -- still deferred, now to
+  **phase 5** (see below).
+- **No lexeme meaning-feedback flow.** The existing `/feedback/meaning`
+  endpoint is still `vocab_items`-scoped only; reporting a shared lexeme's
+  meaning as wrong has no dedicated flow yet.
+- **No legacy shared-deck migration.** Decks published before the
+  lexeme-mode publish change (phase before this one) still have no
+  `shared_deck_words` rows and stay on the legacy `vocab_items`-copying
+  import path, untouched.
+
+### Next phase candidates
+
+1. **Lexeme stats/dashboard integration** -- fold `lexeme_review_logs` +
+   `user_word_progress` into `/stats`' due/new/reviewed-today counts
+   alongside `vocab_items`, once a design exists for how an approximate
+   merged number should be presented without undermining trust in the
+   existing precise `vocab_items`-only numbers.
+2. **Lexeme meaning feedback** -- a "오류 신고" entry point for a shared
+   lexeme's common meaning, separate from the existing `vocab_items`-scoped
+   one.
+3. **Legacy shared-deck migration** -- backfilling pre-lexeme-mode shared
+   decks into `lexemes`/`shared_deck_words`, and deciding how (or whether)
+   to reconcile already-copied personal `vocab_items` rows against the new
+   progress/log tables.
 
 ## Existing data / migration policy
 

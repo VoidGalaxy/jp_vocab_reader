@@ -402,13 +402,21 @@ def update_word_status(
 
 
 def record_lexeme_review(
-    user_id: int, lexeme_id: int, rating: str
+    user_id: int, lexeme_id: int, rating: str, shared_deck_id: int | None = None
 ) -> dict[str, Any] | None:
     """Same fixed-step SRS ladder as vocab_items (compute_review_schedule),
-    applied to a lazily-created user_word_progress row instead. Deliberately
-    does not touch review_logs (that table's vocab_item_id FK is
-    vocab_items-specific) -- a lexeme-level review log is left as a phase-2
-    TODO (see docs/architecture/shared-lexeme-progress-storage.md).
+    applied to a lazily-created user_word_progress row instead.
+
+    Phase 4 (see docs/architecture/shared-lexeme-progress-storage.md --
+    "Phase 4: lexeme review logs"): also writes one row to the additive
+    `lexeme_review_logs` table, in the same call that updates
+    user_word_progress -- never on its own. review_logs (vocab_items'
+    review history) is completely untouched by this function; its
+    vocab_item_id NOT NULL FK has no room for a lexeme-keyed review, which
+    is exactly why lexeme_review_logs is a separate table instead of trying
+    to retrofit that one. `shared_deck_id` is optional context (which deck
+    the rating was made through) -- a caller that only has a lexeme_id
+    (no deck context) can still log by passing None.
     """
     reviewed_at = now_utc()
     timestamp = reviewed_at.isoformat()
@@ -420,9 +428,11 @@ def record_lexeme_review(
             return None
 
         progress = get_or_create_progress(connection, user_id, lexeme_id)
-        current_level = int(progress["review_level"] or 0)
+        previous_review_level = int(progress["review_level"] or 0)
+        previous_next_review_at = progress["next_review_at"]
+        previous_status = progress["status"]
         next_level, next_review_at = compute_review_schedule(
-            rating, current_level, reviewed_at
+            rating, previous_review_level, reviewed_at
         )
         count_column = "wrong_count" if rating == "again" else "correct_count"
         connection.execute(
@@ -438,6 +448,32 @@ def record_lexeme_review(
             (next_level, next_review_at, timestamp, timestamp, user_id, lexeme_id),
         )
         row = _get_progress_row(connection, user_id, lexeme_id)
+        new_status = row["status"]
+
+        connection.execute(
+            """
+            INSERT INTO lexeme_review_logs (
+                user_id, lexeme_id, shared_deck_id, rating,
+                previous_review_level, new_review_level,
+                previous_next_review_at, new_next_review_at,
+                previous_status, new_status, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                lexeme_id,
+                shared_deck_id,
+                rating,
+                previous_review_level,
+                next_level,
+                previous_next_review_at,
+                next_review_at,
+                previous_status,
+                new_status,
+                timestamp,
+            ),
+        )
     return row_to_dict(row)
 
 

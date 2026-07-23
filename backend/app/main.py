@@ -644,7 +644,9 @@ def post_shared_deck_word_review(
     user_id = current_user_id(http_request)
     if not shared_deck_exists(shared_deck_id):
         raise HTTPException(status_code=404, detail="shared deck not found")
-    progress = record_lexeme_review(user_id, lexeme_id, body.rating)
+    progress = record_lexeme_review(
+        user_id, lexeme_id, body.rating, shared_deck_id=shared_deck_id
+    )
     if not progress:
         raise HTTPException(status_code=404, detail="word not found")
     return LexemeWordProgressResponse(**progress)
