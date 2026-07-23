@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import {
   AppEmptyState,
   BrandDeckCover,
@@ -5,12 +6,20 @@ import {
 } from "./BrandElements";
 import { ShioriMark, ShioriStamp } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
-import { BookIcon, BookshelfIcon, CardFileIcon, RotateIcon, ShieldIcon } from "./icons";
+import {
+  BookIcon,
+  BookshelfIcon,
+  CardFileIcon,
+  RotateIcon,
+  SearchIcon,
+  ShieldIcon,
+} from "./icons";
 import {
   formatDateTime,
   getDisplayMeaning,
   getJlptLevel,
   sortSharedDecksByJlptLevel,
+  statusLabels,
   StatusSelect,
 } from "./shared";
 import type {
@@ -20,6 +29,21 @@ import type {
   SharedDeckWordProgress,
   TokenStatus,
 } from "./types";
+
+// 학습 목록 카드함 필터 -- 색인 카드 카드함을 뒤지듯 검색/상태로 좁혀볼 수 있게
+// (see VocabSection.tsx's identical statusFilterOptions pattern for the 노트
+// tab). "전체"는 특정 상태가 아니라 필터 해제이므로 TokenStatus에 없음.
+const SHARED_WORD_STATUS_FILTERS: Array<{ value: "all" | TokenStatus; label: string }> = [
+  { value: "all", label: "전체" },
+  { value: "unknown", label: statusLabels.unknown },
+  { value: "uncertain", label: statusLabels.uncertain },
+  { value: "known", label: statusLabels.known },
+  { value: "unclassified", label: statusLabels.unclassified },
+];
+
+// 한 번에 렌더링하는 단어 카드 수 -- 수백~수천 단어짜리 추천 덱을 열어도
+// 목록이 스프레드시트처럼 한 번에 쏟아지지 않도록 페이지 단위로 늘려간다.
+const SHARED_WORD_PAGE_SIZE = 80;
 
 // Maps one overlay-carrying SharedDeckItem (see the additive fields on that
 // type) into the shape the interactive word list actually works with --
@@ -150,6 +174,56 @@ export function SharedDeckSection({
     ? Boolean(selectedDeck.imported_at) || importedDeckId === selectedDeck.id
     : false;
   const selectedLevel = selectedDeck ? getJlptLevel(selectedDeck.title) : null;
+
+  // 학습 목록 카드함 검색/필터 -- 구독 덱 단어가 수백~수천 개여도 스크롤로만
+  // 뒤지지 않도록. 다른 덱을 열거나 검색어/필터를 바꾸면 표시 개수를 다시
+  // 첫 페이지로 되돌린다.
+  const [wordSearchText, setWordSearchText] = useState("");
+  const [wordStatusFilter, setWordStatusFilter] = useState<"all" | TokenStatus>("all");
+  const [visibleWordCount, setVisibleWordCount] = useState(SHARED_WORD_PAGE_SIZE);
+
+  useEffect(() => {
+    setWordSearchText("");
+    setWordStatusFilter("all");
+    setVisibleWordCount(SHARED_WORD_PAGE_SIZE);
+  }, [selectedDeck?.id]);
+
+  function handleWordSearchChange(value: string) {
+    setWordSearchText(value);
+    setVisibleWordCount(SHARED_WORD_PAGE_SIZE);
+  }
+
+  function handleWordStatusFilterChange(value: "all" | TokenStatus) {
+    setWordStatusFilter(value);
+    setVisibleWordCount(SHARED_WORD_PAGE_SIZE);
+  }
+
+  const subscribedWords = useMemo(
+    () =>
+      selectedDeck && selectedDeck.mode === "subscribed"
+        ? selectedDeck.items.map(toSharedDeckWordProgress)
+        : [],
+    [selectedDeck],
+  );
+  const filteredSubscribedWords = useMemo(() => {
+    const query = wordSearchText.trim().toLowerCase();
+    return subscribedWords.filter((word) => {
+      if (wordStatusFilter !== "all" && word.status !== wordStatusFilter) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      return (
+        word.surface.toLowerCase().includes(query) ||
+        word.baseForm.toLowerCase().includes(query) ||
+        word.reading.toLowerCase().includes(query) ||
+        word.meaningKo.toLowerCase().includes(query)
+      );
+    });
+  }, [subscribedWords, wordSearchText, wordStatusFilter]);
+  const visibleSubscribedWords = filteredSubscribedWords.slice(0, visibleWordCount);
+  const hasMoreSubscribedWords = filteredSubscribedWords.length > visibleSubscribedWords.length;
 
   function handleImportClick(deck: SharedDeckSummary) {
     if (deck.imported_at) {
@@ -555,38 +629,95 @@ export function SharedDeckSection({
                 <h3>
                   학습 목록 ({selectedDeck.items.length}개)
                 </h3>
-                {selectedDeck.items.length > 0 ? (
-                  <div className="shared-preview-list shared-lexeme-word-list">
-                    {selectedDeck.items.map((item) => {
-                      const word = toSharedDeckWordProgress(item);
-                      return (
-                        <div
-                          key={word.lexemeId}
-                          className="shared-preview-row shared-lexeme-row"
-                        >
-                          <div className="shared-lexeme-row-main">
-                            <strong>{word.surface || word.baseForm || "-"}</strong>
-                            <span>{word.reading || "-"}</span>
-                            <span>{getDisplayMeaning(word.meaningKo)}</span>
-                          </div>
-                          {selectedAlreadyImported ? (
-                            <div className="shared-lexeme-row-status">
-                              <StatusSelect
-                                value={word.status}
-                                label={`${word.surface || word.baseForm} 학습 상태`}
-                                onChange={(status) =>
-                                  onUpdateWordStatus(selectedDeck.id, word.lexemeId, status)
-                                }
-                              />
-                              {updatingWordLexemeId === word.lexemeId ? (
-                                <span className="shared-lexeme-row-saving">저장 중...</span>
+                {subscribedWords.length > 0 ? (
+                  <>
+                    <div className="index-card-filter shared-lexeme-word-filter">
+                      <span className="memo-label vocab-toolbar-label">
+                        <SearchIcon className="vocab-toolbar-label-icon" />
+                        카드함 필터
+                      </span>
+                      <div className="vocab-search-wrap">
+                        <SearchIcon className="vocab-search-icon" />
+                        <input
+                          className="vocab-search-input"
+                          value={wordSearchText}
+                          onChange={(event) => handleWordSearchChange(event.target.value)}
+                          placeholder="단어, 읽기, 뜻으로 검색"
+                          aria-label="학습 목록 검색"
+                        />
+                      </div>
+                      <div className="vocab-status-filters" role="group" aria-label="학습 상태 필터">
+                        {SHARED_WORD_STATUS_FILTERS.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            className={`vocab-filter-chip${
+                              wordStatusFilter === option.value ? " vocab-filter-chip-active" : ""
+                            }`}
+                            aria-pressed={wordStatusFilter === option.value}
+                            onClick={() => handleWordStatusFilterChange(option.value)}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {filteredSubscribedWords.length > 0 ? (
+                      <>
+                        <div className="shared-preview-list shared-lexeme-word-list">
+                          {visibleSubscribedWords.map((word) => (
+                            <div
+                              key={word.lexemeId}
+                              className="shared-preview-row shared-lexeme-row"
+                            >
+                              <div className="shared-lexeme-row-main">
+                                <strong>{word.surface || word.baseForm || "-"}</strong>
+                                <span>{word.reading || "-"}</span>
+                                <span>{getDisplayMeaning(word.meaningKo)}</span>
+                              </div>
+                              {selectedAlreadyImported ? (
+                                <div className="shared-lexeme-row-status">
+                                  <StatusSelect
+                                    value={word.status}
+                                    label={`${word.surface || word.baseForm} 학습 상태`}
+                                    onChange={(status) =>
+                                      onUpdateWordStatus(selectedDeck.id, word.lexemeId, status)
+                                    }
+                                  />
+                                  {updatingWordLexemeId === word.lexemeId ? (
+                                    <span className="shared-lexeme-row-saving">저장 중...</span>
+                                  ) : null}
+                                </div>
                               ) : null}
                             </div>
-                          ) : null}
+                          ))}
                         </div>
-                      );
-                    })}
-                  </div>
+                        <p className="muted-text shared-lexeme-word-count-caption">
+                          전체 {filteredSubscribedWords.length}개 중{" "}
+                          {visibleSubscribedWords.length}개 표시
+                        </p>
+                        {hasMoreSubscribedWords ? (
+                          <button
+                            type="button"
+                            className="secondary-button compact-button shared-lexeme-load-more"
+                            onClick={() =>
+                              setVisibleWordCount((count) => count + SHARED_WORD_PAGE_SIZE)
+                            }
+                          >
+                            더 보기 (
+                            {Math.min(
+                              SHARED_WORD_PAGE_SIZE,
+                              filteredSubscribedWords.length - visibleSubscribedWords.length,
+                            )}
+                            개)
+                          </button>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p className="empty">검색 결과가 없습니다.</p>
+                    )}
+                  </>
                 ) : (
                   <p className="empty">공유된 단어가 없습니다.</p>
                 )}

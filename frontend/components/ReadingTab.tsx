@@ -84,19 +84,19 @@ const saveButtons: Array<{
   {
     mode: "unknown_only",
     label: "모르는 단어 저장",
-    hint: "unknown 상태 후보만 저장",
+    hint: "모르는 단어로 표시한 후보만 저장합니다",
     variant: "secondary",
   },
   {
     mode: "unknown_uncertain",
     label: "모르는+헷갈리는 단어 저장",
-    hint: "unknown + uncertain 저장",
+    hint: "모르는 단어와 헷갈리는 단어를 함께 저장합니다",
     variant: "secondary",
   },
   {
     mode: "all_unclassified",
     label: "미분류까지 저장",
-    hint: "unknown + uncertain + unclassified 저장",
+    hint: "모르는 단어, 헷갈리는 단어, 아직 분류하지 않은 단어까지 모두 저장합니다",
     variant: "ghost",
   },
 ];

@@ -101,7 +101,7 @@ export function HomeDashboard({
               onClick={isDevUser ? onOpenAccount : onStartTodayReview}
             >
               <CardsIcon className="button-icon" />
-              오늘 복습하기
+              {isDevUser ? "로그인하고 복습 기록 저장하기" : "오늘 복습하기"}
             </button>
             <button
               type="button"
