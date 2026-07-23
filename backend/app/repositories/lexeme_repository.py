@@ -227,7 +227,7 @@ def get_or_create_subscription(
                 connection.execute(
                     """
                     UPDATE user_deck_subscriptions
-                    SET is_active = 1, updated_at = ?
+                    SET is_active = TRUE, updated_at = ?
                     WHERE id = ?
                     """,
                     (timestamp, existing["id"]),
@@ -239,7 +239,7 @@ def get_or_create_subscription(
             INSERT INTO user_deck_subscriptions (
                 user_id, shared_deck_id, is_active, imported_at, created_at, updated_at
             )
-            VALUES (?, ?, 1, ?, ?, ?)
+            VALUES (?, ?, TRUE, ?, ?, ?)
             """,
             (user_id, shared_deck_id, timestamp, timestamp, timestamp),
         )
@@ -261,7 +261,7 @@ def list_subscribed_shared_deck_ids(user_id: int) -> set[int]:
             """
             SELECT shared_deck_id
             FROM user_deck_subscriptions
-            WHERE user_id = ? AND is_active = 1
+            WHERE user_id = ? AND is_active = TRUE
             """,
             (user_id,),
         ).fetchall()
@@ -631,7 +631,7 @@ def get_subscribed_lexeme_stats_summary(user_id: int) -> dict[str, int]:
                     JOIN user_deck_subscriptions
                         ON user_deck_subscriptions.shared_deck_id = shared_deck_words.shared_deck_id
                        AND user_deck_subscriptions.user_id = ?
-                       AND user_deck_subscriptions.is_active = 1
+                       AND user_deck_subscriptions.is_active = TRUE
                 ) AS subscribed_lexemes
                 LEFT JOIN user_word_progress
                     ON user_word_progress.lexeme_id = subscribed_lexemes.lexeme_id

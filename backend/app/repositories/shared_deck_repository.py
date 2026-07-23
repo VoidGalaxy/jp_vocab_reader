@@ -200,7 +200,7 @@ def list_shared_decks(user_id: int | None = None) -> list[dict[str, Any]]:
                            FROM user_deck_subscriptions
                            WHERE user_deck_subscriptions.shared_deck_id = shared_decks.id
                              AND user_deck_subscriptions.user_id = ?
-                             AND user_deck_subscriptions.is_active = 1
+                             AND user_deck_subscriptions.is_active = TRUE
                        )
                    ) AS imported_at
             FROM shared_decks
@@ -241,7 +241,7 @@ def get_shared_deck(
                            FROM user_deck_subscriptions
                            WHERE user_deck_subscriptions.shared_deck_id = shared_decks.id
                              AND user_deck_subscriptions.user_id = ?
-                             AND user_deck_subscriptions.is_active = 1
+                             AND user_deck_subscriptions.is_active = TRUE
                        )
                    ) AS imported_at
             FROM shared_decks
