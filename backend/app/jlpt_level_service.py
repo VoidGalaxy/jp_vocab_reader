@@ -28,8 +28,13 @@ def extract_jlpt_level_from_title(title: str) -> str | None:
 
 
 def _load_jlpt_level_index() -> tuple[dict[str, str], dict[str, str]]:
+    leveled_items: list[dict[str, Any]] = []
+
     with get_connection() as connection:
-        rows = connection.execute(
+        # Legacy path: JLPT decks published the old way (personal deck copied
+        # into shared_deck_items) -- level comes from the deck title pattern,
+        # same as always.
+        legacy_rows = connection.execute(
             """
             SELECT shared_decks.title AS deck_title,
                    shared_deck_items.surface, shared_deck_items.base_form,
@@ -42,14 +47,27 @@ def _load_jlpt_level_index() -> tuple[dict[str, str], dict[str, str]]:
             """,
             ("JLPT %", "N_어휘모음"),
         ).fetchall()
+        # New path: lexeme-mode JLPT decks (see
+        # docs/architecture/shared-lexeme-progress-storage.md) never write to
+        # shared_deck_items, but each lexeme already carries its own
+        # jlpt_level column directly -- no deck-title parsing needed here.
+        lexeme_rows = connection.execute(
+            """
+            SELECT surface, base_form, reading, base_form AS normalized_form,
+                   jlpt_level AS level
+            FROM lexemes
+            WHERE jlpt_level IS NOT NULL AND jlpt_level != ''
+            """
+        ).fetchall()
 
-    leveled_items: list[dict[str, Any]] = []
-    for row in rows:
+    for row in legacy_rows:
         item = row_to_dict(row)
         level = extract_jlpt_level_from_title(item.get("deck_title", ""))
         if level:
             item["level"] = level
             leveled_items.append(item)
+    for row in lexeme_rows:
+        leveled_items.append(row_to_dict(row))
 
     # Easiest level first, so when the same word appears in multiple JLPT
     # decks the first (easiest) match wins via dict.setdefault below.

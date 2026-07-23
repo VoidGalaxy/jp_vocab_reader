@@ -5,14 +5,44 @@ import {
 } from "./BrandElements";
 import { ShioriMark, ShioriStamp } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
-import { BookshelfIcon, CardFileIcon, RotateIcon, ShieldIcon } from "./icons";
+import { BookIcon, BookshelfIcon, CardFileIcon, RotateIcon, ShieldIcon } from "./icons";
 import {
   formatDateTime,
   getDisplayMeaning,
   getJlptLevel,
   sortSharedDecksByJlptLevel,
+  StatusSelect,
 } from "./shared";
-import type { SharedDeckDetail, SharedDeckSummary } from "./types";
+import type {
+  SharedDeckDetail,
+  SharedDeckItem,
+  SharedDeckSummary,
+  SharedDeckWordProgress,
+  TokenStatus,
+} from "./types";
+
+// Maps one overlay-carrying SharedDeckItem (see the additive fields on that
+// type) into the shape the interactive word list actually works with --
+// deliberately named/typed so `lexemeId` is never confused with a personal
+// VocabularyItem's `id`. Only meaningful for a "subscribed"-mode deck's
+// items, which always carry these fields (see
+// docs/architecture/shared-lexeme-progress-storage.md).
+function toSharedDeckWordProgress(item: SharedDeckItem): SharedDeckWordProgress {
+  return {
+    lexemeId: item.lexeme_id ?? item.id,
+    surface: item.surface || item.base_form || "",
+    baseForm: item.base_form || item.surface || "",
+    reading: item.reading || "",
+    partOfSpeech: item.part_of_speech || "",
+    meaningKo: item.meaning_ko || "",
+    jlptLevel: item.jlpt_level ?? null,
+    status: (item.status as TokenStatus | null) ?? "unclassified",
+    reviewLevel: item.review_level ?? 0,
+    nextReviewAt: item.next_review_at ?? null,
+    correctCount: item.correct_count ?? 0,
+    wrongCount: item.wrong_count ?? 0,
+  };
+}
 
 function JlptLevelTag({ level }: { level: string }) {
   return (
@@ -79,11 +109,17 @@ type SharedDeckSectionProps = {
   importedDeckId: number | null;
   unpublishingDeckId: number | null;
   message: string;
+  // Subscribed-deck word status (see
+  // docs/architecture/shared-lexeme-progress-storage.md) -- lexeme_id of
+  // whichever word is currently being updated, so its own dropdown can show
+  // a saving state without disabling the whole list.
+  updatingWordLexemeId: number | null;
   onRefresh: () => void;
   onSelectDeck: (deckId: number) => void;
   onCloseDetail: () => void;
   onImportDeck: (deckId: number) => void;
   onUnpublishDeck: (deckId: number) => void;
+  onUpdateWordStatus: (sharedDeckId: number, lexemeId: number, status: TokenStatus) => void;
   onGoToVocab: () => void;
   onGoToStudyToday: () => void;
 };
@@ -98,11 +134,13 @@ export function SharedDeckSection({
   importedDeckId,
   unpublishingDeckId,
   message,
+  updatingWordLexemeId,
   onRefresh,
   onSelectDeck,
   onCloseDetail,
   onImportDeck,
   onUnpublishDeck,
+  onUpdateWordStatus,
   onGoToVocab,
   onGoToStudyToday,
 }: SharedDeckSectionProps) {
@@ -133,6 +171,10 @@ export function SharedDeckSection({
     const level = getJlptLevel(deck.title);
     const totalWordCount = deck.vocab_count + deck.custom_term_count;
     const alreadyImported = Boolean(deck.imported_at) || isImported;
+    // Subscribed-mode decks (see docs/architecture/shared-lexeme-progress-storage.md)
+    // never need a "다시 가져오기" re-copy confirm -- once subscribed,
+    // the same button just opens the deck's word list instead.
+    const isSubscribedMode = deck.mode === "subscribed";
     return (
       <article
         key={deck.id}
@@ -161,7 +203,7 @@ export function SharedDeckSection({
                     : undefined
                 }
               >
-                가져옴
+                {isSubscribedMode ? "학습 목록에 있음" : "가져옴"}
                 {deck.imported_at ? ` · ${formatDateTime(deck.imported_at)}` : ""}
               </span>
             ) : null}
@@ -194,20 +236,34 @@ export function SharedDeckSection({
                 ? "secondary-button compact-button"
                 : "compact-button"
             }
-            onClick={() => handleImportClick(deck)}
+            onClick={() => {
+              if (isSubscribedMode && alreadyImported) {
+                onSelectDeck(deck.id);
+                return;
+              }
+              handleImportClick(deck);
+            }}
             disabled={isImporting}
             title={
-              alreadyImported
+              !isSubscribedMode && alreadyImported
                 ? "이미 가져온 덱입니다. 다시 가져오면 확인 후 새로 추가됩니다."
                 : undefined
             }
           >
             {isImporting ? (
               "가져오는 중..."
+            ) : isSubscribedMode && alreadyImported ? (
+              <>
+                <BookIcon className="button-icon" />열기
+              </>
             ) : alreadyImported ? (
               <>
                 <RotateIcon className="button-icon" />
                 다시 가져오기
+              </>
+            ) : isSubscribedMode ? (
+              <>
+                <CardFileIcon className="button-icon" />학습 목록에 추가
               </>
             ) : (
               <>
@@ -274,7 +330,7 @@ export function SharedDeckSection({
         </div>
         <p className="info-strip">
           <ShieldIcon className="info-strip-icon" />
-          가져온 덱은 내 노트에 바로 추가돼요. 원문 전체는 들어가지 않습니다.
+          가져온 덱은 학습 목록에 바로 추가돼요. 원문 전체는 들어가지 않습니다.
         </p>
       </section>
 
@@ -415,7 +471,7 @@ export function SharedDeckSection({
                         : undefined
                     }
                   >
-                    가져옴
+                    {selectedDeck.mode === "subscribed" ? "학습 목록에 있음" : "가져옴"}
                     {selectedDeck.imported_at
                       ? ` · ${formatDateTime(selectedDeck.imported_at)}`
                       : ""}
@@ -440,18 +496,22 @@ export function SharedDeckSection({
               >
                 닫기
               </button>
-              <button
-                type="button"
-                className={selectedAlreadyImported ? "secondary-button" : undefined}
-                onClick={() => handleImportClick(selectedDeck)}
-                disabled={importingDeckId === selectedDeck.id}
-              >
-                {importingDeckId === selectedDeck.id
-                  ? "가져오는 중..."
-                  : selectedAlreadyImported
-                    ? "다시 가져오기"
-                    : "내 노트에 가져오기"}
-              </button>
+              {selectedDeck.mode === "subscribed" && selectedAlreadyImported ? null : (
+                <button
+                  type="button"
+                  className={selectedAlreadyImported ? "secondary-button" : undefined}
+                  onClick={() => handleImportClick(selectedDeck)}
+                  disabled={importingDeckId === selectedDeck.id}
+                >
+                  {importingDeckId === selectedDeck.id
+                    ? "가져오는 중..."
+                    : selectedAlreadyImported
+                      ? "다시 가져오기"
+                      : selectedDeck.mode === "subscribed"
+                        ? "학습 목록에 추가"
+                        : "내 노트에 가져오기"}
+                </button>
+              )}
               {selectedDeck.is_owner ? (
                 <button
                   type="button"
@@ -483,46 +543,97 @@ export function SharedDeckSection({
             </p>
           ) : null}
 
-          <div className="shared-detail-columns">
-            <div>
-              <h3>단어 미리보기 (최대 20개)</h3>
-              {selectedDeck.items.length > 0 ? (
-                <div className="shared-preview-list">
-                  {selectedDeck.items.slice(0, 20).map((item) => (
-                    <div key={item.id} className="shared-preview-row">
-                      <strong>{item.surface || item.base_form || "-"}</strong>
-                      <span>{item.reading || "-"}</span>
-                      <span>{getDisplayMeaning(item.meaning_ko)}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="empty">공유된 단어가 없습니다.</p>
-              )}
+          {selectedDeck.mode === "subscribed" ? (
+            // Subscribed-mode deck: this is the real "학습 목록" (see
+            // docs/architecture/shared-lexeme-progress-storage.md), not a
+            // preview -- show every word, and once the user has actually
+            // added the deck, let them classify each one right here. No
+            // custom_terms column: lexeme-mode decks never have any (the
+            // backend always returns an empty array for them).
+            <div className="shared-detail-columns shared-detail-columns-single">
+              <div>
+                <h3>
+                  학습 목록 ({selectedDeck.items.length}개)
+                </h3>
+                {selectedDeck.items.length > 0 ? (
+                  <div className="shared-preview-list shared-lexeme-word-list">
+                    {selectedDeck.items.map((item) => {
+                      const word = toSharedDeckWordProgress(item);
+                      return (
+                        <div
+                          key={word.lexemeId}
+                          className="shared-preview-row shared-lexeme-row"
+                        >
+                          <div className="shared-lexeme-row-main">
+                            <strong>{word.surface || word.baseForm || "-"}</strong>
+                            <span>{word.reading || "-"}</span>
+                            <span>{getDisplayMeaning(word.meaningKo)}</span>
+                          </div>
+                          {selectedAlreadyImported ? (
+                            <div className="shared-lexeme-row-status">
+                              <StatusSelect
+                                value={word.status}
+                                label={`${word.surface || word.baseForm} 학습 상태`}
+                                onChange={(status) =>
+                                  onUpdateWordStatus(selectedDeck.id, word.lexemeId, status)
+                                }
+                              />
+                              {updatingWordLexemeId === word.lexemeId ? (
+                                <span className="shared-lexeme-row-saving">저장 중...</span>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="empty">공유된 단어가 없습니다.</p>
+                )}
+              </div>
             </div>
-
-            <div>
-              <h3>사용자 정의 용어</h3>
-              {selectedDeck.custom_terms.length > 0 ? (
-                <div className="shared-preview-list">
-                  {selectedDeck.custom_terms.slice(0, 30).map((term) => {
-                    const goodMeaning = getDisplayMeaning(term.meaning_ko, "");
-                    return (
-                      <div key={term.id} className="shared-preview-row">
-                        <strong>{term.term}</strong>
-                        <span>{term.reading || "-"}</span>
-                        <span>
-                          {goodMeaning || term.description || getDisplayMeaning(null)}
-                        </span>
+          ) : (
+            <div className="shared-detail-columns">
+              <div>
+                <h3>단어 미리보기 (최대 20개)</h3>
+                {selectedDeck.items.length > 0 ? (
+                  <div className="shared-preview-list">
+                    {selectedDeck.items.slice(0, 20).map((item) => (
+                      <div key={item.id} className="shared-preview-row">
+                        <strong>{item.surface || item.base_form || "-"}</strong>
+                        <span>{item.reading || "-"}</span>
+                        <span>{getDisplayMeaning(item.meaning_ko)}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="empty">공유된 사용자 정의 용어가 없습니다.</p>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <p className="empty">공유된 단어가 없습니다.</p>
+                )}
+              </div>
+
+              <div>
+                <h3>사용자 정의 용어</h3>
+                {selectedDeck.custom_terms.length > 0 ? (
+                  <div className="shared-preview-list">
+                    {selectedDeck.custom_terms.slice(0, 30).map((term) => {
+                      const goodMeaning = getDisplayMeaning(term.meaning_ko, "");
+                      return (
+                        <div key={term.id} className="shared-preview-row">
+                          <strong>{term.term}</strong>
+                          <span>{term.reading || "-"}</span>
+                          <span>
+                            {goodMeaning || term.description || getDisplayMeaning(null)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="empty">공유된 사용자 정의 용어가 없습니다.</p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="form-actions">
             <button

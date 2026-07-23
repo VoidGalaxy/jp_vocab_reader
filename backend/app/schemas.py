@@ -177,6 +177,19 @@ class StatsResponse(BaseModel):
     today_good_count: int = 0
     today_easy_count: int = 0
     streak_days: int = 0
+    # Additive breakdown (Phase 5, see
+    # docs/architecture/shared-lexeme-progress-storage.md). The merged
+    # totals above (due_today_count/new_count/hard_count/
+    # reviewed_today_count) are always vocab_*+lexeme_* -- these fields
+    # never change existing field meanings, just expose the split.
+    vocab_due_count: int = 0
+    lexeme_due_count: int = 0
+    vocab_new_count: int = 0
+    lexeme_new_count: int = 0
+    vocab_hard_count: int = 0
+    lexeme_hard_count: int = 0
+    vocab_completed_today: int = 0
+    lexeme_completed_today: int = 0
 
 
 class DeckCreate(BaseModel):
@@ -231,6 +244,12 @@ class SharedDeckSummaryResponse(BaseModel):
     created_at: str
     is_owner: bool = False
     imported_at: str | None = None
+    # Additive (see docs/architecture/shared-lexeme-progress-storage.md).
+    # "subscribed" = lexeme-mode deck (importing only creates a
+    # user_deck_subscriptions row). "copied" = legacy deck (importing still
+    # copies into vocab_items, unchanged). Known ahead of import so the
+    # frontend can show the right button/label before the user clicks.
+    mode: str = "copied"
 
 
 class SharedDeckItemResponse(BaseModel):
@@ -246,6 +265,16 @@ class SharedDeckItemResponse(BaseModel):
     example_sentence: str | None = None
     quality_tag: str | None = None
     created_at: str
+    # Additive: only populated for lexeme-mode shared decks (see
+    # docs/architecture/shared-lexeme-progress-storage.md). None/default for
+    # legacy shared_deck_items-based decks, which never set these.
+    lexeme_id: int | None = None
+    jlpt_level: str | None = None
+    status: str | None = None
+    review_level: int | None = None
+    next_review_at: str | None = None
+    correct_count: int | None = None
+    wrong_count: int | None = None
 
 
 class SharedDeckTermResponse(BaseModel):
@@ -277,6 +306,64 @@ class SharedDeckImportResponse(BaseModel):
     imported_vocab_count: int
     imported_custom_term_count: int
     message: str
+    # Additive (see docs/architecture/shared-lexeme-progress-storage.md).
+    # "copied" = legacy path (unchanged behavior, personal deck + vocab_items
+    # copy). "subscribed" = new lexeme-mode path: no personal deck, no
+    # vocab_items copy -- deck_id/deck_name/imported_vocab_count above are
+    # still populated with sensible stand-in values so older client code
+    # that only reads those fields doesn't break.
+    success: bool = True
+    mode: str = "copied"
+    subscribed: bool = False
+    shared_deck_id: int | None = None
+    word_count: int | None = None
+
+
+# --- Lexeme-mode shared deck word progress (additive; see
+# docs/architecture/shared-lexeme-progress-storage.md) -----------------------
+
+
+class LexemeProgressUpdateRequest(BaseModel):
+    status: str
+
+
+class LexemeReviewRequest(BaseModel):
+    rating: str
+
+
+class LexemeWordProgressResponse(BaseModel):
+    lexeme_id: int
+    status: str
+    review_level: int
+    next_review_at: str | None = None
+    correct_count: int
+    wrong_count: int
+    last_reviewed_at: str | None = None
+
+
+# --- Phase 3: subscribed shared-deck words in the SRS study queue (additive;
+# see docs/architecture/shared-lexeme-progress-storage.md) ------------------
+
+
+class StudyLexemeItemResponse(BaseModel):
+    item_type: str = "lexeme"
+    lexeme_id: int
+    shared_deck_id: int
+    surface: str
+    base_form: str
+    reading: str
+    part_of_speech: str
+    meaning_ko: str
+    dictionary_gloss: str | None = None
+    example_sentence: str | None = None
+    context_explanation_ko: str | None = None
+    jlpt_level: str | None = None
+    status: str
+    review_level: int
+    next_review_at: str | None = None
+    correct_count: int
+    wrong_count: int
+    source_label: str
 
 
 class DeckPackageApp(BaseModel):

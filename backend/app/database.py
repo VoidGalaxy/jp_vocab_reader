@@ -15,7 +15,7 @@ from app.schemas import (
     VocabItemCreate,
     VocabItemUpdate,
 )
-from app.settings import DEFAULT_SQLITE_DB_PATH, get_database_url
+from app.settings import DEFAULT_SQLITE_DB_PATH, get_app_env, get_database_url
 
 try:
     import psycopg
@@ -167,6 +167,48 @@ def _is_insert_with_id(query: str) -> bool:
     }
 
 
+NEON_HOST_MARKER = "neon.tech"
+PRODUCTION_APP_ENV = "production"
+NON_PRODUCTION_APP_ENV_DEFAULT = "development"
+
+
+def is_neon_database_url(database_url: str) -> bool:
+    """Cheap substring check on the host, not a full URL parse -- good
+    enough to catch the one real-world case this guards against (a Neon
+    DATABASE_URL left over in backend/.env), without parsing/logging the
+    URL itself anywhere.
+    """
+    return NEON_HOST_MARKER in (database_url or "")
+
+
+def normalize_app_env(app_env: str | None) -> str:
+    """Missing/blank APP_ENV is treated as local/development, never as
+    production -- an unset APP_ENV must never be the thing that lets a Neon
+    DATABASE_URL slip through.
+    """
+    normalized = (app_env or "").strip().lower()
+    return normalized or NON_PRODUCTION_APP_ENV_DEFAULT
+
+
+def assert_safe_database_url(database_url: str | None, app_env: str | None) -> None:
+    """Refuses to proceed if DATABASE_URL points at Neon while APP_ENV isn't
+    production (see docs/operations/database-safety.md). A local SQLite
+    DATABASE_URL, or no DATABASE_URL at all, is always fine regardless of
+    APP_ENV. Never logs/includes the URL itself -- it may contain
+    credentials -- only whether its host matched the Neon marker.
+    """
+    database_url = (database_url or "").strip()
+    if not is_neon_database_url(database_url):
+        return
+    if normalize_app_env(app_env) == PRODUCTION_APP_ENV:
+        return
+    raise RuntimeError(
+        "Refusing to start: DATABASE_URL points to Neon (host matches "
+        "neon.tech) while APP_ENV is not production. Use a local SQLite "
+        "DATABASE_URL for development."
+    )
+
+
 def get_sqlite_database_path() -> str:
     database_url = get_database_url()
     if not database_url:
@@ -187,6 +229,12 @@ def get_sqlite_database_path() -> str:
 
 def get_connection() -> sqlite3.Connection | AppPostgresConnection:
     database_url = get_database_url()
+    # Must run before any connection object (SQLite or PostgreSQL) is
+    # created -- this is the single choke point every DB access in the app
+    # goes through, including init_db() (init_db -> initialize_database ->
+    # get_connection(), before any schema/migration statement runs). See
+    # docs/operations/database-safety.md.
+    assert_safe_database_url(database_url, get_app_env())
     if database_url.startswith(POSTGRES_URL_PREFIXES):
         if psycopg is None or dict_row is None:
             raise RuntimeError(
@@ -226,7 +274,9 @@ def ensure_schema(connection: sqlite3.Connection) -> None:
 
     create_core_tables(connection)
     create_shared_deck_tables(connection)
+    create_lexeme_progress_tables(connection)
     create_review_log_table(connection)
+    create_lexeme_review_log_table(connection)
     create_meaning_feedback_table(connection)
     create_app_feedback_table(connection)
     apply_sqlite_migrations(connection)
@@ -248,6 +298,24 @@ def create_core_tables(connection: sqlite3.Connection) -> None:
 def apply_sqlite_migrations(connection: sqlite3.Connection) -> None:
     ensure_vocab_item_columns(connection)
     ensure_user_scoped_columns(connection)
+    ensure_shared_deck_words_columns(connection)
+
+
+def ensure_shared_deck_words_columns(connection: sqlite3.Connection) -> None:
+    """Additive snapshot columns for a table that may already exist from
+    before user-published decks became lexeme-based (see
+    docs/architecture/shared-lexeme-progress-storage.md). CREATE TABLE IF
+    NOT EXISTS in create_lexeme_progress_tables is a no-op on an existing
+    table, so these need the same add_column_if_missing pattern as
+    ensure_vocab_item_columns above.
+    """
+    add_column_if_missing(connection, "shared_deck_words", "display_meaning_ko TEXT")
+    add_column_if_missing(connection, "shared_deck_words", "example_sentence TEXT")
+    add_column_if_missing(
+        connection, "shared_deck_words", "context_explanation_ko TEXT"
+    )
+    add_column_if_missing(connection, "shared_deck_words", "tags_json TEXT")
+    add_column_if_missing(connection, "shared_deck_words", "published_note TEXT")
 
 
 def seed_dev_user(connection: sqlite3.Connection) -> int:
@@ -430,6 +498,109 @@ def create_shared_deck_tables(connection: sqlite3.Connection) -> None:
     )
 
 
+# Additive shared-lexeme storage (see docs/architecture/shared-lexeme-progress-storage.md).
+# Lets a shared/JLPT deck's word data live once in `lexemes` + `shared_deck_words`
+# instead of being copied into every importing user's vocab_items. A user who
+# imports such a deck only gets a `user_deck_subscriptions` row; per-word
+# `user_word_progress` rows are created lazily (see
+# app/repositories/lexeme_repository.py), not in bulk at import time. Existing
+# `shared_deck_items`/`vocab_items`-based decks and imports are completely
+# untouched by these tables -- this is purely additive.
+def create_lexeme_progress_tables(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS lexemes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            surface TEXT NOT NULL,
+            base_form TEXT NOT NULL,
+            reading TEXT NOT NULL DEFAULT '',
+            part_of_speech TEXT NOT NULL DEFAULT '',
+            meaning_ko TEXT NOT NULL DEFAULT '',
+            dictionary_gloss TEXT NOT NULL DEFAULT '',
+            jlpt_level TEXT,
+            source_type TEXT NOT NULL DEFAULT 'shared_deck',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(base_form, reading, part_of_speech)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shared_deck_words (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shared_deck_id INTEGER NOT NULL,
+            lexeme_id INTEGER NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            -- Deck-specific published snapshot (see
+            -- docs/architecture/shared-lexeme-progress-storage.md). All
+            -- nullable/additive: a publisher's own short wording for this
+            -- word in *this* deck, so it can be shown without ever
+            -- overwriting the shared lexemes row other decks/users rely on.
+            -- Same short-text policy as legacy shared_deck_items (no full
+            -- source text, no personal notes beyond a short note).
+            display_meaning_ko TEXT,
+            example_sentence TEXT,
+            context_explanation_ko TEXT,
+            tags_json TEXT,
+            published_note TEXT,
+            UNIQUE(shared_deck_id, lexeme_id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_shared_deck_words_deck
+        ON shared_deck_words(shared_deck_id, sort_order)
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS user_deck_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            shared_deck_id INTEGER NOT NULL,
+            is_active INTEGER NOT NULL DEFAULT 1,
+            imported_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(user_id, shared_deck_id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_user_deck_subscriptions_user
+        ON user_deck_subscriptions(user_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS user_word_progress (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            lexeme_id INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'unclassified',
+            review_level INTEGER NOT NULL DEFAULT 0,
+            next_review_at TEXT,
+            correct_count INTEGER NOT NULL DEFAULT 0,
+            wrong_count INTEGER NOT NULL DEFAULT 0,
+            last_reviewed_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(user_id, lexeme_id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_user_word_progress_user
+        ON user_word_progress(user_id)
+        """
+    )
+
+
 def create_review_log_table(connection: sqlite3.Connection) -> None:
     connection.execute(
         """
@@ -458,6 +629,58 @@ def create_review_log_table(connection: sqlite3.Connection) -> None:
         """
         CREATE INDEX IF NOT EXISTS idx_review_logs_item
         ON review_logs(vocab_item_id)
+        """
+    )
+
+
+# Additive, Phase 4 (see docs/architecture/shared-lexeme-progress-storage.md
+# -- "Phase 4: lexeme review logs"). `review_logs` above is left completely
+# untouched -- its `vocab_item_id` NOT NULL FK has no room for a lexeme-keyed
+# review, and retrofitting it (nullable FK / polymorphic item_type-item_id)
+# would risk the integrity of every already-logged personal review. This
+# table exists purely so a subscribed shared-deck/JLPT word's review history
+# is recorded somewhere, without touching vocab_items' logging at all.
+def create_lexeme_review_log_table(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS lexeme_review_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            lexeme_id INTEGER NOT NULL,
+            shared_deck_id INTEGER,
+            rating TEXT NOT NULL,
+            previous_review_level INTEGER NOT NULL,
+            new_review_level INTEGER NOT NULL,
+            previous_next_review_at TEXT,
+            new_next_review_at TEXT,
+            previous_status TEXT NOT NULL,
+            new_status TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_user_created
+        ON lexeme_review_logs(user_id, created_at)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_user_lexeme
+        ON lexeme_review_logs(user_id, lexeme_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_user_deck
+        ON lexeme_review_logs(user_id, shared_deck_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_lexeme
+        ON lexeme_review_logs(lexeme_id)
         """
     )
 
@@ -663,6 +886,108 @@ def create_postgres_tables(connection: AppPostgresConnection) -> None:
         )
         """
     )
+    # Additive shared-lexeme storage -- see create_lexeme_progress_tables'
+    # docstring-comment (SQLite branch) for the full rationale. Mirrors that
+    # schema for PostgreSQL.
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS lexemes (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            surface TEXT NOT NULL,
+            base_form TEXT NOT NULL,
+            reading TEXT NOT NULL DEFAULT '',
+            part_of_speech TEXT NOT NULL DEFAULT '',
+            meaning_ko TEXT NOT NULL DEFAULT '',
+            dictionary_gloss TEXT NOT NULL DEFAULT '',
+            jlpt_level TEXT,
+            source_type TEXT NOT NULL DEFAULT 'shared_deck',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(base_form, reading, part_of_speech)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS shared_deck_words (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            shared_deck_id INTEGER NOT NULL REFERENCES shared_decks(id) ON DELETE CASCADE,
+            lexeme_id INTEGER NOT NULL REFERENCES lexemes(id) ON DELETE CASCADE,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            display_meaning_ko TEXT,
+            example_sentence TEXT,
+            context_explanation_ko TEXT,
+            tags_json TEXT,
+            published_note TEXT,
+            UNIQUE(shared_deck_id, lexeme_id)
+        )
+        """
+    )
+    # Additive columns for a table that may already exist (e.g. a
+    # pre-this-change Neon database) -- CREATE TABLE IF NOT EXISTS above is a
+    # no-op there, so these run unconditionally. PostgreSQL (9.6+) supports
+    # ADD COLUMN IF NOT EXISTS natively, unlike SQLite.
+    connection.execute(
+        """
+        ALTER TABLE shared_deck_words
+        ADD COLUMN IF NOT EXISTS display_meaning_ko TEXT,
+        ADD COLUMN IF NOT EXISTS example_sentence TEXT,
+        ADD COLUMN IF NOT EXISTS context_explanation_ko TEXT,
+        ADD COLUMN IF NOT EXISTS tags_json TEXT,
+        ADD COLUMN IF NOT EXISTS published_note TEXT
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS user_deck_subscriptions (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            shared_deck_id INTEGER NOT NULL REFERENCES shared_decks(id) ON DELETE CASCADE,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            imported_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(user_id, shared_deck_id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS user_word_progress (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            lexeme_id INTEGER NOT NULL REFERENCES lexemes(id) ON DELETE CASCADE,
+            status TEXT NOT NULL DEFAULT 'unclassified',
+            review_level INTEGER NOT NULL DEFAULT 0,
+            next_review_at TEXT,
+            correct_count INTEGER NOT NULL DEFAULT 0,
+            wrong_count INTEGER NOT NULL DEFAULT 0,
+            last_reviewed_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(user_id, lexeme_id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_shared_deck_words_deck
+        ON shared_deck_words(shared_deck_id, sort_order)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_user_deck_subscriptions_user
+        ON user_deck_subscriptions(user_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_user_word_progress_user
+        ON user_word_progress(user_id)
+        """
+    )
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS review_logs (
@@ -678,6 +1003,51 @@ def create_postgres_tables(connection: AppPostgresConnection) -> None:
             next_review_at TEXT NOT NULL,
             response_time_ms INTEGER
         )
+        """
+    )
+    # Additive, Phase 4 -- see create_lexeme_review_log_table's
+    # docstring-comment (SQLite branch) for the full rationale. Mirrors that
+    # schema for PostgreSQL; review_logs above is untouched.
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS lexeme_review_logs (
+            id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            lexeme_id INTEGER NOT NULL REFERENCES lexemes(id) ON DELETE CASCADE,
+            shared_deck_id INTEGER REFERENCES shared_decks(id) ON DELETE SET NULL,
+            rating TEXT NOT NULL,
+            previous_review_level INTEGER NOT NULL,
+            new_review_level INTEGER NOT NULL,
+            previous_next_review_at TEXT,
+            new_next_review_at TEXT,
+            previous_status TEXT NOT NULL,
+            new_status TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_user_created
+        ON lexeme_review_logs(user_id, created_at)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_user_lexeme
+        ON lexeme_review_logs(user_id, lexeme_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_user_deck
+        ON lexeme_review_logs(user_id, shared_deck_id)
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_lexeme
+        ON lexeme_review_logs(lexeme_id)
         """
     )
     connection.execute(

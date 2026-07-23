@@ -4,11 +4,53 @@ import sqlite3
 from typing import Any
 
 from app.database import get_connection, now_iso, row_to_dict
+from app.repositories.lexeme_repository import (
+    add_word_to_shared_deck,
+    count_shared_deck_words,
+    get_or_create_subscription,
+    is_lexeme_deck,
+    is_lexeme_deck_in_connection,
+    list_lexeme_deck_ids,
+    list_shared_deck_words_with_progress,
+    upsert_lexeme,
+)
+
+
+def shared_deck_exists(shared_deck_id: int) -> bool:
+    """Cheap existence check -- does not build the full word-list overlay,
+    unlike get_shared_deck(). Used by the word-progress/review endpoints,
+    which only need a 404 guard, not the whole deck detail payload.
+    """
+    with get_connection() as connection:
+        row = connection.execute(
+            "SELECT 1 FROM shared_decks WHERE id = ? AND visibility = 'public'",
+            (shared_deck_id,),
+        ).fetchone()
+    return row is not None
 
 
 def publish_deck(
     user_id: int, deck_id: int, title: str, description: str
 ) -> dict[str, Any] | None:
+    """Publishes a personal deck as a new shared deck.
+
+    Default (and only) behavior as of the lexeme-mode publish change (see
+    docs/architecture/shared-lexeme-progress-storage.md "User-published
+    shared decks"): every word -- both vocab_items and custom_terms -- is
+    upserted into the shared `lexemes` table and linked via
+    `shared_deck_words`, exactly like a JLPT-registered deck. Nothing is
+    written to the legacy `shared_deck_items`/`shared_deck_terms` tables for
+    a *new* publish; those tables and any shared deck published before this
+    change are left completely alone (read/import compatibility is
+    unaffected -- see is_lexeme_deck()/get_shared_deck()/import_shared_deck()
+    below, which still serve legacy decks from those tables).
+
+    vocab_count/custom_term_count on the returned dict (and on the
+    shared_decks row) keep their original meaning -- counts of the
+    publisher's source vocab_items/custom_terms -- so the response shape
+    and any "N\uac1c \ub2e8\uc5b4 + M\uac1c \ucee4\uc2a4\ud140 \uc6a9\uc5b4" style label stay unchanged even
+    though both now live in the same underlying shared_deck_words list.
+    """
     timestamp = now_iso()
     with get_connection() as connection:
         deck = connection.execute(
@@ -69,51 +111,61 @@ def publish_deck(
         )
         shared_deck_id = int(cursor.lastrowid)
 
-        for row in vocab_rows:
-            connection.execute(
-                """
-                INSERT INTO shared_deck_items (
-                    shared_deck_id, surface, base_form, reading, part_of_speech,
-                    normalized_form, meaning_ko, dictionary_gloss,
-                    context_explanation_ko, example_sentence, quality_tag, created_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    shared_deck_id,
-                    row["surface"],
-                    row["base_form"],
-                    row["reading"],
-                    row["part_of_speech"],
-                    row["normalized_form"],
-                    row["meaning_ko"],
-                    row["dictionary_gloss"],
-                    row["context_explanation_ko"],
-                    row["example_sentence"],
-                    row["quality_tag"],
-                    timestamp,
-                ),
-            )
+    # upsert_lexeme/add_word_to_shared_deck open their own connections (see
+    # lexeme_repository.py) so this runs after the `with` block above closes
+    # the first connection/transaction.
+    sort_order = 0
+    for row in vocab_rows:
+        surface = row["surface"] or row["base_form"] or ""
+        base_form = row["base_form"] or row["surface"] or ""
+        lexeme_id = upsert_lexeme(
+            surface=surface,
+            base_form=base_form,
+            reading=row["reading"] or "",
+            part_of_speech=row["part_of_speech"] or "",
+            meaning_ko=row["meaning_ko"] or "",
+            dictionary_gloss=row["dictionary_gloss"] or "",
+            source_type="user_published_deck",
+            # A publisher must never clobber an existing shared word's
+            # common meaning with their own personal wording -- see
+            # upsert_lexeme()'s docstring.
+            refresh_shared_fields=False,
+        )
+        add_word_to_shared_deck(
+            shared_deck_id,
+            lexeme_id,
+            sort_order,
+            # Always snapshot the publisher's own wording for *this* deck so
+            # it's shown even when the shared lexeme keeps a different,
+            # earlier meaning_ko (nothing the publisher shared is lost).
+            display_meaning_ko=row["meaning_ko"] or None,
+            example_sentence=row["example_sentence"] or None,
+            context_explanation_ko=row["context_explanation_ko"] or None,
+        )
+        sort_order += 1
 
-        for row in term_rows:
-            connection.execute(
-                """
-                INSERT INTO shared_deck_terms (
-                    shared_deck_id, term, reading, part_of_speech,
-                    meaning_ko, description, created_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    shared_deck_id,
-                    row["term"],
-                    row["reading"],
-                    row["part_of_speech"],
-                    row["meaning_ko"],
-                    row["description"],
-                    timestamp,
-                ),
-            )
+    for row in term_rows:
+        lexeme_id = upsert_lexeme(
+            surface=row["term"],
+            base_form=row["term"],
+            reading=row["reading"] or "",
+            part_of_speech=row["part_of_speech"] or "",
+            meaning_ko=row["meaning_ko"] or "",
+            source_type="user_published_custom_term",
+            refresh_shared_fields=False,
+        )
+        add_word_to_shared_deck(
+            shared_deck_id,
+            lexeme_id,
+            sort_order,
+            display_meaning_ko=row["meaning_ko"] or None,
+            # custom_terms has no example_sentence field; its `description`
+            # is the closest equivalent to a short deck-specific note, so it
+            # maps to the context_explanation_ko snapshot slot instead of
+            # being dropped.
+            context_explanation_ko=row["description"] or None,
+        )
+        sort_order += 1
 
     return {
         "shared_deck_id": shared_deck_id,
@@ -125,6 +177,10 @@ def publish_deck(
 
 
 def list_shared_decks(user_id: int | None = None) -> list[dict[str, Any]]:
+    # COALESCE covers both import paths: the legacy shared_deck_imports row
+    # (personal deck was copied) and the new user_deck_subscriptions row
+    # (lexeme-mode deck, nothing copied) -- whichever one exists for this
+    # deck/user is what "가져옴" should reflect.
     with get_connection() as connection:
         rows = connection.execute(
             """
@@ -132,26 +188,39 @@ def list_shared_decks(user_id: int | None = None) -> list[dict[str, Any]]:
                    shared_decks.owner_user_id, users.display_name AS owner_display_name,
                    shared_decks.vocab_count, shared_decks.custom_term_count,
                    shared_decks.import_count, shared_decks.created_at,
-                   (
-                       SELECT MAX(shared_deck_imports.imported_at)
-                       FROM shared_deck_imports
-                       WHERE shared_deck_imports.shared_deck_id = shared_decks.id
-                         AND shared_deck_imports.user_id = ?
+                   COALESCE(
+                       (
+                           SELECT MAX(shared_deck_imports.imported_at)
+                           FROM shared_deck_imports
+                           WHERE shared_deck_imports.shared_deck_id = shared_decks.id
+                             AND shared_deck_imports.user_id = ?
+                       ),
+                       (
+                           SELECT MAX(user_deck_subscriptions.imported_at)
+                           FROM user_deck_subscriptions
+                           WHERE user_deck_subscriptions.shared_deck_id = shared_decks.id
+                             AND user_deck_subscriptions.user_id = ?
+                             AND user_deck_subscriptions.is_active = 1
+                       )
                    ) AS imported_at
             FROM shared_decks
             LEFT JOIN users ON users.id = shared_decks.owner_user_id
             WHERE shared_decks.visibility = 'public'
             ORDER BY shared_decks.created_at DESC, shared_decks.id DESC
             """,
-            (user_id,),
+            (user_id, user_id),
         ).fetchall()
     results = [row_to_dict(row) for row in rows]
+    lexeme_deck_ids = list_lexeme_deck_ids()
     for result in results:
         result["is_owner"] = user_id is not None and result["owner_user_id"] == user_id
+        result["mode"] = "subscribed" if result["id"] in lexeme_deck_ids else "copied"
     return results
 
 
-def get_shared_deck(shared_deck_id: int, user_id: int | None = None) -> dict[str, Any] | None:
+def get_shared_deck(
+    shared_deck_id: int, user_id: int | None = None, due_only: bool = False
+) -> dict[str, Any] | None:
     with get_connection() as connection:
         deck = connection.execute(
             """
@@ -160,46 +229,70 @@ def get_shared_deck(shared_deck_id: int, user_id: int | None = None) -> dict[str
                    shared_decks.vocab_count, shared_decks.custom_term_count,
                    shared_decks.import_count, shared_decks.created_at,
                    shared_decks.updated_at,
-                   (
-                       SELECT MAX(shared_deck_imports.imported_at)
-                       FROM shared_deck_imports
-                       WHERE shared_deck_imports.shared_deck_id = shared_decks.id
-                         AND shared_deck_imports.user_id = ?
+                   COALESCE(
+                       (
+                           SELECT MAX(shared_deck_imports.imported_at)
+                           FROM shared_deck_imports
+                           WHERE shared_deck_imports.shared_deck_id = shared_decks.id
+                             AND shared_deck_imports.user_id = ?
+                       ),
+                       (
+                           SELECT MAX(user_deck_subscriptions.imported_at)
+                           FROM user_deck_subscriptions
+                           WHERE user_deck_subscriptions.shared_deck_id = shared_decks.id
+                             AND user_deck_subscriptions.user_id = ?
+                             AND user_deck_subscriptions.is_active = 1
+                       )
                    ) AS imported_at
             FROM shared_decks
             LEFT JOIN users ON users.id = shared_decks.owner_user_id
             WHERE shared_decks.id = ?
               AND shared_decks.visibility = 'public'
             """,
-            (user_id, shared_deck_id),
+            (user_id, user_id, shared_deck_id),
         ).fetchone()
         if not deck:
             return None
-        item_rows = connection.execute(
-            """
-            SELECT id, surface, base_form, reading, part_of_speech,
-                   normalized_form, meaning_ko, dictionary_gloss,
-                   context_explanation_ko, example_sentence, quality_tag, created_at
-            FROM shared_deck_items
-            WHERE shared_deck_id = ?
-            ORDER BY id ASC
-            """,
-            (shared_deck_id,),
-        ).fetchall()
-        term_rows = connection.execute(
-            """
-            SELECT id, term, reading, part_of_speech, meaning_ko, description, created_at
-            FROM shared_deck_terms
-            WHERE shared_deck_id = ?
-            ORDER BY id ASC
-            """,
-            (shared_deck_id,),
-        ).fetchall()
+        lexeme_mode = is_lexeme_deck_in_connection(connection, shared_deck_id)
+        item_rows = []
+        term_rows = []
+        if not lexeme_mode:
+            item_rows = connection.execute(
+                """
+                SELECT id, surface, base_form, reading, part_of_speech,
+                       normalized_form, meaning_ko, dictionary_gloss,
+                       context_explanation_ko, example_sentence, quality_tag, created_at
+                FROM shared_deck_items
+                WHERE shared_deck_id = ?
+                ORDER BY id ASC
+                """,
+                (shared_deck_id,),
+            ).fetchall()
+            term_rows = connection.execute(
+                """
+                SELECT id, term, reading, part_of_speech, meaning_ko, description, created_at
+                FROM shared_deck_terms
+                WHERE shared_deck_id = ?
+                ORDER BY id ASC
+                """,
+                (shared_deck_id,),
+            ).fetchall()
 
     result = row_to_dict(deck)
     result["is_owner"] = user_id is not None and result["owner_user_id"] == user_id
-    result["items"] = [row_to_dict(row) for row in item_rows]
-    result["custom_terms"] = [row_to_dict(row) for row in term_rows]
+    result["mode"] = "subscribed" if lexeme_mode else "copied"
+    if lexeme_mode:
+        # Word data lives in lexemes/shared_deck_words, overlaid with this
+        # user's progress (see docs/architecture/shared-lexeme-progress-storage.md)
+        # -- a word with no progress row still appears, just as unclassified.
+        words = list_shared_deck_words_with_progress(
+            shared_deck_id, user_id, due_only=due_only
+        )
+        result["items"] = [{**word, "id": word["lexeme_id"]} for word in words]
+        result["custom_terms"] = []
+    else:
+        result["items"] = [row_to_dict(row) for row in item_rows]
+        result["custom_terms"] = [row_to_dict(row) for row in term_rows]
     return result
 
 
@@ -239,6 +332,76 @@ def delete_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | st
 
 
 def import_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | None:
+    """Dispatches on how this shared deck's words are stored:
+
+    - lexeme-mode deck (has shared_deck_words rows, e.g. anything the JLPT
+      register script creates from now on): only a user_deck_subscriptions
+      row is written. No vocab_items are copied, so importing the same
+      recommended deck for 10,000 users no longer means 10,000x the word
+      rows -- see docs/architecture/shared-lexeme-progress-storage.md.
+    - legacy deck (shared_deck_items only, e.g. anything published from a
+      personal deck before this change): unchanged copy-into-vocab_items
+      behavior, so existing shared decks keep working exactly as before.
+    """
+    if is_lexeme_deck(shared_deck_id):
+        return _import_lexeme_shared_deck(user_id, shared_deck_id)
+    return _import_shared_deck_legacy(user_id, shared_deck_id)
+
+
+def _import_lexeme_shared_deck(
+    user_id: int, shared_deck_id: int
+) -> dict[str, Any] | None:
+    with get_connection() as connection:
+        deck = connection.execute(
+            """
+            SELECT id, title
+            FROM shared_decks
+            WHERE id = ?
+              AND visibility = 'public'
+            """,
+            (shared_deck_id,),
+        ).fetchone()
+        if not deck:
+            return None
+
+    word_count = count_shared_deck_words(shared_deck_id)
+    _subscription, created = get_or_create_subscription(user_id, shared_deck_id)
+
+    if created:
+        timestamp = now_iso()
+        with get_connection() as connection:
+            connection.execute(
+                """
+                UPDATE shared_decks
+                SET import_count = import_count + 1, updated_at = ?
+                WHERE id = ?
+                """,
+                (timestamp, shared_deck_id),
+            )
+        message = "추천 어휘 덱을 내 학습 목록에 추가했어요."
+    else:
+        message = "이미 내 학습 목록에 있는 추천 어휘 덱이에요."
+
+    return {
+        "success": True,
+        "mode": "subscribed",
+        "subscribed": True,
+        "shared_deck_id": shared_deck_id,
+        "word_count": word_count,
+        # Kept populated (not null) for any older client code that still
+        # reads these -- no personal deck exists for a lexeme-mode import,
+        # so deck_id is the shared deck itself and nothing was "copied".
+        "deck_id": shared_deck_id,
+        "deck_name": deck["title"],
+        "imported_vocab_count": word_count,
+        "imported_custom_term_count": 0,
+        "message": message,
+    }
+
+
+def _import_shared_deck_legacy(
+    user_id: int, shared_deck_id: int
+) -> dict[str, Any] | None:
     timestamp = now_iso()
     with get_connection() as connection:
         deck = connection.execute(
@@ -355,6 +518,11 @@ def import_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | No
         )
 
     return {
+        "success": True,
+        "mode": "copied",
+        "subscribed": False,
+        "shared_deck_id": shared_deck_id,
+        "word_count": len(item_rows),
         "deck_id": imported_deck_id,
         "deck_name": deck_name,
         "imported_vocab_count": len(item_rows),

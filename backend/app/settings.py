@@ -25,6 +25,10 @@ def get_database_url() -> str:
     return os.getenv("DATABASE_URL", "").strip()
 
 
+def get_app_env() -> str:
+    return os.getenv("APP_ENV", "").strip()
+
+
 def get_jwt_secret_key() -> str:
     # TODO: Set JWT_SECRET_KEY in production; the fallback is for local dev only.
     return os.getenv("JWT_SECRET_KEY") or DEV_JWT_SECRET_KEY

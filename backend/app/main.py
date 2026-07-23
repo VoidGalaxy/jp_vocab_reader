@@ -49,12 +49,18 @@ from app.repositories.deck_repository import (
     update_deck,
 )
 from app.repositories.feedback_repository import create_app_feedback, create_meaning_feedback
+from app.repositories.lexeme_repository import (
+    list_subscribed_lexeme_study_items,
+    record_lexeme_review,
+    update_word_status,
+)
 from app.repositories.shared_deck_repository import (
     delete_shared_deck,
     get_shared_deck as get_shared_deck_data,
     import_shared_deck,
     list_shared_decks,
     publish_deck,
+    shared_deck_exists,
 )
 from app.repositories.stats_repository import build_stats
 from app.repositories.user_repository import (
@@ -102,6 +108,9 @@ from app.schemas import (
     DecksResponse,
     DeckUpdate,
     MAX_FEEDBACK_FIELD_LENGTH,
+    LexemeProgressUpdateRequest,
+    LexemeReviewRequest,
+    LexemeWordProgressResponse,
     MeaningFeedbackRequest,
     MeaningFeedbackResponse,
     SharedDeckDeleteResponse,
@@ -110,6 +119,7 @@ from app.schemas import (
     SharedDeckSummaryResponse,
     StatsResponse,
     StudyItemsResponse,
+    StudyLexemeItemResponse,
     StudyReviewRequest,
     RESULT_TO_RATING,
     VALID_APP_FEEDBACK_CATEGORIES,
@@ -549,9 +559,13 @@ def get_shared_decks(http_request: Request) -> list[SharedDeckSummaryResponse]:
 
 
 @app.get("/shared-decks/{shared_deck_id}", response_model=SharedDeckDetailResponse)
-def get_shared_deck(shared_deck_id: int, http_request: Request) -> SharedDeckDetailResponse:
+def get_shared_deck(
+    shared_deck_id: int,
+    http_request: Request,
+    due_only: bool = Query(default=False),
+) -> SharedDeckDetailResponse:
     user_id = current_user_id(http_request)
-    shared_deck = get_shared_deck_data(shared_deck_id, user_id)
+    shared_deck = get_shared_deck_data(shared_deck_id, user_id, due_only=due_only)
     if not shared_deck:
         raise HTTPException(status_code=404, detail="shared deck not found")
     return SharedDeckDetailResponse(**shared_deck)
@@ -581,6 +595,104 @@ def remove_shared_deck(
             status_code=403, detail="only the owner can unpublish this shared deck"
         )
     return SharedDeckDeleteResponse(**result)
+
+
+# --- Lexeme-mode shared deck word progress ----------------------------------
+# Minimal "make a subscribed deck's words learnable" surface (see
+# docs/architecture/shared-lexeme-progress-storage.md, phase 1 scope). Does
+# not touch vocab_items/review_logs/study-items at all -- existing personal
+# vocabulary review is untouched. Full review-flow integration (e.g. mixing
+# these into /study-items) is left as a documented phase-2 TODO.
+
+
+@app.patch(
+    "/shared-decks/{shared_deck_id}/words/{lexeme_id}/progress",
+    response_model=LexemeWordProgressResponse,
+)
+def patch_shared_deck_word_progress(
+    shared_deck_id: int,
+    lexeme_id: int,
+    body: LexemeProgressUpdateRequest,
+    http_request: Request,
+) -> LexemeWordProgressResponse:
+    if body.status not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail="invalid status")
+    user_id = current_user_id(http_request)
+    if not shared_deck_exists(shared_deck_id):
+        raise HTTPException(status_code=404, detail="shared deck not found")
+    try:
+        progress = update_word_status(user_id, lexeme_id, body.status)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid status")
+    if not progress:
+        raise HTTPException(status_code=404, detail="word not found")
+    return LexemeWordProgressResponse(**progress)
+
+
+@app.post(
+    "/shared-decks/{shared_deck_id}/words/{lexeme_id}/review",
+    response_model=LexemeWordProgressResponse,
+)
+def post_shared_deck_word_review(
+    shared_deck_id: int,
+    lexeme_id: int,
+    body: LexemeReviewRequest,
+    http_request: Request,
+) -> LexemeWordProgressResponse:
+    if body.rating not in VALID_REVIEW_RATINGS:
+        raise HTTPException(status_code=400, detail="invalid review rating")
+    user_id = current_user_id(http_request)
+    if not shared_deck_exists(shared_deck_id):
+        raise HTTPException(status_code=404, detail="shared deck not found")
+    progress = record_lexeme_review(
+        user_id, lexeme_id, body.rating, shared_deck_id=shared_deck_id
+    )
+    if not progress:
+        raise HTTPException(status_code=404, detail="word not found")
+    return LexemeWordProgressResponse(**progress)
+
+
+# --- Phase 3: subscribed shared-deck words in the SRS study queue -----------
+# Read-only merge source for the review tab (see
+# docs/architecture/shared-lexeme-progress-storage.md). Rating submission for
+# these words still goes through the existing
+# POST /shared-decks/{shared_deck_id}/words/{lexeme_id}/review endpoint above
+# -- no new write endpoint needed here.
+
+
+@app.get("/study-items/lexemes", response_model=list[StudyLexemeItemResponse])
+def get_study_lexeme_items(
+    http_request: Request,
+    shared_deck_id: int | None = Query(default=None),
+    due_only: bool = Query(default=False),
+) -> list[StudyLexemeItemResponse]:
+    user_id = current_user_id(http_request)
+    items = list_subscribed_lexeme_study_items(
+        user_id, shared_deck_id=shared_deck_id, due_only=due_only
+    )
+    return [
+        StudyLexemeItemResponse(
+            lexeme_id=item["lexeme_id"],
+            shared_deck_id=item["shared_deck_id"],
+            surface=item["surface"],
+            base_form=item["base_form"],
+            reading=item["reading"],
+            part_of_speech=item["part_of_speech"],
+            meaning_ko=item["meaning_ko"],
+            dictionary_gloss=item.get("dictionary_gloss"),
+            example_sentence=item.get("example_sentence"),
+            context_explanation_ko=item.get("context_explanation_ko"),
+            jlpt_level=item.get("jlpt_level"),
+            status=item["status"],
+            review_level=item["review_level"],
+            next_review_at=item.get("next_review_at"),
+            correct_count=item["correct_count"],
+            wrong_count=item["wrong_count"],
+            source_label=item["source_label"],
+        )
+        for item in items
+        if item["status"] != "known"
+    ]
 
 
 @app.get("/vocab-items", response_model=VocabItemsResponse)

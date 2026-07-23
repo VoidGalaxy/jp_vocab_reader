@@ -71,6 +71,7 @@ uvicorn app.main:app --reload
 Backend:
 
 ```env
+APP_ENV=production
 DATABASE_URL=
 JWT_SECRET_KEY=change-me-in-production
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=10080
@@ -80,6 +81,8 @@ CORS_ORIGINS=http://localhost:3000,https://your-frontend-domain.example
 JMDICT_FULL_JSON_URL=
 EN_KO_DICTIONARY_URL=
 ```
+
+`APP_ENV=production` is required on Render whenever `DATABASE_URL` points at Neon/PostgreSQL -- the backend refuses to start against a Neon `DATABASE_URL` unless `APP_ENV` is exactly `production` (see [docs/operations/database-safety.md](operations/database-safety.md)). This exists specifically to stop a local dev server from accidentally initializing/writing to the shared Neon database.
 
 Frontend:
 
