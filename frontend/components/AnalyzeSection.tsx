@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ShioriCharacter, ShioriMark, ShioriStamp } from "./Shiori";
+import { ShioriCharacter, ShioriStamp } from "./Shiori";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import type { CoverageStats } from "./types";
@@ -450,7 +450,6 @@ function ClassifyCardStage({
 
       <div className="classify-word-card card-stack-surface">
         <div className="classify-progress">
-          <ShioriMark variant="classify" />
           <span>
             {currentCardIndex + 1} / {totalCount}
           </span>

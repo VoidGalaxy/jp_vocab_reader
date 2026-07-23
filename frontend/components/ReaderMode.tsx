@@ -114,6 +114,11 @@ export function ReaderMode({
   // it for attention. Local-only UI state, no effect on the toggles'
   // values or behavior once opened.
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+  // Dismissible idle-state guide bubble -- once the reader has shown the
+  // hint once, a click on its own close button hides it for the rest of
+  // this reading session instead of it sitting there like a permanent
+  // banner every time no word is selected.
+  const [isIdleGuideDismissed, setIsIdleGuideDismissed] = useState(false);
   // Guards against re-applying a restored selection every time tokens
   // change (e.g. after a status save) -- only ever resolved once, right
   // after a restore, then the user's own clicks take over.
@@ -621,19 +626,29 @@ export function ReaderMode({
           onCancelMeaningEdit={onCancelMeaningEdit}
           onReportMeaning={onReportMeaning}
         />
-      ) : (
+      ) : isIdleGuideDismissed ? null : (
         // Desktop-only idle Word Inspector: docked in the same spot
         // TokenDetailSheet occupies once a word is selected (see
         // .token-sheet-overlay-idle in globals.css, hidden below the
         // 641px breakpoint) so the panel reads as "always there", not
         // something that only appears after a click. Mobile intentionally
         // shows nothing here -- the bottom-sheet inspector only appears
-        // on demand there, per the reader-workspace mobile spec.
+        // on demand there, per the reader-workspace mobile spec. A close
+        // button lets it be dismissed for the rest of this session instead
+        // of hovering there like a persistent banner/ad.
         <div
           className="token-sheet-overlay token-sheet-overlay-idle"
           aria-hidden="true"
         >
           <div className="bookmark-inspector word-index-inspector token-sheet-idle paper-corner card-stack-surface">
+            <button
+              type="button"
+              className="token-sheet-idle-dismiss"
+              onClick={() => setIsIdleGuideDismissed(true)}
+              aria-label="안내 닫기"
+            >
+              ×
+            </button>
             <ShioriGuideCard
               variant="reading"
               message="원문에서 모르는 단어를 눌러보세요."

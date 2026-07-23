@@ -109,8 +109,12 @@
 }
 
 .study-panel {
-  --screen-accent: var(--tone-indigo);
-  --screen-accent-soft: #ece9fa;
+  /* Was --tone-indigo (a cool purple) -- stood out against the rest of the
+     app's warm amber/ink-green/coral/brown/dusty-blue accent set. Teal
+     (the app's own --primary) keeps the review tab's top border/accents
+     inside the same brand palette instead of reading as an odd one out. */
+  --screen-accent: var(--primary);
+  --screen-accent-soft: #e6eef0;
   /* Tighter than the shared .tab-panel rhythm (18px) -- both disclosures
      above the ready/empty card are collapsed by default now, so the base
      gap just pushes that card further down than it needs to be. */
@@ -2194,8 +2198,8 @@ select {
 }
 
 .shiori-stamp-character {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
 }
 
 .shiori-stamp-label {
@@ -2219,12 +2223,13 @@ select {
 
 /* Same "floating helper" sizing as .reading-empty-guide -- a visible guide,
    not a small mark, since this is the one companion moment on the reading
-   screen's word-inspector idle state. Sized to the panel/helper tier
-   (56-80px), not the smaller inline-mark tier, so it actually reads as a
-   companion instead of an ambiguous little icon. */
+   screen's word-inspector idle state. Sized to the helper/header tier
+   (32-48px), not the smaller inline-mark tier, so it actually reads as a
+   companion instead of an ambiguous little icon, without dominating the
+   one-line hint text next to it. */
 .shiori-guide-card .shiori-asset--md {
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
 }
 
 .shiori-guide-card-text {
@@ -2810,12 +2815,11 @@ select {
 }
 
 /* This is the one companion moment on the whole tab (the review-card flow
-   itself never repeats a big character) -- sized a notch above the shared
-   xl tier so shiori-review reads clearly here, not just "a bit bigger than
-   a mark". */
+   itself never repeats a big character) -- ~96px so shiori-review reads
+   clearly here, not just "a bit bigger than a mark". */
 .study-ready-card .shiori-asset--xl {
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
 }
 
 .study-ready-card h3,
@@ -2885,11 +2889,11 @@ select {
 }
 
 /* This guide's companion is a "floating helper" moment, not a generic
-   small mark -- sized to the panel/helper tier (56-80px) so Shiori is a
+   small mark -- sized to the helper/header tier (32-48px) so Shiori is a
    visible guide here, not a disappearing icon. */
 .reading-empty-guide .shiori-asset--md {
-  width: 64px;
-  height: 64px;
+  width: 48px;
+  height: 48px;
 }
 
 .reading-empty-guide button {
@@ -4136,7 +4140,7 @@ input.reading-vocab-item-checkbox {
 }
 
 .records-deck-progress {
-  height: 6px;
+  height: 8px;
 }
 
 /* Primary-visible row: 오늘 복습 N / 모르는 단어 N -- 전체/아는 단어/헷갈리는
@@ -4565,9 +4569,13 @@ input.reading-vocab-item-checkbox {
 }
 
 .brand-deck-cover.jlpt-level-n3 {
+  /* Was linear-gradient(..., var(--accent)) -- the shared CTA accent color
+     is more saturated than its N5/N4/N2/N1 neighbors and popped as an odd
+     bright step in the ramp. A dedicated, slightly muted tone keeps the
+     N5->N1 gradient smooth. */
   background-image:
     radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
-    linear-gradient(135deg, #e59266 0%, var(--accent) 100%);
+    linear-gradient(135deg, #d68a5f 0%, #c17550 100%);
 }
 
 .brand-deck-cover.jlpt-level-n2 {
@@ -4635,8 +4643,8 @@ input.reading-vocab-item-checkbox {
 }
 
 .shared-deck-title-mark {
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
 }
 
 
@@ -4666,7 +4674,7 @@ input.reading-vocab-item-checkbox {
 }
 
 .jlpt-level-n3 {
-  background: var(--accent);
+  background: #c17550;
 }
 
 .jlpt-level-n2 {
@@ -5020,6 +5028,10 @@ input.reading-vocab-item-checkbox {
   width: 3px;
   border-radius: 2px;
   background: var(--status-unclassified-line);
+  /* Softened -- a full-strength status color down every row (most rows
+     are "모르는 단어") read as a harsh red rail down the whole list. Still
+     legible as a status cue, just quieter. */
+  opacity: 0.7;
 }
 
 .vocab-row-status-known::before {
@@ -6447,6 +6459,23 @@ input.reading-vocab-item-checkbox {
   background: var(--panel-bg);
   box-shadow: 0 -8px 30px rgba(120, 98, 40, 0.22);
   animation: app-slide-up var(--motion-base) var(--ease-soft) both;
+  /* A thin, quiet scrollbar instead of the OS-default thick one -- on
+     platforms with always-visible scrollbars this was eating into the
+     20px padding and making the panel feel tighter than it actually is. */
+  scrollbar-width: thin;
+}
+
+.bookmark-inspector::-webkit-scrollbar {
+  width: 8px;
+}
+
+.bookmark-inspector::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.bookmark-inspector::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Idle Word Inspector -- desktop-only "nothing selected yet" placeholder
@@ -6466,10 +6495,39 @@ input.reading-vocab-item-checkbox {
    centers that strip in the panel; the icon+text arrangement itself is
    ShioriGuideCard's own. */
 .token-sheet-idle {
+  position: relative;
   display: flex;
   justify-content: center;
   padding: 28px 20px;
   pointer-events: none;
+}
+
+/* The idle guide itself is pointer-events:none (a passive hint, not a
+   clickable panel), but its own dismiss button needs to opt back in so it
+   can actually be closed. */
+.token-sheet-idle-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: auto;
+}
+
+.token-sheet-idle-dismiss:hover {
+  background: var(--soft-bg);
+  color: var(--text);
 }
 
 .token-sheet-header {
@@ -6497,8 +6555,8 @@ input.reading-vocab-item-checkbox {
 .token-sheet-bookmark-icon {
   flex: 0 0 auto;
   align-self: center;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
 }
 
 .token-sheet-word {
