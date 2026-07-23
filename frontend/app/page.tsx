@@ -53,6 +53,8 @@ import type {
   VocabItem,
   VocabSort,
   StudyStats,
+  StudyCardItem,
+  StudyLexemeItem,
   SharedDeckDetail,
   SharedDeckSummary,
 } from "../components/types";
@@ -68,6 +70,18 @@ type VocabItemsResponse = {
 
 type StudyItemsResponse = {
   items: VocabItem[];
+};
+
+const SHARED_DECK_STUDY_ID_PREFIX = "shared:";
+
+type LexemeReviewResponse = {
+  lexeme_id: number;
+  status: string;
+  review_level: number;
+  next_review_at: string | null;
+  correct_count: number;
+  wrong_count: number;
+  last_reviewed_at: string | null;
 };
 
 type StatsResponse = StudyStats;
@@ -740,7 +754,7 @@ export default function HomePage() {
   const [studyMessage, setStudyMessage] = useState("");
   const [studyStatsMessage, setStudyStatsMessage] = useState("");
   const [infoStatsMessage, setInfoStatsMessage] = useState("");
-  const [studyItems, setStudyItems] = useState<VocabItem[]>([]);
+  const [studyItems, setStudyItems] = useState<StudyCardItem[]>([]);
   const [studyStats, setStudyStats] = useState<StudyStats | null>(null);
   const [infoStats, setInfoStats] = useState<StudyStats | null>(null);
   // 기록 탭 전용 read-only word highlights ("최근 담은 단어" / "자주 틀린
@@ -2416,7 +2430,16 @@ export default function HomePage() {
     setVocabItems((current) => current.map(replaceIfMatch));
     setDeckVocabItems((current) => current.map(replaceIfMatch));
     setReadingDeckVocabItems((current) => current.map(replaceIfMatch));
-    setStudyItems((current) => current.map(replaceIfMatch));
+    // studyItems mixes in lexeme study cards (item_type: "lexeme") alongside
+    // vocab ones -- only re-tag the matching *vocab* card, and keep it as a
+    // StudyCardItem rather than collapsing it back down to a bare VocabItem.
+    setStudyItems((current) =>
+      current.map((item) =>
+        item.item_type === "vocab" && item.id === updated.id
+          ? toVocabStudyCardItem(updated)
+          : item,
+      ),
+    );
     setReadingTokens((current) =>
       current.map((token) =>
         token.savedVocabItemId === updated.id
@@ -2733,10 +2756,106 @@ export default function HomePage() {
     if (deckId === "all") {
       return "전체 단어장";
     }
+    if (deckId.startsWith(SHARED_DECK_STUDY_ID_PREFIX)) {
+      const sharedDeckId = Number(deckId.slice(SHARED_DECK_STUDY_ID_PREFIX.length));
+      return (
+        sharedDecks.find((deck) => deck.id === sharedDeckId)?.title ?? "가져온 덱"
+      );
+    }
     return decks.find((deck) => String(deck.id) === deckId)?.name ?? "선택한 덱";
   }
 
+  // Phase 3 (see docs/architecture/shared-lexeme-progress-storage.md -- "SRS
+  // card integration"): tag a plain vocab item / lexeme study item with the
+  // common item_type-discriminated shape the study card renders. A lexeme
+  // item's synthetic `id` is always negative -- vocab_item ids are positive
+  // DB autoincrement ids, so this can never collide, and lexeme_id/
+  // shared_deck_id (not `id`) are what rating submission actually keys off.
+  function toVocabStudyCardItem(item: VocabItem): StudyCardItem {
+    return {
+      ...item,
+      item_type: "vocab",
+      vocab_item_id: item.id,
+      lexeme_id: null,
+      shared_deck_id: null,
+      source_label: item.deck_name || "내 단어장",
+    };
+  }
+
+  function toLexemeStudyCardItem(item: StudyLexemeItem): StudyCardItem {
+    return {
+      id: -item.lexeme_id,
+      deck_id: item.shared_deck_id,
+      deck_name: item.source_label,
+      surface: item.surface,
+      base_form: item.base_form,
+      reading: item.reading,
+      part_of_speech: item.part_of_speech,
+      normalized_form: item.base_form,
+      meaning_ko: item.meaning_ko,
+      dictionary_gloss: item.dictionary_gloss ?? "",
+      quality_tag: "normal",
+      example_sentence: item.example_sentence ?? "",
+      is_custom_term: false,
+      occurrence_count: 1,
+      jlpt_level: item.jlpt_level,
+      status: item.status,
+      context_explanation_ko: item.context_explanation_ko ?? "",
+      correct_count: item.correct_count,
+      wrong_count: item.wrong_count,
+      last_reviewed_at: null,
+      review_level: item.review_level,
+      next_review_at: item.next_review_at,
+      created_at: "",
+      updated_at: "",
+      item_type: "lexeme",
+      vocab_item_id: null,
+      lexeme_id: item.lexeme_id,
+      shared_deck_id: item.shared_deck_id,
+      source_label: item.source_label,
+    };
+  }
+
+  async function fetchLexemeStudyItems(
+    options: { sharedDeckId?: number; dueOnly?: boolean } = {},
+  ) {
+    const params = new URLSearchParams();
+    if (options.sharedDeckId !== undefined) {
+      params.set("shared_deck_id", String(options.sharedDeckId));
+    }
+    if (options.dueOnly) {
+      params.set("due_only", "true");
+    }
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return requestJson<StudyLexemeItem[]>(`/study-items/lexemes${query}`);
+  }
+
   async function fetchStudyItems(deckId: string, mode: StudyMode) {
+    // A subscribed shared deck was picked in the deck selector -- study only
+    // that deck's lexeme words, no personal vocab_items mixed in. "recent"
+    // (방금 담은 단어) is a personal-vocab-only concept, so it stays empty here.
+    if (deckId.startsWith(SHARED_DECK_STUDY_ID_PREFIX)) {
+      if (mode === "recent") {
+        return [];
+      }
+      const sharedDeckId = Number(deckId.slice(SHARED_DECK_STUDY_ID_PREFIX.length));
+      const lexemeItems = await fetchLexemeStudyItems({
+        sharedDeckId,
+        dueOnly: mode === "today",
+      });
+      let filtered = lexemeItems;
+      if (mode === "new") {
+        filtered = lexemeItems.filter((item) => item.status === "unclassified");
+      } else if (mode === "uncertain") {
+        filtered = lexemeItems.filter((item) => item.status === "uncertain");
+      } else if (mode === "unknown") {
+        filtered = lexemeItems.filter(
+          (item) => item.status === "unknown" || item.status === "unclassified",
+        );
+      }
+      return filtered.map(toLexemeStudyCardItem);
+    }
+
     const baseParams = new URLSearchParams();
     if (deckId !== "all") {
       baseParams.set("deck_id", deckId);
@@ -2745,7 +2864,15 @@ export default function HomePage() {
     if (mode === "today") {
       const query = baseParams.toString() ? `?${baseParams.toString()}` : "";
       const data = await requestJson<StudyItemsResponse>(`/study-items${query}`);
-      return data.items;
+      const vocabCards = data.items.map(toVocabStudyCardItem);
+      // Only merge in subscribed-deck lexeme words for the "everything"
+      // view (no specific personal deck selected) -- a specific personal
+      // deck's study session should stay scoped to that deck's own words.
+      if (deckId !== "all") {
+        return vocabCards;
+      }
+      const lexemeItems = await fetchLexemeStudyItems({ dueOnly: true });
+      return [...vocabCards, ...lexemeItems.map(toLexemeStudyCardItem)];
     }
 
     if (mode === "all") {
@@ -2762,7 +2889,7 @@ export default function HomePage() {
         fetchByStatus("unknown"),
         fetchByStatus("uncertain"),
       ]);
-      return [...unknownItems, ...uncertainItems];
+      return [...unknownItems, ...uncertainItems].map(toVocabStudyCardItem);
     }
 
     if (mode === "new") {
@@ -2771,7 +2898,17 @@ export default function HomePage() {
       const data = await requestJson<VocabItemsResponse>(
         `/vocab-items?${params.toString()}`,
       );
-      return data.items.filter((item) => !item.last_reviewed_at);
+      const vocabCards = data.items
+        .filter((item) => !item.last_reviewed_at)
+        .map(toVocabStudyCardItem);
+      if (deckId !== "all") {
+        return vocabCards;
+      }
+      const lexemeItems = await fetchLexemeStudyItems();
+      const newLexemeCards = lexemeItems
+        .filter((item) => item.status === "unclassified")
+        .map(toLexemeStudyCardItem);
+      return [...vocabCards, ...newLexemeCards];
     }
 
     if (mode === "recent") {
@@ -2782,7 +2919,7 @@ export default function HomePage() {
         `/vocab-items?${baseParams.toString()}`,
       );
       const recentIds = new Set(recentlySavedVocabItemIds);
-      return data.items.filter((item) => recentIds.has(item.id));
+      return data.items.filter((item) => recentIds.has(item.id)).map(toVocabStudyCardItem);
     }
 
     const params = new URLSearchParams(baseParams);
@@ -2791,7 +2928,7 @@ export default function HomePage() {
     const data = await requestJson<VocabItemsResponse>(
       `/vocab-items?${params.toString()}`,
     );
-    return data.items;
+    return data.items.map(toVocabStudyCardItem);
   }
 
   function getEmptyStudyMessage(mode: StudyMode, deckId: string) {
@@ -2912,29 +3049,61 @@ export default function HomePage() {
     setStudyMessage("");
 
     try {
-      const updatedItem = await requestJson<VocabItem>(
-        `/study-items/${currentItem.id}/review`,
-        {
-          method: "POST",
-          body: JSON.stringify({ rating, response_time_ms: responseTimeMs }),
-        },
-      );
-      setVocabItems((currentItems) =>
-        currentItems.map((item) =>
-          item.id === updatedItem.id ? updatedItem : item,
-        ),
-      );
+      let nextReviewAt: string | null;
+      // item_type branches the rating submission to the right endpoint --
+      // a lexeme item's rating must never touch vocab_items or /study-items
+      // (see docs/architecture/shared-lexeme-progress-storage.md -- "SRS
+      // card integration"). Both branches lazily update/create exactly one
+      // progress row for the current word, same as before this phase.
+      if (currentItem.item_type === "lexeme" && currentItem.lexeme_id !== null) {
+        const progress = await requestJson<LexemeReviewResponse>(
+          `/shared-decks/${currentItem.shared_deck_id}/words/${currentItem.lexeme_id}/review`,
+          {
+            method: "POST",
+            body: JSON.stringify({ rating }),
+          },
+        );
+        nextReviewAt = progress.next_review_at;
+        setStudyItems((currentItems) =>
+          currentItems.map((item) =>
+            item.item_type === "lexeme" && item.lexeme_id === progress.lexeme_id
+              ? {
+                  ...item,
+                  status: progress.status as StudyCardItem["status"],
+                  review_level: progress.review_level,
+                  next_review_at: progress.next_review_at,
+                  correct_count: progress.correct_count,
+                  wrong_count: progress.wrong_count,
+                }
+              : item,
+          ),
+        );
+      } else {
+        const updatedItem = await requestJson<VocabItem>(
+          `/study-items/${currentItem.id}/review`,
+          {
+            method: "POST",
+            body: JSON.stringify({ rating, response_time_ms: responseTimeMs }),
+          },
+        );
+        nextReviewAt = updatedItem.next_review_at;
+        setVocabItems((currentItems) =>
+          currentItems.map((item) =>
+            item.id === updatedItem.id ? updatedItem : item,
+          ),
+        );
+      }
       setSessionCounts((counts) => ({
         ...counts,
         [rating]: counts[rating] + 1,
       }));
-      setStudyMessage(buildRatingFeedbackMessage(rating, updatedItem.next_review_at));
+      setStudyMessage(buildRatingFeedbackMessage(rating, nextReviewAt));
       setNextUpcomingReviewAt((current) => {
-        if (!updatedItem.next_review_at) {
+        if (!nextReviewAt) {
           return current;
         }
-        if (!current || updatedItem.next_review_at < current) {
-          return updatedItem.next_review_at;
+        if (!current || nextReviewAt < current) {
+          return nextReviewAt;
         }
         return current;
       });
@@ -3295,6 +3464,12 @@ export default function HomePage() {
             sessionCounts={sessionCounts}
             nextUpcomingReviewAt={nextUpcomingReviewAt}
             decks={decks}
+            sharedDeckOptions={sharedDecks
+              .filter((deck) => deck.mode === "subscribed" && deck.imported_at)
+              .map((deck) => ({
+                id: `${SHARED_DECK_STUDY_ID_PREFIX}${deck.id}`,
+                title: deck.title,
+              }))}
             selectedDeckId={selectedStudyDeckId}
             selectedDeckName={getDeckDisplayName(selectedStudyDeckId)}
             studyMode={studyMode}

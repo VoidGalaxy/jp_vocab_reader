@@ -328,6 +328,31 @@ class LexemeWordProgressResponse(BaseModel):
     last_reviewed_at: str | None = None
 
 
+# --- Phase 3: subscribed shared-deck words in the SRS study queue (additive;
+# see docs/architecture/shared-lexeme-progress-storage.md) ------------------
+
+
+class StudyLexemeItemResponse(BaseModel):
+    item_type: str = "lexeme"
+    lexeme_id: int
+    shared_deck_id: int
+    surface: str
+    base_form: str
+    reading: str
+    part_of_speech: str
+    meaning_ko: str
+    dictionary_gloss: str | None = None
+    example_sentence: str | None = None
+    context_explanation_ko: str | None = None
+    jlpt_level: str | None = None
+    status: str
+    review_level: int
+    next_review_at: str | None = None
+    correct_count: int
+    wrong_count: int
+    source_label: str
+
+
 class DeckPackageApp(BaseModel):
     name: str = "JP Vocab Reader"
     format: str = "deck_package"

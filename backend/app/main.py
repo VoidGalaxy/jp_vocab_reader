@@ -50,6 +50,7 @@ from app.repositories.deck_repository import (
 )
 from app.repositories.feedback_repository import create_app_feedback, create_meaning_feedback
 from app.repositories.lexeme_repository import (
+    list_subscribed_lexeme_study_items,
     record_lexeme_review,
     update_word_status,
 )
@@ -118,6 +119,7 @@ from app.schemas import (
     SharedDeckSummaryResponse,
     StatsResponse,
     StudyItemsResponse,
+    StudyLexemeItemResponse,
     StudyReviewRequest,
     RESULT_TO_RATING,
     VALID_APP_FEEDBACK_CATEGORIES,
@@ -646,6 +648,49 @@ def post_shared_deck_word_review(
     if not progress:
         raise HTTPException(status_code=404, detail="word not found")
     return LexemeWordProgressResponse(**progress)
+
+
+# --- Phase 3: subscribed shared-deck words in the SRS study queue -----------
+# Read-only merge source for the review tab (see
+# docs/architecture/shared-lexeme-progress-storage.md). Rating submission for
+# these words still goes through the existing
+# POST /shared-decks/{shared_deck_id}/words/{lexeme_id}/review endpoint above
+# -- no new write endpoint needed here.
+
+
+@app.get("/study-items/lexemes", response_model=list[StudyLexemeItemResponse])
+def get_study_lexeme_items(
+    http_request: Request,
+    shared_deck_id: int | None = Query(default=None),
+    due_only: bool = Query(default=False),
+) -> list[StudyLexemeItemResponse]:
+    user_id = current_user_id(http_request)
+    items = list_subscribed_lexeme_study_items(
+        user_id, shared_deck_id=shared_deck_id, due_only=due_only
+    )
+    return [
+        StudyLexemeItemResponse(
+            lexeme_id=item["lexeme_id"],
+            shared_deck_id=item["shared_deck_id"],
+            surface=item["surface"],
+            base_form=item["base_form"],
+            reading=item["reading"],
+            part_of_speech=item["part_of_speech"],
+            meaning_ko=item["meaning_ko"],
+            dictionary_gloss=item.get("dictionary_gloss"),
+            example_sentence=item.get("example_sentence"),
+            context_explanation_ko=item.get("context_explanation_ko"),
+            jlpt_level=item.get("jlpt_level"),
+            status=item["status"],
+            review_level=item["review_level"],
+            next_review_at=item.get("next_review_at"),
+            correct_count=item["correct_count"],
+            wrong_count=item["wrong_count"],
+            source_label=item["source_label"],
+        )
+        for item in items
+        if item["status"] != "known"
+    ]
 
 
 @app.get("/vocab-items", response_model=VocabItemsResponse)

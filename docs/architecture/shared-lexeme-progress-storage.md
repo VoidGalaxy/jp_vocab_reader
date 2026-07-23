@@ -119,14 +119,14 @@ them when registering in lexeme mode.
 - ~~No frontend UI for browsing/studying a subscribed deck's words~~ --
   **done in phase 2** (see below): the deck tab now has an interactive word
   list with status controls for a subscribed deck.
-- **No review-flow integration.** Still true after phase 2. `/study-items`,
-  `/study-items/{id}/review`, and `/stats` are entirely `vocab_items`-based,
-  unchanged. `POST .../review` updates `user_word_progress` directly but does
-  **not** write to `review_logs` (that table's `vocab_item_id` column is a
-  NOT NULL FK into `vocab_items`, which doesn't fit a lexeme-keyed review).
-  A `lexeme_review_logs` table (or a nullable/polymorphic `review_logs`
-  redesign), plus actually wiring a subscribed deck into the Study tab's
-  card-flip review flow, is left for **phase 3**.
+- ~~No review-flow integration~~ -- **done in phase 3** (see below): the
+  Study tab's card-flip review flow now includes subscribed-deck lexeme
+  words, merged in via a `StudyCardItem` adapter layer. `/stats` is still
+  entirely `vocab_items`-based (deferred to phase 4/5, see phase 3's
+  section below), and `review_logs` is still vocab-only (also phase 4, see
+  below) -- both `POST .../review` (lexeme) and `record_review()` (vocab)
+  update only their own progress table, with no lexeme-side review-history
+  log written anywhere yet.
 - **No custom-term lexeme equivalent.** Still true. Deck packages can carry
   `custom_terms`; lexeme-mode registration currently skips them.
 - **No automatic cleanup of previously-copied vocabulary.** Still true. See
@@ -196,6 +196,149 @@ tab -- no changes to VocabSection (노트) or StudySection (복습).
   correct phase-2 action would be a "오류 신고" entry point -- not built
   yet (no UI hook added this phase; the existing `/feedback/meaning`
   endpoint is `vocab_items`-scoped, not lexeme-scoped).
+
+## Phase 3: SRS card integration
+
+Phase 3 wires subscribed shared-deck/JLPT-recommended-deck words into the
+actual Study (복습) tab's card-flip review flow, which phase 2 explicitly
+left alone. Personal `vocab_items` review is completely unchanged -- this
+is additive merging, not a rewrite of the review flow.
+
+### Backend
+
+- **New read-only endpoint**: `GET /study-items/lexemes` (optional
+  `shared_deck_id`, `due_only` query params), backed by
+  `list_subscribed_lexeme_study_items()` in
+  `app/repositories/lexeme_repository.py`. Reuses the already-tested
+  `list_shared_deck_words_with_progress()` once per subscribed deck rather
+  than a new SQL join, then de-duplicates by `lexeme_id` (the same lexeme
+  can be linked into more than one subscribed deck, but a user has at most
+  one `user_word_progress` row per lexeme -- it must only ever show up as
+  one study card). Excludes `status = 'known'` words, same policy as
+  `vocab_items`. Passing a `shared_deck_id` the user isn't actually
+  subscribed to returns an empty list rather than leaking that deck's
+  words. **Never creates a `user_word_progress` row** -- merely listing the
+  queue stays exactly as read-only as the existing deck-detail view.
+- **No new write endpoint.** Rating a lexeme study card still calls the
+  phase-1 `POST /shared-decks/{shared_deck_id}/words/{lexeme_id}/review`
+  endpoint (`record_lexeme_review()`), which already lazily creates/updates
+  `user_word_progress` and never touches `vocab_items` or the shared
+  `lexemes` row. Nothing changed in that function this phase.
+- **Progress-less lexeme words are new-word study material.** A lexeme
+  with no `user_word_progress` row overlays as `status: "unclassified"`,
+  `review_level: 0`, `next_review_at: null` (unchanged phase-1 overlay
+  contract) -- the study queue treats that exactly like a personal
+  `vocab_items` row that's never been reviewed.
+
+### Frontend: a common study-card shape, not a rewrite
+
+- `StudyCardItem` (`components/types.ts`) is a strict superset of the
+  existing `VocabItem` type (`VocabItem & { item_type, vocab_item_id,
+  lexeme_id, shared_deck_id, source_label }`), built via two adapters in
+  `app/page.tsx` -- `toVocabStudyCardItem()` (tags an existing
+  `/study-items`/`/vocab-items` row `item_type: "vocab"`) and
+  `toLexemeStudyCardItem()` (maps a `GET /study-items/lexemes` row into the
+  same shape, with a synthetic **negative** `id` (`-lexeme_id`) so it can
+  never collide with a real, positive `vocab_items` id in the same list/key
+  space). `/study-items`, `/vocab-items`, and their response shapes are
+  byte-for-byte unchanged -- the unification happens entirely client-side,
+  as an adapter layer over the existing endpoints, per this phase's "add an
+  adapter, don't rewrite the flow" brief.
+- `StudySection.tsx`'s props widened from `VocabItem[]`/`VocabItem` to
+  `StudyCardItem[]`/`StudyCardItem` -- since `StudyCardItem` is a superset,
+  every existing render path (front word, reading, meaning, example
+  sentence, rating buttons) keeps working unchanged for vocab cards. Two
+  small, additive changes only: (1) the card header shows
+  `· {source_label}` next to the mode label for a lexeme card, so it's
+  visually obvious which deck a subscribed-deck word came from; (2) the
+  "뜻 수정"/"뜻 오류 신고" controls only render `if (item_type ===
+  "vocab")` -- editing a shared lexeme's common meaning from the study
+  card was never in scope (phase 2 already drew this line for the deck
+  tab; phase 3 keeps it).
+- **Rating submission branches on `item_type`** in
+  `submitStudyReview()` (`app/page.tsx`): a `"vocab"` card keeps calling
+  `POST /study-items/{id}/review` exactly as before; a `"lexeme"` card
+  calls `POST /shared-decks/{shared_deck_id}/words/{lexeme_id}/review`
+  instead and patches only the matching `studyItems` entry (never
+  `setVocabItems`, since a lexeme rating is not a `vocab_items` row).
+- **Where lexeme words get merged into the queue**: for the "오늘 복습"
+  (today) and "새 단어 학습" (new) modes with no specific *personal* deck
+  selected, `fetchStudyItems()` merges in every subscribed deck's due (today)
+  or `status === "unclassified"` (new) lexeme words alongside the vocab
+  ones. Selecting one specific personal deck keeps that session scoped to
+  that deck's own `vocab_items`, same as before -- lexeme words only mix in
+  for the "everything" view.
+- **Subscribed decks are selectable for "덱별 학습"**: the existing deck
+  `<select>` in `StudySection.tsx` gained an `<optgroup label="학습
+  목록">` listing every actively-subscribed shared deck (`sharedDecks`
+  already fetched via `GET /shared-decks`, filtered to
+  `mode === "subscribed" && imported_at`), value-prefixed `shared:<id>` so
+  it shares the same string-keyed `<select>` value space as a personal
+  deck's plain numeric id. Picking one studies only that deck's lexeme
+  words, with `today`/`new`/`uncertain`/`unknown`/`all` filtering the same
+  status values a lexeme's `user_word_progress` can hold (identical
+  `VALID_STATUSES` set to `vocab_items`). "방금 담은 단어 복습" (recent) is
+  a personal-vocab-only concept and returns no items for a selected shared
+  deck.
+- **Wording**: only "가져온 덱" / "학습 목록" / a deck's own title are
+  used; no "복사된 단어" phrasing (there's nothing copied), no "공식
+  JLPT" phrasing anywhere in the new code or UI strings.
+
+### review_logs: still vocab-only, lexeme logging is Phase 4
+
+`review_logs.vocab_item_id` is a `NOT NULL` FK into `vocab_items` -- a
+lexeme rating has no row to point that at. Exactly as phase 1 already
+flagged, this phase **does not** touch `review_logs` at all: a lexeme
+rating updates only `user_word_progress` (`correct_count`/`wrong_count`/
+`review_level`/`next_review_at`/`last_reviewed_at`), with no reviewed-word
+history log written anywhere. Deliberately not attempted this phase --
+forcing a nullable/polymorphic FK onto the existing `review_logs` table
+under time pressure risks corrupting the integrity of every already-logged
+personal review. **Phase 4 TODO**, two candidate designs already identified
+(pick one then, not now):
+
+1. A new, separate `lexeme_review_logs` table (mirrors `review_logs`'
+   columns, FK's into `lexemes`/`user_word_progress` instead of
+   `vocab_items`) -- purely additive, zero risk to the existing table.
+2. Redesigning `review_logs` itself into a polymorphic
+   `item_type`/`item_id` shape that covers both -- more unified, but a real
+   migration of every existing row, which is exactly the kind of
+   destructive-migration risk this phase was told to avoid.
+
+### stats/dashboard: intentionally not touched this phase
+
+`GET /stats`/`build_stats()` stays entirely `vocab_items`-based, unchanged.
+Full lexeme-aware stats (e.g. "오늘 복습" including subscribed-deck due
+words in the dashboard's own count, not just the study queue actually
+studying them) is **deferred to phase 4/5** -- mixing an approximate,
+possibly-inconsistent lexeme count into `/stats`' existing, precisely
+`vocab_items`-scoped numbers was judged riskier than useful for this phase.
+The Study tab's own in-session counters (session rating counts, "N / M"
+progress) already reflect the merged queue correctly, since those are
+computed from `studyItems.length`/`sessionCounts` client-side, not from
+`/stats`.
+
+### Storage regression, extended
+
+`check_shared_deck_storage_regression.py` and
+`check_shared_deck_publish_storage_regression.py` (both already existing)
+still pass unchanged after this phase. A new companion script,
+`backend/scripts/check_shared_deck_srs_regression.py`, additionally guards
+that:
+
+- Merely **listing** the study queue (`list_subscribed_lexeme_study_items()`
+  / `GET /study-items/lexemes`) creates **zero** `user_word_progress` rows,
+  at any deck size (verified at 200 and 1000 words) -- only an actual
+  rating submission does.
+- One rating on one lexeme item lazily creates exactly **one**
+  `user_word_progress` row, and rating that same item again **updates that
+  row in place** (no duplicate).
+- `vocab_items` never grows, at any point in this flow (import, listing,
+  first rating, repeated rating).
+- A lexeme shared by two different subscribed decks appears as exactly
+  **one** de-duplicated study card, not two.
+- A shared deck the user never subscribed to never leaks its words into
+  the study queue, even if its id is passed explicitly.
 
 ## Existing data / migration policy
 

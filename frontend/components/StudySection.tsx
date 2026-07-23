@@ -7,8 +7,8 @@ import type {
   Deck,
   ReviewResult,
   SessionReviewCounts,
+  StudyCardItem,
   StudyMode,
-  VocabItem,
 } from "./types";
 import type { StudyStats } from "./types";
 import { StatsPanel } from "./StatsPanel";
@@ -26,8 +26,8 @@ import {
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 
 type StudySectionProps = {
-  items: VocabItem[];
-  currentItem?: VocabItem;
+  items: StudyCardItem[];
+  currentItem?: StudyCardItem;
   currentIndex: number;
   isComplete: boolean;
   isAnswerVisible: boolean;
@@ -41,6 +41,12 @@ type StudySectionProps = {
   sessionCounts: SessionReviewCounts;
   nextUpcomingReviewAt: string | null;
   decks: Deck[];
+  // Phase 3 (see docs/architecture/shared-lexeme-progress-storage.md -- "SRS
+  // card integration"): subscribed shared decks selectable as a study deck,
+  // alongside the personal decks above. `id` is already prefixed
+  // ("shared:123") so it can share the same <select> value space as a
+  // personal deck's plain numeric id string.
+  sharedDeckOptions: Array<{ id: string; title: string }>;
   selectedDeckId: string;
   selectedDeckName: string;
   studyMode: StudyMode;
@@ -52,7 +58,7 @@ type StudySectionProps = {
   onMeaningEditDraftChange: (value: string) => void;
   onSaveMeaningEdit: () => void;
   onCancelMeaningEdit: () => void;
-  onReportMeaning: (item: VocabItem) => void;
+  onReportMeaning: (item: StudyCardItem) => void;
   onSelectedDeckChange: (deckId: string) => void;
   onStudyModeChange: (mode: StudyMode) => void;
   onQuickStart: (mode: StudyMode) => void;
@@ -245,6 +251,7 @@ export function StudySection({
   sessionCounts,
   nextUpcomingReviewAt,
   decks,
+  sharedDeckOptions,
   selectedDeckId,
   selectedDeckName,
   studyMode,
@@ -357,6 +364,15 @@ export function StudySection({
                         {deck.name}
                       </option>
                     ))}
+                    {sharedDeckOptions.length > 0 ? (
+                      <optgroup label="학습 목록">
+                        {sharedDeckOptions.map((deck) => (
+                          <option key={deck.id} value={deck.id}>
+                            {deck.title}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ) : null}
                   </select>
                 </label>
                 <button
@@ -448,7 +464,10 @@ export function StudySection({
               studyMode === "recent" ? " study-card-header-recent" : ""
             }`}
           >
-            <span>{modeLabel}</span>
+            <span>
+              {modeLabel}
+              {currentItem.item_type === "lexeme" ? ` · ${currentItem.source_label}` : ""}
+            </span>
             <strong>{visibleProgress}</strong>
           </div>
           {studyMode === "recent" ? (
@@ -511,33 +530,38 @@ export function StudySection({
                   </span>
                 ) : null}
               </div>
-              <div className="meaning-actions-row">
-                <MeaningQuickEdit
-                  isEditing={meaningEditItemId === currentItem.id}
-                  draftValue={meaningEditDraft}
-                  isSaving={isSavingMeaningEdit}
-                  message={
-                    meaningEditItemId === currentItem.id
-                      ? meaningEditMessage
-                      : ""
-                  }
-                  onStartEdit={() =>
-                    onStartMeaningEdit(currentItem.id, currentItem.meaning_ko)
-                  }
-                  onDraftChange={onMeaningEditDraftChange}
-                  onSave={onSaveMeaningEdit}
-                  onCancel={onCancelMeaningEdit}
-                />
-                {meaningEditItemId !== currentItem.id ? (
-                  <button
-                    type="button"
-                    className="ghost-button compact-button"
-                    onClick={() => onReportMeaning(currentItem)}
-                  >
-                    뜻 오류 신고
-                  </button>
-                ) : null}
-              </div>
+              {currentItem.item_type === "vocab" ? (
+                // 뜻 수정/오류 신고는 개인 단어장(vocab_items) 전용 기능 --
+                // 구독 덱 lexeme 단어의 공용 뜻은 이 화면에서 수정 대상이
+                // 아님 (see docs/architecture/shared-lexeme-progress-storage.md).
+                <div className="meaning-actions-row">
+                  <MeaningQuickEdit
+                    isEditing={meaningEditItemId === currentItem.id}
+                    draftValue={meaningEditDraft}
+                    isSaving={isSavingMeaningEdit}
+                    message={
+                      meaningEditItemId === currentItem.id
+                        ? meaningEditMessage
+                        : ""
+                    }
+                    onStartEdit={() =>
+                      onStartMeaningEdit(currentItem.id, currentItem.meaning_ko)
+                    }
+                    onDraftChange={onMeaningEditDraftChange}
+                    onSave={onSaveMeaningEdit}
+                    onCancel={onCancelMeaningEdit}
+                  />
+                  {meaningEditItemId !== currentItem.id ? (
+                    <button
+                      type="button"
+                      className="ghost-button compact-button"
+                      onClick={() => onReportMeaning(currentItem)}
+                    >
+                      뜻 오류 신고
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               {currentItem.example_sentence ? (
                 <div className="study-example-callout paper-corner">
                   <div className="study-example-heading">

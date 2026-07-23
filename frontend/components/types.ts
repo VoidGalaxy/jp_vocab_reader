@@ -46,6 +46,46 @@ export type VocabItem = TokenWithStatus & {
   updated_at: string;
 };
 
+// Phase 3 (see docs/architecture/shared-lexeme-progress-storage.md -- "SRS
+// card integration"): the raw wire shape of GET /study-items/lexemes, one
+// entry per subscribed shared-deck word merged into the review queue.
+export type StudyLexemeItem = {
+  item_type: "lexeme";
+  lexeme_id: number;
+  shared_deck_id: number;
+  surface: string;
+  base_form: string;
+  reading: string;
+  part_of_speech: string;
+  meaning_ko: string;
+  dictionary_gloss: string | null;
+  example_sentence: string | null;
+  context_explanation_ko: string | null;
+  jlpt_level: string | null;
+  status: TokenStatus;
+  review_level: number;
+  next_review_at: string | null;
+  correct_count: number;
+  wrong_count: number;
+  source_label: string;
+};
+
+// Common study-card shape the review tab actually renders, built by
+// tagging/adapting either a VocabItem or a StudyLexemeItem (see
+// toVocabStudyCardItem/toLexemeStudyCardItem in app/page.tsx) -- never
+// returned directly by any endpoint. A strict superset of VocabItem so
+// existing StudySection code that only reads VocabItem-shaped fields keeps
+// working unchanged; `item_type` plus the nullable id fields are what a
+// caller uses to tell the two kinds of card apart before submitting a
+// rating or offering a personal-meaning-edit action.
+export type StudyCardItem = VocabItem & {
+  item_type: "vocab" | "lexeme";
+  vocab_item_id: number | null;
+  lexeme_id: number | null;
+  shared_deck_id: number | null;
+  source_label: string;
+};
+
 export type VocabFormData = {
   surface: string;
   base_form: string;

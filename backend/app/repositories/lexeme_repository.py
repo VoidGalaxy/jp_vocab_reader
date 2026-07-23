@@ -439,3 +439,63 @@ def record_lexeme_review(
         )
         row = _get_progress_row(connection, user_id, lexeme_id)
     return row_to_dict(row)
+
+
+def list_subscribed_lexeme_study_items(
+    user_id: int, shared_deck_id: int | None = None, due_only: bool = False
+) -> list[dict[str, Any]]:
+    """Study-queue view over every shared deck the user actively subscribes
+    to (Phase 3, see docs/architecture/shared-lexeme-progress-storage.md --
+    "SRS card integration"). Read-only: never creates a
+    user_deck_subscriptions or user_word_progress row -- lazy progress
+    creation only happens in update_word_status()/record_lexeme_review()
+    above, when the user actually submits a status change or rating.
+
+    Reuses list_shared_deck_words_with_progress() per subscribed deck
+    (already regression-tested for the deck-detail view) instead of a new
+    SQL join, so this is additive glue code, not a new query surface:
+    fetch each subscribed deck's word+progress overlay, then de-duplicate
+    by lexeme_id (the same lexeme can be linked into more than one
+    subscribed deck, but a user has at most one user_word_progress row per
+    lexeme) -- keeps the first deck it's seen in as that word's
+    source_label so it doesn't show up as a duplicate study card.
+
+    If shared_deck_id is given, only that one deck's words are returned --
+    but only if the user is actually subscribed to it (never leaks a
+    non-subscribed deck's words through this study-queue path).
+    """
+    subscribed_ids_set = list_subscribed_shared_deck_ids(user_id)
+    if shared_deck_id is not None:
+        if shared_deck_id not in subscribed_ids_set:
+            return []
+        subscribed_ids = [shared_deck_id]
+    else:
+        subscribed_ids = sorted(subscribed_ids_set)
+    if not subscribed_ids:
+        return []
+
+    with get_connection() as connection:
+        placeholders = ", ".join("?" for _ in subscribed_ids)
+        title_rows = connection.execute(
+            f"SELECT id, title FROM shared_decks WHERE id IN ({placeholders})",
+            tuple(subscribed_ids),
+        ).fetchall()
+    titles = {int(row["id"]): row["title"] for row in title_rows}
+
+    seen_lexeme_ids: set[int] = set()
+    items: list[dict[str, Any]] = []
+    for deck_id in subscribed_ids:
+        words = list_shared_deck_words_with_progress(deck_id, user_id, due_only=due_only)
+        for word in words:
+            lexeme_id = word["lexeme_id"]
+            if lexeme_id in seen_lexeme_ids:
+                continue
+            seen_lexeme_ids.add(lexeme_id)
+            items.append(
+                {
+                    **word,
+                    "shared_deck_id": deck_id,
+                    "source_label": titles.get(deck_id) or "가져온 덱",
+                }
+            )
+    return items
