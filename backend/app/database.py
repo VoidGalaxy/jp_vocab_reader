@@ -15,7 +15,7 @@ from app.schemas import (
     VocabItemCreate,
     VocabItemUpdate,
 )
-from app.settings import DEFAULT_SQLITE_DB_PATH, get_database_url
+from app.settings import DEFAULT_SQLITE_DB_PATH, get_app_env, get_database_url
 
 try:
     import psycopg
@@ -167,6 +167,48 @@ def _is_insert_with_id(query: str) -> bool:
     }
 
 
+NEON_HOST_MARKER = "neon.tech"
+PRODUCTION_APP_ENV = "production"
+NON_PRODUCTION_APP_ENV_DEFAULT = "development"
+
+
+def is_neon_database_url(database_url: str) -> bool:
+    """Cheap substring check on the host, not a full URL parse -- good
+    enough to catch the one real-world case this guards against (a Neon
+    DATABASE_URL left over in backend/.env), without parsing/logging the
+    URL itself anywhere.
+    """
+    return NEON_HOST_MARKER in (database_url or "")
+
+
+def normalize_app_env(app_env: str | None) -> str:
+    """Missing/blank APP_ENV is treated as local/development, never as
+    production -- an unset APP_ENV must never be the thing that lets a Neon
+    DATABASE_URL slip through.
+    """
+    normalized = (app_env or "").strip().lower()
+    return normalized or NON_PRODUCTION_APP_ENV_DEFAULT
+
+
+def assert_safe_database_url(database_url: str | None, app_env: str | None) -> None:
+    """Refuses to proceed if DATABASE_URL points at Neon while APP_ENV isn't
+    production (see docs/operations/database-safety.md). A local SQLite
+    DATABASE_URL, or no DATABASE_URL at all, is always fine regardless of
+    APP_ENV. Never logs/includes the URL itself -- it may contain
+    credentials -- only whether its host matched the Neon marker.
+    """
+    database_url = (database_url or "").strip()
+    if not is_neon_database_url(database_url):
+        return
+    if normalize_app_env(app_env) == PRODUCTION_APP_ENV:
+        return
+    raise RuntimeError(
+        "Refusing to start: DATABASE_URL points to Neon (host matches "
+        "neon.tech) while APP_ENV is not production. Use a local SQLite "
+        "DATABASE_URL for development."
+    )
+
+
 def get_sqlite_database_path() -> str:
     database_url = get_database_url()
     if not database_url:
@@ -187,6 +229,12 @@ def get_sqlite_database_path() -> str:
 
 def get_connection() -> sqlite3.Connection | AppPostgresConnection:
     database_url = get_database_url()
+    # Must run before any connection object (SQLite or PostgreSQL) is
+    # created -- this is the single choke point every DB access in the app
+    # goes through, including init_db() (init_db -> initialize_database ->
+    # get_connection(), before any schema/migration statement runs). See
+    # docs/operations/database-safety.md.
+    assert_safe_database_url(database_url, get_app_env())
     if database_url.startswith(POSTGRES_URL_PREFIXES):
         if psycopg is None or dict_row is None:
             raise RuntimeError(
