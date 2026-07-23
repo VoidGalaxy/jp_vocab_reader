@@ -280,14 +280,29 @@ def main() -> int:
             stats_after_rating["lexeme_completed_today"],
             1,
         )
-        # rated word's review_level is now > 0, so it drops out of "new"; its
-        # status is still 'unclassified' (rating never changes status -- see
-        # record_lexeme_review's docstring), so it is not yet "due" or "hard"
-        # either. Only the rated-word bookkeeping should move, nothing else.
+        # rated word's review_level is now > 0, so it drops out of "new". Its
+        # status is auto-corrected from 'unclassified' to 'uncertain' on this
+        # first rating (Phase 6 policy: rating="good" -> status="uncertain",
+        # see record_lexeme_review's _RATING_TO_AUTO_STATUS), so it now
+        # contributes to lexeme_hard_count -- but not lexeme_due_count, since
+        # "good" schedules next_review_at comfortably in the future, not
+        # null/past.
         expect_equal(
             "lexeme_new_count drops by exactly 1 after rating the one word",
             stats_after_rating["lexeme_new_count"],
             word_count - 1,
+        )
+        expect_equal(
+            "lexeme_hard_count reflects the 'good' rating's auto-corrected "
+            "'uncertain' status (Phase 6)",
+            stats_after_rating["lexeme_hard_count"],
+            1,
+        )
+        expect_equal(
+            "lexeme_due_count unaffected by the 'good' rating (next_review_at is "
+            "in the future, not due yet)",
+            stats_after_rating["lexeme_due_count"],
+            0,
         )
 
         # --- explicitly setting status makes a lexeme count as due/hard ---------
@@ -308,9 +323,10 @@ def main() -> int:
             2,  # 'unknown' word + 'uncertain' word both satisfy the due condition
         )
         expect_equal(
-            "lexeme_hard_count after marking one word 'uncertain'",
+            "lexeme_hard_count after marking one word 'uncertain' (plus the "
+            "'good'-rated word already auto-corrected to 'uncertain' above)",
             stats_after_status_changes["lexeme_hard_count"],
-            1,
+            2,
         )
 
         # --- de-duplication: the same lexeme in a second subscribed deck --------

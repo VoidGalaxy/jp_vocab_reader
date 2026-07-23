@@ -595,6 +595,147 @@ everything phases 1-4's scripts already check (all still pass unchanged):
   to key a `DeckStatsResponse` entry on; giving subscribed decks their own
   stats-tab presence, if wanted, is future work.
 
+## Phase 6: lexeme SRS status policy
+
+### The blind spot phase 6 fixes
+
+`get_or_create_progress()` lazily creates a `user_word_progress` row with
+`status='unclassified'`, and phases 3-5's `record_lexeme_review()` only
+ever advanced `review_level`/`next_review_at`/`correct_count`/
+`wrong_count` -- it never touched `status`. So a lexeme rated
+"good"/"hard"/"again" (i.e. every rating except a first-try "easy")
+permanently stayed `status='unclassified'` unless the user *separately*
+used the deck tab's status dropdown (`update_word_status()`). That word:
+
+- dropped out of `new_count`'s `review_level = 0` condition (it had been
+  reviewed), **but**
+- never satisfied `due_count`/`hard_count`'s `status IN ('unknown',
+  'uncertain')` condition either (still `'unclassified'`),
+
+so it effectively vanished from both the SRS study queue's due bucket and
+the stats screens after its very first rating, until the user happened to
+also open the deck tab and manually classify it.
+
+### The fix: one-time status auto-correction on first rating only
+
+`record_lexeme_review()` (`app/repositories/lexeme_repository.py`) gained a
+small, additive `_RATING_TO_AUTO_STATUS` mapping and a few lines of logic,
+applied in the same `UPDATE user_word_progress` statement that already
+updates `review_level`/`next_review_at`/counts -- no new table, no new
+endpoint, no change to `vocab_items`' `record_review()` at all:
+
+| Rating | Auto-corrected status (only if previous status was `'unclassified'`/missing) |
+| --- | --- |
+| `again` | `unknown` |
+| `hard` | `uncertain` |
+| `good` | `uncertain` |
+| `easy` | `known` |
+
+- **Only fires once, on the word's first rating.** The correction only
+  applies `if previous_status is None or previous_status == "unclassified"`.
+  Once a word has any other status -- `known`/`unknown`/`uncertain`, set
+  either by a prior auto-correction or by the user explicitly via
+  `update_word_status()` -- a later rating **never** overwrites it. This
+  was the explicit design constraint: a user who has already classified a
+  word should never have that judgment silently reverted by an SRS rating.
+- **Why `good`/`hard` both map to `uncertain`, not `unknown`.** Both mean
+  "the user remembered something, with varying ease" (matching how
+  `vocab_items`' own `record_review()` already treats hard/good/easy as
+  equally "correct" for its `correct_count` bookkeeping) -- landing on
+  `uncertain` keeps the word in the active review rotation without
+  wrongly implying the user didn't know it at all (`unknown`). `easy`
+  alone maps to `known`, since a first-try-easy word is reasonably treated
+  as already learned. `again` (failed recall) maps to `unknown`.
+- **`lexeme_review_logs.previous_status`/`new_status`** record the
+  correction exactly (e.g. `unclassified` -> `uncertain` for a first
+  "good"), or the same value twice when no correction applied (a
+  user-classified word rated again). The API response's `status` field
+  (from `PATCH`/`POST .../review`) reflects the corrected value
+  immediately -- no separate call needed to see it.
+- **`update_word_status()`'s manual status-change behavior is completely
+  unchanged** -- still the only way to set a status to anything outside
+  this rating-driven mapping (e.g. mark a word `known` directly without
+  ever rating it), and still always wins over whatever a later rating's
+  auto-correction table would have suggested.
+
+### Effect on the SRS queue and stats
+
+- A `good`/`hard`/`again`-rated word now has a real `unknown`/`uncertain`
+  status, so once its `next_review_at` comes due, it correctly reappears in
+  the due-only study queue (`list_subscribed_lexeme_study_items(...,
+  due_only=True)`) and in `/stats`' `lexeme_due_count` -- it no longer
+  silently disappears after one rating.
+- An `easy`-rated word becomes `known` and is therefore correctly excluded
+  from `due_count` (and, per the existing "어려운 단어 reuses only
+  'uncertain'" policy, from `hard_count`) regardless of its
+  `next_review_at` -- exactly like a `vocab_items` row a user has marked
+  known.
+- All four ratings still remove the word from `new_count`'s `review_level
+  = 0` condition, same as before.
+- **`hard_count`'s definition itself is unchanged** -- still `status =
+  'uncertain'` only (never `'unknown'` too), matching `vocab_items`'
+  existing "어려운 단어 reuses uncertain" policy exactly. This phase only
+  changed *when* a lexeme's status leaves `'unclassified'`, not what
+  counts as "hard" once it has.
+
+### Storage regression, extended again
+
+`backend/scripts/check_lexeme_srs_status_policy_regression.py` (new)
+guards, on top of everything phases 1-5's scripts already check (all still
+pass, though `check_lexeme_stats_regression.py`'s hard-coded
+`lexeme_hard_count` expectation was updated from 1 to 2 to reflect that a
+`good`-rated word now correctly counts as `uncertain`/hard too -- a test
+expectation fix, not a behavior regression):
+
+- Each of `again`/`hard`/`good`/`easy` on a fresh (never rated, never
+  manually classified) lexeme produces exactly the status mapped above,
+  both in the returned progress dict and in
+  `lexeme_review_logs.new_status`.
+- A word manually set to `known` and then rated `again` keeps `status =
+  'known'` -- both in the returned progress dict and in
+  `lexeme_review_logs.previous_status`/`new_status` (both `'known'`).
+- Pushing a `good`-rated (now `uncertain`) word's `next_review_at` into the
+  past makes it appear in the due-only study queue and increases
+  `/stats`' `lexeme_due_count`; the `easy`-rated (now `known`) word never
+  appears as due regardless of its `next_review_at`.
+- Import alone and listing the study queue alone still create zero
+  `user_word_progress`/`lexeme_review_logs` rows; `vocab_items` is never
+  touched at any point.
+
+### Frontend: no changes needed this phase
+
+Nothing in the request/response contract changed -- `POST
+/shared-decks/{shared_deck_id}/words/{lexeme_id}/review` still takes
+`{"rating": ...}` and returns the same `LexemeWordProgressResponse` shape,
+just with a more useful `status` value than before. The frontend's
+`submitStudyReview()` lexeme branch (phase 3) already reads `status` from
+that response and patches it into the study card's local state, so it
+picks up the corrected status with zero code changes.
+
+### What phase 6 deliberately did not do
+
+- **No change to `vocab_items`' `record_review()`/status policy at all.**
+  Personal vocabulary review behaves exactly as it always has.
+- **No change to `hard_count`'s "uncertain-only" definition**, or to any
+  other stats formula from phase 5 -- only the status a lexeme actually
+  carries after its first rating changed, not how any count is computed
+  from that status.
+- **Still no lexeme meaning feedback flow, still no legacy shared-deck
+  migration** -- both remain future work (see below).
+
+### Remaining next-phase candidates
+
+1. **Lexeme meaning feedback** -- a "오류 신고" entry point for a shared
+   lexeme's common meaning, separate from the existing
+   `vocab_items`-scoped one.
+2. **Legacy shared-deck migration** -- backfilling pre-lexeme-mode shared
+   decks into `lexemes`/`shared_deck_words`, and deciding how (or whether)
+   to reconcile already-copied personal `vocab_items` rows against the new
+   progress/log tables.
+3. **`deck_stats` for subscribed shared decks** -- whether/how a
+   subscribed deck should get its own row in the stats tab's per-deck
+   breakdown, given it has no personal `deck_id` to key on.
+
 ## Existing data / migration policy
 
 - **Nothing is deleted, converted, or backfilled in phase 1.** Every

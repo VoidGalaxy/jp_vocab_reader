@@ -401,6 +401,24 @@ def update_word_status(
     return row_to_dict(row)
 
 
+# Phase 6 (see docs/architecture/shared-lexeme-progress-storage.md --
+# "Phase 6: lexeme SRS status policy"): a lazily-created user_word_progress
+# row defaults to status='unclassified' (get_or_create_progress), and rating
+# alone never used to change it -- so a lexeme rated "good"/"hard"/"again"
+# advanced its review_level but stayed 'unclassified' forever, which drops
+# it out of new_count (review_level > 0) without ever qualifying for
+# due_count/hard_count (both require status IN ('unknown','uncertain')).
+# This mapping is the one-time auto-correction applied on a word's FIRST
+# rating only (see record_lexeme_review below) -- never applied again once
+# a real status exists (user-set or previously auto-corrected).
+_RATING_TO_AUTO_STATUS = {
+    "again": "unknown",
+    "hard": "uncertain",
+    "good": "uncertain",
+    "easy": "known",
+}
+
+
 def record_lexeme_review(
     user_id: int, lexeme_id: int, rating: str, shared_deck_id: int | None = None
 ) -> dict[str, Any] | None:
@@ -417,6 +435,15 @@ def record_lexeme_review(
     to retrofit that one. `shared_deck_id` is optional context (which deck
     the rating was made through) -- a caller that only has a lexeme_id
     (no deck context) can still log by passing None.
+
+    Phase 6: also corrects `status` away from 'unclassified' on a word's
+    first rating, via `_RATING_TO_AUTO_STATUS` above -- but ONLY when the
+    current status is still 'unclassified' (or, defensively, missing
+    entirely). A status the user already set explicitly (via
+    update_word_status(), or a previous auto-correction) is never
+    overwritten by a later rating -- vocab_items' own record_review() never
+    touches status either way, and this function still doesn't touch
+    vocab_items/review_logs at all.
     """
     reviewed_at = now_utc()
     timestamp = reviewed_at.isoformat()
@@ -434,6 +461,10 @@ def record_lexeme_review(
         next_level, next_review_at = compute_review_schedule(
             rating, previous_review_level, reviewed_at
         )
+        if previous_status is None or previous_status == "unclassified":
+            corrected_status = _RATING_TO_AUTO_STATUS.get(rating, previous_status)
+        else:
+            corrected_status = previous_status
         count_column = "wrong_count" if rating == "again" else "correct_count"
         connection.execute(
             f"""
@@ -442,10 +473,19 @@ def record_lexeme_review(
                 review_level = ?,
                 next_review_at = ?,
                 last_reviewed_at = ?,
+                status = ?,
                 updated_at = ?
             WHERE user_id = ? AND lexeme_id = ?
             """,
-            (next_level, next_review_at, timestamp, timestamp, user_id, lexeme_id),
+            (
+                next_level,
+                next_review_at,
+                timestamp,
+                corrected_status,
+                timestamp,
+                user_id,
+                lexeme_id,
+            ),
         )
         row = _get_progress_row(connection, user_id, lexeme_id)
         new_status = row["status"]
