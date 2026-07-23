@@ -535,3 +535,99 @@ def list_subscribed_lexeme_study_items(
                 }
             )
     return items
+
+
+def get_subscribed_lexeme_stats_summary(user_id: int) -> dict[str, int]:
+    """Phase 5 stats aggregation (see
+    docs/architecture/shared-lexeme-progress-storage.md -- "Phase 5:
+    stats/dashboard integration"). One row per lexeme reachable through an
+    active shared-deck subscription -- the inner `SELECT DISTINCT` is what
+    keeps a lexeme linked into more than one subscribed deck from being
+    double-counted, same dedup rule the Phase 3 study queue already uses.
+    Read-only: never creates a user_word_progress row, just like listing
+    the study queue.
+
+    - `new_count`: no progress row yet, or review_level still 0 (mirrors
+      vocab_items' "last_reviewed_at IS NULL" -- never actually reviewed).
+      A lexeme with no progress row is deliberately excluded from
+      `due_count` (see below) and only shows up here.
+    - `due_count`: has a progress row with status unknown/uncertain and
+      next_review_at null-or-past. Matches vocab_items' own due-today
+      condition; progress-less lexemes are excluded automatically since
+      SQL `NULL IN (...)` is never true.
+    - `hard_count`: status = 'uncertain' only -- mirrors vocab_items'
+      hard_count, which reuses only the "uncertain" classification (not
+      "unknown" too), per its own comment in stats_repository.py.
+    """
+    now = now_iso()
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT
+                COUNT(*) AS total_count,
+                COALESCE(SUM(
+                    CASE WHEN progress_status IS NULL OR progress_review_level = 0
+                    THEN 1 ELSE 0 END
+                ), 0) AS new_count,
+                COALESCE(SUM(
+                    CASE
+                        WHEN progress_status IN ('unknown', 'uncertain')
+                         AND (progress_next_review_at IS NULL OR progress_next_review_at <= ?)
+                        THEN 1 ELSE 0
+                    END
+                ), 0) AS due_count,
+                COALESCE(SUM(
+                    CASE WHEN progress_status = 'uncertain' THEN 1 ELSE 0 END
+                ), 0) AS hard_count
+            FROM (
+                SELECT
+                    subscribed_lexemes.lexeme_id AS lexeme_id,
+                    user_word_progress.status AS progress_status,
+                    user_word_progress.review_level AS progress_review_level,
+                    user_word_progress.next_review_at AS progress_next_review_at
+                FROM (
+                    SELECT DISTINCT shared_deck_words.lexeme_id AS lexeme_id
+                    FROM shared_deck_words
+                    JOIN user_deck_subscriptions
+                        ON user_deck_subscriptions.shared_deck_id = shared_deck_words.shared_deck_id
+                       AND user_deck_subscriptions.user_id = ?
+                       AND user_deck_subscriptions.is_active = 1
+                ) AS subscribed_lexemes
+                LEFT JOIN user_word_progress
+                    ON user_word_progress.lexeme_id = subscribed_lexemes.lexeme_id
+                   AND user_word_progress.user_id = ?
+            ) AS overlay
+            """,
+            (now, user_id, user_id),
+        ).fetchone()
+    return {
+        "total_count": int(row["total_count"] or 0),
+        "new_count": int(row["new_count"] or 0),
+        "due_count": int(row["due_count"] or 0),
+        "hard_count": int(row["hard_count"] or 0),
+    }
+
+
+def get_lexeme_review_rating_counts_since(
+    user_id: int, since_iso: str
+) -> dict[str, int]:
+    """Count of lexeme_review_logs rows (review *events*, not distinct
+    words -- same "count log rows" semantics vocab_items' review_logs
+    already uses for reviewed_today_count/today_*_count), grouped by
+    rating, for this user at/after since_iso. Only ever incremented by an
+    actual rating submission (record_lexeme_review()) -- never by import
+    or listing the study queue, so this can never show an "completed
+    today" count for a word the user only imported or looked at.
+    """
+    with get_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT rating, COUNT(*) AS count
+            FROM lexeme_review_logs
+            WHERE user_id = ?
+              AND created_at >= ?
+            GROUP BY rating
+            """,
+            (user_id, since_iso),
+        ).fetchall()
+    return {row["rating"]: int(row["count"] or 0) for row in rows}

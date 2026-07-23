@@ -439,20 +439,161 @@ still pass unchanged):
   `shared_deck_words` rows and stay on the legacy `vocab_items`-copying
   import path, untouched.
 
-### Next phase candidates
+### Next phase candidates (superseded below where noted)
 
-1. **Lexeme stats/dashboard integration** -- fold `lexeme_review_logs` +
-   `user_word_progress` into `/stats`' due/new/reviewed-today counts
-   alongside `vocab_items`, once a design exists for how an approximate
-   merged number should be presented without undermining trust in the
-   existing precise `vocab_items`-only numbers.
+1. ~~Lexeme stats/dashboard integration~~ -- **done in phase 5** (see
+   below).
 2. **Lexeme meaning feedback** -- a "오류 신고" entry point for a shared
    lexeme's common meaning, separate from the existing `vocab_items`-scoped
-   one.
+   one. Still not built.
 3. **Legacy shared-deck migration** -- backfilling pre-lexeme-mode shared
    decks into `lexemes`/`shared_deck_words`, and deciding how (or whether)
    to reconcile already-copied personal `vocab_items` rows against the new
-   progress/log tables.
+   progress/log tables. Still not attempted.
+
+## Phase 5: stats/dashboard integration
+
+Phase 5 folds subscribed shared-deck/JLPT lexeme progress
+(`user_word_progress`) and review history (`lexeme_review_logs`) into
+`GET /stats` (`build_stats()`), so the existing dashboard/stats screens show
+a number that reflects "내 단어 + 가져온 덱" instead of only personal
+`vocab_items`. `StatsResponse`'s existing field names/types are completely
+unchanged -- this is purely additive, both in the new fields added and in
+how the existing ones are computed.
+
+### What gets merged, and what doesn't
+
+Only four existing numbers change; everything else in `/stats` stays
+100% `vocab_items`-only, exactly as before:
+
+| Field | Now means |
+| --- | --- |
+| `due_today_count` | `vocab_due_count` + `lexeme_due_count` |
+| `new_count` | `vocab_new_count` + `lexeme_new_count` |
+| `hard_count` | `vocab_hard_count` + `lexeme_hard_count` |
+| `reviewed_today_count` (and `today_again_count`/`today_hard_count`/`today_good_count`/`today_easy_count`) | vocab `review_logs` rows + `lexeme_review_logs` rows, today, merged by rating |
+
+`total_count`/`total_vocab_count`/`known_count`/`uncertain_count`/
+`unclassified_count`/`total_correct_count`/`total_wrong_count`/
+`average_review_level`/`learned_rate`/`deck_stats`/`review_level_counts`
+are deliberately **not** touched -- these are either inherently
+`vocab_items`-shaped concepts (personal decks, SRS accuracy on personal
+words) or weren't part of the four metrics this phase's brief called out
+for merging.
+
+**Scoped requests stay vocab-only.** `GET /stats?deck_id=X` scopes to one
+specific *personal* deck, which has no relationship to a subscribed shared
+deck -- lexeme contributions are only computed when `deck_id is None`
+(the unscoped "all" view). A deck-scoped request behaves exactly as before
+this phase.
+
+### Where the lexeme numbers come from
+
+Two new, read-only functions in `app/repositories/lexeme_repository.py`,
+called from `stats_repository.build_stats()`:
+
+- **`get_subscribed_lexeme_stats_summary(user_id)`** -- one row per lexeme
+  reachable through an *active* shared-deck subscription (`SELECT DISTINCT`
+  over `shared_deck_words` joined to `user_deck_subscriptions`, so a lexeme
+  linked into more than one subscribed deck is never double-counted), left
+  joined with `user_word_progress`. Returns:
+  - `new_count`: no progress row yet, or `review_level = 0` -- mirrors
+    `vocab_items`' own "never reviewed" (`last_reviewed_at IS NULL`)
+    condition. **A progress-less lexeme only ever counts here, never in
+    `due_count`.**
+  - `due_count`: has a progress row with `status IN ('unknown',
+    'uncertain')` and `next_review_at` null-or-past -- the exact same
+    condition `vocab_items`' `due_today_count` already uses. A
+    progress-less lexeme's `status` comes back `NULL` from the LEFT JOIN,
+    and SQL's `NULL IN (...)` is never true, so it's automatically
+    excluded without extra logic.
+  - `hard_count`: `status = 'uncertain'` only -- mirrors `vocab_items`'
+    own `hard_count`, which (per its existing comment) reuses only the
+    "uncertain" classification, not "unknown" too.
+- **`get_lexeme_review_rating_counts_since(user_id, since_iso)`** -- counts
+  `lexeme_review_logs` rows (review *events*, not distinct words -- the
+  same "count log rows" semantics `vocab_items`' `reviewed_today_count`
+  already uses), grouped by `rating`, since a given timestamp (today's
+  start). Only ever non-zero because of an actual rating submission
+  (`record_lexeme_review()`) -- never because of an import or a study-queue
+  listing, both of which stay fully read-only exactly as phases 3/4 already
+  guaranteed.
+
+Both are pure `SELECT`s -- calling `/stats` any number of times creates
+zero `user_word_progress`, `lexeme_review_logs`, or `vocab_items` rows,
+verified by the new regression script (see below).
+
+### A known nuance: rating alone doesn't move a word into "due"/"hard"
+
+Rating a lexeme (`record_lexeme_review()`) advances `review_level` but
+never changes `status` (documented in that function since phase 4). So a
+lexeme rated once (`review_level > 0`, `status` still `'unclassified'`)
+drops out of `new_count` but doesn't yet qualify for `due_count`/
+`hard_count` either, until the user explicitly sets its status via
+`update_word_status()` (the deck tab's status dropdown). This mirrors how
+`vocab_items` keeps status and SRS review level as two separate concerns
+too -- not a bug introduced this phase, just worth knowing when reading the
+numbers (documented here since it wasn't obvious until writing this
+phase's regression test).
+
+### `StatsResponse`: 8 new additive fields, nothing removed or retyped
+
+`vocab_due_count`, `lexeme_due_count`, `vocab_new_count`,
+`lexeme_new_count`, `vocab_hard_count`, `lexeme_hard_count`,
+`vocab_completed_today`, `lexeme_completed_today` -- all `int = 0`. These
+expose the split behind the four merged totals above, for a future UI that
+wants to show e.g. "내 단어 12 + 가져온 덱 8"; the merged field is always
+`vocab_* + lexeme_*`.
+
+### Frontend: no changes needed this phase
+
+`due_today_count`/`new_count`/`hard_count`/`reviewed_today_count` are
+already read generically (not as "vocab-only" labels) by
+`HomeDashboard.tsx`, `StatsPanel.tsx`, `StudySection.tsx`'s quick-start
+hero, and `InfoSection.tsx`'s study log page -- once the backend numbers
+became merged totals, every one of those screens shows the combined number
+with **zero frontend code changes**. The 8 new breakdown fields were not
+added to the frontend `StudyStats` TS type this phase, since nothing
+currently reads them and there is no new breakdown UI being built (would be
+unused dead typing, not "필요한 최소 변경") -- add them when/if a future
+phase actually builds a breakdown display.
+
+### Storage regression, extended again
+
+`backend/scripts/check_lexeme_stats_regression.py` (new) guards, on top of
+everything phases 1-4's scripts already check (all still pass unchanged):
+
+- Import still costs 0 `vocab_items` rows; calling `/stats`
+  (`build_stats()`) itself, any number of times, creates 0
+  `user_word_progress` / `lexeme_review_logs` / `vocab_items` rows.
+- Right after import (no progress rows anywhere yet), every subscribed
+  word counts toward `lexeme_new_count` and none toward `lexeme_due_count`.
+- Rating one lexeme makes `lexeme_completed_today` exactly 1 (an actual
+  review event), while import/listing never move it.
+- Explicitly setting one lexeme's status to `unknown` (via
+  `update_word_status()`) makes it count in `lexeme_due_count`; setting
+  another to `uncertain` makes it count in `lexeme_hard_count`.
+- A lexeme reachable through two different subscribed decks is never
+  double-counted in `lexeme_new_count`/`lexeme_due_count`/
+  `lexeme_hard_count` after subscribing to the second deck.
+- The existing personal `vocab_items` review flow
+  (`vocab_repository.record_review()`) still contributes to
+  `vocab_completed_today` exactly as before, never to any `lexeme_*`
+  field, and the merged `reviewed_today_count` always equals
+  `vocab_completed_today + lexeme_completed_today`.
+
+### What phase 5 deliberately did not do
+
+- **No lexeme meaning feedback flow.** Still phase-6+ scope (see "Next
+  phase candidates").
+- **No legacy shared-deck migration.** Still phase-6+ scope.
+- **No frontend breakdown UI.** The 8 new `vocab_*`/`lexeme_*` fields are
+  available in the API but not surfaced anywhere in the UI yet -- only the
+  existing merged totals are visible, automatically, with no code changes.
+- **`deck_stats` (per-personal-deck breakdown) still doesn't include a
+  subscribed-shared-deck row.** A subscribed deck has no personal `deck_id`
+  to key a `DeckStatsResponse` entry on; giving subscribed decks their own
+  stats-tab presence, if wanted, is future work.
 
 ## Existing data / migration policy
 

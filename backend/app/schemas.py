@@ -177,6 +177,19 @@ class StatsResponse(BaseModel):
     today_good_count: int = 0
     today_easy_count: int = 0
     streak_days: int = 0
+    # Additive breakdown (Phase 5, see
+    # docs/architecture/shared-lexeme-progress-storage.md). The merged
+    # totals above (due_today_count/new_count/hard_count/
+    # reviewed_today_count) are always vocab_*+lexeme_* -- these fields
+    # never change existing field meanings, just expose the split.
+    vocab_due_count: int = 0
+    lexeme_due_count: int = 0
+    vocab_new_count: int = 0
+    lexeme_new_count: int = 0
+    vocab_hard_count: int = 0
+    lexeme_hard_count: int = 0
+    vocab_completed_today: int = 0
+    lexeme_completed_today: int = 0
 
 
 class DeckCreate(BaseModel):

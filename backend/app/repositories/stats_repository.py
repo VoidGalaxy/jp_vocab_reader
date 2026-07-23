@@ -4,6 +4,10 @@ from datetime import timedelta
 from typing import Any
 
 from app.database import get_connection, now_iso, now_utc, row_to_dict
+from app.repositories.lexeme_repository import (
+    get_lexeme_review_rating_counts_since,
+    get_subscribed_lexeme_stats_summary,
+)
 
 # How far back to look when computing a daily study streak. A user with an
 # unbroken streak longer than this is undercounted, which is an acceptable
@@ -140,6 +144,37 @@ def build_stats(user_id: int, deck_id: int | None = None) -> dict[str, Any]:
     known_count = int(stats.get("known_count") or 0)
     uncertain_count = int(stats.get("uncertain_count") or 0)
     scope = "deck" if deck_id is not None else "all"
+
+    # Phase 5 (see docs/architecture/shared-lexeme-progress-storage.md --
+    # "Phase 5: stats/dashboard integration"): fold subscribed shared-deck/
+    # JLPT lexeme progress into due/new/hard/completed-today, alongside the
+    # vocab_items numbers above. Only when this is the unscoped "all decks"
+    # view -- a request scoped to one specific *personal* deck_id has no
+    # relationship to a subscribed shared deck, so it stays vocab-only,
+    # exactly as before this phase.
+    vocab_due_count = int(stats.get("due_today_count") or 0)
+    vocab_new_count = int(stats.get("new_count") or 0)
+    # No standalone "difficulty" flag is persisted per vocab item yet, so
+    # "어려운 단어" reuses the existing uncertain classification for now.
+    vocab_hard_count = uncertain_count
+    vocab_completed_today = sum(today_rating_counts.values())
+
+    lexeme_due_count = 0
+    lexeme_new_count = 0
+    lexeme_hard_count = 0
+    lexeme_completed_today = 0
+    if deck_id is None:
+        lexeme_summary = get_subscribed_lexeme_stats_summary(user_id)
+        lexeme_due_count = lexeme_summary["due_count"]
+        lexeme_new_count = lexeme_summary["new_count"]
+        lexeme_hard_count = lexeme_summary["hard_count"]
+        lexeme_rating_counts = get_lexeme_review_rating_counts_since(
+            user_id, today_start
+        )
+        lexeme_completed_today = sum(lexeme_rating_counts.values())
+        for rating, count in lexeme_rating_counts.items():
+            today_rating_counts[rating] = today_rating_counts.get(rating, 0) + count
+
     return {
         "scope": scope,
         "deck_id": deck_id,
@@ -150,17 +185,15 @@ def build_stats(user_id: int, deck_id: int | None = None) -> dict[str, Any]:
         "uncertain_count": uncertain_count,
         "unknown_count": int(stats.get("unknown_count") or 0),
         "unclassified_count": int(stats.get("unclassified_count") or 0),
-        "due_today_count": int(stats.get("due_today_count") or 0),
+        "due_today_count": vocab_due_count + lexeme_due_count,
         "total_correct_count": int(stats.get("total_correct_count") or 0),
         "total_wrong_count": int(stats.get("total_wrong_count") or 0),
         "average_review_level": round(float(stats.get("average_review_level") or 0), 2),
         "learned_rate": learned_rate(known_count, total_count),
         "deck_stats": deck_stats,
-        "new_count": int(stats.get("new_count") or 0),
-        # No standalone "difficulty" flag is persisted per vocab item yet, so
-        # "어려운 단어" reuses the existing uncertain classification for now.
-        "hard_count": uncertain_count,
-        "reviewed_today_count": sum(today_rating_counts.values()),
+        "new_count": vocab_new_count + lexeme_new_count,
+        "hard_count": vocab_hard_count + lexeme_hard_count,
+        "reviewed_today_count": vocab_completed_today + lexeme_completed_today,
         "today_again_count": today_rating_counts.get("again", 0),
         "today_hard_count": today_rating_counts.get("hard", 0),
         "today_good_count": today_rating_counts.get("good", 0),
@@ -173,6 +206,18 @@ def build_stats(user_id: int, deck_id: int | None = None) -> dict[str, Any]:
             }
             for row in level_rows
         ],
+        # Additive breakdown (see docs/architecture/shared-lexeme-progress-storage.md
+        # -- "Phase 5"): lets a future UI show "내 단어 + 가져온 덱" without
+        # having to re-derive the split. The merged totals above are always
+        # vocab_*+lexeme_* -- these never change existing field meanings.
+        "vocab_due_count": vocab_due_count,
+        "lexeme_due_count": lexeme_due_count,
+        "vocab_new_count": vocab_new_count,
+        "lexeme_new_count": lexeme_new_count,
+        "vocab_hard_count": vocab_hard_count,
+        "lexeme_hard_count": lexeme_hard_count,
+        "vocab_completed_today": vocab_completed_today,
+        "lexeme_completed_today": lexeme_completed_today,
     }
 
 
