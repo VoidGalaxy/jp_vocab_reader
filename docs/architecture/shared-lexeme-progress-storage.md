@@ -216,6 +216,72 @@ tab -- no changes to VocabSection (노트) or StudySection (복습).
   `review_level`/`next_review_at` history for a word that also becomes a
   lexeme).
 
+## Goal: every new shared deck, not just JLPT decks, should be lexeme-based
+
+The intent of this storage model is that **any newly created shared deck**
+-- JLPT-recommended or user-published -- stores its words once in
+`lexemes` + `shared_deck_words`, so import always costs one
+`user_deck_subscriptions` row regardless of deck size, and `user_word_progress`
+is always created lazily, only on a real status change or review.
+
+- **JLPT-recommended decks**: already lexeme-based by default. Registering a
+  deck package via `scripts/seed_jlpt_shared_decks.py` (no `--legacy` flag)
+  upserts each word into `lexemes` and links it via `shared_deck_words`; see
+  "JLPT registration script" above.
+- **User-published shared decks are NOT yet lexeme-based.** `POST
+  /decks/{deck_id}/publish` (`publish_deck()` in
+  `app/repositories/shared_deck_repository.py`) still only ever copies the
+  publishing user's `vocab_items`/`custom_terms` into
+  `shared_deck_items`/`shared_deck_terms` -- the legacy structure. It never
+  writes `lexemes` or `shared_deck_words`. That means **every shared deck an
+  end user creates through the app today is legacy-mode**, and importing it
+  will grow the importer's `vocab_items` exactly as before this phase. This
+  is a known gap, not an oversight: converting the user-publish path to
+  lexeme-mode needs its own design pass (e.g. how to reconcile a publisher's
+  personal `meaning_ko`/`context_explanation_ko` edits, which have no home on
+  a shared `lexemes` row) and is left as a **TODO for a later phase**, tracked
+  alongside the phase-3 review-flow integration item above.
+- **Legacy shared decks (JLPT or user-published) already out in the wild
+  keep working unchanged** -- converting them to lexeme-mode is a separate,
+  deliberately deferred migration phase (see "future phase-2 migration"
+  above), not something this phase or the regression test below assumes.
+
+## Storage regression testing
+
+`backend/scripts/check_shared_deck_storage_regression.py` guards the core
+storage promise above at scale. It seeds one lexeme-mode shared deck with a
+configurable number of test lexemes (`--count`, minimum 100, defaults to
+200; also verified at 1000), then asserts, via before/after row-count
+snapshots against a disposable local SQLite DB (never `backend/vocab.db`,
+never a Neon `DATABASE_URL`):
+
+- Importing the deck changes `vocab_items` by exactly **0**, regardless of
+  deck size.
+- Importing the deck changes `user_deck_subscriptions` by exactly **+1**,
+  and re-importing the same deck changes it by **0** (idempotent, no
+  duplicate subscription row).
+- Importing the deck changes `user_word_progress` by exactly **0** (no
+  bulk/eager creation).
+- Changing one word's status afterwards changes `user_word_progress` by
+  exactly **+1** (lazy create, one row per acted-on word) and still changes
+  `vocab_items` by **0**.
+
+Run it locally (always under a session-scoped local-SQLite `DATABASE_URL`
+override -- see the repo's local-server safety rules, never against Neon):
+
+```
+cd backend
+.venv\Scripts\Activate.ps1
+$env:DATABASE_URL="sqlite:///./vocab_storage_test_scratch.db"
+python scripts/check_shared_deck_storage_regression.py
+python scripts/check_shared_deck_storage_regression.py --count 1000
+```
+
+It exits non-zero with a specific `RegressionFailure` message naming which
+table's row-count delta didn't match if the storage promise above is ever
+violated (e.g. a future change accidentally reintroduces bulk-copying into
+`vocab_items` or eager `user_word_progress` creation on import).
+
 ## Operational note: the shared dev/staging Neon database
 
 During phase-1 verification, restarting the local backend dev server (to
