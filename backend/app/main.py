@@ -49,12 +49,17 @@ from app.repositories.deck_repository import (
     update_deck,
 )
 from app.repositories.feedback_repository import create_app_feedback, create_meaning_feedback
+from app.repositories.lexeme_repository import (
+    record_lexeme_review,
+    update_word_status,
+)
 from app.repositories.shared_deck_repository import (
     delete_shared_deck,
     get_shared_deck as get_shared_deck_data,
     import_shared_deck,
     list_shared_decks,
     publish_deck,
+    shared_deck_exists,
 )
 from app.repositories.stats_repository import build_stats
 from app.repositories.user_repository import (
@@ -102,6 +107,9 @@ from app.schemas import (
     DecksResponse,
     DeckUpdate,
     MAX_FEEDBACK_FIELD_LENGTH,
+    LexemeProgressUpdateRequest,
+    LexemeReviewRequest,
+    LexemeWordProgressResponse,
     MeaningFeedbackRequest,
     MeaningFeedbackResponse,
     SharedDeckDeleteResponse,
@@ -549,9 +557,13 @@ def get_shared_decks(http_request: Request) -> list[SharedDeckSummaryResponse]:
 
 
 @app.get("/shared-decks/{shared_deck_id}", response_model=SharedDeckDetailResponse)
-def get_shared_deck(shared_deck_id: int, http_request: Request) -> SharedDeckDetailResponse:
+def get_shared_deck(
+    shared_deck_id: int,
+    http_request: Request,
+    due_only: bool = Query(default=False),
+) -> SharedDeckDetailResponse:
     user_id = current_user_id(http_request)
-    shared_deck = get_shared_deck_data(shared_deck_id, user_id)
+    shared_deck = get_shared_deck_data(shared_deck_id, user_id, due_only=due_only)
     if not shared_deck:
         raise HTTPException(status_code=404, detail="shared deck not found")
     return SharedDeckDetailResponse(**shared_deck)
@@ -581,6 +593,59 @@ def remove_shared_deck(
             status_code=403, detail="only the owner can unpublish this shared deck"
         )
     return SharedDeckDeleteResponse(**result)
+
+
+# --- Lexeme-mode shared deck word progress ----------------------------------
+# Minimal "make a subscribed deck's words learnable" surface (see
+# docs/architecture/shared-lexeme-progress-storage.md, phase 1 scope). Does
+# not touch vocab_items/review_logs/study-items at all -- existing personal
+# vocabulary review is untouched. Full review-flow integration (e.g. mixing
+# these into /study-items) is left as a documented phase-2 TODO.
+
+
+@app.patch(
+    "/shared-decks/{shared_deck_id}/words/{lexeme_id}/progress",
+    response_model=LexemeWordProgressResponse,
+)
+def patch_shared_deck_word_progress(
+    shared_deck_id: int,
+    lexeme_id: int,
+    body: LexemeProgressUpdateRequest,
+    http_request: Request,
+) -> LexemeWordProgressResponse:
+    if body.status not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail="invalid status")
+    user_id = current_user_id(http_request)
+    if not shared_deck_exists(shared_deck_id):
+        raise HTTPException(status_code=404, detail="shared deck not found")
+    try:
+        progress = update_word_status(user_id, lexeme_id, body.status)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="invalid status")
+    if not progress:
+        raise HTTPException(status_code=404, detail="word not found")
+    return LexemeWordProgressResponse(**progress)
+
+
+@app.post(
+    "/shared-decks/{shared_deck_id}/words/{lexeme_id}/review",
+    response_model=LexemeWordProgressResponse,
+)
+def post_shared_deck_word_review(
+    shared_deck_id: int,
+    lexeme_id: int,
+    body: LexemeReviewRequest,
+    http_request: Request,
+) -> LexemeWordProgressResponse:
+    if body.rating not in VALID_REVIEW_RATINGS:
+        raise HTTPException(status_code=400, detail="invalid review rating")
+    user_id = current_user_id(http_request)
+    if not shared_deck_exists(shared_deck_id):
+        raise HTTPException(status_code=404, detail="shared deck not found")
+    progress = record_lexeme_review(user_id, lexeme_id, body.rating)
+    if not progress:
+        raise HTTPException(status_code=404, detail="word not found")
+    return LexemeWordProgressResponse(**progress)
 
 
 @app.get("/vocab-items", response_model=VocabItemsResponse)

@@ -110,6 +110,13 @@ type SharedDeckImportResponse = {
   imported_vocab_count: number;
   imported_custom_term_count: number;
   message: string;
+  // Additive -- see docs/architecture/shared-lexeme-progress-storage.md.
+  // "subscribed" means this deck's words live in the shared lexeme table
+  // and were NOT copied into a personal deck/vocab_items; there is no real
+  // deck_id to select/load in that case.
+  mode?: "copied" | "subscribed";
+  subscribed?: boolean;
+  word_count?: number;
 };
 
 type SharedDeckDeleteResponse = {
@@ -1945,19 +1952,30 @@ export default function HomePage() {
         { method: "POST" },
       );
       const sourceTitle = sourceDeck?.title ?? result.deck_name;
-      const totalImportedCount =
-        result.imported_vocab_count + result.imported_custom_term_count;
-      setSharedDeckMessage(
-        `${withObjectParticle(sourceTitle)} 내 어휘 노트에 가져왔어요. 단어 ${totalImportedCount}개를 담았어요.`,
-      );
       setImportedSharedDeckId(sharedDeckId);
-      const importedDeckId = String(result.deck_id);
-      setSelectedVocabDeckId(importedDeckId);
-      setSelectedSaveDeckId(importedDeckId);
-      await loadDecks();
-      await loadVocabItems(importedDeckId);
-      await loadCustomTerms(importedDeckId);
-      await loadSharedDecks();
+
+      if (result.mode === "subscribed") {
+        // Lexeme-mode deck: nothing was copied into a personal deck, so
+        // there's no vocab_items/decks row to select or load here -- just
+        // refresh the shared-deck list so its "가져옴" state updates.
+        setSharedDeckMessage(
+          `${withObjectParticle(sourceTitle)} 내 학습 목록에 추가했어요.`,
+        );
+        await loadSharedDecks();
+      } else {
+        const totalImportedCount =
+          result.imported_vocab_count + result.imported_custom_term_count;
+        setSharedDeckMessage(
+          `${withObjectParticle(sourceTitle)} 내 어휘 노트에 가져왔어요. 단어 ${totalImportedCount}개를 담았어요.`,
+        );
+        const importedDeckId = String(result.deck_id);
+        setSelectedVocabDeckId(importedDeckId);
+        setSelectedSaveDeckId(importedDeckId);
+        await loadDecks();
+        await loadVocabItems(importedDeckId);
+        await loadCustomTerms(importedDeckId);
+        await loadSharedDecks();
+      }
     } catch (error) {
       setSharedDeckMessage(
         getAuthAwareErrorMessage(

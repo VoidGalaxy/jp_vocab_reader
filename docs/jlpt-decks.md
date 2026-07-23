@@ -88,9 +88,16 @@ uses the approved wording:
    used by the existing deck-sharing feature) -- no new API, no new package
    format.
 
-3. **(Optional) Register it as a shared deck**, using the existing
-   `import_deck_package` + `publish_deck` repository functions (no new DB
-   writes logic, no schema change):
+3. **(Optional) Register it as a shared deck.** As of the
+   shared-lexeme/progress storage change (see
+   [../architecture/shared-lexeme-progress-storage.md](../architecture/shared-lexeme-progress-storage.md)),
+   this **defaults to the new lexeme-mode registration path**: each word is
+   upserted once into the shared `lexemes` table and linked to the shared
+   deck via `shared_deck_words` -- no personal deck is created, and no
+   user's `vocab_items` are touched. Pass `--legacy` to fall back to the old
+   behavior (create a personal deck for the dev/admin user, copying every
+   word into `vocab_items`, then publish that deck the old
+   `shared_deck_items`-based way) if you specifically need it.
 
    ```bash
    cd backend
@@ -99,13 +106,12 @@ uses the approved wording:
    ```
 
    This defaults to a **read-only dry run** that only prints what it would
-   do. Pass `--apply` to actually create the personal deck (owned by the
-   dev/admin user) and publish it as a public shared deck. Because this
-   script connects to whatever `DATABASE_URL` is configured -- which may be
-   a real deployed database, not a local throwaway one -- always review the
-   dry-run output first, and never run `--apply` against a database you
-   don't intend to change. Pass `--skip-publish` to only create the
-   personal deck without publishing it.
+   do. Pass `--apply` to actually write. Because this script connects to
+   whatever `DATABASE_URL` is configured -- which may be a real deployed
+   database, not a local throwaway one -- always review the dry-run output
+   first, and never run `--apply` against a database you don't intend to
+   change. `--skip-publish` only applies together with `--legacy` (create
+   the personal deck without publishing it).
 
 ## Pipeline for externally-sourced word lists (quality review)
 
@@ -294,8 +300,14 @@ This step is intentionally deferred, not built yet:
 
 - No automatic write to the production database. `seed_jlpt_shared_decks.py`
   only writes when `--apply` is explicitly passed.
-- No DB schema changes -- deck packages and shared decks reuse the existing
-  `decks` / `vocab_items` / `shared_decks` tables and repository functions.
+- Deck *package* building (steps 1-2 above) has no DB schema changes -- it
+  reuses the existing `DeckPackage` JSON shape. Registration (step 3) now
+  adds to the shared `lexemes` / `shared_deck_words` tables by default (an
+  additive, non-destructive schema addition) -- see
+  [../architecture/shared-lexeme-progress-storage.md](../architecture/shared-lexeme-progress-storage.md)
+  for the full design and migration policy. `--legacy` registration still
+  reuses the older `decks` / `vocab_items` / `shared_decks` tables exactly
+  as before.
 - No full source-text storage. A deck package only ever contains short
   per-word `example_sentence` fields (and now, optionally, a short
   `context_explanation_ko` translation/note) -- never a book/web-novel's

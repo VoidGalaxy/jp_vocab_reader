@@ -246,6 +246,16 @@ class SharedDeckItemResponse(BaseModel):
     example_sentence: str | None = None
     quality_tag: str | None = None
     created_at: str
+    # Additive: only populated for lexeme-mode shared decks (see
+    # docs/architecture/shared-lexeme-progress-storage.md). None/default for
+    # legacy shared_deck_items-based decks, which never set these.
+    lexeme_id: int | None = None
+    jlpt_level: str | None = None
+    status: str | None = None
+    review_level: int | None = None
+    next_review_at: str | None = None
+    correct_count: int | None = None
+    wrong_count: int | None = None
 
 
 class SharedDeckTermResponse(BaseModel):
@@ -277,6 +287,39 @@ class SharedDeckImportResponse(BaseModel):
     imported_vocab_count: int
     imported_custom_term_count: int
     message: str
+    # Additive (see docs/architecture/shared-lexeme-progress-storage.md).
+    # "copied" = legacy path (unchanged behavior, personal deck + vocab_items
+    # copy). "subscribed" = new lexeme-mode path: no personal deck, no
+    # vocab_items copy -- deck_id/deck_name/imported_vocab_count above are
+    # still populated with sensible stand-in values so older client code
+    # that only reads those fields doesn't break.
+    success: bool = True
+    mode: str = "copied"
+    subscribed: bool = False
+    shared_deck_id: int | None = None
+    word_count: int | None = None
+
+
+# --- Lexeme-mode shared deck word progress (additive; see
+# docs/architecture/shared-lexeme-progress-storage.md) -----------------------
+
+
+class LexemeProgressUpdateRequest(BaseModel):
+    status: str
+
+
+class LexemeReviewRequest(BaseModel):
+    rating: str
+
+
+class LexemeWordProgressResponse(BaseModel):
+    lexeme_id: int
+    status: str
+    review_level: int
+    next_review_at: str | None = None
+    correct_count: int
+    wrong_count: int
+    last_reviewed_at: str | None = None
 
 
 class DeckPackageApp(BaseModel):
