@@ -1,7 +1,7 @@
 "use client";
 
 import { AppEmptyState } from "./BrandElements";
-import { ShioriCharacter, ShioriStamp } from "./Shiori";
+import { ShioriStamp } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
 import type {
   Deck,
@@ -175,11 +175,6 @@ function StudyQuickStartHero({
           <h2>오늘 복습을 시작해볼까요?</h2>
           <p>담아둔 단어를 문맥 예문과 함께 다시 확인해요.</p>
         </div>
-        <ShioriCharacter
-          variant="review"
-          size="sm"
-          className="shiori-glow study-hero-companion"
-        />
       </div>
       {total > 0 ? (
         <div className="study-compact-progress">
@@ -413,6 +408,7 @@ export function StudySection({
       {!hasStarted && !currentItem && !isComplete ? (
         <AppEmptyState
           mood="review"
+          moodSize="xl"
           className="study-card study-ready-card"
           title="학습할 단어를 불러오세요"
           description="덱과 학습 모드를 선택한 뒤 복습을 시작할 수 있어요."
@@ -422,6 +418,7 @@ export function StudySection({
       {hasStarted && !currentItem && !isComplete ? (
         <AppEmptyState
           mood="empty"
+          moodSize="xl"
           className="study-card study-ready-card"
           title={emptyMessages[studyMode]}
           description={emptySecondaryMessages[studyMode]}

@@ -1,6 +1,5 @@
 "use client";
 
-import { LibraryHeroIllustration } from "./BrandElements";
 import { ShioriCharacter } from "./Shiori";
 import { getDisplayMeaning } from "./shared";
 import {
@@ -129,13 +128,11 @@ export function HomeDashboard({
             </span>
           </div>
         </div>
-        <div className="home-hero-visual shiori-hero-scene" aria-hidden="true">
-          <LibraryHeroIllustration />
-          <ShioriCharacter
-            variant="reading"
-            size="hero"
-            className="shiori-hero-scene-character"
-          />
+        <div
+          className="home-hero-visual shiori-book-scene shiori-companion--hero"
+          aria-hidden="true"
+        >
+          <ShioriCharacter variant="default" size="hero" />
         </div>
       </section>
 

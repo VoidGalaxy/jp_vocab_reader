@@ -84,13 +84,11 @@
   padding: 12px 0;
 }
 
-/* Home hero mini-example -- same shiori-hero-scene composition the real
-   HomeDashboard uses, just at a smaller fixed width so it fits this
-   preview grid instead of a full hero card. */
+/* Home hero mini-example -- same shiori-book-scene composition the real
+   HomeDashboard uses (just the hero PNG, centered). */
 .dl-shiori-preview-home-mock {
-  position: relative;
-  width: 220px;
-  margin: 0 auto;
+  display: flex;
+  justify-content: center;
 }
 
 /* Classify-stage mini-example -- mirrors ClassifyStageIntro's header row
@@ -145,4 +143,26 @@
   color: #2f2a24;
   font-size: 13px;
   font-weight: 700;
+}
+
+/* StudySection ready/empty AppEmptyState mini-example -- icon left, title
+   + description stacked right, same shape as the real component. */
+.dl-shiori-preview-review-empty-mock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px dashed #d8c9a0;
+  border-radius: 12px;
+  background: #f2ead9;
+}
+
+.dl-shiori-preview-review-empty-mock p {
+  margin: 0;
+  font-size: 13px;
+  color: #2f2a24;
+}
+
+.dl-shiori-preview-review-empty-mock p + p {
+  margin-top: 2px;
 }

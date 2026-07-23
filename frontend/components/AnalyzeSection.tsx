@@ -250,11 +250,9 @@ function ClassifyStageIntro({
   return (
     <section className="classify-stage hero-card library-card-stage">
       <div className="classify-hero-header">
-        <ShioriCharacter
-          variant="classify"
-          size="lg"
-          className="shiori-glow classify-hero-companion"
-        />
+        <span className="shiori-glow shiori-companion--section classify-hero-companion">
+          <ShioriCharacter variant="classify" size="lg" />
+        </span>
         <div>
           <span className="reading-input-eyebrow">빠른 분류</span>
           <h2>단어를 빠르게 나눠볼까요?</h2>

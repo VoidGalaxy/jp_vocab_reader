@@ -116,6 +116,11 @@
 .vocab-panel {
   --screen-accent: var(--tone-ink-brown);
   --screen-accent-soft: #f1e7da;
+  /* Slightly tighter than the shared .tab-panel rhythm (18px) -- the note
+     screen's own hero card is already compact, so the same gap below it
+     just reads as dead space before the filter/list start. Scoped to this
+     screen only. */
+  gap: 14px;
 }
 
 .shared-deck-section {
@@ -820,87 +825,13 @@ button {
   }
 }
 
-/* "서재 히어로 비주얼" -- small flat-lay desk scene (LibraryHeroIllustration)
-   beside the hero copy on wide screens. Shrinks (not hides) on mobile, per
-   design brief: a quiet illustration, never one that crowds out the CTAs. */
+/* "서재 히어로 비주얼" -- the Shiori hero PNG (already depicts her resting on
+   an open book) sits beside the hero copy on wide screens. Shrinks (not
+   hides) on mobile, per design brief: a quiet companion, never one that
+   crowds out the CTAs. */
 .home-hero-visual {
   flex: 0 0 auto;
   align-self: center;
-}
-
-.library-hero-illustration {
-  display: block;
-  /* Bumped up from 148px -- screenshot QA found the home hero's one real
-     "this is a library app" visual reading as a small corner ornament next
-     to the copy/CTAs instead of carrying real brand weight. Still yields
-     to the CTAs (they stay left, full-width, first in reading order), but
-     needs to be big enough to register on first glance. */
-  width: 220px;
-  height: auto;
-  filter: drop-shadow(0 10px 18px rgba(120, 98, 40, 0.14));
-}
-
-@media (min-width: 900px) {
-  .library-hero-illustration {
-    width: 268px;
-  }
-}
-
-.library-hero-book-cover {
-  fill: var(--screen-accent-soft, var(--soft-bg));
-  stroke: var(--paper-border);
-  stroke-width: 1;
-}
-
-.library-hero-book-page {
-  fill: var(--panel-bg);
-  stroke: var(--paper-border);
-  stroke-width: 1;
-}
-
-.library-hero-spine {
-  stroke: var(--border-strong);
-  stroke-width: 1;
-}
-
-.library-hero-bookmark {
-  fill: var(--screen-accent, var(--accent));
-}
-
-.library-hero-pencil-body {
-  fill: var(--sand-amber);
-  stroke: var(--paper-border);
-  stroke-width: 1;
-}
-
-.library-hero-pencil-band {
-  fill: var(--text-secondary);
-}
-
-.library-hero-pencil-tip {
-  fill: var(--text);
-}
-
-.library-hero-memo {
-  fill: var(--panel-bg);
-  stroke: var(--paper-border);
-  stroke-width: 1;
-}
-
-.library-hero-memo-line {
-  fill: var(--border-strong);
-}
-
-.library-hero-word-chip {
-  fill: var(--panel-bg);
-  stroke: var(--screen-accent, var(--accent));
-  stroke-width: 1.5;
-}
-
-.library-hero-word-chip-text {
-  fill: var(--text);
-  font-size: 14px;
-  font-weight: 800;
 }
 
 .home-hero-greeting {
@@ -1241,16 +1172,11 @@ button {
     margin: 0 auto;
   }
 
-  .library-hero-illustration {
-    width: 150px;
-  }
-
-  /* Tighter cap than the base clamp() -- keeps Shiori from reading as
-     oversized against the shrunk 150px desk illustration on a phone. */
-  .shiori-hero-scene-character {
-    width: clamp(72px, 24vw, 96px);
-    height: clamp(98px, 32vw, 130px);
-    top: -4px;
+  /* Tighter cap than the base clamp() -- keeps the hero PNG from crowding
+     the CTAs above it on a narrow phone viewport. */
+  .shiori-book-scene .shiori-asset--hero {
+    width: clamp(110px, 34vw, 160px);
+    height: clamp(110px, 34vw, 160px);
   }
 
   .landing-hero-title {
@@ -2095,54 +2021,93 @@ select {
 }
 
 /* ==========================================================================
-   Shiori character system -- one shared geometry (tassel + bookmark body +
-   face + eyes) reused by every piece (ShioriCharacter/ShioriMark/
-   ShioriStamp/ShioriGuideCard, see components/Shiori.tsx) so the character
-   reads as the same brand face everywhere, just a different size/small
-   expression. Fixed brand palette everywhere -- deliberately NOT
-   var(--screen-accent) (screenshot QA on the previous character caught it
-   turning purple on 복습, blue on 덱 책장, etc. by inheriting whatever accent
-   tone that screen happened to use). One constant look: cream ribbon body
-   with a deep-teal outline, a deep-teal face plate, amber/coral reserved
-   for small per-variant accents only -- never the whole character.
+   Shiori character system -- Shiori is now a set of pre-made illustrated
+   PNG assets (frontend/public/brand/shiori/shiori-<variant>.png, see
+   docs/design/shiori-design-spec.md for the art direction), not hand-drawn
+   SVG/CSS. This block only sizes/positions the image (ShioriCharacter/
+   ShioriMark/ShioriStamp/ShioriGuideCard, see components/Shiori.tsx) --
+   the character's own linework/color lives in the PNGs themselves, so
+   there's no face/body/limb geometry to keep in sync here.
    ========================================================================== */
-.shiori-character {
+.shiori-asset {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
   line-height: 0;
   animation: app-pop var(--motion-base) var(--ease-soft) both;
 }
 
-.shiori-character-svg {
+.shiori-asset-img {
   display: block;
   width: 100%;
   height: 100%;
-  overflow: visible;
-  filter: drop-shadow(0 4px 8px rgba(120, 98, 40, 0.16));
+  object-fit: contain;
+  pointer-events: none;
+  /* Soft warm-beige shadow -- a quiet reading companion wants a gentle
+     shadow, not a sharp cutout one. */
+  filter: drop-shadow(0 3px 6px rgba(120, 98, 40, 0.12));
 }
 
-/* Sizes stay the "quiet symbol, not a mascot" scale (sm ~24-32px wide, md
-   ~40-56px, lg well under 100px) except "hero" -- the one tier meant to
-   actually anchor a scene (home hero) -- which clamps to vw so it never
-   grows past a sensible cap on a narrow phone viewport. */
-.shiori-character-sm {
-  width: 28px;
-  height: 38px;
+/* Size scale, three roles (see components/Shiori.tsx usage):
+   sm/md are marks (nav/header/modal title badges), lg is a "companion"
+   (section intro, paired with a title/description), xl is a scene
+   illustration (empty/ready cards), hero is the home-only full scene --
+   the only tier that still clamps to viewport width, since it's the one
+   place Shiori is meant to visually dominate a chunk of the screen. */
+.shiori-asset--sm {
+  width: 24px;
+  height: 24px;
 }
 
-.shiori-character-md {
-  width: 44px;
-  height: 60px;
+.shiori-asset--md {
+  width: 40px;
+  height: 40px;
 }
 
-.shiori-character-lg {
-  width: 70px;
-  height: 96px;
+.shiori-asset--lg {
+  width: 72px;
+  height: 72px;
 }
 
-.shiori-character-hero {
-  width: clamp(84px, 20vw, 132px);
-  height: clamp(114px, 27vw, 180px);
+.shiori-asset--xl {
+  width: 104px;
+  height: 104px;
+}
+
+.shiori-asset--hero {
+  width: clamp(150px, 15vw, 210px);
+  height: clamp(150px, 15vw, 210px);
+}
+
+/* Home hero companion -- a soft radial paper-glow sitting *behind* the
+   hero PNG (not a card, no edges) so the character reads as anchored in
+   the scene instead of a separate image pasted on top of the hero card.
+   Applied on the existing .home-hero-visual wrapper, not on the sized
+   .shiori-asset span itself, so it never fights the hero box's own
+   width/height. */
+.shiori-companion--hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: radial-gradient(circle, rgba(247, 236, 208, 0.6) 0%, rgba(247, 236, 208, 0) 70%);
+  border-radius: 50%;
+}
+
+/* Section-level pairing (classify/study hero headers) -- on top of those
+   headers' own flex+gap, this just guarantees the character never reads
+   as a second, disconnected icon from the title/description next to it. */
+.shiori-companion--section {
+  align-items: center;
+}
+
+/* AppEmptyState's "big illustration" moment (empty/ready cards) -- a
+   slightly deeper, wider shadow than the default asset shadow so a
+   large character sitting alone in a card still reads as grounded, not
+   floating cardboard-cutout style. */
+.shiori-empty-illustration .shiori-asset-img {
+  filter: drop-shadow(0 8px 16px rgba(120, 98, 40, 0.14));
 }
 
 /* Presence glow -- a soft round light behind Shiori for the small "guide"
@@ -2159,191 +2124,14 @@ select {
   background: radial-gradient(circle, #f7ecd6 0%, transparent 72%);
 }
 
-/* Loop + tassel at the top of the ribbon -- the one piece the previous
-   bookmark-only silhouette was missing, so the shape reads as "a bookmark
-   with a tassel" at a glance instead of just a rounded ribbon. */
-.shiori-tassel {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-}
-
-.shiori-bookmark-body {
-  fill: var(--soft-bg);
-  stroke: var(--primary);
-  stroke-width: 1.5;
-}
-
-.shiori-face {
-  fill: var(--primary);
-  stroke: var(--primary-dark);
-  stroke-width: 1;
-}
-
-.shiori-eye {
-  fill: var(--soft-bg);
-}
-
-/* "empty"/"loading" resting eyes -- short lines instead of round dots,
-   reads as calm/quiet rather than the alert open-eyed look every other
-   variant uses. */
-.shiori-eye-closed {
-  stroke: var(--soft-bg);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-}
-
-/* "success" beaming eyes -- upward smile-arcs instead of dots, paired with
-   the big grin mouth below so success reads as visibly happier than the
-   calm default expression, not just a sparkle bolted on. */
-.shiori-eye-happy {
-  fill: none;
-  stroke: var(--soft-bg);
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-
-.shiori-mouth {
-  fill: none;
-  stroke: var(--soft-bg);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-}
-
-/* Small eyebrow flourish (reading/classify/review only, md+ sizes only) --
-   deep-teal like the face outline, thin enough to read as an expression
-   accent rather than a second face feature. */
-.shiori-brow {
-  fill: none;
-  stroke: var(--primary-dark);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-}
-
-/* Per-variant accents -- one small mark/prop at most, so the character
-   stays "one calm expression + a tiny detail" rather than a busier
-   drawing. */
-.shiori-accent-sparkle {
-  fill: var(--warning);
-}
-
-.shiori-accent-check {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.shiori-accent-dot {
-  fill: var(--accent);
-}
-
-.shiori-accent-card {
-  fill: var(--accent);
-  opacity: 0.85;
-}
-
-/* "reading"/"loading" small held page -- a tiny paper-tone rectangle (not
-   the accent color) since it represents a page/card from the same book,
-   not a "this just happened" flourish. */
-.shiori-accent-page {
-  fill: var(--soft-bg);
-  stroke: var(--primary);
-  stroke-width: 1.3;
-}
-
-.shiori-accent-page-line {
-  stroke: var(--primary);
-  stroke-width: 1.2;
-  stroke-linecap: round;
-}
-
-/* "classify" card-flip motion tick -- a short swoosh, not a second prop. */
-.shiori-accent-swoosh {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-}
-
-/* "empty" variant's small waiting-beside card box -- outline only (no
-   fill), dashed like an empty slot rather than a held item, so "empty"
-   reads as "nothing in the box yet" instead of another held prop. */
-.shiori-empty-box {
-  fill: none;
-  stroke: var(--border-strong);
-  stroke-width: 1.6;
-  stroke-dasharray: 3 3;
-}
-
-/* Arm stubs shared by every pose -- deliberately just a short curved
-   stroke (a stub, not articulated fingers/limbs) so each variant reads as
-   "about to do something" without becoming a full figure. */
-.shiori-hand {
-  fill: none;
-  stroke: var(--primary);
-  stroke-width: 2.4;
-  stroke-linecap: round;
-}
-
-.shiori-loading-dots circle {
-  fill: var(--muted);
-  animation: shiori-loading-pulse 1.2s ease-in-out infinite;
-}
-
-.shiori-loading-dots circle:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.shiori-loading-dots circle:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes shiori-loading-pulse {
-  0%,
-  80%,
-  100% {
-    opacity: 0.25;
-  }
-  40% {
-    opacity: 0.9;
-  }
-}
-
-/* "loading" variant gets a gentle tilt on top of the existing dot-pulse --
-   subtle (+/-3deg) so it reads as "a small bookmark swaying while pages
-   turn", not a spinning-loader animation. */
-.shiori-character--loading .shiori-character-svg {
-  animation: shiori-loading-tilt 2.4s ease-in-out infinite;
-}
-
-@keyframes shiori-loading-tilt {
-  0%,
-  100% {
-    transform: rotate(-3deg);
-  }
-  50% {
-    transform: rotate(3deg);
-  }
-}
-
-/* ShioriMark -- compact inline "brand mark" form (bookmark + calm face, no
-   tassel/accessory) for a slot that used to hold a plain generic bookmark
-   glyph, e.g. the selected-word panel's title icon. */
+/* ShioriMark -- compact inline "brand mark" form for a slot that used to
+   hold a plain generic bookmark glyph, e.g. the selected-word panel's
+   title icon. Same asset as ShioriCharacter, just deliberately small --
+   screens that need it even smaller (.token-sheet-bookmark-icon,
+   .records-log-title-mark, ...) override width/height further. */
 .shiori-mark {
-  display: inline-flex;
-  flex: 0 0 auto;
-  width: 15px;
+  width: 20px;
   height: 20px;
-  line-height: 0;
-}
-
-.shiori-mark-svg {
-  display: block;
-  width: 100%;
-  height: 100%;
 }
 
 /* ShioriStamp -- bare (no label) is just the small character, for an
@@ -2371,8 +2159,8 @@ select {
 }
 
 .shiori-stamp-character {
-  width: 18px;
-  height: 25px;
+  width: 22px;
+  height: 22px;
 }
 
 .shiori-stamp-label {
@@ -2394,6 +2182,14 @@ select {
   text-align: left;
 }
 
+/* Same "floating helper" sizing as .reading-empty-guide -- a visible guide,
+   not a small mark, since this is the one companion moment on the reading
+   screen's word-inspector idle state. */
+.shiori-guide-card .shiori-asset--md {
+  width: 48px;
+  height: 48px;
+}
+
 .shiori-guide-card-text {
   margin: 0;
   color: var(--muted);
@@ -2401,19 +2197,14 @@ select {
   line-height: 1.5;
 }
 
-/* Home hero scene -- layers a hero-size Shiori over the existing desk
-   illustration so the character reads as bookmarked into the book, not a
-   separate icon next to the title. Position is tuned to sit roughly where
-   a real bookmark ribbon would peek out of the spine. */
-.shiori-hero-scene {
-  position: relative;
-}
-
-.shiori-hero-scene-character {
-  position: absolute;
-  top: 14px;
-  right: 34%;
-  filter: drop-shadow(0 10px 16px rgba(120, 98, 40, 0.22));
+/* Home hero scene -- the hero PNG already depicts Shiori resting on an
+   open book (art, not composed from a separate illustration layer), so
+   this is just a centered slot -- no absolute-position layering needed
+   anymore. */
+.shiori-book-scene {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .study-control-panel {
@@ -2996,6 +2787,14 @@ select {
 
 .reading-empty-guide p {
   margin: 0;
+}
+
+/* This guide's companion is a "floating helper" moment, not a generic
+   small mark -- sized a notch above the shared md tier (44-56px target)
+   so Shiori is a visible guide here, not a disappearing icon. */
+.reading-empty-guide .shiori-asset--md {
+  width: 48px;
+  height: 48px;
 }
 
 .reading-empty-guide button {
@@ -3833,8 +3632,8 @@ input.reading-vocab-item-checkbox {
    compact stats strip and the deck/mode utility panel below it. */
 .study-hero-card {
   display: grid;
-  gap: 16px;
-  padding: 20px;
+  gap: 12px;
+  padding: 16px;
   border-top: 3px solid var(--screen-accent, var(--accent));
 }
 
@@ -3858,10 +3657,6 @@ input.reading-vocab-item-checkbox {
   margin: 0;
   color: var(--text);
   font-size: 19px;
-}
-
-.study-hero-companion {
-  margin: -10px -6px 0 auto;
 }
 
 .study-hero-header p {
@@ -3952,7 +3747,7 @@ input.reading-vocab-item-checkbox {
   display: grid;
   gap: 4px;
   justify-items: center;
-  padding: 14px 10px;
+  padding: 11px 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text);
@@ -4121,11 +3916,6 @@ input.reading-vocab-item-checkbox {
   color: var(--text);
   font-size: 15px;
   font-weight: 700;
-}
-
-.records-log-title-mark {
-  width: 14px;
-  height: 19px;
 }
 
 .records-log-hint {
@@ -4450,6 +4240,7 @@ input.reading-vocab-item-checkbox {
 }
 
 .shared-hero-card {
+  padding: 16px 20px;
   border-top: 3px solid var(--screen-accent, var(--accent));
 }
 
@@ -4708,6 +4499,11 @@ input.reading-vocab-item-checkbox {
   margin: 0;
 }
 
+.shared-deck-title-mark {
+  width: 28px;
+  height: 28px;
+}
+
 
 .jlpt-level-tag {
   display: inline-flex;
@@ -4903,6 +4699,7 @@ input.reading-vocab-item-checkbox {
    the home dashboard and reading tab already use. */
 .vocab-hero-card {
   gap: 14px;
+  padding: 16px 20px;
   border-color: var(--paper-border);
   border-top: 3px solid var(--screen-accent, var(--accent));
   background: var(--paper-bg);
@@ -6561,13 +6358,14 @@ input.reading-vocab-item-checkbox {
 /* Small Shiori mark ahead of the word -- the one visual cue (besides the
    top accent edge) that marks this as "a bookmark note about this word",
    not a generic word-detail inspector. Sized/aligned to sit inline with
-   the word's baseline rather than towering over it; width/height override
-   ShioriMark's own default size but keep its bookmark aspect ratio. */
+   the word's baseline rather than towering over it. Square (not the old
+   narrow bookmark-glyph ratio) since object-fit: contain already respects
+   the illustrated character's own proportions inside the box. */
 .token-sheet-bookmark-icon {
   flex: 0 0 auto;
   align-self: center;
-  width: 16px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
 }
 
 .token-sheet-word {
@@ -6877,6 +6675,8 @@ input.reading-vocab-item-checkbox {
 
 .feedback-modal-companion {
   flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
 }
 
 .feedback-modal-title {
@@ -6978,9 +6778,14 @@ input.reading-vocab-item-checkbox {
   }
 
   /* Idle inspector reuses .token-sheet-overlay's right-dock positioning
-     above (same base class) -- only needs to become visible here. */
+     above (same base class) -- only needs to become visible here. A small
+     top offset (base overlay is anchored to the raw viewport edge) drops it
+     down near where the reading guide/text actually starts, so it reads as
+     a companion panel beside the reading area instead of a notification
+     floating at the very top of the screen. */
   .token-sheet-overlay-idle {
     display: flex;
+    padding-top: 96px;
   }
 }
 

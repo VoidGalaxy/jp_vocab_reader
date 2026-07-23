@@ -297,7 +297,7 @@ export function SharedDeckSection({
             }`}
           >
             {messageTone === "success" ? (
-              <ShioriStamp variant="save" className="shared-deck-message-stamp" />
+              <ShioriStamp variant="success" className="shared-deck-message-stamp" />
             ) : null}
             <span>{message}</span>
           </p>
@@ -323,7 +323,7 @@ export function SharedDeckSection({
       ) : null}
 
       {isInitialLoading ? (
-        <AppEmptyState mood="loading" title="덱 책장을 불러오는 중이에요..." />
+        <AppEmptyState mood="loading" moodSize="md" title="덱 책장을 불러오는 중이에요..." />
       ) : sortedDecks.length > 0 ? (
         hasGroups ? (
           <>
@@ -382,6 +382,7 @@ export function SharedDeckSection({
       ) : (
         <AppEmptyState
           mood="empty"
+          moodSize="lg"
           title="가져올 수 있는 추천 덱을 살펴보세요."
           description="내 어휘 노트를 공유하거나 추천 덱을 가져올 수 있어요."
         >

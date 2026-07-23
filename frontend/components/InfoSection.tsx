@@ -1,5 +1,4 @@
 import { AppEmptyState, BrandSectionBadge } from "./BrandElements";
-import { ShioriMark } from "./Shiori";
 import { getDisplayMeaning } from "./shared";
 import {
   BookIcon,
@@ -50,10 +49,7 @@ function TodayStudyMemo({
 }) {
   return (
     <section className="study-log-entry today-study-memo">
-      <h3 className="records-log-title">
-        <ShioriMark variant="review" className="records-log-title-mark" />
-        오늘 학습
-      </h3>
+      <h3 className="records-log-title">오늘 학습</h3>
       <div className="records-today-row">
         <span className="home-summary-chip">
           <ClockIcon className="home-summary-chip-icon" />
@@ -150,6 +146,7 @@ function StudyLogEmptyState({ onGoToReading }: { onGoToReading: () => void }) {
   return (
     <AppEmptyState
       mood="empty"
+      moodSize="lg"
       title="아직 기록이 없어요."
       description="원문을 읽고 첫 단어를 담아보세요."
     >

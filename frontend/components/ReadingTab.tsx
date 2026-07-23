@@ -287,7 +287,7 @@ function ReaderSaveDock({
           }`}
         >
           {messageTone === "success" ? (
-            <ShioriStamp variant="save" className="reading-summary-message-stamp" />
+            <ShioriStamp variant="success" className="reading-summary-message-stamp" />
           ) : null}
           <span>{message}</span>
         </p>
@@ -523,6 +523,7 @@ export function ReadingTab({
               {!hasResult && !text.trim() ? (
                 <AppEmptyState
                   mood="reading"
+                  moodSize="md"
                   className="reading-empty-guide"
                   title="원문을 펼쳐볼까요?"
                   description="일본어 원문을 붙여넣고 모르는 단어를 눌러보세요."
