@@ -249,6 +249,24 @@ def create_core_tables(connection: sqlite3.Connection) -> None:
 def apply_sqlite_migrations(connection: sqlite3.Connection) -> None:
     ensure_vocab_item_columns(connection)
     ensure_user_scoped_columns(connection)
+    ensure_shared_deck_words_columns(connection)
+
+
+def ensure_shared_deck_words_columns(connection: sqlite3.Connection) -> None:
+    """Additive snapshot columns for a table that may already exist from
+    before user-published decks became lexeme-based (see
+    docs/architecture/shared-lexeme-progress-storage.md). CREATE TABLE IF
+    NOT EXISTS in create_lexeme_progress_tables is a no-op on an existing
+    table, so these need the same add_column_if_missing pattern as
+    ensure_vocab_item_columns above.
+    """
+    add_column_if_missing(connection, "shared_deck_words", "display_meaning_ko TEXT")
+    add_column_if_missing(connection, "shared_deck_words", "example_sentence TEXT")
+    add_column_if_missing(
+        connection, "shared_deck_words", "context_explanation_ko TEXT"
+    )
+    add_column_if_missing(connection, "shared_deck_words", "tags_json TEXT")
+    add_column_if_missing(connection, "shared_deck_words", "published_note TEXT")
 
 
 def seed_dev_user(connection: sqlite3.Connection) -> int:
@@ -466,6 +484,18 @@ def create_lexeme_progress_tables(connection: sqlite3.Connection) -> None:
             lexeme_id INTEGER NOT NULL,
             sort_order INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
+            -- Deck-specific published snapshot (see
+            -- docs/architecture/shared-lexeme-progress-storage.md). All
+            -- nullable/additive: a publisher's own short wording for this
+            -- word in *this* deck, so it can be shown without ever
+            -- overwriting the shared lexemes row other decks/users rely on.
+            -- Same short-text policy as legacy shared_deck_items (no full
+            -- source text, no personal notes beyond a short note).
+            display_meaning_ko TEXT,
+            example_sentence TEXT,
+            context_explanation_ko TEXT,
+            tags_json TEXT,
+            published_note TEXT,
             UNIQUE(shared_deck_id, lexeme_id)
         )
         """
@@ -784,8 +814,27 @@ def create_postgres_tables(connection: AppPostgresConnection) -> None:
             lexeme_id INTEGER NOT NULL REFERENCES lexemes(id) ON DELETE CASCADE,
             sort_order INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
+            display_meaning_ko TEXT,
+            example_sentence TEXT,
+            context_explanation_ko TEXT,
+            tags_json TEXT,
+            published_note TEXT,
             UNIQUE(shared_deck_id, lexeme_id)
         )
+        """
+    )
+    # Additive columns for a table that may already exist (e.g. a
+    # pre-this-change Neon database) -- CREATE TABLE IF NOT EXISTS above is a
+    # no-op there, so these run unconditionally. PostgreSQL (9.6+) supports
+    # ADD COLUMN IF NOT EXISTS natively, unlike SQLite.
+    connection.execute(
+        """
+        ALTER TABLE shared_deck_words
+        ADD COLUMN IF NOT EXISTS display_meaning_ko TEXT,
+        ADD COLUMN IF NOT EXISTS example_sentence TEXT,
+        ADD COLUMN IF NOT EXISTS context_explanation_ko TEXT,
+        ADD COLUMN IF NOT EXISTS tags_json TEXT,
+        ADD COLUMN IF NOT EXISTS published_note TEXT
         """
     )
     connection.execute(

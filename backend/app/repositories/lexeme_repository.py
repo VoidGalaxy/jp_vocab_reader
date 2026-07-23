@@ -56,13 +56,24 @@ def upsert_lexeme(
     dictionary_gloss: str = "",
     jlpt_level: str | None = None,
     source_type: str = "shared_deck",
+    refresh_shared_fields: bool = True,
 ) -> int:
     """Find-or-create a lexeme keyed by (base_form, reading, part_of_speech).
 
     This is the one place a shared word's *common* fields (meaning_ko,
     dictionary_gloss, jlpt_level) are written -- re-running a JLPT package
-    registration refreshes them here. Never call this to store a user's
-    personal meaning edit; that stays on vocab_items as it always has.
+    registration refreshes them here (refresh_shared_fields=True, the
+    default, matches JLPT-script/curated callers). Never call this to store
+    a user's personal meaning edit; that stays on vocab_items as it always
+    has.
+
+    A publisher of their own shared deck must NOT be able to clobber this
+    shared row's meaning_ko/dictionary_gloss just because their personal
+    vocab_item had different wording -- pass refresh_shared_fields=False
+    (see publish_deck() in shared_deck_repository.py) so an existing match
+    is reused as-is (only jlpt_level is opportunistically filled in if it
+    was previously unset). The publisher's own wording is preserved
+    separately as a deck-specific snapshot on shared_deck_words, not lost.
     """
     timestamp = now_iso()
     base_form = (base_form or surface or "").strip() or surface.strip()
@@ -79,25 +90,36 @@ def upsert_lexeme(
         ).fetchone()
         if existing:
             lexeme_id = int(existing["id"])
-            connection.execute(
-                """
-                UPDATE lexemes
-                SET surface = ?,
-                    meaning_ko = ?,
-                    dictionary_gloss = ?,
-                    jlpt_level = COALESCE(?, jlpt_level),
-                    updated_at = ?
-                WHERE id = ?
-                """,
-                (
-                    surface,
-                    meaning_ko.strip(),
-                    dictionary_gloss.strip(),
-                    jlpt_level,
-                    timestamp,
-                    lexeme_id,
-                ),
-            )
+            if refresh_shared_fields:
+                connection.execute(
+                    """
+                    UPDATE lexemes
+                    SET surface = ?,
+                        meaning_ko = ?,
+                        dictionary_gloss = ?,
+                        jlpt_level = COALESCE(?, jlpt_level),
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        surface,
+                        meaning_ko.strip(),
+                        dictionary_gloss.strip(),
+                        jlpt_level,
+                        timestamp,
+                        lexeme_id,
+                    ),
+                )
+            else:
+                connection.execute(
+                    """
+                    UPDATE lexemes
+                    SET jlpt_level = COALESCE(jlpt_level, ?),
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (jlpt_level, timestamp, lexeme_id),
+                )
             return lexeme_id
 
         cursor = connection.execute(
@@ -125,20 +147,51 @@ def upsert_lexeme(
 
 
 def add_word_to_shared_deck(
-    shared_deck_id: int, lexeme_id: int, sort_order: int
+    shared_deck_id: int,
+    lexeme_id: int,
+    sort_order: int,
+    *,
+    display_meaning_ko: str | None = None,
+    example_sentence: str | None = None,
+    context_explanation_ko: str | None = None,
+    tags_json: str | None = None,
+    published_note: str | None = None,
 ) -> None:
+    """Idempotent upsert on (shared_deck_id, lexeme_id): republishing/
+    re-registering the same deck refreshes sort_order and the deck-specific
+    snapshot fields in place rather than creating a duplicate
+    shared_deck_words row (the UNIQUE(shared_deck_id, lexeme_id) constraint
+    plus ON CONFLICT DO UPDATE below is what guarantees that).
+    """
     timestamp = now_iso()
     with get_connection() as connection:
         connection.execute(
             """
-            -- TODO(postgres): INSERT OR IGNORE is SQLite-specific; adapt_query()
-            -- rewrites this to ON CONFLICT DO NOTHING for PostgreSQL.
-            INSERT OR IGNORE INTO shared_deck_words (
-                shared_deck_id, lexeme_id, sort_order, created_at
+            INSERT INTO shared_deck_words (
+                shared_deck_id, lexeme_id, sort_order, created_at,
+                display_meaning_ko, example_sentence, context_explanation_ko,
+                tags_json, published_note
             )
-            VALUES (?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (shared_deck_id, lexeme_id) DO UPDATE SET
+                sort_order = excluded.sort_order,
+                display_meaning_ko = excluded.display_meaning_ko,
+                example_sentence = excluded.example_sentence,
+                context_explanation_ko = excluded.context_explanation_ko,
+                tags_json = excluded.tags_json,
+                published_note = excluded.published_note
             """,
-            (shared_deck_id, lexeme_id, sort_order, timestamp),
+            (
+                shared_deck_id,
+                lexeme_id,
+                sort_order,
+                timestamp,
+                display_meaning_ko,
+                example_sentence,
+                context_explanation_ko,
+                tags_json,
+                published_note,
+            ),
         )
 
 
@@ -220,6 +273,13 @@ def _normalize_progress_overlay(item: dict[str, Any]) -> dict[str, Any]:
     item["review_level"] = item.get("review_level") or 0
     item["correct_count"] = item.get("correct_count") or 0
     item["wrong_count"] = item.get("wrong_count") or 0
+    # Deck-specific published snapshot wins over the shared lexeme's common
+    # meaning -- lets a publisher's own wording show in their deck without
+    # ever overwriting lexemes.meaning_ko, which other decks/users share
+    # (see docs/architecture/shared-lexeme-progress-storage.md).
+    lexeme_meaning_ko = item.pop("lexeme_meaning_ko", None)
+    display_meaning_ko = item.pop("display_meaning_ko", None)
+    item["meaning_ko"] = display_meaning_ko or lexeme_meaning_ko or ""
     return item
 
 
@@ -252,10 +312,14 @@ def list_shared_deck_words_with_progress(
             SELECT
                 lexemes.id AS lexeme_id,
                 lexemes.surface, lexemes.base_form, lexemes.reading,
-                lexemes.part_of_speech, lexemes.meaning_ko,
+                lexemes.part_of_speech,
+                lexemes.meaning_ko AS lexeme_meaning_ko,
                 lexemes.dictionary_gloss, lexemes.jlpt_level,
                 shared_deck_words.sort_order,
                 shared_deck_words.created_at,
+                shared_deck_words.display_meaning_ko,
+                shared_deck_words.example_sentence,
+                shared_deck_words.context_explanation_ko,
                 user_word_progress.status,
                 user_word_progress.review_level,
                 user_word_progress.next_review_at,

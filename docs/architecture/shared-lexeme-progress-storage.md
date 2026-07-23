@@ -216,35 +216,132 @@ tab -- no changes to VocabSection (노트) or StudySection (복습).
   `review_level`/`next_review_at` history for a word that also becomes a
   lexeme).
 
-## Goal: every new shared deck, not just JLPT decks, should be lexeme-based
+## Every new shared deck, not just JLPT decks, is lexeme-based
 
 The intent of this storage model is that **any newly created shared deck**
 -- JLPT-recommended or user-published -- stores its words once in
 `lexemes` + `shared_deck_words`, so import always costs one
 `user_deck_subscriptions` row regardless of deck size, and `user_word_progress`
-is always created lazily, only on a real status change or review.
+is always created lazily, only on a real status change or review. As of the
+user-publish lexeme-mode change, this now covers both creation paths:
 
-- **JLPT-recommended decks**: already lexeme-based by default. Registering a
-  deck package via `scripts/seed_jlpt_shared_decks.py` (no `--legacy` flag)
+- **JLPT-recommended decks**: lexeme-based by default. Registering a deck
+  package via `scripts/seed_jlpt_shared_decks.py` (no `--legacy` flag)
   upserts each word into `lexemes` and links it via `shared_deck_words`; see
   "JLPT registration script" above.
-- **User-published shared decks are NOT yet lexeme-based.** `POST
+- **User-published shared decks are now lexeme-based too.** `POST
   /decks/{deck_id}/publish` (`publish_deck()` in
-  `app/repositories/shared_deck_repository.py`) still only ever copies the
-  publishing user's `vocab_items`/`custom_terms` into
-  `shared_deck_items`/`shared_deck_terms` -- the legacy structure. It never
-  writes `lexemes` or `shared_deck_words`. That means **every shared deck an
-  end user creates through the app today is legacy-mode**, and importing it
-  will grow the importer's `vocab_items` exactly as before this phase. This
-  is a known gap, not an oversight: converting the user-publish path to
-  lexeme-mode needs its own design pass (e.g. how to reconcile a publisher's
-  personal `meaning_ko`/`context_explanation_ko` edits, which have no home on
-  a shared `lexemes` row) and is left as a **TODO for a later phase**, tracked
-  alongside the phase-3 review-flow integration item above.
+  `app/repositories/shared_deck_repository.py`) upserts every one of the
+  publisher's `vocab_items` **and** `custom_terms` into `lexemes` and links
+  them via `shared_deck_words` (see "custom_terms handling" and
+  "Deck-specific meaning/context snapshot" below for exactly how). A brand
+  new publish writes **zero** rows to the legacy `shared_deck_items`/
+  `shared_deck_terms` tables. `is_lexeme_deck()` is therefore `True` for
+  every deck published from now on, so it gets the same import/read
+  behavior as a JLPT deck: `import_shared_deck()` only creates a
+  `user_deck_subscriptions` row, never bulk-copies into the importer's
+  `vocab_items`.
 - **Legacy shared decks (JLPT or user-published) already out in the wild
-  keep working unchanged** -- converting them to lexeme-mode is a separate,
-  deliberately deferred migration phase (see "future phase-2 migration"
-  above), not something this phase or the regression test below assumes.
+  keep working unchanged.** A deck published *before* this change has no
+  `shared_deck_words` rows, so `is_lexeme_deck()` stays `False` for it
+  forever, and it continues to be served from
+  `shared_deck_items`/`shared_deck_terms` exactly as before -- reading and
+  importing it is completely untouched. Converting those existing legacy
+  decks to lexeme-mode is a separate, deliberately deferred migration phase
+  (see "Existing data / migration policy" above), not something this change
+  or the regression tests below assume.
+- **Known edge case, not fixed here:** a personal deck with literally zero
+  `vocab_items` and zero `custom_terms` produces zero `shared_deck_words`
+  rows on publish, so `is_lexeme_deck()` would report it as legacy-mode by
+  the same "has at least one row" heuristic used everywhere else. This is
+  harmless in practice (an empty deck stays empty and importable either
+  way) and not worth a dedicated flag column for a deck with no content.
+
+## custom_terms handling policy
+
+Chose **option A: custom_terms are converted to lexemes**, not kept on a
+separate legacy fallback path, because the schemas turned out to line up
+closely enough that dropping or side-lining them wasn't necessary --
+sharing a user's data (even a custom term) should never silently disappear.
+
+- Mapping: `custom_terms.term` -> `lexemes.surface` **and**
+  `lexemes.base_form` (a custom term has no separate base/surface
+  distinction); `custom_terms.reading` -> `lexemes.reading`;
+  `custom_terms.part_of_speech` -> `lexemes.part_of_speech` (kept as
+  whatever grammatical tag the user chose, e.g. `명사`/`동사` -- not
+  forced to a literal `"custom"` value, so that information isn't lost);
+  `custom_terms.meaning_ko` -> `lexemes.meaning_ko` (only on first
+  creation, see the meaning-overwrite policy below); `dictionary_gloss` is
+  left empty (custom_terms has no equivalent field).
+- `lexemes.source_type = "user_published_custom_term"` marks a lexeme that
+  originated from a custom term (as opposed to `"user_published_deck"` for
+  a regular vocab item, or `"jlpt"` for a JLPT-registered word) -- purely
+  informational bookkeeping, not currently surfaced in any API response.
+- Custom terms are linked into the **same** `shared_deck_words` list as
+  regular vocab items (`sort_order` continues after the vocab items), not
+  kept in a visually separate list. This matches how a lexeme-mode deck
+  already works for JLPT decks: `get_shared_deck()`'s lexeme-mode branch
+  always returns `custom_terms: []` and puts everything in the unified
+  `items` list -- true for a JLPT deck, and now true for a user-published
+  deck too. The frontend doesn't need to change to see a converted custom
+  term; it just shows up as another word in the deck's word list.
+- `custom_terms.description` (a short free-text note) maps to the deck-specific
+  `context_explanation_ko` snapshot slot on `shared_deck_words` (see below)
+  rather than being dropped, since it's the closest equivalent to a short
+  per-word note.
+- The publisher's own `custom_terms` rows are never deleted or modified by
+  publishing -- exactly like `vocab_items`, they're read-only inputs to the
+  upsert, left completely untouched afterward.
+
+## Deck-specific meaning/context snapshot (additive `shared_deck_words` columns)
+
+A publisher's personal wording for a word (their own `meaning_ko`, a short
+`example_sentence`, a short `context_explanation_ko`) must be preserved and
+shown in *their* deck, but must never be force-written onto the shared
+`lexemes` row that other decks/users/publishers share -- two different
+publishers sharing the exact same word (same `base_form`/`reading`/
+`part_of_speech`) must each keep seeing their own wording, not clobber each
+other's.
+
+- Five nullable, additive columns were added to `shared_deck_words` (both
+  the SQLite and PostgreSQL branches of `ensure_schema`, plus a SQLite
+  `add_column_if_missing`-based migration and a PostgreSQL
+  `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for a table that may already
+  exist from before this change): `display_meaning_ko`, `example_sentence`,
+  `context_explanation_ko`, `tags_json` (reserved, not populated yet --
+  no tagging feature exists on vocab_items to source it from),
+  `published_note` (reserved, not populated yet).
+- `publish_deck()` always snapshots the publisher's own `meaning_ko` (and,
+  for regular vocab items, `example_sentence`/`context_explanation_ko`) onto
+  `shared_deck_words.display_meaning_ko`/etc for that specific
+  `(shared_deck_id, lexeme_id)` row -- regardless of whether the underlying
+  `lexemes` row was just created or already existed from an earlier
+  publisher.
+- `upsert_lexeme()` gained a `refresh_shared_fields: bool = True` parameter.
+  The JLPT registration script keeps calling it with the default `True`
+  (curated content is *meant* to refresh `meaning_ko`/`dictionary_gloss`
+  on re-registration). `publish_deck()` always calls it with
+  `refresh_shared_fields=False`: if a matching lexeme already exists, its
+  `surface`/`meaning_ko`/`dictionary_gloss` are left exactly as they are
+  (only `jlpt_level` is opportunistically filled in via `COALESCE` if it
+  was previously unset) -- a publisher can enrich the shared word pool by
+  creating a lexeme that doesn't exist yet, but can never overwrite one
+  that does.
+- Overlay display priority, applied in
+  `lexeme_repository._normalize_progress_overlay()`: a word's shown
+  `meaning_ko` is `shared_deck_words.display_meaning_ko` if set, otherwise
+  `lexemes.meaning_ko`. `example_sentence`/`context_explanation_ko` come
+  straight from the `shared_deck_words` snapshot (legacy JLPT-seeded decks
+  never set them, so they stay `null` there exactly as before this change).
+  `status`/`review_level`/etc keep coming from `user_word_progress` only,
+  unaffected.
+- Same short-text policy as the existing legacy `shared_deck_items` columns
+  applies to these snapshots: `example_sentence` is a short example, not a
+  full source passage; `context_explanation_ko` is a short note. Nothing
+  about the "no full original text" policy changes -- these columns just
+  give a user-published lexeme-mode deck the same per-word display
+  richness a legacy deck already had, without touching the shared
+  `lexemes` row.
 
 ## Storage regression testing
 
@@ -281,6 +378,45 @@ It exits non-zero with a specific `RegressionFailure` message naming which
 table's row-count delta didn't match if the storage promise above is ever
 violated (e.g. a future change accidentally reintroduces bulk-copying into
 `vocab_items` or eager `user_word_progress` creation on import).
+
+### User-published deck storage regression
+
+`backend/scripts/check_shared_deck_publish_storage_regression.py` is the
+companion check for the *other* way a shared deck is created: a real user
+publishing their own personal deck (`publish_deck()`), rather than the JLPT
+registration script. Same disposable-local-SQLite-only setup, same
+`--count` flag (>= 100, default 200, also verified at 1000). In addition to
+the import/status-change deltas above, it also asserts:
+
+- Publishing a deck with N `vocab_items` + M `custom_terms` creates exactly
+  N + M `shared_deck_words` rows, zero new `shared_deck_items`/
+  `shared_deck_terms` rows, and leaves the publisher's own `vocab_items`/
+  `custom_terms` row counts completely unchanged (retained, not moved or
+  deleted).
+- The published deck is detected as lexeme-mode (`is_lexeme_deck()` ->
+  `True`).
+- Every custom term appears in the deck's word list/overlay (via
+  `list_shared_deck_words_with_progress`) with its own meaning intact --
+  not silently dropped, and `get_shared_deck()`'s `custom_terms` field is
+  `[]` (merged into `items` instead, matching the JLPT lexeme-deck
+  convention).
+- **Meaning-collision protection**: a second publisher publishing a
+  different personal deck that happens to contain the exact same
+  `(base_form, reading, part_of_speech)` as an existing lexeme does not
+  create a duplicate `lexemes` row, does not change that lexeme's shared
+  `meaning_ko`, and still shows *their own* wording in *their own* deck via
+  the `display_meaning_ko` snapshot -- while the first publisher's deck
+  keeps showing the first publisher's original wording.
+
+Run it the same way as the JLPT-deck check, still never against Neon:
+
+```
+cd backend
+.venv\Scripts\Activate.ps1
+$env:DATABASE_URL="sqlite:///./vocab_publish_lexeme_scratch.db"
+python scripts/check_shared_deck_publish_storage_regression.py
+python scripts/check_shared_deck_publish_storage_regression.py --count 1000
+```
 
 ## Operational note: the shared dev/staging Neon database
 

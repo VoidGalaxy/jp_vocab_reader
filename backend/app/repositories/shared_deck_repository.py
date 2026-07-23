@@ -5,12 +5,14 @@ from typing import Any
 
 from app.database import get_connection, now_iso, row_to_dict
 from app.repositories.lexeme_repository import (
+    add_word_to_shared_deck,
     count_shared_deck_words,
     get_or_create_subscription,
     is_lexeme_deck,
     is_lexeme_deck_in_connection,
     list_lexeme_deck_ids,
     list_shared_deck_words_with_progress,
+    upsert_lexeme,
 )
 
 
@@ -30,6 +32,25 @@ def shared_deck_exists(shared_deck_id: int) -> bool:
 def publish_deck(
     user_id: int, deck_id: int, title: str, description: str
 ) -> dict[str, Any] | None:
+    """Publishes a personal deck as a new shared deck.
+
+    Default (and only) behavior as of the lexeme-mode publish change (see
+    docs/architecture/shared-lexeme-progress-storage.md "User-published
+    shared decks"): every word -- both vocab_items and custom_terms -- is
+    upserted into the shared `lexemes` table and linked via
+    `shared_deck_words`, exactly like a JLPT-registered deck. Nothing is
+    written to the legacy `shared_deck_items`/`shared_deck_terms` tables for
+    a *new* publish; those tables and any shared deck published before this
+    change are left completely alone (read/import compatibility is
+    unaffected -- see is_lexeme_deck()/get_shared_deck()/import_shared_deck()
+    below, which still serve legacy decks from those tables).
+
+    vocab_count/custom_term_count on the returned dict (and on the
+    shared_decks row) keep their original meaning -- counts of the
+    publisher's source vocab_items/custom_terms -- so the response shape
+    and any "N\uac1c \ub2e8\uc5b4 + M\uac1c \ucee4\uc2a4\ud140 \uc6a9\uc5b4" style label stay unchanged even
+    though both now live in the same underlying shared_deck_words list.
+    """
     timestamp = now_iso()
     with get_connection() as connection:
         deck = connection.execute(
@@ -90,51 +111,61 @@ def publish_deck(
         )
         shared_deck_id = int(cursor.lastrowid)
 
-        for row in vocab_rows:
-            connection.execute(
-                """
-                INSERT INTO shared_deck_items (
-                    shared_deck_id, surface, base_form, reading, part_of_speech,
-                    normalized_form, meaning_ko, dictionary_gloss,
-                    context_explanation_ko, example_sentence, quality_tag, created_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    shared_deck_id,
-                    row["surface"],
-                    row["base_form"],
-                    row["reading"],
-                    row["part_of_speech"],
-                    row["normalized_form"],
-                    row["meaning_ko"],
-                    row["dictionary_gloss"],
-                    row["context_explanation_ko"],
-                    row["example_sentence"],
-                    row["quality_tag"],
-                    timestamp,
-                ),
-            )
+    # upsert_lexeme/add_word_to_shared_deck open their own connections (see
+    # lexeme_repository.py) so this runs after the `with` block above closes
+    # the first connection/transaction.
+    sort_order = 0
+    for row in vocab_rows:
+        surface = row["surface"] or row["base_form"] or ""
+        base_form = row["base_form"] or row["surface"] or ""
+        lexeme_id = upsert_lexeme(
+            surface=surface,
+            base_form=base_form,
+            reading=row["reading"] or "",
+            part_of_speech=row["part_of_speech"] or "",
+            meaning_ko=row["meaning_ko"] or "",
+            dictionary_gloss=row["dictionary_gloss"] or "",
+            source_type="user_published_deck",
+            # A publisher must never clobber an existing shared word's
+            # common meaning with their own personal wording -- see
+            # upsert_lexeme()'s docstring.
+            refresh_shared_fields=False,
+        )
+        add_word_to_shared_deck(
+            shared_deck_id,
+            lexeme_id,
+            sort_order,
+            # Always snapshot the publisher's own wording for *this* deck so
+            # it's shown even when the shared lexeme keeps a different,
+            # earlier meaning_ko (nothing the publisher shared is lost).
+            display_meaning_ko=row["meaning_ko"] or None,
+            example_sentence=row["example_sentence"] or None,
+            context_explanation_ko=row["context_explanation_ko"] or None,
+        )
+        sort_order += 1
 
-        for row in term_rows:
-            connection.execute(
-                """
-                INSERT INTO shared_deck_terms (
-                    shared_deck_id, term, reading, part_of_speech,
-                    meaning_ko, description, created_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    shared_deck_id,
-                    row["term"],
-                    row["reading"],
-                    row["part_of_speech"],
-                    row["meaning_ko"],
-                    row["description"],
-                    timestamp,
-                ),
-            )
+    for row in term_rows:
+        lexeme_id = upsert_lexeme(
+            surface=row["term"],
+            base_form=row["term"],
+            reading=row["reading"] or "",
+            part_of_speech=row["part_of_speech"] or "",
+            meaning_ko=row["meaning_ko"] or "",
+            source_type="user_published_custom_term",
+            refresh_shared_fields=False,
+        )
+        add_word_to_shared_deck(
+            shared_deck_id,
+            lexeme_id,
+            sort_order,
+            display_meaning_ko=row["meaning_ko"] or None,
+            # custom_terms has no example_sentence field; its `description`
+            # is the closest equivalent to a short deck-specific note, so it
+            # maps to the context_explanation_ko snapshot slot instead of
+            # being dropped.
+            context_explanation_ko=row["description"] or None,
+        )
+        sort_order += 1
 
     return {
         "shared_deck_id": shared_deck_id,
