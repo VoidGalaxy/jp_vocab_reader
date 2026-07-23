@@ -126,6 +126,18 @@ type SharedDeckDeleteResponse = {
   message: string;
 };
 
+// Response from PATCH/POST .../shared-decks/{id}/words/{lexeme_id}/(progress|review)
+// -- see docs/architecture/shared-lexeme-progress-storage.md.
+type LexemeWordProgressResponse = {
+  lexeme_id: number;
+  status: TokenStatus;
+  review_level: number;
+  next_review_at: string | null;
+  correct_count: number;
+  wrong_count: number;
+  last_reviewed_at: string | null;
+};
+
 type CurrentUser = {
   id: number;
   email: string;
@@ -779,6 +791,13 @@ export default function HomePage() {
     null,
   );
   const [unpublishingSharedDeckId, setUnpublishingSharedDeckId] = useState<
+    number | null
+  >(null);
+  // Subscribed shared-deck word status (see
+  // docs/architecture/shared-lexeme-progress-storage.md) -- tracks only
+  // which single lexeme_id is currently being saved, never a personal
+  // vocab_items id.
+  const [updatingWordLexemeId, setUpdatingWordLexemeId] = useState<
     number | null
   >(null);
   const [publishTitle, setPublishTitle] = useState("");
@@ -2032,6 +2051,56 @@ export default function HomePage() {
     }
   }
 
+  // Subscribed shared-deck word status change (see
+  // docs/architecture/shared-lexeme-progress-storage.md) -- lexeme_id
+  // keyed, lazily creates/updates user_word_progress server-side. Never
+  // touches personal vocab_items and never confuses lexeme_id with a
+  // vocab_items id.
+  async function updateSharedDeckWordStatus(
+    sharedDeckId: number,
+    lexemeId: number,
+    status: TokenStatus,
+  ) {
+    if (updatingWordLexemeId !== null) {
+      return;
+    }
+    const previousDeck = selectedSharedDeck;
+    setUpdatingWordLexemeId(lexemeId);
+    // Optimistic update so the dropdown reflects the choice immediately --
+    // reverted below if the request actually fails.
+    setSelectedSharedDeck((current) => {
+      if (!current || current.id !== sharedDeckId) {
+        return current;
+      }
+      return {
+        ...current,
+        items: current.items.map((item) =>
+          item.lexeme_id === lexemeId ? { ...item, status } : item,
+        ),
+      };
+    });
+
+    try {
+      await requestJson<LexemeWordProgressResponse>(
+        `/shared-decks/${sharedDeckId}/words/${lexemeId}/progress`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ status }),
+        },
+      );
+    } catch (error) {
+      setSelectedSharedDeck(previousDeck);
+      setSharedDeckMessage(
+        getAuthAwareErrorMessage(
+          error,
+          "단어 상태를 바꾸지 못했어요. 잠시 후 다시 시도해주세요.",
+        ),
+      );
+    } finally {
+      setUpdatingWordLexemeId(null);
+    }
+  }
+
   async function createDeck() {
     if (!newDeckName.trim()) {
       setDeckMessage("덱 이름을 입력해 주세요.");
@@ -3196,11 +3265,15 @@ export default function HomePage() {
             importedDeckId={importedSharedDeckId}
             unpublishingDeckId={unpublishingSharedDeckId}
             message={sharedDeckMessage}
+            updatingWordLexemeId={updatingWordLexemeId}
             onRefresh={() => void loadSharedDecks()}
             onSelectDeck={(deckId) => void loadSharedDeckDetail(deckId)}
             onCloseDetail={closeSharedDeckDetail}
             onImportDeck={(deckId) => void importSharedDeckToMyDeck(deckId)}
             onUnpublishDeck={(deckId) => void unpublishSharedDeck(deckId)}
+            onUpdateWordStatus={(sharedDeckId, lexemeId, status) =>
+              void updateSharedDeckWordStatus(sharedDeckId, lexemeId, status)
+            }
             onGoToVocab={goToVocabTab}
             onGoToStudyToday={goToStudyToday}
           />

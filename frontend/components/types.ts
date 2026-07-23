@@ -180,6 +180,12 @@ export type SharedDeckSummary = {
   created_at: string;
   is_owner: boolean;
   imported_at: string | null;
+  // Additive -- see docs/architecture/shared-lexeme-progress-storage.md.
+  // "subscribed" = importing only creates a subscription (no vocabulary
+  // copy). "copied" = legacy deck, importing still copies into vocab_items
+  // exactly like before. Known ahead of import, so the UI can show the
+  // right button/label before the user clicks.
+  mode?: "copied" | "subscribed";
 };
 
 export type SharedDeckItem = {
@@ -195,6 +201,39 @@ export type SharedDeckItem = {
   example_sentence: string | null;
   quality_tag: string | null;
   created_at: string;
+  // Additive -- only populated when the parent deck's mode is "subscribed"
+  // (see docs/architecture/shared-lexeme-progress-storage.md). `id` above
+  // is set to the same value as `lexeme_id` for these items so old code
+  // that only reads `.id` still works; new code should read `lexeme_id`
+  // explicitly instead, to avoid confusing it with a personal vocab_items id.
+  lexeme_id?: number | null;
+  jlpt_level?: string | null;
+  status?: TokenStatus | null;
+  review_level?: number | null;
+  next_review_at?: string | null;
+  correct_count?: number | null;
+  wrong_count?: number | null;
+};
+
+// One word inside a "subscribed" shared deck, once overlaid with this
+// user's progress -- the shape the interactive word list actually renders
+// from. Derived from SharedDeckItem (see toSharedDeckWordProgress in
+// SharedDeckSection.tsx), not a separate API response -- deliberately kept
+// as its own named type instead of overloading SharedDeckItem everywhere,
+// so "lexeme_id" is never confused with a personal VocabularyItem's id.
+export type SharedDeckWordProgress = {
+  lexemeId: number;
+  surface: string;
+  baseForm: string;
+  reading: string;
+  partOfSpeech: string;
+  meaningKo: string;
+  jlptLevel: string | null;
+  status: TokenStatus;
+  reviewLevel: number;
+  nextReviewAt: string | null;
+  correctCount: number;
+  wrongCount: number;
 };
 
 export type SharedDeckTerm = {

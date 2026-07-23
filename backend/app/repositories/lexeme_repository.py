@@ -35,6 +35,18 @@ def is_lexeme_deck_in_connection(connection: Any, shared_deck_id: int) -> bool:
     return row is not None
 
 
+def list_lexeme_deck_ids() -> set[int]:
+    """All shared_deck_ids that are lexeme-mode -- one query, so
+    list_shared_decks() can tag every row's `mode` without an N+1 check
+    per deck.
+    """
+    with get_connection() as connection:
+        rows = connection.execute(
+            "SELECT DISTINCT shared_deck_id FROM shared_deck_words"
+        ).fetchall()
+    return {int(row["shared_deck_id"]) for row in rows}
+
+
 def upsert_lexeme(
     surface: str,
     base_form: str,

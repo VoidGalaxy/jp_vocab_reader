@@ -4783,6 +4783,58 @@ input.reading-vocab-item-checkbox {
   color: var(--text);
 }
 
+/* Subscribed-mode deck detail: no custom_terms column exists for a lexeme
+   deck (see docs/architecture/shared-lexeme-progress-storage.md), so the
+   word list gets the full row width instead of sharing it with an
+   always-empty second column. */
+.shared-detail-columns-single {
+  grid-template-columns: 1fr;
+}
+
+/* Interactive "학습 목록" row -- same base look as .shared-preview-row
+   (border/padding/font), but laid out as word-info + status control
+   instead of a plain 3-column read-only row. Compound selector so it wins
+   over .shared-preview-row's own grid-template-columns regardless of
+   stylesheet order. */
+.shared-preview-row.shared-lexeme-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.shared-lexeme-row-main {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(70px, 0.8fr) minmax(120px, 1.2fr);
+  gap: 8px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.shared-lexeme-row-status {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.shared-lexeme-row-saving {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* A full recommended deck (e.g. N5 ~680 words) would otherwise make this
+   the tallest thing on the page -- a capped, scrollable panel keeps it a
+   "학습 목록" section instead of a page-length list. */
+.shared-lexeme-word-list {
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 /* Drawer-tab framing instead of a plain bordered admin filter box -- a
    dashed top edge + small "카드함 필터" label reads as pulling open a card
    drawer's filter tab, not an admin data-table toolbar. */
@@ -5562,6 +5614,16 @@ input.reading-vocab-item-checkbox {
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 10px;
+  }
+
+  .shared-lexeme-row-main {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .shared-lexeme-row-status {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .analyze-options,

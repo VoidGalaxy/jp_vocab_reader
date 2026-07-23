@@ -114,25 +114,88 @@ Not carried over yet: `custom_terms` in a deck package have no lexeme-mode
 equivalent (phase-2 TODO, see below) -- the script prints a note and skips
 them when registering in lexeme mode.
 
-## What phase 1 deliberately does NOT do (see TODO / phase 2)
+## What phase 1 deliberately did not do (superseded by phase 2 below where noted)
 
-- **No review-flow integration.** `/study-items`, `/study-items/{id}/review`,
-  and `/stats` are entirely `vocab_items`-based, unchanged. The new
-  `POST .../review` endpoint updates `user_word_progress` directly but does
+- ~~No frontend UI for browsing/studying a subscribed deck's words~~ --
+  **done in phase 2** (see below): the deck tab now has an interactive word
+  list with status controls for a subscribed deck.
+- **No review-flow integration.** Still true after phase 2. `/study-items`,
+  `/study-items/{id}/review`, and `/stats` are entirely `vocab_items`-based,
+  unchanged. `POST .../review` updates `user_word_progress` directly but does
   **not** write to `review_logs` (that table's `vocab_item_id` column is a
   NOT NULL FK into `vocab_items`, which doesn't fit a lexeme-keyed review).
   A `lexeme_review_logs` table (or a nullable/polymorphic `review_logs`
-  redesign) is left for phase 2.
-- **No frontend UI for browsing/studying a subscribed deck's words.** The
-  backend overlay/status/review endpoints exist and are smoke-tested, but
-  the app's Study/Vocab tabs still only show `vocab_items`. Wiring a
-  subscribed deck into those screens (or a new screen) is phase 2 -- this
-  phase only had to make the import button say the truth and not silently
-  return 404s.
-- **No custom-term lexeme equivalent.** Deck packages can carry
+  redesign), plus actually wiring a subscribed deck into the Study tab's
+  card-flip review flow, is left for **phase 3**.
+- **No custom-term lexeme equivalent.** Still true. Deck packages can carry
   `custom_terms`; lexeme-mode registration currently skips them.
-- **No automatic cleanup of previously-copied vocabulary.** See "Existing
-  data" below.
+- **No automatic cleanup of previously-copied vocabulary.** Still true. See
+  "Existing data" below.
+
+## Phase 2: frontend learning UI integration
+
+Phase 2 connects the phase-1 API surface to the actual app instead of
+leaving it backend-only. Scope, deliberately kept to the shared-deck (덱)
+tab -- no changes to VocabSection (노트) or StudySection (복습).
+
+### What's now possible end-to-end
+
+- **Subscribing.** `GET /shared-decks` now returns an additive `mode`
+  field (`"copied"` | `"subscribed"`) per deck, computed once via
+  `list_lexeme_deck_ids()` -- the frontend knows a deck's storage mode
+  *before* the user clicks anything, not just after importing.
+  `SharedDeckSummary`/`SharedDeckDetail` (frontend types) carry it through.
+- **Deck-card button reflects real state** (`SharedDeckSection.tsx`):
+  not-yet-subscribed lexeme deck -> "학습 목록에 추가"; already-subscribed
+  lexeme deck -> the same button becomes "열기" and just opens the deck
+  (no re-import call, no "다시 가져오기 하시겠어요?" confirm -- there is
+  nothing to re-copy). Legacy decks keep their exact previous "내 노트에
+  가져오기" / "다시 가져오기" behavior, untouched. The "가져옴" badge reads
+  "학습 목록에 있음" for a subscribed deck instead.
+- **Opening a subscribed deck shows a real word list**, not a 20-word
+  preview: every word in the deck, each with a `<select>` status control
+  (known/uncertain/unknown/unclassified, reusing the existing
+  `StatusSelect` component from `components/shared.tsx` -- no new UI
+  component). A word with no progress row shows "분류되지 않음"
+  (unclassified), exactly per the phase-1 overlay contract. The always-empty
+  custom-terms column is hidden for subscribed decks (lexeme decks never
+  have any).
+- **Status change is lazy-create, end to end.** Picking a status calls
+  `PATCH /shared-decks/{id}/words/{lexeme_id}/progress`
+  (`updateSharedDeckWordStatus` in `app/page.tsx`), which creates the
+  `user_word_progress` row on first use, updates it on every later change,
+  optimistically updates the dropdown, and rolls back with an error message
+  if the request fails. Re-fetching the deck (e.g. after closing and
+  reopening it) confirms the status persisted server-side, not just in
+  local state.
+- **Type separation**: `SharedDeckItem` (the wire shape, additive fields
+  only populated for subscribed decks) vs. the new `SharedDeckWordProgress`
+  (camelCase, UI-facing, `lexemeId` instead of a bare `id`) -- converted via
+  `toSharedDeckWordProgress()` in `SharedDeckSection.tsx`. `VocabularyItem`
+  (personal vocab_items row) was not touched; nothing conflates a
+  `lexeme_id` with a personal vocab item's `id`.
+
+### What phase 2 deliberately does not do
+
+- **No cross-tab navigation.** Chose the "Option B" design explicitly
+  allowed by the phase-2 brief: a subscribed deck's word list lives inside
+  the 덱 tab's own existing detail panel (via "열기"), not a new nav
+  destination, not a source-mode toggle inside VocabSection, and not a new
+  StudySection entry point. `VocabSection.tsx` and `StudySection.tsx` have
+  zero changes this phase.
+- **No 복습 (Study) tab integration.** A subscribed deck's words cannot be
+  selected as a study source in the Study tab yet, and rating a word there
+  doesn't touch `user_word_progress` (only the deck tab's own
+  status-dropdown does, via `PATCH .../progress`; the `POST .../review`
+  rating endpoint from phase 1 exists and is smoke-tested but has no caller
+  in the frontend yet). Full SRS/review-flow integration remains phase 3,
+  exactly as phase 1 already flagged.
+- **No personal meaning edits on lexemes.** Only a status dropdown is
+  exposed for a subscribed deck's words; "뜻 수정" stays a personal-vocab
+  (`vocab_items`) feature. If a lexeme's shared meaning is wrong, the
+  correct phase-2 action would be a "오류 신고" entry point -- not built
+  yet (no UI hook added this phase; the existing `/feedback/meaning`
+  endpoint is `vocab_items`-scoped, not lexeme-scoped).
 
 ## Existing data / migration policy
 

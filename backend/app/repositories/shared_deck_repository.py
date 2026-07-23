@@ -9,6 +9,7 @@ from app.repositories.lexeme_repository import (
     get_or_create_subscription,
     is_lexeme_deck,
     is_lexeme_deck_in_connection,
+    list_lexeme_deck_ids,
     list_shared_deck_words_with_progress,
 )
 
@@ -179,8 +180,10 @@ def list_shared_decks(user_id: int | None = None) -> list[dict[str, Any]]:
             (user_id, user_id),
         ).fetchall()
     results = [row_to_dict(row) for row in rows]
+    lexeme_deck_ids = list_lexeme_deck_ids()
     for result in results:
         result["is_owner"] = user_id is not None and result["owner_user_id"] == user_id
+        result["mode"] = "subscribed" if result["id"] in lexeme_deck_ids else "copied"
     return results
 
 
@@ -246,6 +249,7 @@ def get_shared_deck(
 
     result = row_to_dict(deck)
     result["is_owner"] = user_id is not None and result["owner_user_id"] == user_id
+    result["mode"] = "subscribed" if lexeme_mode else "copied"
     if lexeme_mode:
         # Word data lives in lexemes/shared_deck_words, overlaid with this
         # user's progress (see docs/architecture/shared-lexeme-progress-storage.md)

@@ -231,6 +231,12 @@ class SharedDeckSummaryResponse(BaseModel):
     created_at: str
     is_owner: bool = False
     imported_at: str | None = None
+    # Additive (see docs/architecture/shared-lexeme-progress-storage.md).
+    # "subscribed" = lexeme-mode deck (importing only creates a
+    # user_deck_subscriptions row). "copied" = legacy deck (importing still
+    # copies into vocab_items, unchanged). Known ahead of import so the
+    # frontend can show the right button/label before the user clicks.
+    mode: str = "copied"
 
 
 class SharedDeckItemResponse(BaseModel):
