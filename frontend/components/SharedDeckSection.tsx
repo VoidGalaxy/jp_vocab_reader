@@ -385,7 +385,8 @@ export function SharedDeckSection({
             덱 책장
           </h2>
           <p className="panel-card-description">
-            추천 어휘 덱을 내 노트에 가져와 읽기와 복습에 사용하세요.
+            내가 읽은 원문에서 쌓는 단어장이 기본이고, 레벨별 추천 어휘 덱은
+            보조로 가져와 활용하세요.
           </p>
         </div>
         <div className="landing-hero-actions">

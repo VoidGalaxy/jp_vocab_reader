@@ -83,12 +83,12 @@ export function HomeDashboard({
             </span>
           </div>
           <h2 className="landing-hero-title">
-            오늘 읽을 원문을
+            오늘 읽을 일본어 원문을
             <br />
             펼쳐볼까요?
           </h2>
           <p className="landing-hero-subtitle">
-            모르는 단어를 눌러 노트에 담고, 짧게 복습하세요.
+            모르는 단어를 눌러두면, 읽으면서 단어장이 자연스럽게 쌓여요.
           </p>
           <div className="landing-hero-actions">
             <button type="button" onClick={onStartReading}>
