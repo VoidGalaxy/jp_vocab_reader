@@ -33,7 +33,7 @@ const MEANING_PLACEHOLDER_VALUES = new Set([
 
 const HANGUL_PATTERN = /[가-힣]/;
 
-export const DEFAULT_MEANING_FALLBACK = "한국어 뜻을 찾지 못했습니다.";
+export const DEFAULT_MEANING_FALLBACK = "한국어 뜻을 찾지 못했어요.";
 
 export function getDisplayMeaning(
   meaningKo: string | null | undefined,

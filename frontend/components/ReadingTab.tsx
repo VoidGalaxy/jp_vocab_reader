@@ -84,19 +84,19 @@ const saveButtons: Array<{
   {
     mode: "unknown_only",
     label: "모르는 단어 저장",
-    hint: "모르는 단어로 표시한 후보만 저장합니다",
+    hint: "모르는 단어로 표시한 후보만 저장해요",
     variant: "secondary",
   },
   {
     mode: "unknown_uncertain",
     label: "모르는+헷갈리는 단어 저장",
-    hint: "모르는 단어와 헷갈리는 단어를 함께 저장합니다",
+    hint: "모르는 단어와 헷갈리는 단어를 함께 저장해요",
     variant: "secondary",
   },
   {
     mode: "all_unclassified",
     label: "미분류까지 저장",
-    hint: "모르는 단어, 헷갈리는 단어, 아직 분류하지 않은 단어까지 모두 저장합니다",
+    hint: "모르는 단어, 헷갈리는 단어, 아직 분류하지 않은 단어까지 모두 저장해요",
     variant: "ghost",
   },
 ];
@@ -328,7 +328,7 @@ function ReaderSaveDock({
           title={
             canStartFromSaved
               ? undefined
-              : "먼저 단어를 저장하면 바로 학습으로 이동할 수 있습니다."
+              : "먼저 단어를 저장하면 바로 학습으로 이동할 수 있어요."
           }
         >
           <CardsIcon className="button-icon" />
@@ -499,11 +499,11 @@ export function ReadingTab({
   // disappears on its own once they analyze their own real text.
   const isSampleText = analyzedText === SAMPLE_TEXT;
   const analyzeHint = !text.trim()
-    ? "원문을 입력하면 분석할 수 있습니다."
+    ? "원문을 입력하면 분석할 수 있어요."
     : !selectedDeckId
-      ? "읽기 덱을 선택하면 분석할 수 있습니다."
+      ? "읽기 덱을 선택하면 분석할 수 있어요."
       : isAnalyzing
-        ? "분석 중입니다. 잠시만 기다려주세요..."
+        ? "분석 중이에요. 잠시만 기다려주세요..."
         : null;
   const messageTone = classifyMessageTone(message);
 

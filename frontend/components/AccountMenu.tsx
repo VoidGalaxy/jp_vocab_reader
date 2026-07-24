@@ -180,7 +180,7 @@ export function AccountMenu({
             <div className="account-menu-profile">
               <p className="account-menu-email">{user!.email}</p>
               <p className="account-menu-hint">
-                저장한 단어와 복습 기록이 이 계정에 보관됩니다.
+                저장한 단어와 복습 기록이 이 계정에 보관돼요.
               </p>
               {message ? (
                 <p className={`account-message message message--${messageTone}`}>

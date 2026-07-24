@@ -430,7 +430,7 @@ export function VocabSection({
           <section className="management-card">
             <div className="management-card-header">
               <h2>덱 관리</h2>
-              <p className="muted-text">새 덱을 만들거나 현재 선택한 덱을 삭제합니다.</p>
+              <p className="muted-text">새 덱을 만들거나 현재 선택한 덱을 삭제해요.</p>
             </div>
 
       <div className="management-actions">
@@ -442,7 +442,7 @@ export function VocabSection({
             disabled={selectedDeckId === defaultDeckId}
             title={
               selectedDeckId === defaultDeckId
-                ? "기본 단어장은 삭제할 수 없습니다."
+                ? "기본 단어장은 삭제할 수 없어요."
                 : undefined
             }
           >
@@ -480,13 +480,13 @@ export function VocabSection({
             <div className="management-card-header">
               <h2>덱 공유</h2>
               <p className="muted-text">
-                CSV는 엑셀 확인용입니다. 앱 간 공유는 덱 공유 파일을 사용하세요.
+                CSV는 엑셀 확인용이에요. 앱 간 공유는 덱 공유 파일을 사용하세요.
               </p>
             </div>
 
       <div className="deck-share-panel">
         <p className="muted-text">
-          등록하면 다른 사용자가 공유 탭에서 이 덱을 보고 자기 단어장으로 가져올 수 있습니다. 학습 기록은 공유되지 않습니다.
+          등록하면 다른 사용자가 공유 탭에서 이 덱을 보고 자기 단어장으로 가져올 수 있어요. 학습 기록은 공유되지 않아요.
         </p>
         <div className="publish-deck-form">
           <label className="inline-field">
@@ -533,7 +533,7 @@ export function VocabSection({
           {isBackupToolsOpen ? (
             <div className="backup-tools">
               <p className="muted-text">
-                일반적인 덱 공유는 공유 탭을 사용하세요. CSV/JSON 파일은 백업이나 수동 이동이 필요할 때만 사용하는 고급 기능입니다.
+                일반적인 덱 공유는 공유 탭을 사용하세요. CSV/JSON 파일은 백업이나 수동 이동이 필요할 때만 사용하는 고급 기능이에요.
               </p>
         <div className="deck-share-actions">
           <button
@@ -594,7 +594,7 @@ export function VocabSection({
           <section className="management-card">
             <div className="management-card-header">
               <h2>고급</h2>
-              <p className="muted-text">작품별 사용자 용어와 보조 관리 기능입니다.</p>
+              <p className="muted-text">작품별 사용자 용어와 보조 관리 기능이에요.</p>
             </div>
             <div className="management-actions">
               <button
@@ -933,7 +933,7 @@ export function VocabSection({
                           const label = item.surface || item.base_form;
                           if (
                             window.confirm(
-                              `"${label}" 단어를 삭제할까요? 저장된 학습 기록도 함께 삭제됩니다.`,
+                              `"${label}" 단어를 삭제할까요? 저장된 학습 기록도 함께 삭제돼요.`,
                             )
                           ) {
                             onDelete(item.id);
