@@ -87,7 +87,7 @@ export function MeaningFeedbackModal({
         </label>
 
         <p className="meaning-feedback-hint">
-          신고 내용은 사전 품질 개선에 참고됩니다.
+          신고 내용은 사전 품질 개선에 참고돼요.
         </p>
 
         {message ? (

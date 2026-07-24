@@ -2934,21 +2934,21 @@ export default function HomePage() {
   function getEmptyStudyMessage(mode: StudyMode, deckId: string) {
     const deckName = getDeckDisplayName(deckId);
     if (mode === "today") {
-      return `${deckName}에는 오늘 복습할 단어가 없습니다.`;
+      return `${deckName}에는 오늘 복습할 단어가 없어요.`;
     }
     if (mode === "uncertain") {
-      return `${deckName}에 헷갈리는 단어가 없습니다.`;
+      return `${deckName}에 헷갈리는 단어가 없어요.`;
     }
     if (mode === "unknown") {
-      return `${deckName}에 모르는 단어가 없습니다.`;
+      return `${deckName}에 모르는 단어가 없어요.`;
     }
     if (mode === "new") {
-      return "새로 학습할 단어가 없습니다.";
+      return "새로 학습할 단어가 없어요.";
     }
     if (mode === "recent") {
-      return "방금 저장한 단어를 찾을 수 없습니다.";
+      return "방금 저장한 단어를 찾을 수 없어요.";
     }
-    return `${deckName}에 학습할 모르는 단어와 헷갈리는 단어가 없습니다.`;
+    return `${deckName}에 학습할 모르는 단어와 헷갈리는 단어가 없어요.`;
   }
 
   async function startStudy(

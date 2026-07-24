@@ -211,12 +211,12 @@ export function TokenDetailSheet({
                 />
               </p>
               <p className="context-example-hint">
-                이 단어가 나온 문장을 복습 카드에 함께 저장합니다.
+                이 단어가 나온 문장을 복습 카드에 함께 저장해요.
               </p>
             </>
           ) : (
             <p className="context-example-hint">
-              이 단어가 포함된 문장을 찾지 못했습니다.
+              이 단어가 포함된 문장을 찾지 못했어요.
             </p>
           )}
         </div>

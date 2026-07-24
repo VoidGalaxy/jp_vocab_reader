@@ -580,7 +580,7 @@ export function StudySection({
                   </p>
                 </div>
               ) : (
-                <p className="study-example-empty">저장된 문맥 예문이 없습니다.</p>
+                <p className="study-example-empty">저장된 문맥 예문이 없어요.</p>
               )}
               <div className="study-rating-grid" role="group" aria-label="복습 평가">
                 {ratingButtons.map(({ result, label, hint, className, icon: Icon }) => (
@@ -647,7 +647,7 @@ export function StudySection({
           <p>
             {nextUpcomingReviewAt
               ? formatNextReview(nextUpcomingReviewAt)
-              : "다음 복습 단어는 아직 예정되어 있지 않습니다."}
+              : "다음 복습 단어는 아직 예정되어 있지 않아요."}
           </p>
           <div className="study-actions">
             <button type="button" onClick={onRestart}>

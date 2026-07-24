@@ -87,11 +87,11 @@ function getDisplayTitle(deck: SharedDeckSummary, level: string | null) {
 }
 
 const jlptLevelDescriptions: Record<string, string> = {
-  N5: "기초 문장 읽기에 자주 쓰이는 추천 어휘입니다.",
-  N4: "초급 원문 읽기에 도움이 되는 추천 어휘입니다.",
-  N3: "중급 독해로 넘어가기 위한 추천 어휘입니다.",
-  N2: "긴 문장과 기사 독해에 도움이 되는 추천 어휘입니다.",
-  N1: "고급 독해와 원서 읽기에 도움이 되는 추천 어휘입니다.",
+  N5: "기초 문장 읽기에 자주 쓰이는 추천 어휘예요.",
+  N4: "초급 원문 읽기에 도움이 되는 추천 어휘예요.",
+  N3: "중급 독해로 넘어가기 위한 추천 어휘예요.",
+  N2: "긴 문장과 기사 독해에 도움이 되는 추천 어휘예요.",
+  N1: "고급 독해와 원서 읽기에 도움이 되는 추천 어휘예요.",
 };
 
 const DEFAULT_SHARED_DECK_DESCRIPTION =
@@ -228,7 +228,7 @@ export function SharedDeckSection({
   function handleImportClick(deck: SharedDeckSummary) {
     if (deck.imported_at) {
       const confirmed = window.confirm(
-        `이미 가져온 공유덱입니다 (${formatDateTime(deck.imported_at)}). 다시 가져올까요?`,
+        `이미 가져온 공유덱이에요 (${formatDateTime(deck.imported_at)}). 다시 가져올까요?`,
       );
       if (!confirmed) {
         return;
@@ -320,7 +320,7 @@ export function SharedDeckSection({
             disabled={isImporting}
             title={
               !isSubscribedMode && alreadyImported
-                ? "이미 가져온 덱입니다. 다시 가져오면 확인 후 새로 추가됩니다."
+                ? "이미 가져온 덱이에요. 다시 가져오면 확인 후 새로 추가돼요."
                 : undefined
             }
           >
@@ -613,7 +613,7 @@ export function SharedDeckSection({
           {selectedDeck.is_owner ? (
             <p className="muted-text shared-deck-owner-hint">
               공유 취소하면 공유 목록에서만 내려가며, 이미 가져간 개인 덱은
-              삭제되지 않습니다.
+              삭제되지 않아요.
             </p>
           ) : null}
 

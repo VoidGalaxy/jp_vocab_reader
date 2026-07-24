@@ -355,7 +355,7 @@ function ClassifyWordCard({ token }: { token: TokenWithStatus }) {
             />
           </p>
         ) : (
-          <p className="context-example-hint">예문을 찾지 못했습니다.</p>
+          <p className="context-example-hint">예문을 찾지 못했어요.</p>
         )}
       </div>
     </>
@@ -520,7 +520,7 @@ function ClassifyResultSummary({
       >
         {isSaving ? "저장 중..." : "모르는 단어 노트에 담기"}
       </button>
-      <p className="muted-text">저장 시 임시 저장이 삭제됩니다.</p>
+      <p className="muted-text">저장하면 임시 저장은 삭제돼요.</p>
       <div className="study-actions">
         <button type="button" className="secondary-button" onClick={onViewInReadingTab}>
           <BookIcon className="button-icon" />

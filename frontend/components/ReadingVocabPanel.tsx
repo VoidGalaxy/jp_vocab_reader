@@ -56,17 +56,17 @@ const quickSelectModes: Array<{ mode: ReadingSaveMode; label: string; hint: stri
   {
     mode: "unknown_only",
     label: "모르는 단어 담기",
-    hint: "unknown 상태 단어를 바구니에 담습니다",
+    hint: "모르는 단어를 바구니에 담아요",
   },
   {
     mode: "unknown_uncertain",
     label: "모르는+헷갈리는 단어 담기",
-    hint: "unknown + uncertain 상태 단어를 바구니에 담습니다",
+    hint: "모르는 단어와 헷갈리는 단어를 바구니에 담아요",
   },
   {
     mode: "all_unclassified",
     label: "미분류까지 담기",
-    hint: "unknown + uncertain + 미분류 단어를 바구니에 담습니다",
+    hint: "모르는 단어, 헷갈리는 단어, 미분류 단어를 바구니에 담아요",
   },
 ];
 
@@ -182,7 +182,7 @@ export function ReadingVocabPanel({
         <button
           type="button"
           className="ghost-button compact-button"
-          title="전체 텍스트에서 저장 가능한 단어를 모두 바구니에 담습니다"
+          title="전체 텍스트에서 저장 가능한 단어를 모두 바구니에 담아요"
           onClick={() => onReplaceSelection(entries.filter((e) => e.isSaveable))}
         >
           전체 담기

@@ -54,7 +54,7 @@ export function MeaningQuickEdit({
         autoFocus
       />
       <p className="meaning-quick-edit-hint">
-        수정한 뜻은 내 단어장에만 적용됩니다.
+        수정한 뜻은 내 단어장에만 적용돼요.
       </p>
       {message ? (
         <p className={`message message--${classifyMessageTone(message)} compact-message`}>
