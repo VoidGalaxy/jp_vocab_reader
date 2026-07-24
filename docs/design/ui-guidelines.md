@@ -2,7 +2,7 @@
 
 > 이 문서는 이미 코드에 구현되어 있는 디자인 언어를 **사후 문서화**한 것입니다. 새 시각 언어를 제안하는 문서가 아니라, 화면을 새로 만들거나 고칠 때 "이미 있는 패턴 중 무엇을 재사용해야 하는가"를 빠르게 찾기 위한 참고서입니다.
 > 캐릭터(시오리)의 조형 자체는 [`shiori-design-spec.md`](./shiori-design-spec.md)가 기준 문서이며, 이 문서는 그 캐릭터를 **화면에서 어떻게 배치하는가**만 다룹니다.
-> 참고: `shiori-design-spec.md`의 5장(SVG/벡터 구현 명세)은 시오리가 손그림 SVG였던 시기의 기록입니다. 현재 `components/Shiori.tsx`는 사전 제작 PNG 에셋(`public/brand/shiori/shiori-<variant>.png`)을 사용합니다 — variant/size 체계와 사용 규칙은 여전히 유효하지만, "구현 명세"는 최신 구현과 다릅니다.
+> `shiori-design-spec.md`는 현재 PNG 기반 구현(`components/Shiori.tsx` + `public/brand/shiori/shiori-<variant>.png`)에 맞춰 정리되어 있습니다 — variant/size 체계, 화면별 실제 사용처, 컴포넌트 사용 규칙까지 그 문서를 기준으로 참고하세요.
 
 ---
 
