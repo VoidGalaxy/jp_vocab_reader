@@ -140,18 +140,21 @@ export function HomeDashboard({
       </div>
 
       {recentWords.length > 0 ? (
-        <div className="home-recent-index-row" aria-label="최근 담은 단어">
-          {recentWords.map((item) => (
-            <div className="index-card-shell home-recent-index-card" key={item.id}>
-              <span className="home-recent-index-card-surface">{item.surface}</span>
-              {item.reading && item.reading !== item.surface ? (
-                <span className="home-recent-index-card-reading">{item.reading}</span>
-              ) : null}
-              <span className="home-recent-index-card-meaning">
-                {getDisplayMeaning(item.meaning_ko)}
-              </span>
-            </div>
-          ))}
+        <div className="home-recent-section">
+          <span className="home-recent-section-title">최근 담은 단어</span>
+          <div className="home-recent-index-row" aria-label="최근 담은 단어">
+            {recentWords.map((item) => (
+              <div className="index-card-shell home-recent-index-card" key={item.id}>
+                <span className="home-recent-index-card-surface">{item.surface}</span>
+                {item.reading && item.reading !== item.surface ? (
+                  <span className="home-recent-index-card-reading">{item.reading}</span>
+                ) : null}
+                <span className="home-recent-index-card-meaning">
+                  {getDisplayMeaning(item.meaning_ko)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
 

@@ -102,98 +102,6 @@ const saveButtons: Array<{
 ];
 
 // ---------------------------------------------------------------------------
-// ReaderRestoreBanner -- was a full-width banner, now a small dismissible
-// pill that lives inside ReaderCompactToolbar instead of its own stacked
-// row above everything else.
-// ---------------------------------------------------------------------------
-function ReaderRestoreBanner({ onDismiss }: { onDismiss: () => void }) {
-  return (
-    <span className="reading-restored-chip">
-      이전 작업 복원됨
-      <button
-        type="button"
-        className="reading-restored-chip-dismiss"
-        onClick={onDismiss}
-      >
-        확인
-      </button>
-    </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// ReaderCompactToolbar -- everything that used to compete with the reader
-// for first-glance attention (복원 안내, 원문 입력 토글, 새 원문, 저장 가능/
-// 바구니 chip) lives in this one compact row instead of a stacked hero
-// title + banner + header-actions row + chip row, so ReaderPaper sits much
-// closer to the top of the screen once a result exists.
-// ---------------------------------------------------------------------------
-type ReaderCompactToolbarProps = {
-  isSessionRestored: boolean;
-  onDismissRestoredNotice: () => void;
-  isTextCollapsed: boolean;
-  onToggleTextCollapsed: () => void;
-  onResetSession: () => void;
-  summary: ReadingSaveSummary | null;
-  selectedCount: number;
-};
-
-function ReaderCompactToolbar({
-  isSessionRestored,
-  onDismissRestoredNotice,
-  isTextCollapsed,
-  onToggleTextCollapsed,
-  onResetSession,
-  summary,
-  selectedCount,
-}: ReaderCompactToolbarProps) {
-  // "원문 입력 펼치기/접기"와 "새 원문"은 둘 다 자주 쓰는 액션이 아니라
-  // "원문을 어떻게 할지" 계열이라 하나의 토글 뒤로 접어 둔다 -- 기본 노출은
-  // 토글 버튼 하나뿐, 눌렀을 때만 두 액션이 같은 줄에 나타난다.
-  const [isManageOpen, setIsManageOpen] = useState(false);
-  return (
-    <div className="reader-compact-toolbar" role="group" aria-label="읽기 도구">
-      {isSessionRestored ? <ReaderRestoreBanner onDismiss={onDismissRestoredNotice} /> : null}
-      <button
-        type="button"
-        className="ghost-button compact-button"
-        onClick={() => setIsManageOpen((value) => !value)}
-        aria-expanded={isManageOpen}
-      >
-        <ChevronDownIcon
-          className={`reading-vocab-collapse-icon${
-            isManageOpen ? "" : " reading-vocab-collapse-icon-collapsed"
-          }`}
-        />
-        원문 관리
-      </button>
-      {isManageOpen ? (
-        <>
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={onToggleTextCollapsed}
-          >
-            {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
-          </button>
-          <button type="button" className="ghost-button compact-button" onClick={onResetSession}>
-            새 원문
-          </button>
-        </>
-      ) : null}
-      {summary ? (
-        <>
-          <span className="reader-toolbar-chip">저장 가능 {summary.saveableCount}개</span>
-          <span className="reader-toolbar-chip reader-toolbar-chip-accent">
-            바구니에 담음 {selectedCount}개
-          </span>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // ReaderSaveDock -- deliberately not a titled panel-card, a slim shelf-like
 // strip sitting right under ReaderPaper. Owns its own "빠르게 전체 저장"
 // disclosure state -- nothing outside this component needs it.
@@ -230,8 +138,9 @@ function ReaderSaveDock({
       <div className="save-dock-count">
         <FolderIcon className="save-dock-icon" />
         <span>
-          담은 단어 <strong>{selectedCount}</strong>개
+          담은 단어 <strong className="save-dock-count-badge">{selectedCount}</strong>개
         </span>
+        <span className="save-dock-saveable-chip">저장 가능 {summary.saveableCount}개</span>
       </div>
 
       {selectedCount > 0 ? (
@@ -253,7 +162,7 @@ function ReaderSaveDock({
       <div className="save-tray-quick-save">
         <button
           type="button"
-          className="secondary-button compact-button save-tray-quick-save-toggle"
+          className="ghost-button compact-button save-tray-quick-save-toggle"
           onClick={() => setIsQuickSaveOpen((value) => !value)}
           aria-expanded={isQuickSaveOpen}
         >
@@ -509,18 +418,6 @@ export function ReadingTab({
 
   return (
     <section className="tab-panel reading-panel" aria-live="polite">
-      {hasResult ? (
-        <ReaderCompactToolbar
-          isSessionRestored={isSessionRestored}
-          onDismissRestoredNotice={onDismissRestoredNotice}
-          isTextCollapsed={isTextCollapsed}
-          onToggleTextCollapsed={onToggleTextCollapsed}
-          onResetSession={onResetSession}
-          summary={summary}
-          selectedCount={selectedCount}
-        />
-      ) : null}
-
       <section
         className={`reading-input-open${hasResult ? "" : " reading-input-open-intro"}`}
       >
@@ -701,6 +598,11 @@ export function ReadingTab({
             onSaveMeaningEdit={onSaveMeaningEdit}
             onCancelMeaningEdit={onCancelMeaningEdit}
             onReportMeaning={onReportMeaning}
+            isSessionRestored={isSessionRestored}
+            onDismissRestoredNotice={onDismissRestoredNotice}
+            isTextCollapsed={isTextCollapsed}
+            onToggleTextCollapsed={onToggleTextCollapsed}
+            onResetSession={onResetSession}
           />
         ) : isAnalyzing ? (
           !analyzeProgress || analyzeProgress.total <= 1 ? (

@@ -1136,24 +1136,42 @@ button {
   font-size: 15px;
 }
 
-/* Index Card Study direction -- "최근 담은 단어" as 3 small index cards
+/* Index Card Study direction -- "최근 담은 단어" as small index cards
    instead of just a number in a chip, echoing Design Lab Direction B's
    Home mini-screen. Real data (page.tsx's infoRecentWords, already fetched
-   for the 기록 tab), sliced to 3. */
+   for the 기록 tab), sliced to 3. Wrapped with its own small section title
+   (home-recent-section-title) so the row doesn't appear out of context
+   right under the summary chips, and kept deliberately light (capped card
+   width, quieter shadow, smaller type) so it reads as a small aside, not
+   home's second hero. */
+.home-recent-section {
+  display: grid;
+  gap: 6px;
+}
+
+.home-recent-section-title {
+  color: var(--screen-accent, var(--muted));
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .home-recent-index-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 180px));
+  justify-content: start;
+  gap: 8px;
 }
 
 .home-recent-index-card {
-  padding: 10px 12px;
+  padding: 8px 10px;
+  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.06);
 }
 
 .home-recent-index-card-surface {
   display: block;
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--text);
 }
 
@@ -2972,24 +2990,13 @@ select {
   color: var(--muted);
 }
 
-/* V3 final polish: 복원 안내/원문 입력 토글/초기화/저장 가능·바구니 chip
-   used to be a stacked hero title + full-width banner + header-actions row
-   + separate chip row above the reader -- now one compact wrapping
-   toolbar, so the reader canvas sits much closer to the top of the screen
-   once a result exists. */
-.reader-compact-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
 /* Small pill (not a full-width banner) for the "restored" notice -- same
    information, far less vertical/visual weight. */
 .reading-restored-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 10px;
   padding: 5px 8px 5px 12px;
   border: 1px solid var(--paper-border);
   border-radius: 999px;
@@ -3604,32 +3611,6 @@ input.reading-vocab-item-checkbox {
   margin: 8px 0 0;
 }
 
-/* Reader Workspace top toolbar -- compact state chips shown once analysis
-   has a result, so "저장 가능/바구니에 담음" counts stay visible without the
-   big descriptive summary card the reader used to open with. */
-.reader-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: -4px 0 2px;
-}
-
-.reader-toolbar-chip {
-  padding: 5px 12px;
-  border: 1px solid var(--paper-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.reader-toolbar-chip-accent {
-  border-color: transparent;
-  background: var(--screen-accent, var(--primary));
-  color: #ffffff;
-}
-
 /* Save Dock -- a slim shelf-like strip (count + one primary CTA on the same
    line) sitting right under the reader. Previously just a dashed top rule
    with no fill of its own, so it read as a divider, not a place to act --
@@ -3651,6 +3632,7 @@ input.reading-vocab-item-checkbox {
 
 .save-dock-count {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   color: var(--text-secondary);
@@ -3661,6 +3643,30 @@ input.reading-vocab-item-checkbox {
 .save-dock-count strong {
   color: var(--screen-accent, var(--primary-dark));
   font-size: 16px;
+}
+
+/* The count itself as a small filled badge (not just bold text) so "담은
+   단어가 0개일 때 vs N개일 때" reads as a different shape, not just a
+   different number. */
+.save-dock-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--screen-accent-soft, var(--soft-bg));
+}
+
+.save-dock-saveable-chip {
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .save-dock-icon {
@@ -3937,6 +3943,7 @@ input.reading-vocab-item-checkbox {
 
 .classify-hero-header p {
   margin: 4px 0 0;
+  max-width: 46ch;
   color: var(--muted);
   font-size: 13px;
 }
@@ -3968,8 +3975,14 @@ input.reading-vocab-item-checkbox {
   gap: 10px;
 }
 
+/* Was its own centered row below the deck-select/checkbox line -- two
+   rows with different alignment (left-flowing footer, centered button)
+   read as loosely arranged. Now a nested flex inside .classify-hero-footer
+   itself, pushed to the row's trailing edge so deck-select + checkbox sit
+   left and the submit action anchors right, one action row instead of two
+   independently-aligned ones. */
 .classify-hero-cta-row {
-  justify-content: center;
+  margin-left: auto;
 }
 
 .classify-hero-cta-row .reading-open-button {
@@ -3982,16 +3995,22 @@ input.reading-vocab-item-checkbox {
   gap: 10px;
 }
 
+/* Non-primary tiles (새 단어 학습/어려운 단어 복습/덱별 학습) were nearly as
+   opaque/shadowed/bold as the primary "오늘 복습 시작" tile below (same
+   panel-bg fill, same border-strong, a visible shadow) -- so all 4 tiles
+   read as equally important, weakening which one is actually the
+   recommended action. Lighter fill/border/shadow/weight here; the primary
+   modifier still overrides these back up to full weight. */
 .study-cta-button {
   display: grid;
   gap: 4px;
   justify-items: center;
   padding: 11px 10px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  color: var(--text);
-  background: var(--panel-bg);
-  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.09);
+  color: var(--text-secondary);
+  background: var(--soft-bg);
+  box-shadow: none;
   text-align: center;
 }
 
@@ -4001,6 +4020,10 @@ input.reading-vocab-item-checkbox {
 
 .study-cta-label {
   font-size: 14px;
+  font-weight: 600;
+}
+
+.study-cta-button-primary .study-cta-label {
   font-weight: 700;
 }
 
@@ -4221,8 +4244,8 @@ input.reading-vocab-item-checkbox {
    the deck breakdown reads as shelf log entries, not table rows. */
 .records-deck-row {
   display: grid;
-  gap: 6px;
-  padding: 12px 14px;
+  gap: 5px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--panel-bg);
@@ -4339,7 +4362,7 @@ input.reading-vocab-item-checkbox {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px 10px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--panel-bg);
@@ -4661,11 +4684,16 @@ input.reading-vocab-item-checkbox {
   position: relative;
 }
 
+/* Was a full-saturation --primary band (the same teal every primary button
+   uses) -- as a full-width card header next to the app's otherwise warm
+   cream/amber tones, it read as an admin/status banner rather than a book
+   cover. Lightened tint of the same hue (not a new color) so "내가 공유함"
+   still reads as its own tone without shouting over the shelf. */
 .brand-deck-cover-mine {
-  background-color: var(--primary);
+  background-color: #6f98a0;
   background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
-    linear-gradient(135deg, #3d7885 0%, var(--primary) 100%);
+    radial-gradient(circle, rgba(255, 255, 255, 0.22) 1px, transparent 1.3px),
+    linear-gradient(135deg, #7ba5ac 0%, #557f88 100%);
 }
 
 .brand-deck-cover-shared {
@@ -4978,10 +5006,10 @@ input.reading-vocab-item-checkbox {
    drawer's filter tab, not an admin data-table toolbar. */
 .index-card-filter {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   border: 1px dashed var(--border-strong);
   border-radius: 4px 4px 10px 10px;
-  padding: 10px;
+  padding: 8px;
   background: var(--surface-stage);
 }
 
@@ -5827,14 +5855,6 @@ input.reading-vocab-item-checkbox {
     padding: 7px 12px;
   }
 
-  /* Same opt-out for the reading toolbar row's buttons -- otherwise each
-     one stretches full-width and the compact one-row toolbar becomes a
-     tall stack of full-width buttons again on mobile. */
-  .reader-compact-toolbar button {
-    width: auto;
-    min-width: 0;
-  }
-
   .management-actions {
     align-items: stretch;
     flex-direction: column;
@@ -6337,6 +6357,20 @@ input.reading-vocab-item-checkbox {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* "원문 입력 펼치기/접기" + "새 원문" -- previously their own toolbar row
+   above the reader card (원문 관리 disclosure), now folded into this same
+   options popover as a visually separate group (session management, not
+   display preference) instead of a second management surface. */
+.reader-mode-toggles-manage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px dashed var(--border);
 }
 
 .reading-focus-toggle,
