@@ -253,7 +253,7 @@ function ReaderSaveDock({
       <div className="save-tray-quick-save">
         <button
           type="button"
-          className="ghost-button compact-button save-tray-quick-save-toggle"
+          className="secondary-button compact-button save-tray-quick-save-toggle"
           onClick={() => setIsQuickSaveOpen((value) => !value)}
           aria-expanded={isQuickSaveOpen}
         >
@@ -509,15 +509,6 @@ export function ReadingTab({
 
   return (
     <section className="tab-panel reading-panel" aria-live="polite">
-      {!hasResult ? (
-        <div className="reading-hero">
-          <h2 className="reading-hero-title">원문으로 읽고 바로 노트에 담기</h2>
-          <p className="reading-hero-subtitle">
-            원문을 붙여넣고 모르는 단어를 바로 담아보세요.
-          </p>
-        </div>
-      ) : null}
-
       {hasResult ? (
         <ReaderCompactToolbar
           isSessionRestored={isSessionRestored}
@@ -530,13 +521,18 @@ export function ReadingTab({
         />
       ) : null}
 
-      <section className="reading-input-open">
+      <section
+        className={`reading-input-open${hasResult ? "" : " reading-input-open-intro"}`}
+      >
         {!hasResult ? (
           <div className="reading-input-open-header">
             <span className="reading-input-eyebrow">원문 읽기</span>
-            {!text.trim() ? null : (
-              <h3 className="reading-input-open-title">읽을 원문을 붙여넣어 주세요</h3>
-            )}
+            <h2 className="reading-input-open-title">
+              원문으로 읽고 바로 노트에 담기
+            </h2>
+            <p className="reading-input-open-hint">
+              원문을 붙여넣고 모르는 단어를 바로 담아보세요.
+            </p>
           </div>
         ) : null}
         <form className="analyze-form" onSubmit={onAnalyze}>
@@ -551,8 +547,7 @@ export function ReadingTab({
                   mood="reading"
                   moodSize="md"
                   className="reading-empty-guide"
-                  title="원문을 펼쳐볼까요?"
-                  description="일본어 원문을 붙여넣고 모르는 단어를 눌러보세요."
+                  title="직접 붙여넣거나 샘플로 먼저 체험해보세요"
                 >
                   <button
                     type="button"

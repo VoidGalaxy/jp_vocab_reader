@@ -262,13 +262,15 @@ export function VocabSection({
   const selectedDeckLabel =
     selectedDeckId === "all"
       ? "전체 단어장"
-      : decks.find((deck) => String(deck.id) === selectedDeckId)?.name ?? "전체 단어장";
+      : selectedDeckId === ""
+        ? "덱 선택 전"
+        : decks.find((deck) => String(deck.id) === selectedDeckId)?.name ?? "전체 단어장";
 
   return (
     <section className="tab-panel vocab-panel" aria-live="polite">
       <section className="panel-card hero-card vocab-hero-card vocab-hero-compact">
         <div className="panel-card-header">
-          <h2 className="panel-card-title">내 단어 노트</h2>
+          <h2 className="panel-card-title">내 단어장</h2>
           <p className="panel-card-description">
             읽으며 담은 단어를 모아두고 다시 복습해요.
           </p>
@@ -289,9 +291,9 @@ export function VocabSection({
           <button
             type="button"
             onClick={onStudySelectedDeck}
-            disabled={selectedDeckId === "all"}
+            disabled={selectedDeckId === "all" || selectedDeckId === ""}
             title={
-              selectedDeckId === "all"
+              selectedDeckId === "all" || selectedDeckId === ""
                 ? "학습할 특정 덱을 먼저 선택해 주세요."
                 : undefined
             }
@@ -362,6 +364,7 @@ export function VocabSection({
           <label className="inline-field">
             덱
             <select value={selectedDeckId} onChange={(event) => onSelectedDeckChange(event.target.value)}>
+              <option value="" disabled hidden>덱을 선택해 주세요</option>
               <option value="all">전체 단어장</option>
               {decks.map((deck) => (
                 <option key={deck.id} value={String(deck.id)}>
@@ -434,7 +437,7 @@ export function VocabSection({
             </div>
 
       <div className="management-actions">
-        {selectedDeckId !== "all" ? (
+        {selectedDeckId !== "all" && selectedDeckId !== "" ? (
           <button
             type="button"
             className="danger-button"
@@ -511,9 +514,9 @@ export function VocabSection({
           <button
             type="button"
             onClick={onPublishDeck}
-            disabled={selectedDeckId === "all" || isPublishingDeck}
+            disabled={selectedDeckId === "all" || selectedDeckId === "" || isPublishingDeck}
             title={
-              selectedDeckId === "all"
+              selectedDeckId === "all" || selectedDeckId === ""
                 ? "공유할 특정 덱을 먼저 선택해 주세요."
                 : undefined
             }
@@ -540,9 +543,9 @@ export function VocabSection({
             type="button"
             className="secondary-button"
             onClick={onExportDeckPackage}
-            disabled={selectedDeckId === "all" || isExportingDeckPackage}
+            disabled={selectedDeckId === "all" || selectedDeckId === "" || isExportingDeckPackage}
             title={
-              selectedDeckId === "all"
+              selectedDeckId === "all" || selectedDeckId === ""
                 ? "내보낼 특정 덱을 먼저 선택해 주세요."
                 : undefined
             }
@@ -764,6 +767,34 @@ export function VocabSection({
 
       ) : null}
 
+      <div className="desk-surface desk-surface-section">
+      {selectedDeckId === "" ? (
+        decks.length === 0 ? (
+          <AppEmptyState
+            mood="empty"
+            moodSize="xl"
+            title="아직 만든 단어장이 없어요."
+            description="읽기 탭에서 원문을 읽고 단어를 담아보면 단어장이 자동으로 만들어져요."
+          >
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onGoToReading}
+            >
+              <BookIcon className="button-icon" />
+              원문 읽기 시작
+            </button>
+          </AppEmptyState>
+        ) : (
+          <AppEmptyState
+            mood="empty"
+            moodSize="xl"
+            title="먼저 단어를 볼 덱을 선택해 주세요."
+            description="덱을 선택하면 담아둔 단어를 불러와요."
+          />
+        )
+      ) : (
+        <>
       <div className="result-heading">
         <div>
           <h2 className="section-title-with-icon">
@@ -1035,6 +1066,9 @@ export function VocabSection({
           </div>
         </AppEmptyState>
       )}
+        </>
+      )}
+      </div>
     </section>
   );
 }
