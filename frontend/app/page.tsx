@@ -619,6 +619,11 @@ function deriveReadingTokens(
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabKey>("home");
   const [decks, setDecks] = useState<Deck[]>([]);
+  const [isLoadingDecks, setIsLoadingDecks] = useState(false);
+  // Separate from deckMessage, which doubles as 단어 탭 CRUD feedback and only
+  // renders there -- the reading tab needs its own failure signal it can put a
+  // retry button next to.
+  const [deckLoadError, setDeckLoadError] = useState("");
   const [selectedSaveDeckId, setSelectedSaveDeckId] = useState("");
   // "" = no deck chosen yet on the 단어 탭 (see the vocab-list effect below) --
   // distinct from "all", which is an explicit "전체 단어장" choice. Keeping
@@ -986,6 +991,29 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
+  // The reading tab is reachable through several paths (nav/handleTabChange,
+  // 분석 탭's "읽기 탭에서 보기", home's 샘플 CTA, and a localStorage-restored
+  // session), and decks are otherwise fetched only once on mount -- so a
+  // failed first /decks call used to leave the deck select permanently empty
+  // with no way back short of a page reload. Watching activeTab instead of
+  // patching each entry point covers all of them, including future ones.
+  // The ref bounds this to one automatic attempt per reading-tab visit, so a
+  // response with no decks at all can't spin into a fetch loop; an actual
+  // failure surfaces deckLoadError and the user's retry button re-requests.
+  const readingDeckAutoLoadTriedRef = useRef(false);
+  useEffect(() => {
+    if (activeTab !== "reading") {
+      readingDeckAutoLoadTriedRef.current = false;
+      return;
+    }
+    if (decks.length > 0 || isLoadingDecks || readingDeckAutoLoadTriedRef.current) {
+      return;
+    }
+    readingDeckAutoLoadTriedRef.current = true;
+    void loadDecks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, decks.length, isLoadingDecks]);
+
   async function handleTabChange(tab: TabKey) {
     setActiveTab(tab);
     if (tab === "study") {
@@ -1160,8 +1188,10 @@ export default function HomePage() {
   }
 
   async function loadDecks() {
+    setIsLoadingDecks(true);
     try {
       const data = await requestJson<DecksResponse>("/decks");
+      setDeckLoadError("");
       setDecks(data.items);
       const defaultDeck =
         data.items.find((deck) => deck.name === "기본 단어장") ?? data.items[0];
@@ -1180,7 +1210,14 @@ export default function HomePage() {
             : "",
       );
     } catch (error) {
-      setDeckMessage(getAuthAwareErrorMessage(error, "덱 목록을 불러오지 못했습니다."));
+      const failureMessage = getAuthAwareErrorMessage(
+        error,
+        "덱 목록을 불러오지 못했습니다.",
+      );
+      setDeckMessage(failureMessage);
+      setDeckLoadError(failureMessage);
+    } finally {
+      setIsLoadingDecks(false);
     }
   }
 
@@ -3286,6 +3323,9 @@ export default function HomePage() {
             tokens={readingTokens}
             vocabItems={readingDeckVocabItems}
             decks={decks}
+            isLoadingDecks={isLoadingDecks}
+            deckLoadError={deckLoadError}
+            onRetryLoadDecks={() => void loadDecks()}
             selectedDeckId={readingSelectedDeckId}
             isAnalyzing={isReadingAnalyzing}
             analyzeProgress={readingAnalyzeProgress}

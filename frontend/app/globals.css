@@ -3032,13 +3032,11 @@ select {
 }
 
 /* Open-page input area -- once a reading result exists, this becomes the
-   compact "원문 수정" editor tucked under ReaderCompactToolbar, and stays
-   deliberately un-boxed there (reader/save-dock/candidate-drawer below
-   already read as three distinct card weights; a 4th bordered rectangle
-   here would be one too many). Before any result exists, though, this is
-   the *entire* first-visit screen -- an open page with no card anywhere
-   around it read as unfinished/empty rather than "open notebook", so that
-   state gets its own opaque card via .reading-input-open-intro below. */
+   compact "원문 수정" editor under the reader, and stays deliberately
+   un-boxed there (reader/action-dock/candidate-drawer below already read as
+   three distinct card weights; a 4th bordered rectangle here would be one
+   too many). Before any result exists, though, this is the *entire*
+   first-visit screen, which gets its own card via .reader-start-card. */
 .reading-input-open {
   display: grid;
   gap: 12px;
@@ -3052,8 +3050,7 @@ select {
    nested .analyze-form/textarea keep the stripped-down "open page" styling
    from above -- they don't need their own border now that this outer card
    already provides one. */
-.reading-input-open-intro {
-  border-bottom: none;
+.reader-start-card {
   border: 1px solid var(--border-strong);
   border-radius: 20px;
   padding: 20px;
@@ -3066,7 +3063,7 @@ select {
    row (small Shiori beside the one-line hint + button) so the guide reads
    as connected to the card's own title, not a second stacked block above
    the textarea. */
-.reading-input-open-intro .reading-empty-guide {
+.reader-start-card .reading-empty-guide {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -3078,17 +3075,17 @@ select {
   text-align: left;
 }
 
-.reading-input-open-intro .reading-empty-guide p {
+.reader-start-card .reading-empty-guide p {
   flex: 1 1 auto;
   min-width: 160px;
 }
 
-.reading-input-open-intro .reading-empty-guide .shiori-asset--md {
+.reader-start-card .reading-empty-guide .shiori-asset--md {
   width: 36px;
   height: 36px;
 }
 
-.reading-input-open-intro .reading-empty-guide button {
+.reader-start-card .reading-empty-guide button {
   flex: 0 0 auto;
   margin-top: 0;
 }
@@ -3185,6 +3182,26 @@ select {
   padding: 4px 20px 4px 2px;
   background: transparent;
   font-weight: 700;
+}
+
+/* Takes the deck select's place in the input footer when /decks failed, so
+   the recovery action sits exactly where the unusable dropdown would be. */
+.reading-deck-recovery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: rgba(200, 60, 60, 0.06);
+}
+
+.reading-deck-recovery-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 .reading-open-button {
@@ -3598,50 +3615,6 @@ input.reading-vocab-item-checkbox {
 }
 
 
-/* Onboarding-only guide note shown while analyzedText is the sample
-   sentence (see ReadingTab's isSampleText) -- small note-card, same
-   left-accent-strip language as the home dashboard's guide/trust cards, so
-   it doesn't read as a separate one-off callout. Collapsed by default (a
-   native <details>) -- the reader canvas below is the thing this screen
-   wants seen first, not a standing 1-2-3 explainer. */
-.reading-onboarding-note {
-  padding: 10px 16px;
-}
-
-.reading-onboarding-note[open] {
-  padding-bottom: 12px;
-}
-
-.reading-onboarding-note-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  list-style: none;
-}
-
-.reading-onboarding-note-title::-webkit-details-marker {
-  display: none;
-}
-
-.reading-onboarding-note-title::after {
-  content: "▸";
-  margin-left: auto;
-  color: var(--border-strong);
-}
-
-.reading-onboarding-note[open] .reading-onboarding-note-title::after {
-  content: "▾";
-}
-
-.reading-onboarding-note-steps {
-  margin: 8px 0 0;
-}
-
 /* Save Dock -- a slim shelf-like strip (count + one primary CTA on the same
    line) sitting right under the reader. Previously just a dashed top rule
    with no fill of its own, so it read as a divider, not a place to act --
@@ -3650,7 +3623,7 @@ input.reading-vocab-item-checkbox {
    paper card (still visually lighter than the reader-paper hero above it:
    smaller radius, thinner shadow), distinct in weight from the drawer-pull
    below it, so the reading tab isn't four stacked look-alike boxes. */
-.reader-save-dock {
+.reading-action-dock {
   display: grid;
   gap: 10px;
   margin-top: 14px;
@@ -7453,7 +7426,7 @@ input.reading-vocab-item-checkbox {
     order: 2;
   }
 
-  .reader-save-dock {
+  .reading-action-dock {
     order: 3;
   }
 

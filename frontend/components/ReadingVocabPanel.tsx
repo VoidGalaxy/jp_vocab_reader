@@ -96,21 +96,6 @@ export function ReadingVocabPanel({
     [filteredEntries, search],
   );
 
-  const selectedCount = useMemo(
-    () =>
-      entries.filter(
-        (entry) =>
-          entry.isSaveable && selectedWordKeys.has(getTokenGroupKey(entry.token)),
-      ).length,
-    [entries, selectedWordKeys],
-  );
-  // Total saveable words in this text (not just the current selection) --
-  // the header-level "저장 가능" stat design improvement 1 asks for.
-  const saveableCount = useMemo(
-    () => entries.filter((entry) => entry.isSaveable).length,
-    [entries],
-  );
-
   return (
     <section
       className={`candidate-drawer reading-vocab-drawer${isCollapsed ? "" : " reading-vocab-drawer-open"}`}
@@ -122,9 +107,11 @@ export function ReadingVocabPanel({
         aria-expanded={!isCollapsed}
       >
         <SearchIcon className="reading-vocab-drawer-pull-icon" />
+        {/* Counts here stay list-scoped only. The basket total and the
+            saveable total belong to the save dock above, which owns saving --
+            repeating them here made two rows of near-identical chips. */}
         <span className="reading-vocab-drawer-pull-label">
           어휘 후보 {entries.length}개
-          {saveableCount > 0 ? ` · 담을 수 있는 단어 ${saveableCount}개` : ""}
         </span>
         <ChevronDownIcon
           className={`reading-vocab-collapse-icon${
@@ -210,7 +197,7 @@ export function ReadingVocabPanel({
       </div>
 
       <p className="reading-vocab-selection-summary">
-        바구니에 담음 {selectedCount}개 · 현재 목록 {visibleEntries.length}개
+        현재 목록 {visibleEntries.length}개
       </p>
 
       {visibleEntries.length === 0 ? (

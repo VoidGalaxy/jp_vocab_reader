@@ -26,9 +26,7 @@ import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 // Copyright-safe, hand-written sample so first-time users can try the flow
 // without pasting their own text first. Exported so page.tsx's home-tab
 // "샘플로 체험하기" CTA can load the exact same text/deck-analyze pipeline
-// from outside this tab, and so this component can tell "the user is
-// looking at the sample" apart from their own text (see isSampleText
-// below) without a second source of truth.
+// from outside this tab without a second source of truth.
 export const SAMPLE_TEXT =
   "彼は闇の中で声を聞いた。少女は約束を思い出した。騎士は剣を握り、敵から王を守った。";
 
@@ -38,6 +36,9 @@ type ReadingTabProps = {
   tokens: TokenWithStatus[];
   vocabItems: VocabItem[];
   decks: Deck[];
+  isLoadingDecks: boolean;
+  deckLoadError: string;
+  onRetryLoadDecks: () => void;
   selectedDeckId: string;
   isAnalyzing: boolean;
   analyzeProgress: ChunkAnalyzeProgress | null;
@@ -134,7 +135,7 @@ function ReaderSaveDock({
   const [isQuickSaveOpen, setIsQuickSaveOpen] = useState(false);
 
   return (
-    <section className="reader-save-dock" aria-label="저장 바구니">
+    <section className="reading-action-dock" aria-label="저장 바구니">
       <div className="save-dock-count">
         <FolderIcon className="save-dock-icon" />
         <span>
@@ -252,12 +253,45 @@ function ReaderSaveDock({
   );
 }
 
+// Shown wherever the deck select would otherwise be an empty dropdown the
+// user can do nothing with. Rendered either inside the input form or, when
+// the form is collapsed away (restored session with the text folded), on its
+// own in the panel body -- never both at once.
+function DeckLoadRecovery({
+  message,
+  isRetrying,
+  onRetry,
+}: {
+  message: string;
+  isRetrying: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="reading-deck-recovery" role="alert">
+      <p className="reading-deck-recovery-text">
+        {message} 읽기 덱이 없어 분석을 시작할 수 없어요.
+      </p>
+      <button
+        type="button"
+        className="secondary-button compact-button"
+        onClick={onRetry}
+        disabled={isRetrying}
+      >
+        {isRetrying ? "불러오는 중..." : "덱 다시 불러오기"}
+      </button>
+    </div>
+  );
+}
+
 export function ReadingTab({
   text,
   analyzedText,
   tokens,
   vocabItems,
   decks,
+  isLoadingDecks,
+  deckLoadError,
+  onRetryLoadDecks,
   selectedDeckId,
   isAnalyzing,
   analyzeProgress,
@@ -402,24 +436,23 @@ export function ReadingTab({
   function onToggleBasket(token: TokenWithStatus) {
     toggleSelect(getTokenGroupKey(token));
   }
-  // Onboarding-only guide note (design improvement 5) -- derived from
-  // existing props (no new dismissed-state storage key needed) so it only
-  // shows while the user is actually looking at the sample text, and
-  // disappears on its own once they analyze their own real text.
-  const isSampleText = analyzedText === SAMPLE_TEXT;
-  const analyzeHint = !text.trim()
-    ? "원문을 입력하면 분석할 수 있어요."
-    : !selectedDeckId
-      ? "읽기 덱을 선택하면 분석할 수 있어요."
-      : isAnalyzing
-        ? "분석 중이에요. 잠시만 기다려주세요..."
-        : null;
+  const hasNoDecks = decks.length === 0;
+  const needsDeckRecovery = hasNoDecks && !isLoadingDecks && deckLoadError !== "";
+  const analyzeHint = needsDeckRecovery
+    ? null
+    : !text.trim()
+      ? "원문을 입력하면 분석할 수 있어요."
+      : !selectedDeckId
+        ? "읽기 덱을 선택하면 분석할 수 있어요."
+        : isAnalyzing
+          ? "분석 중이에요. 잠시만 기다려주세요..."
+          : null;
   const messageTone = classifyMessageTone(message);
 
   return (
     <section className="tab-panel reading-panel" aria-live="polite">
       <section
-        className={`reading-input-open${hasResult ? "" : " reading-input-open-intro"}`}
+        className={`reading-input-open${hasResult ? "" : " reader-start-card"}`}
       >
         {!hasResult ? (
           <div className="reading-input-open-header">
@@ -464,20 +497,37 @@ export function ReadingTab({
                 rows={4}
               />
               <div className="reading-input-footer">
-                <label className="reading-deck-picker">
-                  <FolderIcon className="reading-deck-picker-icon" />
-                  <select
-                    value={selectedDeckId}
-                    onChange={(event) => onSelectedDeckChange(event.target.value)}
-                    aria-label="읽기 덱"
-                  >
-                    {decks.map((deck) => (
-                      <option key={deck.id} value={String(deck.id)}>
-                        {deck.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {needsDeckRecovery ? (
+                  <DeckLoadRecovery
+                    message={deckLoadError}
+                    isRetrying={isLoadingDecks}
+                    onRetry={onRetryLoadDecks}
+                  />
+                ) : (
+                  <label className="reading-deck-picker">
+                    <FolderIcon className="reading-deck-picker-icon" />
+                    <select
+                      value={selectedDeckId}
+                      onChange={(event) => onSelectedDeckChange(event.target.value)}
+                      aria-label="읽기 덱"
+                      disabled={hasNoDecks}
+                    >
+                      {hasNoDecks ? (
+                        <option value="">
+                          {isLoadingDecks
+                            ? "덱을 불러오는 중..."
+                            : "사용할 수 있는 덱이 없어요"}
+                        </option>
+                      ) : (
+                        decks.map((deck) => (
+                          <option key={deck.id} value={String(deck.id)}>
+                            {deck.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </label>
+                )}
                 <button
                   type="submit"
                   className="reading-open-button"
@@ -549,16 +599,12 @@ export function ReadingTab({
         )
       ) : null}
 
-      {summary && isSampleText ? (
-        <details className="panel-card note-card reading-onboarding-note">
-          <summary className="reading-onboarding-note-title">
-            <span className="memo-label">가이드</span>
-            샘플로 핵심 흐름을 체험해보세요
-          </summary>
-          <p className="muted-text reading-onboarding-note-steps">
-            1 단어 클릭해 뜻 확인 → 2 모르는 단어 저장 → 3 저장한 단어로 바로 학습
-          </p>
-        </details>
+      {needsDeckRecovery && !showForm ? (
+        <DeckLoadRecovery
+          message={deckLoadError}
+          isRetrying={isLoadingDecks}
+          onRetry={onRetryLoadDecks}
+        />
       ) : null}
 
       {/* ReaderWorkspace -- ReaderPaper (reader-paper, hero tier) +
