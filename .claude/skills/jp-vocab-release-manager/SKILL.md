@@ -1,0 +1,96 @@
+---
+name: jp-vocab-release-manager
+description: Release and git safety workflow for jp_vocab_reader. Use when deciding branches, commits, pushes, merges, build validation, forbidden file checks, deployment readiness, or whether Claude team output may be accepted.
+---
+
+# JP Vocab Release Manager
+
+Use this skill before committing, pushing, merging, or accepting Claude team work.
+
+## Required Order
+
+1. Confirm branch.
+2. Run `git status --short`.
+3. Inspect changed files with `git diff --stat` and targeted `git diff`.
+4. Check forbidden files.
+5. Run required validation.
+6. Decide commit scope.
+7. Provide exact `git add` targets.
+8. Commit only after approval.
+9. Push only after approval.
+
+## Forbidden Commit Targets
+
+Never stage or commit:
+
+- `backend/.env`
+- `backend/.env.backup-neon`
+- `backend/*.db`
+- `backend/data/jlpt/raw/`
+- `backend/data/jlpt/work/`
+- `backend/data/jlpt/reviewed/`
+- `backend/data/jlpt/packages/`
+- `backend/data/dictionary/jmdict_full.json`
+- `backend/data/dictionary/en_ko_full.json`
+- `backend/data/dictionary/en_ko_full.json.gz`
+- `backend/data/dictionary/kaikki_raw.jsonl`
+- `backend/data/dictionary/kaikki_raw.jsonl.gz`
+- `backend/data/dictionary/krdict_reverse_full.json`
+- `backend/data/dictionary/krdict_reverse_full.json.gz`
+- `frontend/.next`
+- `frontend/node_modules`
+- `node_modules`
+- `__pycache__`
+- `*.pyc`
+- `.claude/settings.local.json`
+
+Treat untracked `.agents/` as a separate tooling decision. Do not include it in feature commits unless the task explicitly adds project skills there.
+
+## Validation Commands
+
+Frontend:
+
+```powershell
+cd C:\JV_Project\jp_vocab_reader\frontend
+npm run build
+```
+
+Backend, only when backend code changed:
+
+```powershell
+cd C:\JV_Project\jp_vocab_reader\backend
+.\.venv\Scripts\python.exe -m compileall app scripts
+```
+
+Forbidden copy search:
+
+```powershell
+cd C:\JV_Project\jp_vocab_reader
+Select-String -Path .\frontend\**\* -Pattern "공식 JLPT","official JLPT","source English","MEANING_NEEDS_REVIEW","원문 전체를 저장합니다","원문 전체를 공유합니다","복사된 단어" -SimpleMatch -ErrorAction SilentlyContinue
+```
+
+Known exception: `frontend/components/shared.tsx` may contain internal placeholder filter values `meaning_needs_review` and `source english`. If they are not user-facing and not part of the current diff, report them but do not block solely on them.
+
+## Local Backend Safety
+
+Before running a local backend server, avoid production Neon:
+
+```powershell
+cd C:\JV_Project\jp_vocab_reader\backend
+$env:APP_ENV="development"
+$env:DATABASE_URL="sqlite:///./vocab_claude_scratch.db"
+.\.venv\Scripts\python.exe -c "import os; u=os.environ.get('DATABASE_URL',''); print('DATABASE_URL=', u); assert u.startswith('sqlite:///'); assert 'neon.tech' not in u"
+```
+
+Use `CORS_ORIGINS` or port `3000` when browser testing requires frontend/backend CORS alignment.
+
+## Commit Decision
+
+Commit only when:
+
+- Changed files match the assigned scope.
+- Build/tests pass or failures are understood and accepted by the user.
+- No forbidden files are staged.
+- User-facing copy respects product guardrails.
+- `git status --short` has only intentional staged/unstaged items.
+
