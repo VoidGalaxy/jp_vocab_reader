@@ -71,6 +71,16 @@ type ReaderModeProps = {
   isTokenInBasket: (token: TokenWithStatus) => boolean;
   canAddToBasket: (token: TokenWithStatus) => boolean;
   onToggleBasket: (token: TokenWithStatus) => void;
+  // Session management -- previously ReadingTab's own top-of-screen
+  // "원문 관리" toolbar (a separate row above this card). Folded in here
+  // instead: the restore notice as a small chip in the header, the
+  // collapse/reset actions inside the existing "옵션" panel, so the reading
+  // tab has one management surface instead of a toolbar plus a card.
+  isSessionRestored: boolean;
+  onDismissRestoredNotice: () => void;
+  isTextCollapsed: boolean;
+  onToggleTextCollapsed: () => void;
+  onResetSession: () => void;
 };
 
 export function ReaderMode({
@@ -94,6 +104,11 @@ export function ReaderMode({
   isTokenInBasket,
   canAddToBasket,
   onToggleBasket,
+  isSessionRestored,
+  onDismissRestoredNotice,
+  isTextCollapsed,
+  onToggleTextCollapsed,
+  onResetSession,
 }: ReaderModeProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   // Which literal rendered occurrence was clicked, when known -- a repeated
@@ -447,6 +462,18 @@ export function ReaderMode({
 
   return (
     <div className="reader-paper hero-card card-stack-surface">
+      {isSessionRestored ? (
+        <span className="reading-restored-chip">
+          이전 작업 복원됨
+          <button
+            type="button"
+            className="reading-restored-chip-dismiss"
+            onClick={onDismissRestoredNotice}
+          >
+            확인
+          </button>
+        </span>
+      ) : null}
       <div className="reader-mode-header-row">
         <div>
           <h3 className="reader-mode-title">읽기 모드</h3>
@@ -479,6 +506,22 @@ export function ReaderMode({
                 />
                 JLPT 태그 표시
               </label>
+              <div className="reader-mode-toggles-manage">
+                <button
+                  type="button"
+                  className="ghost-button compact-button"
+                  onClick={onToggleTextCollapsed}
+                >
+                  {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button compact-button"
+                  onClick={onResetSession}
+                >
+                  새 원문
+                </button>
+              </div>
             </div>
           ) : null}
         </div>
