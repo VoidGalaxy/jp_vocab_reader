@@ -426,8 +426,8 @@ export function StudySection({
       {!hasStarted && !currentItem && !isComplete ? (
         <AppEmptyState
           mood="review"
-          moodSize="xl"
-          className="study-card study-ready-card"
+          moodSize="lg"
+          className="study-empty-flat study-ready-card"
           title="학습할 단어를 불러오세요"
           description="덱과 학습 모드를 선택한 뒤 복습을 시작할 수 있어요."
         />
@@ -436,8 +436,8 @@ export function StudySection({
       {hasStarted && !currentItem && !isComplete ? (
         <AppEmptyState
           mood="empty"
-          moodSize="xl"
-          className="study-card study-ready-card"
+          moodSize="lg"
+          className="study-empty-flat study-ready-card"
           title={emptyMessages[studyMode]}
           description={emptySecondaryMessages[studyMode]}
         >

@@ -213,7 +213,7 @@ const tabs: Array<{
   { key: "home", label: "오늘의 책상", mobileLabel: "책상", icon: HomeIcon },
   { key: "analyze", label: "빠른 분류", mobileLabel: "분류", icon: CheckCircleIcon },
   { key: "reading", label: "원문 읽기", mobileLabel: "읽기", icon: BookIcon },
-  { key: "vocab", label: "어휘 노트", mobileLabel: "노트", icon: CardFileIcon },
+  { key: "vocab", label: "내 단어장", mobileLabel: "단어", icon: CardFileIcon },
   { key: "study", label: "복습", icon: CardsIcon },
   { key: "shared", label: "덱 책장", mobileLabel: "덱", icon: BookshelfIcon },
   { key: "info", label: "통계", icon: ClockIcon },
@@ -618,10 +618,13 @@ function deriveReadingTokens(
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabKey>("home");
-  const [hasLoadedVocab, setHasLoadedVocab] = useState(false);
   const [decks, setDecks] = useState<Deck[]>([]);
   const [selectedSaveDeckId, setSelectedSaveDeckId] = useState("");
-  const [selectedVocabDeckId, setSelectedVocabDeckId] = useState("all");
+  // "" = no deck chosen yet on the 단어 탭 (see the vocab-list effect below) --
+  // distinct from "all", which is an explicit "전체 단어장" choice. Keeping
+  // these separate is what lets the tab open without an eager full fetch:
+  // nothing loads until the user picks something, "all" included.
+  const [selectedVocabDeckId, setSelectedVocabDeckId] = useState("");
   const [selectedStudyDeckId, setSelectedStudyDeckId] = useState("all");
   const [studyMode, setStudyMode] = useState<StudyMode>("today");
   const [includeKnown, setIncludeKnown] = useState(false);
@@ -934,7 +937,7 @@ export default function HomePage() {
   const defaultDeck =
     decks.find((deck) => deck.name === "기본 단어장") ?? decks[0];
   const defaultVocabFormDeckId =
-    selectedVocabDeckId !== "all"
+    selectedVocabDeckId !== "all" && selectedVocabDeckId !== ""
       ? selectedVocabDeckId
       : defaultDeck
         ? String(defaultDeck.id)
@@ -951,14 +954,15 @@ export default function HomePage() {
     }));
   }, [defaultVocabFormDeckId]);
 
+  // Deck must be explicitly chosen ("all" counts, "" does not) before the
+  // 단어 탭 fetches anything -- see selectedVocabDeckId's declaration above.
   useEffect(() => {
-    if (activeTab === "vocab" && hasLoadedVocab) {
+    if (activeTab === "vocab" && selectedVocabDeckId !== "") {
       void loadVocabItems();
       void loadCustomTerms();
     }
   }, [
     activeTab,
-    hasLoadedVocab,
     selectedVocabDeckId,
     vocabSearch,
     vocabStatusFilter,
@@ -984,9 +988,6 @@ export default function HomePage() {
 
   async function handleTabChange(tab: TabKey) {
     setActiveTab(tab);
-    if (tab === "vocab" && !hasLoadedVocab) {
-      setHasLoadedVocab(true);
-    }
     if (tab === "study") {
       void loadStudyStats(selectedStudyDeckId);
     }
@@ -1000,11 +1001,11 @@ export default function HomePage() {
   }
 
   async function refreshUserScopedData() {
-    setSelectedVocabDeckId("all");
+    // "" (not "all") -- 단어 탭이 아직 열리지 않았으므로 여기서 전체 단어를
+    // 미리 불러오지 않는다. 실제 fetch는 사용자가 덱을 선택했을 때만 일어난다.
+    setSelectedVocabDeckId("");
     setSelectedStudyDeckId("all");
     await loadDecks();
-    await loadVocabItems("all");
-    await loadCustomTerms("all");
     await loadStudyStats("all");
     await loadInfoStats();
     await loadInfoWordHighlights();
@@ -1315,7 +1316,6 @@ export default function HomePage() {
       const query = params.toString() ? `?${params.toString()}` : "";
       const data = await requestJson<VocabItemsResponse>(`/vocab-items${query}`);
       setVocabItems(data.items);
-      setHasLoadedVocab(true);
     } catch (error) {
       setVocabMessage(
         getAuthAwareErrorMessage(error, "단어장 목록을 불러오지 못했습니다."),
@@ -1800,7 +1800,6 @@ export default function HomePage() {
   function goToVocabFromReading() {
     setSelectedVocabDeckId(readingSelectedDeckId);
     setActiveTab("vocab");
-    setHasLoadedVocab(true);
     void loadVocabItems(readingSelectedDeckId);
     void loadCustomTerms(readingSelectedDeckId);
   }
@@ -1930,13 +1929,18 @@ export default function HomePage() {
 
   function goToVocabTab() {
     setActiveTab("vocab");
-    setHasLoadedVocab(true);
-    void loadVocabItems(selectedVocabDeckId);
-    void loadCustomTerms(selectedVocabDeckId);
+    // No specific deck context to hand off here (unlike goToVocabFromReading/
+    // goToVocabFromStudy) -- only refresh if the user had already picked a
+    // deck previously; otherwise let the 단어 탭's own deck-selection guide
+    // show instead of fetching with an empty deck id.
+    if (selectedVocabDeckId !== "") {
+      void loadVocabItems(selectedVocabDeckId);
+      void loadCustomTerms(selectedVocabDeckId);
+    }
   }
 
   async function publishCurrentDeck() {
-    if (selectedVocabDeckId === "all") {
+    if (selectedVocabDeckId === "all" || selectedVocabDeckId === "") {
       setDeckMessage("공유할 덱을 먼저 선택해 주세요.");
       return;
     }
@@ -2187,6 +2191,10 @@ export default function HomePage() {
 
   async function changeVocabDeck(deckId: string) {
     setSelectedVocabDeckId(deckId);
+    // 덱이 바뀌면 이전 덱 기준 검색/필터가 새 덱에 그대로 적용되지 않도록 초기화.
+    setVocabSearch("");
+    setVocabStatusFilter("all");
+    setVocabDueOnly(false);
   }
 
   function updateNewVocabForm<K extends keyof VocabFormData>(
@@ -2648,7 +2656,7 @@ export default function HomePage() {
   }
 
   async function exportDeckPackage() {
-    if (selectedVocabDeckId === "all") {
+    if (selectedVocabDeckId === "all" || selectedVocabDeckId === "") {
       setVocabMessage("공유 파일로 내보낼 덱을 먼저 선택해 주세요.");
       return;
     }
@@ -2729,7 +2737,9 @@ export default function HomePage() {
 
     try {
       const query =
-        selectedVocabDeckId !== "all" ? `?deck_id=${selectedVocabDeckId}` : "";
+        selectedVocabDeckId !== "all" && selectedVocabDeckId !== ""
+          ? `?deck_id=${selectedVocabDeckId}`
+          : "";
       const response = await apiFetch(`/vocab-items/export.csv${query}`);
       if (!response.ok) {
         throw new Error(`CSV 다운로드에 실패했습니다. (${response.status})`);
@@ -3013,7 +3023,7 @@ export default function HomePage() {
   }
 
   function startStudyFromVocabDeck() {
-    if (selectedVocabDeckId === "all") {
+    if (selectedVocabDeckId === "all" || selectedVocabDeckId === "") {
       setVocabMessage("학습할 특정 덱을 먼저 선택해 주세요.");
       return;
     }
@@ -3026,7 +3036,6 @@ export default function HomePage() {
   function goToVocabFromStudy() {
     setSelectedVocabDeckId(selectedStudyDeckId);
     setActiveTab("vocab");
-    setHasLoadedVocab(true);
     void loadVocabItems(selectedStudyDeckId);
     void loadCustomTerms(selectedStudyDeckId);
   }

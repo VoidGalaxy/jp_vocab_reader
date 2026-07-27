@@ -89,7 +89,7 @@ export function TokenChip({
           : `${label}, ${statusLabels[token.status]}`
       }
     >
-      {label}
+      <span className="token-chip-surface">{label}</span>
       {jlptLevel ? (
         <span className="jlpt-chip-badge">{jlptLevel}</span>
       ) : null}

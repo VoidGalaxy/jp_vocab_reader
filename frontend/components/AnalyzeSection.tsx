@@ -191,12 +191,9 @@ function ClassifyPaperInput({
           />
           완벽히 아는 단어도 표시
         </label>
-        {!isStage ? <div className="analyze-cta-row">{submitButton}</div> : null}
-      </div>
-      {isStage ? (
-        <div className="analyze-cta-row classify-hero-cta-row">
+        <div className={isStage ? "analyze-cta-row classify-hero-cta-row" : "analyze-cta-row"}>
           {submitButton}
-          {secondaryAction ? (
+          {isStage && secondaryAction ? (
             <button
               type="button"
               className="ghost-button compact-button"
@@ -206,7 +203,7 @@ function ClassifyPaperInput({
             </button>
           ) : null}
         </div>
-      ) : null}
+      </div>
     </form>
   );
 }

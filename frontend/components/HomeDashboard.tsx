@@ -6,7 +6,6 @@ import {
   BookIcon,
   CardFileIcon,
   CardsIcon,
-  ChevronRightIcon,
   ClockIcon,
   FolderIcon,
   ShieldIcon,
@@ -54,24 +53,6 @@ export function HomeDashboard({
   onGoToVocab,
   recentWords,
 }: HomeDashboardProps) {
-  const continueRow = recentlySavedVocabItemIdsCount > 0
-    ? {
-        icon: CardsIcon,
-        label: `방금 담은 단어 ${recentlySavedVocabItemIdsCount}개 복습하기`,
-        onAction: onStartRecentlySaved,
-      }
-    : hasReadingSession
-      ? {
-          icon: BookIcon,
-          label: "읽던 원문 이어보기",
-          onAction: onStartReading,
-        }
-      : {
-          icon: SparkleIcon,
-          label: "첫 원문 읽기 시작하기",
-          onAction: onStartReading,
-        };
-
   return (
     <section className="tab-panel home-dashboard" aria-live="polite">
       <section className="panel-card hero-card home-hero-card card-stack-surface">
@@ -159,42 +140,23 @@ export function HomeDashboard({
       </div>
 
       {recentWords.length > 0 ? (
-        <div className="home-recent-index-row" aria-label="최근 담은 단어">
-          {recentWords.map((item) => (
-            <div className="index-card-shell home-recent-index-card" key={item.id}>
-              <span className="home-recent-index-card-surface">{item.surface}</span>
-              {item.reading && item.reading !== item.surface ? (
-                <span className="home-recent-index-card-reading">{item.reading}</span>
-              ) : null}
-              <span className="home-recent-index-card-meaning">
-                {getDisplayMeaning(item.meaning_ko)}
-              </span>
-            </div>
-          ))}
+        <div className="home-recent-section">
+          <span className="home-recent-section-title">최근 담은 단어</span>
+          <div className="home-recent-index-row" aria-label="최근 담은 단어">
+            {recentWords.map((item) => (
+              <div className="index-card-shell home-recent-index-card" key={item.id}>
+                <span className="home-recent-index-card-surface">{item.surface}</span>
+                {item.reading && item.reading !== item.surface ? (
+                  <span className="home-recent-index-card-reading">{item.reading}</span>
+                ) : null}
+                <span className="home-recent-index-card-meaning">
+                  {getDisplayMeaning(item.meaning_ko)}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
-
-      <div className="home-desk-memo paper-corner">
-        <div className="home-desk-memo-header">
-          <span className="memo-label">책상 메모</span>
-          <button
-            type="button"
-            className="ghost-button compact-button home-desk-memo-link"
-            onClick={onGoToVocab}
-          >
-            어휘 노트 보기
-          </button>
-        </div>
-        <button
-          type="button"
-          className="ghost-button home-continue-row"
-          onClick={continueRow.onAction}
-        >
-          <continueRow.icon className="button-icon" />
-          <span>{continueRow.label}</span>
-          <ChevronRightIcon className="home-continue-row-arrow" />
-        </button>
-      </div>
 
       <p className="info-strip info-strip-quiet">
         <ShieldIcon className="info-strip-icon" />

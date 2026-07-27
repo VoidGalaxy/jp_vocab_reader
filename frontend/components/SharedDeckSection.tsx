@@ -450,6 +450,7 @@ export function SharedDeckSection({
         </div>
       ) : null}
 
+      <div className="desk-surface desk-surface-section">
       {isInitialLoading ? (
         <AppEmptyState
           mood="loading"
@@ -529,6 +530,7 @@ export function SharedDeckSection({
           </button>
         </AppEmptyState>
       )}
+      </div>
 
       {selectedDeck ? (
         <section className="shared-deck-detail">

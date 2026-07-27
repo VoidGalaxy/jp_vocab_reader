@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
-import { ShioriGuideCard } from "./Shiori";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet } from "./TokenDetailSheet";
 import { buildReaderLayout, getNavigableTokenIndexes } from "./readerLayout";
@@ -72,6 +71,16 @@ type ReaderModeProps = {
   isTokenInBasket: (token: TokenWithStatus) => boolean;
   canAddToBasket: (token: TokenWithStatus) => boolean;
   onToggleBasket: (token: TokenWithStatus) => void;
+  // Session management -- previously ReadingTab's own top-of-screen
+  // "원문 관리" toolbar (a separate row above this card). Folded in here
+  // instead: the restore notice as a small chip in the header, the
+  // collapse/reset actions inside the existing "옵션" panel, so the reading
+  // tab has one management surface instead of a toolbar plus a card.
+  isSessionRestored: boolean;
+  onDismissRestoredNotice: () => void;
+  isTextCollapsed: boolean;
+  onToggleTextCollapsed: () => void;
+  onResetSession: () => void;
 };
 
 export function ReaderMode({
@@ -95,6 +104,11 @@ export function ReaderMode({
   isTokenInBasket,
   canAddToBasket,
   onToggleBasket,
+  isSessionRestored,
+  onDismissRestoredNotice,
+  isTextCollapsed,
+  onToggleTextCollapsed,
+  onResetSession,
 }: ReaderModeProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   // Which literal rendered occurrence was clicked, when known -- a repeated
@@ -114,11 +128,6 @@ export function ReaderMode({
   // it for attention. Local-only UI state, no effect on the toggles'
   // values or behavior once opened.
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
-  // Dismissible idle-state guide bubble -- once the reader has shown the
-  // hint once, a click on its own close button hides it for the rest of
-  // this reading session instead of it sitting there like a permanent
-  // banner every time no word is selected.
-  const [isIdleGuideDismissed, setIsIdleGuideDismissed] = useState(false);
   // Guards against re-applying a restored selection every time tokens
   // change (e.g. after a status save) -- only ever resolved once, right
   // after a restore, then the user's own clicks take over.
@@ -452,7 +461,20 @@ export function ReaderMode({
   const isAtFirstOccurrence = activeSegmentKey === null;
 
   return (
-    <div className="reader-paper hero-card card-stack-surface">
+    <>
+      {isSessionRestored ? (
+        <span className="reading-restored-chip">
+          이전 작업 복원됨
+          <button
+            type="button"
+            className="reading-restored-chip-dismiss"
+            onClick={onDismissRestoredNotice}
+          >
+            확인
+          </button>
+        </span>
+      ) : null}
+      <div className="reader-paper hero-card card-stack-surface">
       <div className="reader-mode-header-row">
         <div>
           <h3 className="reader-mode-title">읽기 모드</h3>
@@ -485,6 +507,22 @@ export function ReaderMode({
                 />
                 JLPT 태그 표시
               </label>
+              <div className="reader-mode-toggles-manage">
+                <button
+                  type="button"
+                  className="ghost-button compact-button"
+                  onClick={onToggleTextCollapsed}
+                >
+                  {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button compact-button"
+                  onClick={onResetSession}
+                >
+                  새 원문
+                </button>
+              </div>
             </div>
           ) : null}
         </div>
@@ -626,36 +664,8 @@ export function ReaderMode({
           onCancelMeaningEdit={onCancelMeaningEdit}
           onReportMeaning={onReportMeaning}
         />
-      ) : isIdleGuideDismissed ? null : (
-        // Desktop-only idle Word Inspector: docked in the same spot
-        // TokenDetailSheet occupies once a word is selected (see
-        // .token-sheet-overlay-idle in globals.css, hidden below the
-        // 641px breakpoint) so the panel reads as "always there", not
-        // something that only appears after a click. Mobile intentionally
-        // shows nothing here -- the bottom-sheet inspector only appears
-        // on demand there, per the reader-workspace mobile spec. A close
-        // button lets it be dismissed for the rest of this session instead
-        // of hovering there like a persistent banner/ad.
-        <div
-          className="token-sheet-overlay token-sheet-overlay-idle"
-          aria-hidden="true"
-        >
-          <div className="bookmark-inspector word-index-inspector token-sheet-idle paper-corner card-stack-surface">
-            <button
-              type="button"
-              className="token-sheet-idle-dismiss"
-              onClick={() => setIsIdleGuideDismissed(true)}
-              aria-label="안내 닫기"
-            >
-              ×
-            </button>
-            <ShioriGuideCard
-              variant="reading"
-              message="원문에서 모르는 단어를 눌러보세요."
-            />
-          </div>
-        </div>
-      )}
-    </div>
+      ) : null}
+      </div>
+    </>
   );
 }

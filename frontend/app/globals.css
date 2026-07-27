@@ -1,14 +1,35 @@
 :root {
   color: #2f2a24;
   background: #f7f3ea;
-  --page-bg: #f7f3ea;
-  --panel-bg: #fffdf8;
-  --soft-bg: #f2ead9;
-  --border: #e8dfc4;
-  --border-strong: #d8c9a0;
+  /* ---- Surface tiers (app bg < stage < card < inner sheet) ----
+     - --page-bg: the app's base paper tone, behind everything.
+     - --surface-stage: big section/backdrop surfaces (empty-state boxes,
+       the reading/classify workspace backdrop, wide filter drawers) -- one
+       gentle step deeper than --page-bg, never a heavy colored block.
+     - --panel-bg: cards/hero panels -- clearly lighter than the page, the
+       "raised paper" tier.
+     - --sheet-bg: actual input/textarea/select fields -- the lightest,
+       most neutral tier, so a form field reads as its own clean sheet
+       inside a warmer card.
+     --soft-bg remains the app's original general-purpose middle tone, used
+     by the many small pills/badges/hover-states that were never part of
+     the "big box" complaint; only the handful of true big-section
+     surfaces above were moved onto --surface-stage. */
+  --page-bg: #f2ecd9;
+  --surface-stage: #f3e8d1;
+  --panel-bg: #fdf9ee;
+  --sheet-bg: #fffcf3;
+  --soft-bg: #f1e6cc;
+  /* Card edges read as a paper edge rather than a UI-panel hairline. */
+  --border: #e2d5ab;
+  --border-strong: #d4c39c;
   --text: #2f2a24;
   --text-secondary: #5b4f3f;
-  --muted: #7c7160;
+  /* Darkened from the original #7c7160 -- that measured under WCAG AA's
+     4.5:1 against the app's warm backgrounds. This is the app's most-used
+     hint/caption/timestamp color, so it needs to clear that bar without
+     becoming as dark as --text-secondary. */
+  --muted: #6d6350;
   --primary: #2f6470;
   --primary-dark: #234b54;
   --primary-rgb: 47, 100, 112;
@@ -22,7 +43,9 @@
      corner of an otherwise cool app. */
   --paper-bg: var(--panel-bg);
   --paper-border: var(--border);
-  --paper-shadow: rgba(120, 98, 40, 0.08);
+  /* Warm brown-hued lift for hero/panel cards -- deliberately soft, not a
+     gray drop shadow. */
+  --paper-shadow: rgba(120, 98, 40, 0.14);
   /* Named brand palette aliases -- same hex values used throughout the
      file, just given brand-concept names so new work reaches for
      "--sand"/"--sage" instead of inventing another one-off hex. */
@@ -44,7 +67,11 @@
   --status-unknown-fg: #a3444d;
   --status-unknown-bg: #fdf1f1;
   --status-unclassified-fg: var(--muted);
-  --status-unclassified-line: #cebfa0;
+  /* Was #cebfa0 (a golden tan) -- too close to the warm paper background
+     itself once --panel-bg warmed up, so "unclassified" nearly vanished
+     next to "already read as paper" plain text. Pulled toward neutral gray
+     so it still reads as its own quiet, undecided state. */
+  --status-unclassified-line: #b3ac98;
   /* Per-screen accent tones (design improvement: 화면별 포인트 컬러) -- each
      tab wraps itself in a scope class below that sets --screen-accent /
      --screen-accent-soft from these. Every consumer falls back to the
@@ -245,21 +272,34 @@ body {
      any layout that wasn't already overflowing. */
   overflow-x: hidden;
   background-color: var(--page-bg);
+  /* Fourth pass: the dot-grid alone read as faint noise rather than paper,
+     and the bright top glow (was 0.9 alpha) washed the upper half of every
+     screen toward white. Added a second, ruled-notebook-line layer and
+     turned every other layer's alpha up a step so the page itself reads as
+     desk/notebook paper, not a plain tinted background with decoration on
+     top. */
   background-image:
-    radial-gradient(circle, rgba(61, 47, 20, 0.05) 1px, transparent 1.4px),
+    radial-gradient(circle, rgba(61, 47, 20, 0.075) 1px, transparent 1.4px),
+    repeating-linear-gradient(
+      180deg,
+      rgba(61, 47, 20, 0.05) 0px,
+      rgba(61, 47, 20, 0.05) 1px,
+      transparent 1px,
+      transparent 32px
+    ),
     radial-gradient(
       ellipse 900px 480px at 50% -80px,
-      rgba(255, 250, 235, 0.9) 0%,
+      rgba(255, 250, 235, 0.5) 0%,
       rgba(255, 250, 235, 0) 70%
     ),
     radial-gradient(
       circle 620px at 100% 680px,
-      rgba(217, 122, 74, 0.05) 0%,
+      rgba(217, 122, 74, 0.065) 0%,
       rgba(217, 122, 74, 0) 70%
     ),
     radial-gradient(
       circle 520px at -6% 46%,
-      rgba(47, 100, 112, 0.05) 0%,
+      rgba(47, 100, 112, 0.055) 0%,
       rgba(47, 100, 112, 0) 70%
     ),
     /* V3: a soft "desk surface" pool low on the page -- with the sidebar
@@ -268,7 +308,7 @@ body {
        sitting on a surface rather than floating over an empty page. */
     radial-gradient(
       ellipse 1400px 420px at 50% 120%,
-      rgba(61, 47, 20, 0.045) 0%,
+      rgba(61, 47, 20, 0.06) 0%,
       rgba(61, 47, 20, 0) 70%
     ),
     /* V3 content-canvas pass: faint repeating "book spine" columns --
@@ -277,16 +317,17 @@ body {
        workspace, reading as a distant bookshelf instead of blank page. */
     repeating-linear-gradient(
       90deg,
-      rgba(61, 47, 20, 0.04) 0px,
-      rgba(61, 47, 20, 0.04) 2px,
+      rgba(61, 47, 20, 0.045) 0px,
+      rgba(61, 47, 20, 0.045) 2px,
       transparent 2px,
       transparent 34px
     ),
-    linear-gradient(180deg, #fbf8f0 0, var(--page-bg) 260px);
-  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat, repeat-x,
-    no-repeat;
+    linear-gradient(180deg, #f7f1de 0, var(--page-bg) 260px);
+  background-repeat: repeat, repeat-y, no-repeat, no-repeat, no-repeat, no-repeat,
+    repeat-x, no-repeat;
   background-size:
     24px 24px,
+    auto,
     auto,
     auto,
     auto,
@@ -296,21 +337,28 @@ body {
 }
 
 @media (max-width: 640px) {
-  /* Decorative layers stay minimal on mobile (dot texture + top/bottom
-     glow only) -- the book-spine columns and desk-surface pool have no
-     empty gutters to live in on a single-column phone layout, so they're
-     dropped rather than shown compressed. */
+  /* Decorative layers stay minimal on mobile -- dot texture + ruled lines
+     (both cheap, no positioning math) + top glow. The book-spine columns
+     and desk-surface pool have no empty gutters to live in on a
+     single-column phone layout, so those two stay dropped. */
   body {
     background-image:
-      radial-gradient(circle, rgba(61, 47, 20, 0.05) 1px, transparent 1.4px),
+      radial-gradient(circle, rgba(61, 47, 20, 0.075) 1px, transparent 1.4px),
+      repeating-linear-gradient(
+        180deg,
+        rgba(61, 47, 20, 0.05) 0px,
+        rgba(61, 47, 20, 0.05) 1px,
+        transparent 1px,
+        transparent 32px
+      ),
       radial-gradient(
         ellipse 900px 480px at 50% -80px,
-        rgba(255, 250, 235, 0.9) 0%,
+        rgba(255, 250, 235, 0.5) 0%,
         rgba(255, 250, 235, 0) 70%
       ),
-      linear-gradient(180deg, #fbf8f0 0, var(--page-bg) 260px);
-    background-repeat: repeat, no-repeat, no-repeat;
-    background-size: 24px 24px, auto, auto;
+      linear-gradient(180deg, #f7f1de 0, var(--page-bg) 260px);
+    background-repeat: repeat, repeat-y, no-repeat, no-repeat;
+    background-size: 24px 24px, auto, auto, auto;
   }
 }
 
@@ -394,6 +442,12 @@ button {
    as "a small second panel" rather than a rail attached to the page edge.
    Just a flat strip with a hairline right-edge separator, closer to an
    actual book spine sitting next to the page. */
+/* Was transparent -- with the page background now a busier warm paper
+   texture, a transparent rail just let that texture run straight through
+   it, so the nav read as loose icons floating on the page rather than a
+   rail. Reuses --panel-bg (the same "card" tier every other surface uses)
+   plus a soft directional shadow, so it reads as its own attached surface
+   without becoming a heavy, fully-rounded floating sidebar. */
 .library-rail {
   position: sticky;
   top: 24px;
@@ -404,7 +458,9 @@ button {
   gap: 10px;
   padding: 14px 6px;
   border-right: 1px solid var(--border);
-  background: transparent;
+  border-radius: 0 14px 14px 0;
+  background: var(--panel-bg);
+  box-shadow: 3px 0 12px rgba(120, 98, 40, 0.08);
 }
 
 .library-rail-brand {
@@ -432,9 +488,13 @@ button {
   height: 16px;
 }
 
+/* --text-secondary (not --muted) and a touch larger -- at 9.5px, hint-level
+   contrast made the brand mark nearly illegible against the rail's own
+   panel-bg surface. Nav wayfinding text reads better a notch stronger than
+   generic muted hint text. */
 .library-rail-brand-name {
-  color: var(--muted);
-  font-size: 9.5px;
+  color: var(--text-secondary);
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -456,7 +516,10 @@ button {
   min-height: 46px;
   padding: 5px 2px;
   border-radius: 12px;
-  color: var(--muted);
+  /* --text-secondary (not --muted) -- inactive nav labels are wayfinding
+     text, not a de-emphasized hint, so they get a stronger base color than
+     the generic muted tier. */
+  color: var(--text-secondary);
   background: transparent;
   font-weight: 700;
   font-size: 10px;
@@ -480,6 +543,7 @@ button {
 .library-rail-link-active {
   color: #ffffff;
   background: var(--primary);
+  box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.28);
 }
 
 .library-rail-link-active:not(:disabled):hover {
@@ -1030,6 +1094,7 @@ button {
   gap: 14px;
   padding: 22px;
   border-color: var(--paper-border);
+  border-top: 2px solid var(--screen-accent, var(--accent));
   background: var(--paper-bg);
   box-shadow: 0 14px 32px var(--paper-shadow);
 }
@@ -1071,24 +1136,43 @@ button {
   font-size: 15px;
 }
 
-/* Index Card Study direction -- "최근 담은 단어" as 3 small index cards
+/* Index Card Study direction -- "최근 담은 단어" as small index cards
    instead of just a number in a chip, echoing Design Lab Direction B's
    Home mini-screen. Real data (page.tsx's infoRecentWords, already fetched
-   for the 기록 tab), sliced to 3. */
+   for the 기록 tab), sliced to 3. Wrapped with its own small section title
+   (home-recent-section-title) so the row doesn't appear out of context
+   right under the summary chips, and kept deliberately light (capped card
+   width, quieter shadow, smaller type) so it reads as a small aside, not
+   home's second hero. */
+.home-recent-section {
+  display: grid;
+  gap: 4px;
+  margin-bottom: -6px;
+}
+
+.home-recent-section-title {
+  color: var(--screen-accent, var(--muted));
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .home-recent-index-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 180px));
+  justify-content: start;
+  gap: 6px;
 }
 
 .home-recent-index-card {
-  padding: 10px 12px;
+  padding: 6px 10px;
+  box-shadow: 0 3px 8px rgba(120, 98, 40, 0.05);
 }
 
 .home-recent-index-card-surface {
   display: block;
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--text);
 }
 
@@ -1106,67 +1190,6 @@ button {
   margin-top: 4px;
 }
 
-/* Small sticky-note card wrapping the continue-row -- gives the home
-   screen's one "next step" a bit of desk-memo presence (label + paper
-   corner + a faint rotation, like a card actually left on the desk)
-   instead of just another plain full-width button competing with the
-   hero for attention. Deliberately still just the one button underneath;
-   no new content/feature card added. */
-.home-desk-memo {
-  display: grid;
-  gap: 8px;
-  justify-items: start;
-  padding: 14px 16px;
-  border: 1px solid var(--paper-border);
-  border-radius: 12px;
-  background: var(--paper-bg);
-  box-shadow: 0 8px 18px var(--paper-shadow);
-  transform: rotate(-0.4deg);
-}
-
-/* Folds the old standalone "어휘 노트 보기" button (previously alone at the
-   bottom of the tab) into the memo card's own header instead -- one less
-   floating action on the screen, and it now reads as "go see the full
-   note this memo is about" rather than an unrelated fourth CTA. */
-.home-desk-memo-header {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.home-desk-memo-link {
-  flex: 0 0 auto;
-}
-
-/* One-line "continue" action -- replaces the old full card (icon + title +
-   description + button) with a single tappable row, since there's only
-   ever one next step to offer here. */
-.home-continue-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  justify-content: flex-start;
-  color: var(--text);
-  background: var(--soft-bg);
-  border: 1px solid var(--border);
-}
-
-.home-continue-row span {
-  flex: 1 1 auto;
-  min-width: 0;
-  text-align: left;
-  font-weight: 700;
-}
-
-.home-continue-row-arrow {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  color: var(--muted);
-}
 
 
 @media (max-width: 640px) {
@@ -1227,11 +1250,15 @@ button {
 .panel-card {
   display: grid;
   gap: 14px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: 12px;
   padding: 20px;
   background: var(--panel-bg);
-  box-shadow: 0 10px 24px rgba(120, 98, 40, 0.04);
+  /* Was 0.04, then 0.08 -- still read as blending into the page background;
+     this is the base tier every screen's cards use, so it needed just
+     enough lift to read as a card, one step under .hero-card's stronger
+     --paper-shadow. */
+  box-shadow: 0 10px 24px rgba(120, 98, 40, 0.12);
 }
 
 /* Card hierarchy, applied as an additional class alongside each screen's
@@ -1331,7 +1358,7 @@ button {
       transparent 34px,
       transparent 36px
     ),
-    var(--soft-bg);
+    var(--surface-stage);
   padding: 20px;
 }
 
@@ -1465,7 +1492,9 @@ textarea {
   border-radius: 10px;
   padding: 14px;
   color: var(--text);
-  background: var(--panel-bg);
+  /* --sheet-bg (not --panel-bg) -- a textarea sitting inside a panel-card
+     of the same tone had no fill contrast of its own, just a border. */
+  background: var(--sheet-bg);
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
@@ -1483,7 +1512,7 @@ input {
   border-radius: 10px;
   padding: 10px 12px;
   color: var(--text);
-  background: var(--panel-bg);
+  background: var(--sheet-bg);
 }
 
 input,
@@ -1549,7 +1578,11 @@ button:focus-visible {
 
 .secondary-button {
   color: var(--text-secondary);
-  background: #efe6d4;
+  /* Was a hardcoded #efe6d4 -- nearly matched the new deeper --page-bg, so
+     secondary buttons on the page (not inside a card) lost their fill
+     contrast. Reusing --soft-bg keeps it on the shared middle tier instead
+     of a one-off color. */
+  background: var(--soft-bg);
 }
 
 .button-icon {
@@ -1756,7 +1789,7 @@ button:focus-visible {
   display: grid;
   gap: 16px;
   border: 1px solid var(--paper-border);
-  border-top: 3px solid var(--screen-accent, var(--accent));
+  border-top: 2px solid var(--screen-accent, var(--accent));
   border-radius: 20px;
   padding: 28px;
   margin: 0 auto;
@@ -1991,7 +2024,7 @@ select {
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--text);
-  background: var(--panel-bg);
+  background: var(--sheet-bg);
 }
 
 .empty {
@@ -2006,6 +2039,12 @@ select {
 
 /* Empty state that also points at a next action (a button), as opposed to
    .empty's plain informational text. */
+/* Was flat --panel-bg -- every empty state across the app (읽기/단어/복습/덱/
+   통계 all reuse this one class via AppEmptyState) read as a plain pale box
+   floating on the page. The same soft-bg + faint radial highlight
+   .desk-surface already uses (복습 tab) gives every empty moment a touch
+   more "resting on the desk" presence, app-wide, without touching any
+   component. */
 .empty-guide {
   display: grid;
   gap: 6px;
@@ -2013,7 +2052,13 @@ select {
   border: 1px dashed var(--border-strong);
   border-radius: 10px;
   padding: 24px;
-  background: var(--panel-bg);
+  background:
+    radial-gradient(
+      ellipse 70% 65% at 50% 25%,
+      rgba(255, 255, 255, 0.5) 0%,
+      transparent 72%
+    ),
+    var(--surface-stage);
   text-align: center;
   animation: app-slide-up var(--motion-base) var(--ease-soft) both;
 }
@@ -2265,7 +2310,7 @@ select {
 .study-control-panel-compact {
   gap: 12px;
   padding: 14px;
-  background: var(--soft-bg);
+  background: var(--surface-stage);
   box-shadow: none;
 }
 
@@ -2431,13 +2476,15 @@ select {
   position: relative;
   background: radial-gradient(
       ellipse 65% 55% at 50% 28%,
-      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.6) 0%,
       transparent 72%
     ),
-    var(--soft-bg);
+    var(--surface-stage);
+  /* Bottom inset was 0.28 -- softened so the surface reads as a light desk
+     tint, not a shadowed well. */
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -16px 26px -20px rgba(120, 98, 40, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -16px 26px -20px rgba(120, 98, 40, 0.18);
 }
 
 /* Desk stage backdrop -- the 640px-wide .study-card inside still centers
@@ -2447,8 +2494,17 @@ select {
    the bottom stands in for a desk edge; kept low-contrast so it never
    competes with the card or its rating buttons. */
 .desk-surface-stage {
-  padding: 28px 16px 40px;
-  border-radius: 28px;
+  padding: 16px 16px 22px;
+  border-radius: 24px;
+}
+
+/* Same desk-surface recipe, padded/rounded for a full-width section body
+   (a list + its empty state) instead of desk-surface-stage's single
+   centered flashcard -- lets 단어/덱 tabs' main content area read as
+   "resting on the desk" too, at the same intensity tier as 복습's stage. */
+.desk-surface-section {
+  padding: 16px;
+  border-radius: 16px;
 }
 
 .desk-surface-stage::after {
@@ -2475,7 +2531,7 @@ select {
   width: min(640px, 100%);
   margin: 0 auto;
   border: 1px solid var(--border);
-  border-top: 3px solid var(--screen-accent, var(--accent));
+  border-top: 2px solid var(--screen-accent, var(--accent));
   border-radius: 12px;
   padding: 28px;
   background: var(--panel-bg);
@@ -2487,6 +2543,22 @@ select {
    for the active flashcard instance that also carries that class. */
 .study-card.hero-card {
   border-radius: 20px;
+}
+
+/* Empty-state variant: the ready/empty placeholders previously used
+   .study-card too, so an opaque bordered+shadowed card sat nested inside
+   desk-surface-stage's own soft tinted surface -- "box inside a box" for a
+   screen that has nothing to show yet. Keeps .study-card's layout (width
+   cap, centering, internal gap) but drops the card shell, so the empty
+   state sits directly on the desk tint as the only surface. */
+.study-empty-flat {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 10px;
+  width: min(560px, 100%);
+  margin: 0 auto;
+  padding: 2px 16px;
 }
 
 .study-card-header {
@@ -2814,14 +2886,6 @@ select {
   animation: app-slide-up var(--motion-base) var(--ease-soft) both;
 }
 
-/* This is the one companion moment on the whole tab (the review-card flow
-   itself never repeats a big character) -- ~96px so shiori-review reads
-   clearly here, not just "a bit bigger than a mark". */
-.study-ready-card .shiori-asset--xl {
-  width: 100px;
-  height: 100px;
-}
-
 .study-ready-card h3,
 .study-ready-card p,
 .complete-card h3,
@@ -2830,9 +2894,9 @@ select {
 }
 
 .study-ready-card p {
-  max-width: 560px;
+  max-width: 480px;
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.5;
 }
 
 .example-text {
@@ -2915,34 +2979,37 @@ select {
   font-size: 12px;
 }
 
+/* Quiet stand-in for the old full AppEmptyState+button card that used to
+   render here for every pre-result "info" message (reset confirmation,
+   cancelled analysis, missing text/deck) -- those already have their own
+   guidance (the guide card above, or the .action-hint next to the submit
+   button), so a second heavy card with a duplicate "샘플로 체험" button was
+   just noise. Same quiet tone as .action-hint, slightly spaced from the
+   card above it. */
+.reading-status-hint {
+  margin-top: 2px;
+}
+
 .reading-loading-hint {
   color: var(--muted);
 }
 
-/* V3 final polish: 복원 안내/원문 입력 토글/초기화/저장 가능·바구니 chip
-   used to be a stacked hero title + full-width banner + header-actions row
-   + separate chip row above the reader -- now one compact wrapping
-   toolbar, so the reader canvas sits much closer to the top of the screen
-   once a result exists. */
-.reader-compact-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
 /* Small pill (not a full-width banner) for the "restored" notice -- same
-   information, far less vertical/visual weight. */
+   information, far less vertical/visual weight. Now rendered as a sibling
+   above .reader-paper (see ReaderMode.tsx) rather than inside the card, so
+   it reads as a quiet page-level notice instead of competing with the
+   reader card's own header for attention. */
 .reading-restored-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 8px 5px 12px;
+  margin-bottom: 8px;
+  padding: 4px 8px 4px 12px;
   border: 1px solid var(--paper-border);
   border-radius: 999px;
   background: var(--paper-bg);
   color: #6b5f3f;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -2964,17 +3031,66 @@ select {
   transform: none;
 }
 
-/* Open-page input area -- deliberately NOT another bordered .panel-card
-   rectangle. Reader/save-dock/candidate-drawer below already differ in
-   weight (hero card / flat dock / drawer pull); this is the 4th distinct
-   treatment: no box at all, just an open page that blends into the app's
-   paper background, so the reading tab doesn't read as a stack of
-   identical rounded rectangles. */
+/* Open-page input area -- once a reading result exists, this becomes the
+   compact "원문 수정" editor tucked under ReaderCompactToolbar, and stays
+   deliberately un-boxed there (reader/save-dock/candidate-drawer below
+   already read as three distinct card weights; a 4th bordered rectangle
+   here would be one too many). Before any result exists, though, this is
+   the *entire* first-visit screen -- an open page with no card anywhere
+   around it read as unfinished/empty rather than "open notebook", so that
+   state gets its own opaque card via .reading-input-open-intro below. */
 .reading-input-open {
   display: grid;
   gap: 12px;
   padding: 4px 2px 18px;
   border-bottom: 1px dashed var(--paper-border);
+}
+
+/* First-visit-only variant: the one paper card the whole pre-result
+   screen lives in (title -> optional sample guide -> textarea -> primary
+   action), same opaque-panel tone as the other tabs' top hero card. Its
+   nested .analyze-form/textarea keep the stripped-down "open page" styling
+   from above -- they don't need their own border now that this outer card
+   already provides one. */
+.reading-input-open-intro {
+  border-bottom: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  padding: 20px;
+  background: var(--panel-bg);
+  box-shadow: 0 16px 36px var(--paper-shadow);
+}
+
+/* The empty-text sample guide sits inside the intro card now, not as its
+   own dashed box floating above the textarea -- flattened to a plain
+   row (small Shiori beside the one-line hint + button) so the guide reads
+   as connected to the card's own title, not a second stacked block above
+   the textarea. */
+.reading-input-open-intro .reading-empty-guide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.reading-input-open-intro .reading-empty-guide p {
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+
+.reading-input-open-intro .reading-empty-guide .shiori-asset--md {
+  width: 36px;
+  height: 36px;
+}
+
+.reading-input-open-intro .reading-empty-guide button {
+  flex: 0 0 auto;
+  margin-top: 0;
 }
 
 .reading-input-open-header {
@@ -3135,7 +3251,7 @@ select {
    rule instead of inside a bordered box, so the "어휘 후보" list never
    competes with the reader for visual weight. */
 .reading-vocab-drawer {
-  border-top: 1px solid var(--border);
+  border-top: 1px dashed var(--border);
 }
 
 .reading-vocab-drawer-open {
@@ -3147,11 +3263,11 @@ select {
   width: 100%;
   align-items: center;
   gap: 8px;
-  padding: 12px 4px;
-  color: var(--text-secondary);
+  padding: 10px 4px;
+  color: var(--muted);
   background: transparent;
   box-shadow: none;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   text-align: left;
 }
@@ -3258,16 +3374,19 @@ select {
   color: #1b6b3a;
 }
 
+/* Same lavender/coral-beige status colors as .token-chip-uncertain/-unknown
+   and the vocab tab's own status filter chips -- was amber/rose here, the
+   one remaining spot using the old alarm-toned pair. */
 .reading-vocab-filter-uncertain.reading-vocab-filter-active {
-  border-color: #ecdba9;
-  background: #fbf0d9;
-  color: #7a5b12;
+  border-color: #d7cce9;
+  background: #f4f1fa;
+  color: #6f5f96;
 }
 
 .reading-vocab-filter-unknown.reading-vocab-filter-active {
-  border-color: #f3cdd1;
-  background: #fbe8ea;
-  color: #9b3b42;
+  border-color: #e8c7ae;
+  background: #fbf1e9;
+  color: #96603f;
 }
 
 .reading-vocab-filter-unclassified.reading-vocab-filter-active {
@@ -3523,47 +3642,28 @@ input.reading-vocab-item-checkbox {
   margin: 8px 0 0;
 }
 
-/* Reader Workspace top toolbar -- compact state chips shown once analysis
-   has a result, so "저장 가능/바구니에 담음" counts stay visible without the
-   big descriptive summary card the reader used to open with. */
-.reader-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: -4px 0 2px;
-}
-
-.reader-toolbar-chip {
-  padding: 5px 12px;
-  border: 1px solid var(--paper-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.reader-toolbar-chip-accent {
-  border-color: transparent;
-  background: var(--screen-accent, var(--primary));
-  color: #ffffff;
-}
-
-/* Save Dock -- deliberately NOT a titled .panel-card. A slim shelf-like
-   strip (count + one primary CTA on the same line) sitting right under the
-   reader, distinct in weight from the reader hero-card above it and the
-   drawer-pull below it, so the reading tab isn't four stacked look-alike
-   boxes. Quick-save/message/next-actions still stack inside it, just
-   without their own card frame. */
+/* Save Dock -- a slim shelf-like strip (count + one primary CTA on the same
+   line) sitting right under the reader. Previously just a dashed top rule
+   with no fill of its own, so it read as a divider, not a place to act --
+   against the library-card-stage's near-transparent striped backdrop that
+   made "다음 행동이 어디인지" genuinely hard to find. Now a real opaque
+   paper card (still visually lighter than the reader-paper hero above it:
+   smaller radius, thinner shadow), distinct in weight from the drawer-pull
+   below it, so the reading tab isn't four stacked look-alike boxes. */
 .reader-save-dock {
   display: grid;
   gap: 10px;
-  padding: 14px 4px 6px;
-  border-top: 1px dashed var(--paper-border);
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 14px var(--paper-shadow);
 }
 
 .save-dock-count {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   color: var(--text-secondary);
@@ -3574,6 +3674,30 @@ input.reading-vocab-item-checkbox {
 .save-dock-count strong {
   color: var(--screen-accent, var(--primary-dark));
   font-size: 16px;
+}
+
+/* The count itself as a small filled badge (not just bold text) so "담은
+   단어가 0개일 때 vs N개일 때" reads as a different shape, not just a
+   different number. */
+.save-dock-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--screen-accent-soft, var(--soft-bg));
+}
+
+.save-dock-saveable-chip {
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .save-dock-icon {
@@ -3636,18 +3760,18 @@ input.reading-vocab-item-checkbox {
 }
 
 .save-tray-stat-unknown {
-  border-color: #f3cdd1;
-  background: #fdf1f2;
+  border-color: #e8c7ae;
+  background: #fbf1e9;
 }
 
 .save-tray-stat-uncertain {
-  border-color: #ecdba9;
-  background: #fdf6e6;
+  border-color: #d7cce9;
+  background: #f4f1fa;
 }
 
 .save-tray-stat-unclassified {
-  border-color: #ddd0a8;
-  background: #f5efe0;
+  border-color: #ded2b0;
+  background: #f6f0e2;
 }
 
 .save-tray-stat-known {
@@ -3668,8 +3792,7 @@ input.reading-vocab-item-checkbox {
 
 .save-tray-quick-save-toggle {
   align-self: flex-start;
-  color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -3765,12 +3888,20 @@ input.reading-vocab-item-checkbox {
 
 /* The single strongest CTA on the tab -- title + one-line copy above the
    quick-start tiles, wrapped in .hero-card so it visually outranks the
-   compact stats strip and the deck/mode utility panel below it. */
+   compact stats strip and the deck/mode utility panel below it.
+   .hero-card only contributes border-radius/shadow, not a fill -- this
+   needed its own opaque background + border, unlike home-hero-card which
+   already pairs .hero-card with .panel-card for that. Without it the
+   panel rendered with no background at all, reading as transparent
+   against the page. */
 .study-hero-card {
   display: grid;
   gap: 12px;
   padding: 16px;
-  border-top: 3px solid var(--screen-accent, var(--accent));
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--screen-accent, var(--accent));
+  background: var(--panel-bg);
+  box-shadow: 0 12px 28px var(--paper-shadow);
 }
 
 .study-hero-header {
@@ -3808,11 +3939,20 @@ input.reading-vocab-item-checkbox {
    an analysis tool no matter the copy, so this wraps it in a stage: title
    + description + Shiori stay visible the whole time (previously the
    guide/illustration only showed while the textarea was still empty, so
-   typing collapsed the screen back into "just a textarea"). */
+   typing collapsed the screen back into "just a textarea"). Was relying on
+   library-card-stage's duller stage-tone background for its fill --
+   .hero-card contributes no fill of its own -- so this read as a visibly
+   different, flatter card family than the other tabs' top hero card
+   (study-hero-card, home-hero-card). Same opaque-panel + accent-top-border
+   recipe as .study-hero-card now, so every tab's top card reads as the
+   same card system. */
 .classify-stage {
   display: grid;
   gap: 16px;
   padding: 24px;
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--screen-accent, var(--accent));
+  background: var(--panel-bg);
 }
 
 .classify-hero-header {
@@ -3834,6 +3974,7 @@ input.reading-vocab-item-checkbox {
 
 .classify-hero-header p {
   margin: 4px 0 0;
+  max-width: 46ch;
   color: var(--muted);
   font-size: 13px;
 }
@@ -3855,22 +3996,30 @@ input.reading-vocab-item-checkbox {
   border: 1.5px dashed var(--border-strong);
   border-radius: 12px;
   color: var(--text-secondary);
-  background: var(--soft-bg);
+  background: var(--surface-stage);
 }
 
+/* One grouped action area (deck-select + checkbox + submit) instead of
+   controls floating on the left and the button hard-pushed to the far
+   right -- the dashed top divider + padding separates it from the
+   textarea above, so select/checkbox/button read as one row belonging
+   together rather than two independently-aligned pieces. */
 .classify-hero-footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
 }
 
 .classify-hero-cta-row {
-  justify-content: center;
+  flex: 1 1 auto;
+  justify-content: flex-end;
 }
 
 .classify-hero-cta-row .reading-open-button {
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .study-cta-grid {
@@ -3879,6 +4028,12 @@ input.reading-vocab-item-checkbox {
   gap: 10px;
 }
 
+/* Non-primary tiles (새 단어 학습/어려운 단어 복습/덱별 학습) were nearly as
+   opaque/shadowed/bold as the primary "오늘 복습 시작" tile below (same
+   panel-bg fill, same border-strong, a visible shadow) -- so all 4 tiles
+   read as equally important, weakening which one is actually the
+   recommended action. Lighter fill/border/shadow/weight here; the primary
+   modifier still overrides these back up to full weight. */
 .study-cta-button {
   display: grid;
   gap: 4px;
@@ -3886,9 +4041,9 @@ input.reading-vocab-item-checkbox {
   padding: 11px 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  color: var(--text);
-  background: var(--panel-bg);
-  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
+  color: var(--text-secondary);
+  background: var(--soft-bg);
+  box-shadow: none;
   text-align: center;
 }
 
@@ -3898,6 +4053,10 @@ input.reading-vocab-item-checkbox {
 
 .study-cta-label {
   font-size: 14px;
+  font-weight: 600;
+}
+
+.study-cta-button-primary .study-cta-label {
   font-weight: 700;
 }
 
@@ -4118,8 +4277,8 @@ input.reading-vocab-item-checkbox {
    the deck breakdown reads as shelf log entries, not table rows. */
 .records-deck-row {
   display: grid;
-  gap: 6px;
-  padding: 12px 14px;
+  gap: 4px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--panel-bg);
@@ -4140,7 +4299,7 @@ input.reading-vocab-item-checkbox {
 }
 
 .records-deck-progress {
-  height: 8px;
+  height: 6px;
 }
 
 /* Primary-visible row: 오늘 복습 N / 모르는 단어 N -- 전체/아는 단어/헷갈리는
@@ -4236,11 +4395,21 @@ input.reading-vocab-item-checkbox {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px 10px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--panel-bg);
   box-shadow: 0 2px 6px rgba(120, 98, 40, 0.05);
+}
+
+/* Scoped to the 통계 tab's own log lists only (not the shared
+   .custom-term-card use of this same row class in VocabSection, which
+   stays untouched) -- a touch tighter so a long "최근 담은 단어"/"자주
+   틀린 단어" list reads less like a management list once it grows past
+   a handful of rows. */
+.records-word-log .records-word-row {
+  gap: 5px 10px;
+  padding: 6px 12px;
 }
 
 .records-word-surface {
@@ -4402,7 +4571,7 @@ input.reading-vocab-item-checkbox {
 
 .shared-hero-card {
   padding: 14px 18px;
-  border-top: 3px solid var(--screen-accent, var(--accent));
+  border-top: 2px solid var(--screen-accent, var(--accent));
 }
 
 /* One "shelf" of cards under a small heading -- a display-only grouping of
@@ -4558,11 +4727,19 @@ input.reading-vocab-item-checkbox {
   position: relative;
 }
 
+/* Was a full-saturation --primary band (the same teal every primary button
+   uses) -- as a full-width card header next to the app's otherwise warm
+   cream/amber tones, it read as an admin/status banner rather than a book
+   cover. Further desaturated toward the app's neutral gray-brown (less
+   chroma, not a new hue) and given a thinner strip + fainter dot texture so
+   "내가 공유함" reads as a quiet cover tone next to the shelf's warm covers,
+   not a standout status band. */
 .brand-deck-cover-mine {
-  background-color: var(--primary);
+  padding: 6px 16px;
+  background-color: #8a9c9c;
   background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
-    linear-gradient(135deg, #3d7885 0%, var(--primary) 100%);
+    radial-gradient(circle, rgba(255, 255, 255, 0.14) 1px, transparent 1.3px),
+    linear-gradient(135deg, #9aabab 0%, #7d9191 100%);
 }
 
 .brand-deck-cover-shared {
@@ -4671,12 +4848,13 @@ input.reading-vocab-item-checkbox {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  padding: 3px 10px;
+  padding: 2px 9px;
   font-size: 12px;
   font-weight: 700;
-  color: #ffffff;
-  background: var(--primary);
+  color: var(--primary-dark);
+  background: var(--soft-bg);
   white-space: nowrap;
 }
 
@@ -4875,11 +5053,11 @@ input.reading-vocab-item-checkbox {
    drawer's filter tab, not an admin data-table toolbar. */
 .index-card-filter {
   display: grid;
-  gap: 8px;
+  gap: 4px;
   border: 1px dashed var(--border-strong);
   border-radius: 4px 4px 10px 10px;
-  padding: 10px;
-  background: var(--soft-bg);
+  padding: 6px 8px;
+  background: var(--surface-stage);
 }
 
 .vocab-toolbar-label {
@@ -4898,7 +5076,7 @@ input.reading-vocab-item-checkbox {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 
 /* V3 final polish: bare <select> elements fall back to native browser
@@ -5013,7 +5191,7 @@ input.reading-vocab-item-checkbox {
 }
 
 .vocab-filter-chip {
-  padding: 5px 12px;
+  padding: 4px 11px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--soft-bg);
@@ -5039,16 +5217,21 @@ input.reading-vocab-item-checkbox {
   color: #1b6b3a;
 }
 
+/* Uncertain/unknown reuse the same lavender/coral-beige tones as the
+   reading tab's token highlights (.token-chip-uncertain/-unknown,
+   .save-tray-stat-uncertain/-unknown) instead of the amber/rose this used
+   to carry -- one status color language app-wide, and "모르는 단어" no
+   longer reads as an error/warning chip here either. */
 .vocab-filter-uncertain.vocab-filter-chip-active {
-  border-color: #ecdba9;
-  background: #fbf0d9;
-  color: #7a5b12;
+  border-color: #d7cce9;
+  background: #f4f1fa;
+  color: #6f5f96;
 }
 
 .vocab-filter-unknown.vocab-filter-chip-active {
-  border-color: #f3cdd1;
-  background: #fbe8ea;
-  color: #9b3b42;
+  border-color: #e8c7ae;
+  background: #fbf1e9;
+  color: #96603f;
 }
 
 .vocab-filter-unclassified.vocab-filter-chip-active {
@@ -5071,7 +5254,7 @@ input.reading-vocab-item-checkbox {
   display: grid;
   gap: 8px;
   padding: 8px;
-  border-top: 3px solid var(--screen-accent, var(--accent));
+  border-top: 2px solid var(--screen-accent, var(--accent));
   border-radius: 12px;
   background: var(--soft-bg);
 }
@@ -5724,14 +5907,6 @@ input.reading-vocab-item-checkbox {
     padding: 7px 12px;
   }
 
-  /* Same opt-out for the reading toolbar row's buttons -- otherwise each
-     one stretches full-width and the compact one-row toolbar becomes a
-     tall stack of full-width buttons again on mobile. */
-  .reader-compact-toolbar button {
-    width: auto;
-    min-width: 0;
-  }
-
   .management-actions {
     align-items: stretch;
     flex-direction: column;
@@ -6146,7 +6321,7 @@ input.reading-vocab-item-checkbox {
 .reader-workspace {
   position: relative;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   padding-left: 18px;
 }
 
@@ -6174,9 +6349,14 @@ input.reading-vocab-item-checkbox {
    card, not the toolbar above it, is what a first glance should land on. */
 .reader-paper {
   border: 1px solid var(--paper-border);
+  border-top: 2px solid var(--screen-accent, var(--accent));
   padding: 28px;
   background: var(--paper-bg);
-  box-shadow: 0 10px 26px var(--paper-shadow);
+  /* Matches the shared .hero-card shadow tier (study/vocab/shared-deck hero
+     cards) instead of a slightly flatter one-off value -- ties the reader's
+     one hero surface into the same "warm paper" family as the rest of the
+     app instead of reading as a notch quieter than its siblings. */
+  box-shadow: 0 16px 36px var(--paper-shadow);
 }
 
 .reader-mode-header-row {
@@ -6229,6 +6409,20 @@ input.reading-vocab-item-checkbox {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* "원문 입력 펼치기/접기" + "새 원문" -- previously their own toolbar row
+   above the reader card (원문 관리 disclosure), now folded into this same
+   options popover as a visually separate group (session management, not
+   display preference) instead of a second management surface. */
+.reader-mode-toggles-manage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px dashed var(--border);
 }
 
 .reading-focus-toggle,
@@ -6299,17 +6493,17 @@ input.reading-vocab-item-checkbox {
 .reader-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   max-width: 740px;
   margin: 0 auto;
   color: var(--text);
   font-size: 19px;
-  line-height: 2.2;
+  line-height: 2;
 }
 
 .reader-line {
   margin: 0;
-  padding: 6px 0;
+  padding: 3px 0;
   line-height: inherit;
   word-break: keep-all;
   /* Preserves any incidental runs of spaces from the pasted text (real
@@ -6342,33 +6536,51 @@ input.reading-vocab-item-checkbox {
   gap: 4px;
 }
 
+/* ============================================================================
+   Reading-tab word highlight (consolidated -- replaces several earlier
+   stacked passes: solid chip -> underline-only -> bordered capsule ->
+   full-word bar -> this).
+
+   Root cause of "highlight longer than the word": the JLPT badge used to
+   render as a plain sibling of the label text *inside* the same .token-chip
+   button, so a background/::before covering the whole button covered the
+   badge too. Fix is structural, not just color: TokenChip.tsx now wraps the
+   label alone in an inner <span class="token-chip-surface">; only that
+   span gets painted, and the badge sits outside it.
+
+   - .token-chip: the button itself. No background, no border, no padding of
+     its own -- purely a click target + keyboard focus ring. Never
+     contributes to how wide the highlight looks.
+   - .token-chip-surface: wraps *only* the word text. Every status class
+     below sets two custom properties on the outer .token-chip
+     (--chip-fill, optionally --chip-glow); both inherit down into this
+     span, which is the only thing that actually paints them.
+   ========================================================================== */
 .token-chip {
+  position: relative;
   display: inline;
+  /* The app-wide `button { min-width: 120px }` CTA reset otherwise leaks
+     onto every reader word -- a 1-2 char token (闇, 中, 声...) has natural
+     content width well under 120px, so it silently got stretched to a
+     120px box, reading as a huge gap around a tiny word. Form controls
+     apply width/min-width even under display:inline, so these need an
+     explicit reset back to the word's own natural size. */
+  width: auto;
   min-width: 0;
+  height: auto;
+  min-height: 0;
   margin: 0;
-  padding: 4px 3px;
+  padding: 0;
   border: none;
-  border-radius: 5px;
+  background: none;
   color: inherit;
-  background: transparent;
   font-size: inherit;
   font-weight: 500;
   cursor: pointer;
-  transition:
-    background-color 0.12s ease,
-    box-shadow 0.12s ease,
-    filter 0.12s ease;
 }
 
-/* Override the generic button hover lift -- an individual word floating up
-   mid-sentence would look glitchy in running prose. box-shadow is left
-   alone so .token-chip-active's selection ring survives being hovered. */
 .token-chip:not(:disabled):hover {
   transform: none;
-}
-
-.token-chip:not(.token-chip-muted):hover {
-  filter: brightness(0.96);
 }
 
 .token-chip:focus-visible {
@@ -6376,37 +6588,174 @@ input.reading-vocab-item-checkbox {
   outline-offset: 2px;
 }
 
-/* Known/plain words stay close to normal reading text -- only a faint tint,
-   no border -- so they don't compete visually with words worth studying. */
+.token-chip-surface {
+  position: relative;
+  isolation: isolate;
+  z-index: 0;
+  display: inline;
+  padding: 0;
+  line-height: 1.4;
+  box-shadow: var(--chip-glow, none);
+  /* Kept low relative to the mark's own width (see ::before below) -- a
+     radius closer to 0.24em rounds a 1-char mark almost into a circle,
+     so most of the extra width added past the glyph gets eaten by the
+     curve instead of reading as a flat highlighter overshoot. */
+  border-radius: 0.14em;
+  transition:
+    filter 0.12s ease,
+    text-decoration-color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.token-chip:not(.token-chip-muted):hover .token-chip-surface {
+  filter: brightness(0.97);
+}
+
+/* Second pass on the width fix: the previous version sized this ::before to
+   .token-chip-surface's own (near-zero) padding box, which made the mark
+   shrink down to almost exactly the glyph outline -- "tiny colored dots"
+   instead of a highlighter stroke. Now the box is explicitly widened past
+   the text with negative left/right insets (not padding, so it doesn't
+   push the surrounding sentence apart) -- the mark reads as "slightly
+   wider than the word", the way a real highlighter overshoots a little on
+   both ends. Top/bottom insets are asymmetric on purpose (a touch more cut
+   off the top than the bottom) to match the gradient already being paler
+   at the top -- both push the "ink" toward pooling along the baseline. */
+.token-chip-surface::before {
+  content: "";
+  position: absolute;
+  left: -0.19em;
+  right: -0.19em;
+  top: 0.05em;
+  bottom: 0.02em;
+  z-index: -1;
+  border-radius: inherit;
+  background-image: var(--chip-fill, none);
+  pointer-events: none;
+}
+
 .token-chip-known,
 .token-chip-plain {
-  background: transparent;
   color: inherit;
 }
 
-/* known/unclassified are usually the majority of tokens in any given text,
-   so a filled highlight on both made ordinary prose look like an annotated
-   dataset. An inset underline (via box-shadow so it doesn't add to line
-   height) keeps the state visible without painting most of the page. */
-.token-chip-known {
-  background: transparent;
-  box-shadow: inset 0 -2px 0 0 var(--status-known-line);
+/* .token-chip-plain (focus-mode dimming) stays fully quiet -- no mark at
+   all -- so the words a reader asked to de-emphasize actually recede. */
+.token-chip-plain {
+  --chip-fill: none;
 }
 
+/* A soft full-word pastel wash: three gradient stops (mostly transparent at
+   the top, a little more ink pooled at the bottom) instead of one flat
+   fill, closer to how a real highlighter pen actually looks. Alpha is
+   deliberately low across all four states -- color alone should tell the
+   words apart, not saturation. A faint dotted underline (same hue,
+   low alpha) rides along at rest too -- previously this only appeared on
+   hover/focus, so a clickable word looked identical to plain surrounding
+   text until the pointer was already on it. transition: text-decoration-
+   color above now has a real base color to animate from. */
+.token-chip-known {
+  --chip-fill: linear-gradient(
+    180deg,
+    rgba(140, 189, 163, 0.05) 0%,
+    rgba(140, 189, 163, 0.09) 38%,
+    rgba(140, 189, 163, 0.15) 100%
+  );
+  text-decoration: underline dotted rgba(79, 140, 102, 0.26);
+  text-underline-offset: 2px;
+}
+
+/* Uncertain/unknown previously read amber-gold and rose-red -- the red in
+   particular looked like a validation/error mark on the page, not a
+   reading-note highlight. Recolored to lavender (uncertain) and a warm
+   coral-beige (unknown, nowhere near red) -- kept local to these chips
+   rather than reusing --status-uncertain-fg/--status-unknown-fg, since
+   those tokens are shared by other UI (stat pills, dots elsewhere) this
+   pass isn't meant to touch. */
 .token-chip-uncertain {
-  background: var(--status-uncertain-bg);
-  color: var(--status-uncertain-fg);
+  color: #6f5f96;
+  --chip-fill: linear-gradient(
+    180deg,
+    rgba(173, 156, 214, 0.07) 0%,
+    rgba(173, 156, 214, 0.12) 38%,
+    rgba(173, 156, 214, 0.2) 100%
+  );
+  text-decoration: underline dotted rgba(111, 95, 150, 0.24);
+  text-underline-offset: 2px;
 }
 
 .token-chip-unknown {
-  background: var(--status-unknown-bg);
-  color: var(--status-unknown-fg);
+  color: #96603f;
+  --chip-fill: linear-gradient(
+    180deg,
+    rgba(214, 162, 129, 0.06) 0%,
+    rgba(214, 162, 129, 0.1) 38%,
+    rgba(214, 162, 129, 0.18) 100%
+  );
+  text-decoration: underline dotted rgba(150, 96, 63, 0.26);
+  text-underline-offset: 2px;
 }
 
 .token-chip-unclassified {
-  background: transparent;
   color: inherit;
-  box-shadow: inset 0 -2px 0 0 var(--status-unclassified-line);
+  --chip-fill: linear-gradient(
+    180deg,
+    rgba(210, 197, 165, 0.06) 0%,
+    rgba(210, 197, 165, 0.1) 38%,
+    rgba(210, 197, 165, 0.17) 100%
+  );
+  text-decoration: underline dotted rgba(150, 140, 115, 0.2);
+  text-underline-offset: 2px;
+}
+
+/* Hover/focus: alpha roughly doubles, plus a soft dotted underline -- the
+   only two cues that this word is interactive at all. */
+.token-chip-known:hover,
+.token-chip-known:focus-visible {
+  --chip-fill: linear-gradient(
+    180deg,
+    rgba(140, 189, 163, 0.13) 0%,
+    rgba(140, 189, 163, 0.2) 38%,
+    rgba(140, 189, 163, 0.35) 100%
+  );
+  text-decoration: underline dotted rgba(79, 140, 102, 0.6);
+  text-underline-offset: 2px;
+}
+
+.token-chip-uncertain:hover,
+.token-chip-uncertain:focus-visible {
+  --chip-fill: linear-gradient(
+    180deg,
+    rgba(173, 156, 214, 0.17) 0%,
+    rgba(173, 156, 214, 0.28) 38%,
+    rgba(173, 156, 214, 0.46) 100%
+  );
+  text-decoration: underline dotted rgba(111, 95, 150, 0.65);
+  text-underline-offset: 2px;
+}
+
+.token-chip-unknown:hover,
+.token-chip-unknown:focus-visible {
+  --chip-fill: linear-gradient(
+    180deg,
+    rgba(214, 162, 129, 0.15) 0%,
+    rgba(214, 162, 129, 0.24) 38%,
+    rgba(214, 162, 129, 0.4) 100%
+  );
+  text-decoration: underline dotted rgba(150, 96, 63, 0.65);
+  text-underline-offset: 2px;
+}
+
+.token-chip-unclassified:hover,
+.token-chip-unclassified:focus-visible {
+  --chip-fill: linear-gradient(
+    180deg,
+    rgba(210, 197, 165, 0.13) 0%,
+    rgba(210, 197, 165, 0.2) 38%,
+    rgba(210, 197, 165, 0.37) 100%
+  );
+  text-decoration: underline dotted rgba(150, 140, 115, 0.48);
+  text-underline-offset: 2px;
 }
 
 /* .reading-vocab-status-badge and .legend-swatch reuse the same
@@ -6422,19 +6771,19 @@ input.reading-vocab-item-checkbox {
 
 .reading-vocab-status-badge.token-chip-uncertain,
 .legend-swatch.token-chip-uncertain {
-  background: #fbf0d9;
-  color: #7a5b12;
+  background: #f0ecf9;
+  color: #6f5f96;
 }
 
 .reading-vocab-status-badge.token-chip-unknown,
 .legend-swatch.token-chip-unknown {
-  background: #fbe8ea;
-  color: #9b3b42;
+  background: #faeee2;
+  color: #96603f;
 }
 
 .reading-vocab-status-badge.token-chip-unclassified,
 .legend-swatch.token-chip-unclassified {
-  background: #ece4d0;
+  background: #f1ead9;
   color: #6b5f3f;
   box-shadow: none;
 }
@@ -6447,37 +6796,57 @@ input.reading-vocab-item-checkbox {
   opacity: 0.8;
 }
 
-/* Selection cue -- a light amber wash plus a ring rather than a solid fill,
-   so the active word is unmistakable without reading as a data highlight. */
+/* Selection cue -- stronger fill than any status above, plus a glow (not a
+   hard ring): one thin near-solid edge plus a soft blurred halo, sized to
+   .token-chip-surface (the word alone) via --chip-glow, so it wraps the
+   word the same way the fill does -- never the badge, never a card frame. */
 .token-chip-active {
-  background: rgba(250, 204, 21, 0.16);
   color: inherit;
-  box-shadow: 0 0 0 2px rgba(217, 164, 30, 0.55);
+  --chip-fill: linear-gradient(
+    180deg,
+    rgba(250, 214, 130, 0.32) 0%,
+    rgba(230, 172, 45, 0.5) 100%
+  );
+  --chip-glow:
+    0 0 0 1px rgba(217, 164, 30, 0.55),
+    0 1px 5px rgba(217, 164, 30, 0.35);
 }
 
+/* No hard border/pill outline -- a bordered badge next to a full-word
+   highlight read as a second little box. A very faint translucent-white
+   backing (not a border) is enough to keep N5/N4/N3 legible against
+   whichever pastel status color sits behind it, without competing with
+   the highlight for attention. */
+/* Shows on almost every content word by default (JLPT tags are on unless
+   the reader turns them off), so its own footprint -- margin + padding +
+   width -- adds real horizontal material between every word across a whole
+   sentence. Kept as small/quiet as still-legible so it reads as a faint
+   note next to the word, not a second tag breaking up sentence flow. */
 .jlpt-chip-badge {
   display: inline-block;
-  margin-left: 2px;
-  padding: 0 3px;
-  border: 1px solid #e1e5eb;
-  border-radius: 999px;
-  background: #f4f6fa;
-  color: #8b93a1;
-  font-size: 8px;
+  margin-left: 0.05em;
+  padding: 0 1px;
+  border: none;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.45);
+  color: #7d8490;
+  font-size: 7px;
   font-weight: 700;
-  line-height: 1.45;
-  vertical-align: text-top;
+  line-height: 1.4;
+  vertical-align: super;
   white-space: nowrap;
-  opacity: 0.8;
-  transition: opacity 0.12s ease, color 0.12s ease;
+  opacity: 0.45;
+  transition:
+    opacity 0.12s ease,
+    color 0.12s ease,
+    background-color 0.12s ease;
 }
 
-/* Stays out of the way while reading; brightens only when its word is
-   actively hovered/focused, per the "muted by default" requirement. */
 .token-chip:hover .jlpt-chip-badge,
 .token-chip:focus-visible .jlpt-chip-badge {
   opacity: 1;
-  color: #5b6472;
+  color: #4d5561;
+  background: rgba(255, 255, 255, 0.75);
 }
 
 .jlpt-detail-hint {
@@ -6550,7 +6919,7 @@ input.reading-vocab-item-checkbox {
   max-width: 480px;
   max-height: 85vh;
   overflow-y: auto;
-  border-top: 3px solid var(--screen-accent, var(--accent));
+  border-top: 2px solid var(--screen-accent, var(--accent));
   border-radius: 16px 16px 0 0;
   padding: 20px;
   background: var(--panel-bg);
@@ -6573,58 +6942,6 @@ input.reading-vocab-item-checkbox {
 
 .bookmark-inspector::-webkit-scrollbar-track {
   background: transparent;
-}
-
-/* Idle Word Inspector -- desktop-only "nothing selected yet" placeholder
-   docked in the exact same spot TokenDetailSheet occupies once a word is
-   clicked (see the min-width:641px override below), so the panel reads as
-   a permanent fixture of the workspace rather than something that only
-   appears on demand. Hidden by default (mobile): the reader-workspace
-   mobile spec wants the inspector to stay out of the way until a word is
-   actually tapped, not sit as a permanent bottom sheet. */
-.token-sheet-overlay-idle {
-  display: none;
-  pointer-events: none;
-  background: transparent;
-}
-
-/* Content is a ShioriGuideCard now (icon + one line) -- this wrapper just
-   centers that strip in the panel; the icon+text arrangement itself is
-   ShioriGuideCard's own. */
-.token-sheet-idle {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  padding: 28px 20px;
-  pointer-events: none;
-}
-
-/* The idle guide itself is pointer-events:none (a passive hint, not a
-   clickable panel), but its own dismiss button needs to opt back in so it
-   can actually be closed. */
-.token-sheet-idle-dismiss {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1;
-  pointer-events: auto;
-}
-
-.token-sheet-idle-dismiss:hover {
-  background: var(--soft-bg);
-  color: var(--text);
 }
 
 .token-sheet-header {
@@ -7065,16 +7382,6 @@ input.reading-vocab-item-checkbox {
     box-shadow: 0 16px 40px rgba(120, 98, 40, 0.18);
   }
 
-  /* Idle inspector reuses .token-sheet-overlay's right-dock positioning
-     above (same base class) -- only needs to become visible here. A small
-     top offset (base overlay is anchored to the raw viewport edge) drops it
-     down near where the reading guide/text actually starts, so it reads as
-     a companion panel beside the reading area instead of a notification
-     floating at the very top of the screen. */
-  .token-sheet-overlay-idle {
-    display: flex;
-    padding-top: 96px;
-  }
 }
 
 @media (max-width: 640px) {
