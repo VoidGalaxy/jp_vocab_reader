@@ -461,7 +461,7 @@ export function ReadingTab({
                 value={text}
                 onChange={(event) => onTextChange(event.target.value)}
                 placeholder="彼は闇の中で声を聞いた。少女は約束を思い出した。"
-                rows={6}
+                rows={4}
               />
               <div className="reading-input-footer">
                 <label className="reading-deck-picker">
@@ -543,16 +543,7 @@ export function ReadingTab({
 
       {!summary && message ? (
         !hasResult && !isAnalyzing && messageTone === "info" ? (
-          <AppEmptyState icon={SparkleIcon} className="reading-empty-guide" title={message}>
-            <button
-              type="button"
-              className="ghost-button compact-button"
-              onClick={onLoadSampleText}
-            >
-              <SparkleIcon className="button-icon" />
-              샘플 문장으로 체험
-            </button>
-          </AppEmptyState>
+          <p className="action-hint reading-status-hint">{message}</p>
         ) : (
           <p className={`message message--${messageTone}`}>{message}</p>
         )

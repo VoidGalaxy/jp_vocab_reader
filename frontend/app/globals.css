@@ -1146,7 +1146,8 @@ button {
    home's second hero. */
 .home-recent-section {
   display: grid;
-  gap: 6px;
+  gap: 4px;
+  margin-bottom: -6px;
 }
 
 .home-recent-section-title {
@@ -1160,12 +1161,12 @@ button {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 180px));
   justify-content: start;
-  gap: 8px;
+  gap: 6px;
 }
 
 .home-recent-index-card {
-  padding: 8px 10px;
-  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.06);
+  padding: 6px 10px;
+  box-shadow: 0 3px 8px rgba(120, 98, 40, 0.05);
 }
 
 .home-recent-index-card-surface {
@@ -2493,8 +2494,8 @@ select {
    the bottom stands in for a desk edge; kept low-contrast so it never
    competes with the card or its rating buttons. */
 .desk-surface-stage {
-  padding: 28px 16px 40px;
-  border-radius: 28px;
+  padding: 16px 16px 22px;
+  border-radius: 24px;
 }
 
 /* Same desk-surface recipe, padded/rounded for a full-width section body
@@ -2554,10 +2555,10 @@ select {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 16px;
+  gap: 10px;
   width: min(560px, 100%);
   margin: 0 auto;
-  padding: 12px 16px;
+  padding: 2px 16px;
 }
 
 .study-card-header {
@@ -2885,14 +2886,6 @@ select {
   animation: app-slide-up var(--motion-base) var(--ease-soft) both;
 }
 
-/* This is the one companion moment on the whole tab (the review-card flow
-   itself never repeats a big character) -- ~96px so shiori-review reads
-   clearly here, not just "a bit bigger than a mark". */
-.study-ready-card .shiori-asset--xl {
-  width: 100px;
-  height: 100px;
-}
-
 .study-ready-card h3,
 .study-ready-card p,
 .complete-card h3,
@@ -2901,9 +2894,9 @@ select {
 }
 
 .study-ready-card p {
-  max-width: 560px;
+  max-width: 480px;
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.5;
 }
 
 .example-text {
@@ -2986,23 +2979,37 @@ select {
   font-size: 12px;
 }
 
+/* Quiet stand-in for the old full AppEmptyState+button card that used to
+   render here for every pre-result "info" message (reset confirmation,
+   cancelled analysis, missing text/deck) -- those already have their own
+   guidance (the guide card above, or the .action-hint next to the submit
+   button), so a second heavy card with a duplicate "샘플로 체험" button was
+   just noise. Same quiet tone as .action-hint, slightly spaced from the
+   card above it. */
+.reading-status-hint {
+  margin-top: 2px;
+}
+
 .reading-loading-hint {
   color: var(--muted);
 }
 
 /* Small pill (not a full-width banner) for the "restored" notice -- same
-   information, far less vertical/visual weight. */
+   information, far less vertical/visual weight. Now rendered as a sibling
+   above .reader-paper (see ReaderMode.tsx) rather than inside the card, so
+   it reads as a quiet page-level notice instead of competing with the
+   reader card's own header for attention. */
 .reading-restored-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
-  padding: 5px 8px 5px 12px;
+  margin-bottom: 8px;
+  padding: 4px 8px 4px 12px;
   border: 1px solid var(--paper-border);
   border-radius: 999px;
   background: var(--paper-bg);
   color: #6b5f3f;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -3049,20 +3056,41 @@ select {
   border-bottom: none;
   border: 1px solid var(--border-strong);
   border-radius: 20px;
-  padding: 24px;
+  padding: 20px;
   background: var(--panel-bg);
   box-shadow: 0 16px 36px var(--paper-shadow);
 }
 
 /* The empty-text sample guide sits inside the intro card now, not as its
    own dashed box floating above the textarea -- flattened to a plain
-   inline row (small Shiori + one line + button) so the screen reads as
-   one card, not a card inside a card. */
+   row (small Shiori beside the one-line hint + button) so the guide reads
+   as connected to the card's own title, not a second stacked block above
+   the textarea. */
 .reading-input-open-intro .reading-empty-guide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
   border: none;
   background: transparent;
   padding: 0;
-  margin-bottom: 0;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+.reading-input-open-intro .reading-empty-guide p {
+  flex: 1 1 auto;
+  min-width: 160px;
+}
+
+.reading-input-open-intro .reading-empty-guide .shiori-asset--md {
+  width: 36px;
+  height: 36px;
+}
+
+.reading-input-open-intro .reading-empty-guide button {
+  flex: 0 0 auto;
+  margin-top: 0;
 }
 
 .reading-input-open-header {
@@ -3223,7 +3251,7 @@ select {
    rule instead of inside a bordered box, so the "어휘 후보" list never
    competes with the reader for visual weight. */
 .reading-vocab-drawer {
-  border-top: 1px solid var(--border);
+  border-top: 1px dashed var(--border);
 }
 
 .reading-vocab-drawer-open {
@@ -3235,11 +3263,11 @@ select {
   width: 100%;
   align-items: center;
   gap: 8px;
-  padding: 12px 4px;
-  color: var(--text-secondary);
+  padding: 10px 4px;
+  color: var(--muted);
   background: transparent;
   box-shadow: none;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   text-align: left;
 }
@@ -3346,16 +3374,19 @@ select {
   color: #1b6b3a;
 }
 
+/* Same lavender/coral-beige status colors as .token-chip-uncertain/-unknown
+   and the vocab tab's own status filter chips -- was amber/rose here, the
+   one remaining spot using the old alarm-toned pair. */
 .reading-vocab-filter-uncertain.reading-vocab-filter-active {
-  border-color: #ecdba9;
-  background: #fbf0d9;
-  color: #7a5b12;
+  border-color: #d7cce9;
+  background: #f4f1fa;
+  color: #6f5f96;
 }
 
 .reading-vocab-filter-unknown.reading-vocab-filter-active {
-  border-color: #f3cdd1;
-  background: #fbe8ea;
-  color: #9b3b42;
+  border-color: #e8c7ae;
+  background: #fbf1e9;
+  color: #96603f;
 }
 
 .reading-vocab-filter-unclassified.reading-vocab-filter-active {
@@ -3623,11 +3654,11 @@ input.reading-vocab-item-checkbox {
   display: grid;
   gap: 10px;
   margin-top: 14px;
-  padding: 16px;
-  border: 1px solid var(--border-strong);
+  padding: 14px;
+  border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--panel-bg);
-  box-shadow: 0 10px 22px var(--paper-shadow);
+  box-shadow: 0 6px 14px var(--paper-shadow);
 }
 
 .save-dock-count {
@@ -3968,25 +3999,27 @@ input.reading-vocab-item-checkbox {
   background: var(--surface-stage);
 }
 
+/* One grouped action area (deck-select + checkbox + submit) instead of
+   controls floating on the left and the button hard-pushed to the far
+   right -- the dashed top divider + padding separates it from the
+   textarea above, so select/checkbox/button read as one row belonging
+   together rather than two independently-aligned pieces. */
 .classify-hero-footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
 }
 
-/* Was its own centered row below the deck-select/checkbox line -- two
-   rows with different alignment (left-flowing footer, centered button)
-   read as loosely arranged. Now a nested flex inside .classify-hero-footer
-   itself, pushed to the row's trailing edge so deck-select + checkbox sit
-   left and the submit action anchors right, one action row instead of two
-   independently-aligned ones. */
 .classify-hero-cta-row {
-  margin-left: auto;
+  flex: 1 1 auto;
+  justify-content: flex-end;
 }
 
 .classify-hero-cta-row .reading-open-button {
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .study-cta-grid {
@@ -4244,8 +4277,8 @@ input.reading-vocab-item-checkbox {
    the deck breakdown reads as shelf log entries, not table rows. */
 .records-deck-row {
   display: grid;
-  gap: 5px;
-  padding: 10px 14px;
+  gap: 4px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--panel-bg);
@@ -4266,7 +4299,7 @@ input.reading-vocab-item-checkbox {
 }
 
 .records-deck-progress {
-  height: 8px;
+  height: 6px;
 }
 
 /* Primary-visible row: 오늘 복습 N / 모르는 단어 N -- 전체/아는 단어/헷갈리는
@@ -4367,6 +4400,16 @@ input.reading-vocab-item-checkbox {
   border-radius: 10px;
   background: var(--panel-bg);
   box-shadow: 0 2px 6px rgba(120, 98, 40, 0.05);
+}
+
+/* Scoped to the 통계 tab's own log lists only (not the shared
+   .custom-term-card use of this same row class in VocabSection, which
+   stays untouched) -- a touch tighter so a long "최근 담은 단어"/"자주
+   틀린 단어" list reads less like a management list once it grows past
+   a handful of rows. */
+.records-word-log .records-word-row {
+  gap: 5px 10px;
+  padding: 6px 12px;
 }
 
 .records-word-surface {
@@ -4687,13 +4730,16 @@ input.reading-vocab-item-checkbox {
 /* Was a full-saturation --primary band (the same teal every primary button
    uses) -- as a full-width card header next to the app's otherwise warm
    cream/amber tones, it read as an admin/status banner rather than a book
-   cover. Lightened tint of the same hue (not a new color) so "내가 공유함"
-   still reads as its own tone without shouting over the shelf. */
+   cover. Further desaturated toward the app's neutral gray-brown (less
+   chroma, not a new hue) and given a thinner strip + fainter dot texture so
+   "내가 공유함" reads as a quiet cover tone next to the shelf's warm covers,
+   not a standout status band. */
 .brand-deck-cover-mine {
-  background-color: #6f98a0;
+  padding: 6px 16px;
+  background-color: #8a9c9c;
   background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.22) 1px, transparent 1.3px),
-    linear-gradient(135deg, #7ba5ac 0%, #557f88 100%);
+    radial-gradient(circle, rgba(255, 255, 255, 0.14) 1px, transparent 1.3px),
+    linear-gradient(135deg, #9aabab 0%, #7d9191 100%);
 }
 
 .brand-deck-cover-shared {
@@ -4802,12 +4848,13 @@ input.reading-vocab-item-checkbox {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  padding: 3px 10px;
+  padding: 2px 9px;
   font-size: 12px;
   font-weight: 700;
-  color: #ffffff;
-  background: var(--primary);
+  color: var(--primary-dark);
+  background: var(--soft-bg);
   white-space: nowrap;
 }
 
@@ -5006,10 +5053,10 @@ input.reading-vocab-item-checkbox {
    drawer's filter tab, not an admin data-table toolbar. */
 .index-card-filter {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   border: 1px dashed var(--border-strong);
   border-radius: 4px 4px 10px 10px;
-  padding: 8px;
+  padding: 6px 8px;
   background: var(--surface-stage);
 }
 
@@ -5029,7 +5076,7 @@ input.reading-vocab-item-checkbox {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 
 /* V3 final polish: bare <select> elements fall back to native browser
@@ -5144,7 +5191,7 @@ input.reading-vocab-item-checkbox {
 }
 
 .vocab-filter-chip {
-  padding: 5px 12px;
+  padding: 4px 11px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--soft-bg);
@@ -5170,16 +5217,21 @@ input.reading-vocab-item-checkbox {
   color: #1b6b3a;
 }
 
+/* Uncertain/unknown reuse the same lavender/coral-beige tones as the
+   reading tab's token highlights (.token-chip-uncertain/-unknown,
+   .save-tray-stat-uncertain/-unknown) instead of the amber/rose this used
+   to carry -- one status color language app-wide, and "모르는 단어" no
+   longer reads as an error/warning chip here either. */
 .vocab-filter-uncertain.vocab-filter-chip-active {
-  border-color: #ecdba9;
-  background: #fbf0d9;
-  color: #7a5b12;
+  border-color: #d7cce9;
+  background: #f4f1fa;
+  color: #6f5f96;
 }
 
 .vocab-filter-unknown.vocab-filter-chip-active {
-  border-color: #f3cdd1;
-  background: #fbe8ea;
-  color: #9b3b42;
+  border-color: #e8c7ae;
+  background: #fbf1e9;
+  color: #96603f;
 }
 
 .vocab-filter-unclassified.vocab-filter-chip-active {
@@ -6269,7 +6321,7 @@ input.reading-vocab-item-checkbox {
 .reader-workspace {
   position: relative;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   padding-left: 18px;
 }
 
@@ -6441,7 +6493,7 @@ input.reading-vocab-item-checkbox {
 .reader-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   max-width: 740px;
   margin: 0 auto;
   color: var(--text);
@@ -6451,7 +6503,7 @@ input.reading-vocab-item-checkbox {
 
 .reader-line {
   margin: 0;
-  padding: 5px 0;
+  padding: 3px 0;
   line-height: inherit;
   word-break: keep-all;
   /* Preserves any incidental runs of spaces from the pasted text (real
@@ -6605,11 +6657,11 @@ input.reading-vocab-item-checkbox {
 .token-chip-known {
   --chip-fill: linear-gradient(
     180deg,
-    rgba(140, 189, 163, 0.07) 0%,
-    rgba(140, 189, 163, 0.12) 38%,
-    rgba(140, 189, 163, 0.2) 100%
+    rgba(140, 189, 163, 0.05) 0%,
+    rgba(140, 189, 163, 0.09) 38%,
+    rgba(140, 189, 163, 0.15) 100%
   );
-  text-decoration: underline dotted rgba(79, 140, 102, 0.3);
+  text-decoration: underline dotted rgba(79, 140, 102, 0.26);
   text-underline-offset: 2px;
 }
 
@@ -6624,11 +6676,11 @@ input.reading-vocab-item-checkbox {
   color: #6f5f96;
   --chip-fill: linear-gradient(
     180deg,
-    rgba(173, 156, 214, 0.1) 0%,
-    rgba(173, 156, 214, 0.17) 38%,
-    rgba(173, 156, 214, 0.28) 100%
+    rgba(173, 156, 214, 0.07) 0%,
+    rgba(173, 156, 214, 0.12) 38%,
+    rgba(173, 156, 214, 0.2) 100%
   );
-  text-decoration: underline dotted rgba(111, 95, 150, 0.3);
+  text-decoration: underline dotted rgba(111, 95, 150, 0.24);
   text-underline-offset: 2px;
 }
 
@@ -6636,11 +6688,11 @@ input.reading-vocab-item-checkbox {
   color: #96603f;
   --chip-fill: linear-gradient(
     180deg,
-    rgba(214, 162, 129, 0.09) 0%,
-    rgba(214, 162, 129, 0.15) 38%,
-    rgba(214, 162, 129, 0.25) 100%
+    rgba(214, 162, 129, 0.06) 0%,
+    rgba(214, 162, 129, 0.1) 38%,
+    rgba(214, 162, 129, 0.18) 100%
   );
-  text-decoration: underline dotted rgba(150, 96, 63, 0.32);
+  text-decoration: underline dotted rgba(150, 96, 63, 0.26);
   text-underline-offset: 2px;
 }
 
@@ -6648,11 +6700,11 @@ input.reading-vocab-item-checkbox {
   color: inherit;
   --chip-fill: linear-gradient(
     180deg,
-    rgba(210, 197, 165, 0.08) 0%,
-    rgba(210, 197, 165, 0.14) 38%,
-    rgba(210, 197, 165, 0.23) 100%
+    rgba(210, 197, 165, 0.06) 0%,
+    rgba(210, 197, 165, 0.1) 38%,
+    rgba(210, 197, 165, 0.17) 100%
   );
-  text-decoration: underline dotted rgba(150, 140, 115, 0.26);
+  text-decoration: underline dotted rgba(150, 140, 115, 0.2);
   text-underline-offset: 2px;
 }
 
@@ -6772,18 +6824,18 @@ input.reading-vocab-item-checkbox {
    note next to the word, not a second tag breaking up sentence flow. */
 .jlpt-chip-badge {
   display: inline-block;
-  margin-left: 0.08em;
-  padding: 0 1.5px;
+  margin-left: 0.05em;
+  padding: 0 1px;
   border: none;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.45);
   color: #7d8490;
-  font-size: 7.5px;
+  font-size: 7px;
   font-weight: 700;
   line-height: 1.4;
   vertical-align: super;
   white-space: nowrap;
-  opacity: 0.55;
+  opacity: 0.45;
   transition:
     opacity 0.12s ease,
     color 0.12s ease,

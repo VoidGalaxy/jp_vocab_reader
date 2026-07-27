@@ -772,7 +772,7 @@ export function VocabSection({
         decks.length === 0 ? (
           <AppEmptyState
             mood="empty"
-            moodSize="lg"
+            moodSize="md"
             title="아직 만든 단어장이 없어요."
             description="읽기 탭에서 원문을 읽고 단어를 담아보면 단어장이 자동으로 만들어져요."
           >
@@ -1042,7 +1042,7 @@ export function VocabSection({
       ) : (
         <AppEmptyState
           mood="empty"
-          moodSize="lg"
+          moodSize="md"
           title="아직 담은 단어가 없어요."
           description="원문에서 모르는 단어를 눌러 어휘 노트에 쌓아보세요."
         >

@@ -461,7 +461,7 @@ export function ReaderMode({
   const isAtFirstOccurrence = activeSegmentKey === null;
 
   return (
-    <div className="reader-paper hero-card card-stack-surface">
+    <>
       {isSessionRestored ? (
         <span className="reading-restored-chip">
           이전 작업 복원됨
@@ -474,6 +474,7 @@ export function ReaderMode({
           </button>
         </span>
       ) : null}
+      <div className="reader-paper hero-card card-stack-surface">
       <div className="reader-mode-header-row">
         <div>
           <h3 className="reader-mode-title">읽기 모드</h3>
@@ -664,6 +665,7 @@ export function ReaderMode({
           onReportMeaning={onReportMeaning}
         />
       ) : null}
-    </div>
+      </div>
+    </>
   );
 }
