@@ -7,6 +7,16 @@ description: Release and git safety workflow for jp_vocab_reader. Use when decid
 
 Use this skill before committing, pushing, merging, or accepting Claude team work.
 
+## Acceptance Bias
+
+Use a conservative release posture:
+
+- Accept small, well-evidenced diffs.
+- Reject broad rewrites unless the user explicitly approved them.
+- Treat build/test/QA evidence as required for completion claims.
+- Keep unrelated cleanup out of release commits.
+- Mention unrelated risks, but do not fix them inside the current release unless assigned.
+
 ## Required Order
 
 1. Confirm branch.
@@ -18,6 +28,19 @@ Use this skill before committing, pushing, merging, or accepting Claude team wor
 7. Provide exact `git add` targets.
 8. Commit only after approval.
 9. Push only after approval.
+
+## Verification Before Completion
+
+Before saying a Claude round is complete, confirm:
+
+- The changed files match the approved scope.
+- The original bug or UX issue has a direct evidence path from cause to fix.
+- The smallest practical validation ran.
+- Browser or Playwright QA ran when the change affects visible reading-tab behavior.
+- Any failed or skipped validation is reported plainly.
+- Remaining risks are separated into current blockers vs later follow-up.
+
+Do not accept "looks good" reports without changed files, commands, and observable results.
 
 ## Forbidden Commit Targets
 
@@ -94,3 +117,4 @@ Commit only when:
 - User-facing copy respects product guardrails.
 - `git status --short` has only intentional staged/unstaged items.
 
+Prefer exact path staging. Do not use broad staging commands when untracked tooling files, local settings, DB files, build outputs, or unrelated agent changes exist.
