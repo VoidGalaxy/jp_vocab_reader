@@ -2106,7 +2106,7 @@ export default function HomePage() {
   async function unpublishSharedDeck(sharedDeckId: number) {
     if (
       !window.confirm(
-        "이 공유덱을 공유 목록에서 내릴까요? 이미 다른 사용자가 가져간 개인 덱은 삭제되지 않습니다.",
+        "이 공유덱을 공유 목록에서 내릴까요? 이미 학습 중인 사용자는 계속 복습할 수 있어요.",
       )
     ) {
       return;
