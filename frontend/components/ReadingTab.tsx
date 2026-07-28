@@ -47,7 +47,7 @@ type ReadingTabProps = {
   storageWarning: string;
   isTextCollapsed: boolean;
   isSavingBatch: boolean;
-  canStartFromSaved: boolean;
+  recentlySavedCount: number;
   isSessionRestored: boolean;
   selectedTokenKey: string | null;
   scrollFraction: number | null;
@@ -113,7 +113,7 @@ type ReaderSaveDockProps = {
   isSavingBatch: boolean;
   onSaveSelected: () => void;
   onSaveBatch: (mode: ReadingSaveMode) => void;
-  canStartFromSaved: boolean;
+  recentlySavedCount: number;
   onStartStudyFromSaved: () => void;
   onGoToVocab: () => void;
   message: string;
@@ -126,13 +126,14 @@ function ReaderSaveDock({
   isSavingBatch,
   onSaveSelected,
   onSaveBatch,
-  canStartFromSaved,
+  recentlySavedCount,
   onStartStudyFromSaved,
   onGoToVocab,
   message,
   messageTone,
 }: ReaderSaveDockProps) {
   const [isQuickSaveOpen, setIsQuickSaveOpen] = useState(false);
+  const hasRecentlySaved = recentlySavedCount > 0;
 
   return (
     <section className="reading-action-dock" aria-label="저장 바구니">
@@ -229,22 +230,26 @@ function ReaderSaveDock({
         </p>
       ) : null}
 
+      {/* Before anything is saved there is no study CTA at all -- same idea as
+          .save-dock-idle-hint above: a permanently-disabled primary button was
+          taking hero weight while being the one thing the user can't do yet.
+          Once a save lands it becomes the emphasized next step. */}
       <div className="reading-summary-next-actions">
+        {hasRecentlySaved ? (
+          <button
+            type="button"
+            className="reading-summary-cta-button reading-summary-cta-ready"
+            onClick={onStartStudyFromSaved}
+          >
+            <CardsIcon className="button-icon" />
+            저장한 단어 {recentlySavedCount}개 바로 복습
+          </button>
+        ) : null}
         <button
           type="button"
-          className="reading-summary-cta-button"
-          onClick={onStartStudyFromSaved}
-          disabled={!canStartFromSaved}
-          title={
-            canStartFromSaved
-              ? undefined
-              : "먼저 단어를 저장하면 바로 학습으로 이동할 수 있어요."
-          }
+          className={`${hasRecentlySaved ? "secondary-button" : "ghost-button"} reading-summary-cta-button`}
+          onClick={onGoToVocab}
         >
-          <CardsIcon className="button-icon" />
-          저장한 단어로 바로 학습
-        </button>
-        <button type="button" className="secondary-button reading-summary-cta-button" onClick={onGoToVocab}>
           <CardFileIcon className="button-icon" />
           어휘 노트 보기
         </button>
@@ -300,7 +305,7 @@ export function ReadingTab({
   storageWarning,
   isTextCollapsed,
   isSavingBatch,
-  canStartFromSaved,
+  recentlySavedCount,
   isSessionRestored,
   selectedTokenKey,
   scrollFraction,
@@ -658,7 +663,7 @@ export function ReadingTab({
             isSavingBatch={isSavingBatch}
             onSaveSelected={() => void handleSaveSelected()}
             onSaveBatch={onSaveBatch}
-            canStartFromSaved={canStartFromSaved}
+            recentlySavedCount={recentlySavedCount}
             onStartStudyFromSaved={onStartStudyFromSaved}
             onGoToVocab={onGoToVocab}
             message={message}

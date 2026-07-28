@@ -1755,12 +1755,28 @@ export default function HomePage() {
       parts.push(`이미 저장된 단어 ${skipped.length}개는 건너뛰었습니다`);
     }
     if (failureCount > 0) {
-      parts.push(`${failureCount}개는 저장하지 못했습니다. 잠시 후 다시 시도해주세요`);
+      parts.push(`${failureCount}개는 저장하지 못했습니다`);
     }
     if (parts.length === 0) {
       parts.push("저장할 단어가 없습니다");
     }
-    setReadingMessage(`${parts.join(". ")}.`);
+    // One short closing sentence naming the next step. Deliberately no count
+    // here: the "바로 복습" CTA covers newly saved *and* already-saved words
+    // (see recentlySavedVocabItemIds above), so quoting this batch's number
+    // would contradict the button's own label. Kept free of urgent/time-bound
+    // wording because this string is persisted with the reading session and
+    // can resurface days later on a restored session.
+    const savedAnything = succeeded.length > 0 || skipped.length > 0;
+    const nextAction = savedAnything
+      ? failureCount > 0
+        ? "저장된 단어는 아래 '바로 복습'에서 볼 수 있고, 나머지는 다시 저장할 수 있어요."
+        : "아래 '바로 복습'에서 이어서 복습할 수 있어요."
+      : failureCount > 0
+        ? "다시 저장할 수 있어요."
+        : "";
+    setReadingMessage(
+      `${parts.join(". ")}.${nextAction ? ` ${nextAction}` : ""}`,
+    );
 
     return [
       ...succeeded.map(({ index }) => index),
@@ -1782,7 +1798,7 @@ export default function HomePage() {
 
     if (targets.length === 0) {
       setReadingMessage(
-        "저장 가능한 단어가 없습니다. 이미 학습 중인 단어일 수 있습니다.",
+        "저장 가능한 단어가 없습니다. 이미 저장한 단어는 어휘 노트에서 볼 수 있어요.",
       );
       return;
     }
@@ -1814,7 +1830,9 @@ export default function HomePage() {
     );
 
     if (targets.length === 0) {
-      setReadingMessage("선택한 단어 중 저장할 수 있는 단어가 없습니다.");
+      setReadingMessage(
+        "선택한 단어 중 저장할 수 있는 단어가 없습니다. 이미 저장한 단어는 어휘 노트에서 볼 수 있어요.",
+      );
       return [];
     }
 
@@ -2993,7 +3011,7 @@ export default function HomePage() {
       return "새로 학습할 단어가 없어요.";
     }
     if (mode === "recent") {
-      return "방금 저장한 단어를 찾을 수 없어요.";
+      return "방금 담은 단어를 찾을 수 없어요.";
     }
     return `${deckName}에 학습할 모르는 단어와 헷갈리는 단어가 없어요.`;
   }
@@ -3327,7 +3345,7 @@ export default function HomePage() {
             storageWarning={readingStorageWarning}
             isTextCollapsed={isReadingTextCollapsed}
             isSavingBatch={isSavingReadingBatch}
-            canStartFromSaved={recentlySavedVocabItemIds.length > 0}
+            recentlySavedCount={recentlySavedVocabItemIds.length}
             isSessionRestored={isReadingSessionRestored}
             selectedTokenKey={currentSelectedTokenKey}
             scrollFraction={readingScrollFraction}

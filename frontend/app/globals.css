@@ -3752,6 +3752,14 @@ input.reading-vocab-item-checkbox {
   flex: 1 1 200px;
 }
 
+/* Post-save state: the study CTA is the one obvious next step, so it takes
+   more of the row than the vocab-note link beside it and gets a soft accent
+   ring to lift it off the dock's own panel fill. */
+.reading-summary-cta-ready {
+  flex: 2 1 240px;
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.16);
+}
+
 .reading-summary-message {
   margin: 0;
 }

@@ -29,14 +29,24 @@ const ERROR_MESSAGE_PATTERN = /(실패|오류|못했습니다|찾을 수 없)/;
 const SUCCESS_MESSAGE_PATTERN =
   /(저장했습니다|건너뛰었습니다|복원했습니다|초기화했습니다|삭제했습니다|수정했습니다|접수되었습니다|가져왔습니다|내렸습니다|등록했습니다|추가했습니다|완료했습니다|시작했습니다)/;
 
+// A batch save can partially succeed, producing one string that reports both
+// ("...저장했습니다. ...저장하지 못했습니다"). Matching error first painted the
+// whole thing red and buried the part that worked, so a mixed result falls
+// through to the neutral tone instead -- only a failure-only message is an
+// error.
 export function classifyMessageTone(message: string): MessageTone {
   if (!message) {
     return "info";
   }
-  if (ERROR_MESSAGE_PATTERN.test(message)) {
+  const hasError = ERROR_MESSAGE_PATTERN.test(message);
+  const hasSuccess = SUCCESS_MESSAGE_PATTERN.test(message);
+  if (hasError && hasSuccess) {
+    return "info";
+  }
+  if (hasError) {
     return "error";
   }
-  if (SUCCESS_MESSAGE_PATTERN.test(message)) {
+  if (hasSuccess) {
     return "success";
   }
   return "info";
