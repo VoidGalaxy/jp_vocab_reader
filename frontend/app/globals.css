@@ -1303,8 +1303,7 @@ button {
 }
 
 /* index-card-shell -- base "this is an index card" treatment (thin border,
-   small radius, soft shadow, optional colored top tab via
-   .index-card-shell-tab) reused wherever a single word/deck/word-panel
+   small radius, soft shadow) reused wherever a single word/deck/word-panel
    needs to read as a physical index card rather than a generic bordered
    box. */
 .index-card-shell {
@@ -1313,20 +1312,6 @@ button {
   border-radius: 10px;
   background: var(--panel-bg);
   box-shadow: 0 8px 18px rgba(120, 98, 40, 0.1);
-}
-
-.index-card-shell-tab {
-  position: absolute;
-  top: -10px;
-  left: 16px;
-  padding: 3px 12px;
-  border-radius: 4px 4px 0 0;
-  background: var(--screen-accent, var(--primary));
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  z-index: 3;
 }
 
 /* library-card-stage -- very subtle "card catalog drawer" backdrop (faint
@@ -2965,7 +2950,11 @@ select {
 }
 
 .reading-restored-chip-dismiss {
-  min-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  min-width: 24px;
   padding: 3px 10px;
   border-radius: 999px;
   color: #6b5f3f;
@@ -3267,6 +3256,7 @@ select {
   margin: 0;
   color: var(--muted);
   font-size: 12px;
+  word-break: keep-all;
 }
 
 .reading-vocab-collapse-icon {
@@ -3384,6 +3374,7 @@ select {
   gap: 6px;
   margin: 0;
   font-size: 13px;
+  word-break: keep-all;
 }
 
 .reading-vocab-empty-icon {
