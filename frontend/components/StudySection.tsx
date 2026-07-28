@@ -12,7 +12,7 @@ import type {
 } from "./types";
 import type { StudyStats } from "./types";
 import { StatsPanel } from "./StatsPanel";
-import { formatNextReview, getDisplayMeaning } from "./shared";
+import { formatNextReview, formatReviewDelay, getDisplayMeaning } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
 import {
   BookIcon,
@@ -39,6 +39,7 @@ type StudySectionProps = {
   statsMessage: string;
   sessionCounts: SessionReviewCounts;
   nextUpcomingReviewAt: string | null;
+  againNextReviewAt: string | null;
   decks: Deck[];
   // Phase 3 (see docs/architecture/shared-lexeme-progress-storage.md -- "SRS
   // card integration"): subscribed shared decks selectable as a study deck,
@@ -259,6 +260,7 @@ export function StudySection({
   statsMessage,
   sessionCounts,
   nextUpcomingReviewAt,
+  againNextReviewAt,
   decks,
   sharedDeckOptions,
   selectedDeckId,
@@ -290,7 +292,11 @@ export function StudySection({
   // *what happens next* for the ratings that actually occurred this session.
   const completionHintParts: string[] = [];
   if (sessionCounts.again > 0) {
-    completionHintParts.push(`다시 ${sessionCounts.again}개는 5분 후 재등장`);
+    completionHintParts.push(
+      againNextReviewAt
+        ? `다시 ${sessionCounts.again}개는 ${formatReviewDelay(againNextReviewAt)} 재등장`
+        : `다시 ${sessionCounts.again}개는 곧 재등장`,
+    );
   }
   if (sessionCounts.hard > 0) {
     completionHintParts.push(`어려움 ${sessionCounts.hard}개는 곧 재등장`);

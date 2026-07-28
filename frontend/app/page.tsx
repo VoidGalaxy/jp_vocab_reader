@@ -783,6 +783,7 @@ export default function HomePage() {
   const [nextUpcomingReviewAt, setNextUpcomingReviewAt] = useState<string | null>(
     null,
   );
+  const [againNextReviewAt, setAgainNextReviewAt] = useState<string | null>(null);
   const answerShownAtRef = useRef<number | null>(null);
   const [hasStartedStudy, setHasStartedStudy] = useState(false);
   const [isLoadingStudyStats, setIsLoadingStudyStats] = useState(false);
@@ -834,6 +835,7 @@ export default function HomePage() {
     setStudyMessage("");
     setSessionCounts(createEmptySessionCounts());
     setNextUpcomingReviewAt(null);
+    setAgainNextReviewAt(null);
     answerShownAtRef.current = null;
   }
 
@@ -3028,6 +3030,7 @@ export default function HomePage() {
     setIsAnswerVisible(false);
     setSessionCounts(createEmptySessionCounts());
     setNextUpcomingReviewAt(null);
+    setAgainNextReviewAt(null);
     answerShownAtRef.current = null;
     setHasStartedStudy(false);
 
@@ -3158,6 +3161,17 @@ export default function HomePage() {
         [rating]: counts[rating] + 1,
       }));
       setStudyMessage(buildRatingFeedbackMessage(rating, nextReviewAt));
+      if (rating === "again") {
+        setAgainNextReviewAt((current) => {
+          if (!nextReviewAt) {
+            return current;
+          }
+          if (!current || nextReviewAt < current) {
+            return nextReviewAt;
+          }
+          return current;
+        });
+      }
       setNextUpcomingReviewAt((current) => {
         if (!nextReviewAt) {
           return current;
@@ -3523,6 +3537,7 @@ export default function HomePage() {
             statsMessage={studyStatsMessage}
             sessionCounts={sessionCounts}
             nextUpcomingReviewAt={nextUpcomingReviewAt}
+            againNextReviewAt={againNextReviewAt}
             decks={decks}
             sharedDeckOptions={sharedDecks
               .filter((deck) => deck.mode === "subscribed" && deck.imported_at)
