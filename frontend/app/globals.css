@@ -862,12 +862,27 @@ button {
   margin-top: 4px;
 }
 
-/* Home hero -- lightweight-reader-first: title + 1-line subcopy + the 3
-   CTAs the core loop needs, no illustration column. The flow-preview
-   card/companion (BrandReadingFlowIllustration) that used to render here
-   traded space for a graphic competing with the CTAs -- the component
-   itself is untouched (still available elsewhere, and its cover-flow
-   language is echoed in the compact .home-flow-strip below instead). */
+/* One primary action per screen: the reading CTA takes its own full-width
+   row so the secondary 복습 button below never reads as its equal. */
+.home-hero-primary-cta {
+  flex: 1 1 100%;
+  justify-content: center;
+}
+
+/* Tertiary "샘플로 체험" link -- kept reachable but visually well below the
+   two real CTAs instead of sitting in the same button row. */
+.home-hero-quiet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+/* Home hero -- lightweight-reader-first: title + 1-line subcopy + one
+   full-width primary CTA plus one secondary CTA, no illustration column.
+   The flow-preview card/companion (BrandReadingFlowIllustration) that used
+   to render here traded space for a graphic competing with the CTAs -- the
+   component itself is untouched and still available elsewhere. */
 .home-hero-main {
   display: grid;
   gap: 10px;
@@ -930,41 +945,6 @@ button {
 .home-hero-badge-icon {
   width: 14px;
   height: 14px;
-}
-
-/* One-line "읽기 -> 담기 -> 복습" flow reminder under the hero CTAs -- the
-   core loop made visible without the old full illustration card's height.
-   Text + small icons only. */
-.home-flow-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.home-flow-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border: 1px solid var(--paper-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.55);
-  color: var(--text-secondary);
-}
-
-.home-flow-icon {
-  width: 13px;
-  height: 13px;
-  color: var(--screen-accent, var(--accent));
-}
-
-.home-flow-arrow {
-  color: var(--border-strong);
 }
 
 /* Wraps the flow-preview card so the word-card + bookmark ribbon below
@@ -1099,15 +1079,8 @@ button {
   box-shadow: 0 14px 32px var(--paper-shadow);
 }
 
-/* Lightweight home: 3 small chips instead of a stats-dashboard card --
-   just enough to answer "is there anything waiting for me today" without
-   its own bordered panel. */
-.home-summary-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
+/* Small count chip, now used by the 기록 tab's 오늘 학습 row (see
+   InfoSection) -- home folds the same numbers into its CTA label instead. */
 .home-summary-chip {
   display: flex;
   align-items: center;
@@ -1148,6 +1121,13 @@ button {
   display: grid;
   gap: 4px;
   margin-bottom: -6px;
+}
+
+.home-recent-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .home-recent-section-title {
@@ -1239,6 +1219,14 @@ button {
   .landing-hero-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  /* In a column-direction flex container, `flex-basis: 100%` resolves
+     against the main axis (height, not width), so this stacked the
+     button at ~2x height and pushed the sibling CTA off-screen. Reset
+     to auto so `align-items: stretch` alone gives it full width. */
+  .home-hero-primary-cta {
+    flex: 0 1 auto;
   }
 }
 
@@ -2427,44 +2415,6 @@ select {
 
 .study-options-collapsible .study-control-panel {
   margin-top: 12px;
-}
-
-.study-mode-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.study-mode-button {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-  justify-items: start;
-  border: 1px solid var(--border);
-  padding: 12px;
-  color: var(--text-secondary);
-  background: var(--soft-bg);
-  text-align: left;
-  box-shadow: none;
-}
-
-.study-mode-button span {
-  font-size: 13px;
-}
-
-.study-mode-button strong {
-  color: var(--text);
-  font-size: 18px;
-}
-
-.active-study-mode {
-  border-color: var(--primary);
-  color: #ffffff;
-  background: var(--primary);
-}
-
-.active-study-mode strong {
-  color: #ffffff;
 }
 
 /* desk-surface -- the reusable "sitting on a desk, not bare page
@@ -5959,15 +5909,6 @@ input.reading-vocab-item-checkbox {
     bottom: 12px;
   }
 
-  .study-mode-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .study-mode-button {
-    min-height: 76px;
-    padding: 12px 10px;
-  }
-
   .study-front {
     min-height: 150px;
     font-size: 42px;
@@ -6076,6 +6017,14 @@ input.reading-vocab-item-checkbox {
   .danger-button {
     min-width: 0;
     min-height: 42px;
+  }
+
+  /* Opt out of the app-wide mobile `button { width: 100% }` rule above --
+     same pattern as .reading-vocab-filter-button -- so this header button
+     stays a natural-width pill instead of squeezing the section title. */
+  .home-recent-section-header .compact-button {
+    width: auto;
+    min-width: 0;
   }
 
   .show-results-toggle {

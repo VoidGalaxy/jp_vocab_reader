@@ -3077,10 +3077,6 @@ export default function HomePage() {
     void loadCustomTerms(selectedStudyDeckId);
   }
 
-  function goToAnalyzeFromStudy() {
-    setActiveTab("analyze");
-  }
-
   async function submitStudyReview(rating: ReviewResult) {
     const currentItem = studyItems[currentStudyIndex];
     if (!currentItem) {
@@ -3272,13 +3268,10 @@ export default function HomePage() {
             isDevUser={isDevUser}
             studyStats={studyStats}
             isStudyStatsLoading={isLoadingStudyStats}
-            recentlySavedVocabItemIdsCount={recentlySavedVocabItemIds.length}
-            hasReadingSession={readingTokens.length > 0}
             onStartReading={() => void handleTabChange("reading")}
             onTryWithSample={startSampleReadingFromHome}
             onStartTodayReview={goToStudyToday}
             onOpenAccount={openAccountMenu}
-            onStartRecentlySaved={startStudyFromRecentlySaved}
             onGoToVocab={() => void handleTabChange("vocab")}
             recentWords={infoRecentWords.slice(0, 3)}
           />
@@ -3547,9 +3540,7 @@ export default function HomePage() {
             onStart={() => void startStudy()}
             onRestart={() => void startStudy()}
             onGoToVocab={goToVocabFromStudy}
-            onGoToAnalyze={goToAnalyzeFromStudy}
             onGoToReading={() => setActiveTab("reading")}
-            onGoToShared={() => void handleTabChange("shared")}
             onShowAnswer={() => {
               answerShownAtRef.current = Date.now();
               setIsAnswerVisible(true);

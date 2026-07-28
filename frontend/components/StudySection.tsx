@@ -17,7 +17,6 @@ import { HighlightedExample } from "./HighlightedExample";
 import {
   BookIcon,
   BookmarkIcon,
-  BookshelfIcon,
   CardsIcon,
   CheckCircleIcon,
   PencilIcon,
@@ -65,9 +64,7 @@ type StudySectionProps = {
   onStart: () => void;
   onRestart: () => void;
   onGoToVocab: () => void;
-  onGoToAnalyze: () => void;
   onGoToReading: () => void;
-  onGoToShared: () => void;
   onShowAnswer: () => void;
   onReview: (result: ReviewResult) => void;
 };
@@ -80,6 +77,18 @@ const studyModeLabels: Record<StudyMode, string> = {
   new: "새 단어 학습",
   recent: "방금 담은 단어 복습",
 };
+
+type SelectableStudyMode = Extract<
+  StudyMode,
+  "today" | "uncertain" | "unknown" | "all"
+>;
+
+const selectableStudyModes: SelectableStudyMode[] = [
+  "today",
+  "uncertain",
+  "unknown",
+  "all",
+];
 
 const emptyMessages: Record<StudyMode, string> = {
   today: "오늘은 복습할 단어가 없어요.",
@@ -217,7 +226,7 @@ function StudyQuickStartHero({
       <div className="study-hero-secondary-links">
         <button
           type="button"
-          className="ghost-button compact-button study-hero-secondary-link"
+          className="secondary-button compact-button study-hero-secondary-link"
           onClick={onGoToReading}
         >
           <BookIcon className="button-icon" />
@@ -270,9 +279,7 @@ export function StudySection({
   onStart,
   onRestart,
   onGoToVocab,
-  onGoToAnalyze,
   onGoToReading,
-  onGoToShared,
   onShowAnswer,
   onReview,
 }: StudySectionProps) {
@@ -297,6 +304,12 @@ export function StudySection({
   const uncertainCount = stats?.uncertain_count ?? 0;
   const unknownCount = stats?.unknown_count ?? 0;
   const allStudyCount = uncertainCount + unknownCount;
+  const studyModeCounts: Record<SelectableStudyMode, number> = {
+    today: dueCount,
+    uncertain: uncertainCount,
+    unknown: unknownCount,
+    all: allStudyCount,
+  };
   const visibleProgress =
     items.length > 0 ? `${Math.min(currentIndex + 1, items.length)} / ${items.length}` : "0 / 0";
   // While a card is actively on screen, the dashboard/CTA chrome above it is
@@ -324,34 +337,27 @@ export function StudySection({
             </summary>
 
             <div className="study-control-panel study-control-panel-compact">
-              <div className="study-mode-grid" role="group" aria-label="학습 모드">
-                {(["today", "uncertain", "unknown", "all"] as StudyMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    className={
-                      studyMode === mode
-                        ? "study-mode-button active-study-mode"
-                        : "study-mode-button"
-                    }
-                    onClick={() => onStudyModeChange(mode)}
-                  >
-                    <span>{studyModeLabels[mode]}</span>
-                    <strong>
-                      {mode === "today"
-                        ? dueCount
-                        : mode === "uncertain"
-                          ? uncertainCount
-                          : mode === "unknown"
-                            ? unknownCount
-                            : allStudyCount}
-                      개
-                    </strong>
-                  </button>
-                ))}
-              </div>
-
               <div className="study-control-footer">
+                <label className="inline-field">
+                  학습 모드
+                  <select
+                    value={studyMode}
+                    onChange={(event) =>
+                      onStudyModeChange(event.target.value as StudyMode)
+                    }
+                  >
+                    {/* 퀵스타트로 진입한 new/recent 모드도 select가 현재 상태를
+                        그대로 보여줄 수 있도록 옵션을 하나 덧붙인다. */}
+                    {selectableStudyModes.some((mode) => mode === studyMode) ? null : (
+                      <option value={studyMode}>{studyModeLabels[studyMode]}</option>
+                    )}
+                    {selectableStudyModes.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {studyModeLabels[mode]} ({studyModeCounts[mode]}개)
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label className="inline-field">
                   학습 덱
                   <select
@@ -426,7 +432,7 @@ export function StudySection({
       {!hasStarted && !currentItem && !isComplete ? (
         <AppEmptyState
           mood="review"
-          moodSize="lg"
+          moodSize="md"
           className="study-empty-flat study-ready-card"
           title="학습할 단어를 불러오세요"
           description="덱과 학습 모드를 선택한 뒤 복습을 시작할 수 있어요."
@@ -448,10 +454,6 @@ export function StudySection({
             </button>
             <button type="button" className="secondary-button" onClick={onGoToVocab}>
               어휘 노트 보기
-            </button>
-            <button type="button" className="ghost-button" onClick={onGoToShared}>
-              <BookshelfIcon className="button-icon" />
-              덱 책장 둘러보기
             </button>
           </div>
         </AppEmptyState>
@@ -614,7 +616,7 @@ export function StudySection({
       ) : null}
 
       {isComplete ? (
-        <div className="study-card complete-card card-stack-surface index-card-shell">
+        <div className="study-card complete-card card-stack-surface">
           <ShioriStamp variant="success" label="완료" />
           <h3>
             {studyMode === "recent"
