@@ -295,6 +295,9 @@ export function StudySection({
   if (sessionCounts.hard > 0) {
     completionHintParts.push(`어려움 ${sessionCounts.hard}개는 곧 재등장`);
   }
+  if (sessionCounts.good > 0) {
+    completionHintParts.push(`보통 ${sessionCounts.good}개는 다음 복습 예약됨`);
+  }
   if (sessionCounts.easy > 0) {
     completionHintParts.push(`쉬움 ${sessionCounts.easy}개는 간격 늘어남`);
   }
@@ -316,6 +319,15 @@ export function StudySection({
   // hidden -- the review flow should read as one focused flashcard, not a
   // stats screen with a card wedged underneath it.
   const isReviewingActive = Boolean(currentItem) && !isComplete;
+  // The rating confirmation describes the card that was just rated, but the
+  // next card mounts in the same commit -- so it lives at the bottom of the
+  // card, where the rating buttons were, and clears the moment that next
+  // card's answer is revealed instead of lingering above a word it doesn't
+  // describe. A failure is not a confirmation: it stays until a retry
+  // replaces it, since that card never advanced.
+  const messageTone = classifyMessageTone(message);
+  const isCardMessageVisible =
+    Boolean(message) && (!isAnswerVisible || messageTone === "error");
 
   return (
     <section className="tab-panel study-panel" aria-live="polite">
@@ -412,14 +424,8 @@ export function StudySection({
         </>
       ) : null}
 
-      {message ? (
-        <p
-          className={`message message--${classifyMessageTone(message)}${
-            isReviewingActive ? " study-rating-toast" : ""
-          }`}
-        >
-          {message}
-        </p>
+      {message && !isReviewingActive ? (
+        <p className={`message message--${messageTone}`}>{message}</p>
       ) : null}
 
       {/* Desk stage: every "focused single card" state (ready/empty/active/
@@ -612,6 +618,14 @@ export function StudySection({
               </button>
             </div>
           )}
+          {isCardMessageVisible ? (
+            <p
+              className={`message message--${messageTone} study-rating-toast`}
+              role="status"
+            >
+              {message}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -648,7 +662,7 @@ export function StudySection({
           {completionHint ? <p className="muted-text">{completionHint}</p> : null}
           <p>
             {nextUpcomingReviewAt
-              ? formatNextReview(nextUpcomingReviewAt)
+              ? `이번 세션에서 본 단어 기준 ${formatNextReview(nextUpcomingReviewAt)}`
               : "다음 복습 단어는 아직 예정되어 있지 않아요."}
           </p>
           <div className="study-actions">

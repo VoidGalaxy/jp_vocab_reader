@@ -138,8 +138,8 @@ export function formatNextReview(value: string | null) {
 }
 
 // Short, non-alarming confirmation shown right after a rating button is
-// pressed. "again" already states its own delay ("5분 후"), so it skips the
-// redundant "(다음 복습: 5분 후)" suffix the other three ratings get.
+// pressed. Every rating states the delay the server actually returned, so
+// the copy can't drift from the real schedule.
 export function buildRatingFeedbackMessage(
   rating: ReviewResult,
   nextReviewAt: string | null,
@@ -147,7 +147,7 @@ export function buildRatingFeedbackMessage(
   const delay = formatReviewDelay(nextReviewAt);
   switch (rating) {
     case "again":
-      return "5분 후 다시 볼게요.";
+      return `다시 볼게요. (다음 복습: ${delay})`;
     case "hard":
       return `곧 다시 복습할게요. (다음 복습: ${delay})`;
     case "easy":
