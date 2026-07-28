@@ -19,6 +19,9 @@ dist/
 *.db
 *.sqlite
 *.sqlite3
+*.db-wal
+*.db-shm
+*.db-journal
 backend/data/dictionary/jmdict_full.json
 backend/data/dictionary/en_ko_full.json
 
@@ -89,3 +92,7 @@ backend/data/jlpt/*_recommended_deck.json
 !backend/data/jlpt/samples/
 !backend/data/jlpt/n5_sample.csv
 !backend/data/jlpt/README.md
+
+# Local agent tooling (machine-local, never committed)
+.claude/settings.local.json
+.agents/
