@@ -99,22 +99,27 @@ def count_rows(table: str, where: str = "1=1", params: tuple = ()) -> int:
 
 
 def run_unpublish_boundary_checks() -> None:
-    """Records what CURRENTLY happens to a subscriber when the owner of a
-    lexeme-mode shared deck unpublishes it.
+    """Verifies the owner-unpublish policy (see
+    docs/architecture/shared-lexeme-progress-storage.md -- "owner unpublish
+    policy", decided Phase 6 Round 0): unpublish means "closed to new
+    users", not "existing subscribers lose their progress".
 
-    These checks deliberately assert today's KNOWN-BROKEN behavior so it is
-    visible and regression-locked -- not that it is correct. The subscriber's
-    user_word_progress row survives the unpublish, but every further
-    review/status write is rejected 404 by the shared_deck_exists() guard in
-    app/main.py while the word is still served in their study queue. Whether
-    that should change is a product policy decision that was deliberately
-    deferred; if a later round settles it, check 15/15b/17 below are what must
-    be updated.
+    delete_shared_deck() now soft-unpublishes -- it only flips
+    shared_decks.visibility away from 'public', never deletes the row (or
+    shared_deck_words/user_deck_subscriptions/user_word_progress). That is
+    what lets an already-subscribed user keep reviewing the deck's words
+    through their own subscription afterwards, with zero bulk-copy into
+    personal vocab_items -- shared_deck_word_access_allowed() in
+    shared_deck_repository.py allows review/status writes for a still-active
+    subscriber even once the deck is unpublished. A brand new user is still
+    fully blocked: list/detail/import all keep requiring
+    visibility='public'.
 
-    SQLite only. The PostgreSQL schema declares ON DELETE CASCADE on
-    shared_deck_words/user_deck_subscriptions (app/database.py) where the
-    SQLite schema declares no foreign key at all, so post-unpublish behavior
-    there is expected to differ and is NOT covered by this script.
+    SQLite only (no PostgreSQL-only behavior left to special-case here --
+    unpublish never hard-deletes shared_decks, so the ON DELETE CASCADE on
+    shared_deck_words/user_deck_subscriptions in the PostgreSQL schema
+    (app/database.py) is simply never triggered by this path on either
+    database).
     """
     from fastapi.testclient import TestClient
 
@@ -158,6 +163,28 @@ def run_unpublish_boundary_checks() -> None:
             json={"title": "언퍼블리시 경계 공유덱", "description": ""},
             headers=owner_headers,
         ).json()["shared_deck_id"]
+        other_deck_id = client.post(
+            "/decks",
+            json={"name": "언퍼블리시 교차 접근 테스트 덱"},
+            headers=owner_headers,
+        ).json()["id"]
+        client.post(
+            "/vocab-items",
+            json={
+                "surface": "森",
+                "base_form": "森",
+                "reading": "もり",
+                "part_of_speech": "명사",
+                "meaning_ko": "숲",
+                "deck_id": other_deck_id,
+            },
+            headers=owner_headers,
+        )
+        other_shared_deck_id = client.post(
+            f"/decks/{other_deck_id}/publish",
+            json={"title": "언퍼블리시 교차 접근 공유덱", "description": ""},
+            headers=owner_headers,
+        ).json()["shared_deck_id"]
         check(
             "13. publishing a personal deck produces a lexeme-mode shared deck",
             is_lexeme_deck(shared_deck_id),
@@ -168,6 +195,12 @@ def run_unpublish_boundary_checks() -> None:
                 connection.execute(
                     "SELECT lexeme_id FROM shared_deck_words WHERE shared_deck_id = ?",
                     (shared_deck_id,),
+                ).fetchone()["lexeme_id"]
+            )
+            other_lexeme_id = int(
+                connection.execute(
+                    "SELECT lexeme_id FROM shared_deck_words WHERE shared_deck_id = ?",
+                    (other_shared_deck_id,),
                 ).fetchone()["lexeme_id"]
             )
 
@@ -194,11 +227,20 @@ def run_unpublish_boundary_checks() -> None:
             )
             == 1,
         )
+        cross_deck_review = client.post(
+            f"/shared-decks/{shared_deck_id}/words/{other_lexeme_id}/review",
+            json={"rating": "good"},
+            headers=sub_headers,
+        )
+        check(
+            "13e. public deck review is rejected when the lexeme is not in that deck",
+            cross_deck_review.status_code == 404,
+        )
 
         resp = client.delete(f"/shared-decks/{shared_deck_id}", headers=owner_headers)
         check("14. owner can unpublish their shared deck", resp.status_code == 200)
 
-        # --- everything below records current, known-broken behavior --------
+        # --- everything below verifies the decided owner-unpublish policy ----
         review_after = client.post(
             f"/shared-decks/{shared_deck_id}/words/{lexeme_id}/review",
             json={"rating": "good"},
@@ -206,8 +248,8 @@ def run_unpublish_boundary_checks() -> None:
         )
         print(f"       -> review after unpublish: HTTP {review_after.status_code}")
         check(
-            "15. KNOWN ISSUE: subscriber review after owner unpublish returns 404",
-            review_after.status_code == 404,
+            "15. existing subscriber can still review after owner unpublish (200)",
+            review_after.status_code == 200,
         )
         status_after = client.patch(
             f"/shared-decks/{shared_deck_id}/words/{lexeme_id}/progress",
@@ -216,8 +258,17 @@ def run_unpublish_boundary_checks() -> None:
         )
         print(f"       -> status change after unpublish: HTTP {status_after.status_code}")
         check(
-            "15b. KNOWN ISSUE: subscriber status change after unpublish returns 404",
-            status_after.status_code == 404,
+            "15b. existing subscriber can still change status after unpublish (200)",
+            status_after.status_code == 200,
+        )
+        cross_deck_review_after = client.post(
+            f"/shared-decks/{shared_deck_id}/words/{other_lexeme_id}/review",
+            json={"rating": "good"},
+            headers=sub_headers,
+        )
+        check(
+            "15c. subscribed access still rejects a lexeme from another deck",
+            cross_deck_review_after.status_code == 404,
         )
 
         with get_connection() as connection:
@@ -240,29 +291,69 @@ def run_unpublish_boundary_checks() -> None:
                 f"next_review_at={row['next_review_at']!r}"
             )
             check(
-                "16b. the pre-unpublish review is still recorded in that row",
-                int(row["review_level"]) > 0 and int(row["correct_count"]) == 1,
+                "16b. both the pre- and post-unpublish reviews landed on that row",
+                int(row["review_level"]) > 0 and int(row["correct_count"]) == 2,
+            )
+            check(
+                "16c. the post-unpublish status write actually landed",
+                row["status"] == "unknown",
             )
 
-        # On SQLite nothing cascades, so the word keeps being served -- which is
-        # what turns the 404 above into a visibly dead card rather than a
-        # silently vanished one.
+        # No FK cascade is ever triggered by unpublish (it's a soft
+        # visibility flip, never a shared_decks DELETE), so the word keeps
+        # being served in the queue on both SQLite and PostgreSQL -- and,
+        # unlike before this policy, that is now correct: the subscriber can
+        # actually act on it (see 15/15b above), so it's a live card, not a
+        # dead one.
         queue = client.get("/study-items/lexemes", headers=sub_headers).json()
         queued = [item for item in queue if item["lexeme_id"] == lexeme_id]
         check(
-            "17. KNOWN ISSUE (SQLite): word is STILL in the study queue after unpublish",
+            "17. word stays in the study queue after unpublish (still reviewable)",
             len(queued) == 1,
         )
         if queued:
             print(f"       -> queue entry source_label={queued[0]['source_label']!r}")
         check(
-            "17b. subscription row also survives on SQLite (no FK cascade declared)",
+            "17b. subscription row survives the unpublish",
             count_rows(
                 "user_deck_subscriptions",
                 "user_id = ? AND shared_deck_id = ?",
                 (sub_id, shared_deck_id),
             )
             == 1,
+        )
+        check(
+            "17c. shared_decks row itself survives (soft-unpublish, not hard delete)",
+            count_rows("shared_decks", "id = ?", (shared_deck_id,)) == 1,
+        )
+        check(
+            "17d. shared_decks.visibility flipped away from 'public'",
+            count_rows(
+                "shared_decks", "id = ? AND visibility = 'public'", (shared_deck_id,)
+            )
+            == 0,
+        )
+
+        # --- a brand new user must still be fully locked out -----------------
+        new_headers, _new_user_id = register(client, "unpublish-newcomer@smoke.test")
+        listing = client.get("/shared-decks", headers=new_headers).json()
+        check(
+            "18. unpublished deck no longer appears in the public list",
+            all(item["id"] != shared_deck_id for item in listing),
+        )
+        detail_resp = client.get(
+            f"/shared-decks/{shared_deck_id}", headers=new_headers
+        )
+        check(
+            "18b. a new user gets 404 on the unpublished deck's detail",
+            detail_resp.status_code == 404,
+        )
+        import_resp = client.post(
+            f"/shared-decks/{shared_deck_id}/import", headers=new_headers
+        )
+        check(
+            "18c. a new user cannot import the unpublished deck (404)",
+            import_resp.status_code == 404,
         )
 
 

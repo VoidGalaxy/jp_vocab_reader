@@ -60,7 +60,7 @@ from app.repositories.shared_deck_repository import (
     import_shared_deck,
     list_shared_decks,
     publish_deck,
-    shared_deck_exists,
+    shared_deck_word_access_allowed,
 )
 from app.repositories.stats_repository import build_stats
 from app.repositories.user_repository import (
@@ -618,7 +618,7 @@ def patch_shared_deck_word_progress(
     if body.status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail="invalid status")
     user_id = current_user_id(http_request)
-    if not shared_deck_exists(shared_deck_id):
+    if not shared_deck_word_access_allowed(shared_deck_id, user_id, lexeme_id):
         raise HTTPException(status_code=404, detail="shared deck not found")
     try:
         progress = update_word_status(user_id, lexeme_id, body.status)
@@ -642,7 +642,7 @@ def post_shared_deck_word_review(
     if body.rating not in VALID_REVIEW_RATINGS:
         raise HTTPException(status_code=400, detail="invalid review rating")
     user_id = current_user_id(http_request)
-    if not shared_deck_exists(shared_deck_id):
+    if not shared_deck_word_access_allowed(shared_deck_id, user_id, lexeme_id):
         raise HTTPException(status_code=404, detail="shared deck not found")
     progress = record_lexeme_review(
         user_id, lexeme_id, body.rating, shared_deck_id=shared_deck_id

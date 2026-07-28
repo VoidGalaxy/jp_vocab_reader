@@ -18,8 +18,10 @@ from app.repositories.lexeme_repository import (
 
 def shared_deck_exists(shared_deck_id: int) -> bool:
     """Cheap existence check -- does not build the full word-list overlay,
-    unlike get_shared_deck(). Used by the word-progress/review endpoints,
-    which only need a 404 guard, not the whole deck detail payload.
+    unlike get_shared_deck(). Used for surfaces that must stay closed to
+    everyone once a deck is unpublished (new import/list/detail) -- see
+    shared_deck_word_access_allowed() below for the write-endpoint guard,
+    which is deliberately NOT this function.
     """
     with get_connection() as connection:
         row = connection.execute(
@@ -27,6 +29,49 @@ def shared_deck_exists(shared_deck_id: int) -> bool:
             (shared_deck_id,),
         ).fetchone()
     return row is not None
+
+
+def shared_deck_word_access_allowed(
+    shared_deck_id: int, user_id: int, lexeme_id: int
+) -> bool:
+    """Write-endpoint guard for a lexeme-mode shared deck's per-word
+    review/status endpoints (see docs/architecture/shared-lexeme-progress-storage.md
+    -- "owner unpublish" policy). A still-public deck is open to anyone; once
+    the owner unpublishes it (visibility flips away from 'public', see
+    delete_shared_deck() below -- the row is never hard-deleted), it only
+    stays writable for a user who already holds an active
+    user_deck_subscriptions row. A brand new user can never reach this
+    allowance since import_shared_deck()/get_shared_deck() keep requiring
+    visibility='public', so unpublish still fully blocks new adoption --
+    only existing subscribers keep their reference-based (no bulk copy)
+    review/status access. The lexeme must also belong to this shared deck:
+    owning/subscribing to one deck must not become a generic permission to
+    mutate progress for an unrelated shared word.
+    """
+    with get_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT shared_decks.visibility
+            FROM shared_decks
+            JOIN shared_deck_words
+              ON shared_deck_words.shared_deck_id = shared_decks.id
+            WHERE shared_decks.id = ?
+              AND shared_deck_words.lexeme_id = ?
+            """,
+            (shared_deck_id, lexeme_id),
+        ).fetchone()
+        if not row:
+            return False
+        if row["visibility"] == "public":
+            return True
+        subscription = connection.execute(
+            """
+            SELECT 1 FROM user_deck_subscriptions
+            WHERE user_id = ? AND shared_deck_id = ? AND is_active = TRUE
+            """,
+            (user_id, shared_deck_id),
+        ).fetchone()
+        return subscription is not None
 
 
 def publish_deck(
@@ -297,14 +342,23 @@ def get_shared_deck(
 
 
 def delete_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | str:
-    """Unpublish a shared deck: removes the shared_decks row and its
-    shared_deck_items/shared_deck_terms/shared_deck_imports rows only.
-    Never touches personal decks/vocab_items, including copies other
-    users already imported from this shared deck.
+    """Unpublish a shared deck: soft-unpublish only (see
+    docs/architecture/shared-lexeme-progress-storage.md -- "owner unpublish
+    policy"). Flips shared_decks.visibility away from 'public' so the deck
+    disappears from public list/detail/import for everyone new -- it never
+    hard-deletes the shared_decks row (or shared_deck_items/terms/imports/
+    shared_deck_words/user_deck_subscriptions/user_word_progress). That is
+    what lets an existing subscriber keep reviewing the deck's words through
+    their own subscription/progress rows afterwards (see
+    shared_deck_word_access_allowed() above) without any bulk copy into
+    their personal vocab_items -- exactly the same reference-based storage
+    the deck used while it was public. Never touches personal
+    decks/vocab_items, including copies other users already imported from
+    this shared deck.
     """
     with get_connection() as connection:
         deck = connection.execute(
-            "SELECT id, owner_user_id, title FROM shared_decks WHERE id = ?",
+            "SELECT id, owner_user_id, title, visibility FROM shared_decks WHERE id = ?",
             (shared_deck_id,),
         ).fetchone()
         if not deck:
@@ -313,16 +367,11 @@ def delete_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | st
             return "forbidden"
 
         title = deck["title"]
-        connection.execute(
-            "DELETE FROM shared_deck_items WHERE shared_deck_id = ?", (shared_deck_id,)
-        )
-        connection.execute(
-            "DELETE FROM shared_deck_terms WHERE shared_deck_id = ?", (shared_deck_id,)
-        )
-        connection.execute(
-            "DELETE FROM shared_deck_imports WHERE shared_deck_id = ?", (shared_deck_id,)
-        )
-        connection.execute("DELETE FROM shared_decks WHERE id = ?", (shared_deck_id,))
+        if deck["visibility"] == "public":
+            connection.execute(
+                "UPDATE shared_decks SET visibility = 'unpublished', updated_at = ? WHERE id = ?",
+                (now_iso(), shared_deck_id),
+            )
 
     return {
         "shared_deck_id": shared_deck_id,

@@ -118,14 +118,24 @@ Repeat the standard sentence 20-50 times as one pasted block and confirm:
 - [ ] Re-importing an already-imported deck prompts a confirmation instead
       of silently duplicating.
 - [ ] A deck the current user published can be unpublished / share-canceled
-      (and, where supported, deleted).
+      (soft-unpublish only — the deck disappears from public list/detail/
+      import for new users, but an already-subscribed user can keep
+      reviewing its words; see policy below).
+- [ ] After unpublish, an existing subscriber's review/status writes for
+      that deck's words still return 200 and their study queue still
+      serves the words (not a 404 dead card).
+- [ ] After unpublish, a user who never imported the deck gets 404 on its
+      list/detail/import.
 
-**Known risk (confirmed 2026-07-28, Phase 5 QA):** unpublishing a
-lexeme-based shared deck currently blocks subscriber review/status writes
-with a 404 rather than preserving their ability to keep studying. See
-"Known issue: owner unpublish blocks subscriber review access" in
-`docs/architecture/shared-lexeme-progress-storage.md` for the full
-investigation and open policy question.
+**Resolved (Phase 6 Round 0-3, 2026-07-29):** owner unpublish is now a
+soft-unpublish (`shared_decks.visibility` flips away from `'public'`; the
+row itself is never deleted) — closed to new users, but an existing
+subscriber keeps reference-based review/status access through their own
+`user_deck_subscriptions`/`user_word_progress` rows, no bulk copy. See
+"Owner unpublish policy" in
+`docs/architecture/shared-lexeme-progress-storage.md` for the full design
+and `backend/scripts/smoke_test_shared_lexeme_progress.py`'s
+`run_unpublish_boundary_checks()` for the regression coverage.
 
 **Known risk (confirmed 2026-07-14):** importing a large recommended deck is
 slow — importing the 684-word N5 deck took ~2 minutes end-to-end against the

@@ -974,55 +974,63 @@ confirmation is needed. All subsequent verification in this phase
 (smoke test script, `compileall`) was pointed at a local, disposable SQLite
 file only.
 
-## Known issue: owner unpublish blocks subscriber review access
+## Owner unpublish policy (decided Phase 6 Round 0, implemented Round 1-3)
 
-Confirmed 2026-07-28 (jp_vocab_reader Phase 5, Round 7-9 QA), via a real
-SQLite smoke run (not just static reading):
+Phase 5 (Round 7-9 QA, confirmed 2026-07-28) found that `DELETE
+/shared-decks/{id}` blocked an existing subscriber's further
+review/status writes with HTTP 404, while on SQLite the word kept
+appearing in their study queue anyway -- a dead card. That behavior was
+recorded as a known issue and deliberately left unresolved pending a
+product policy decision.
 
-- When a deck owner unpublishes/deletes a lexeme-based shared deck
-  (`DELETE /shared-decks/{id}`, `delete_shared_deck()` in
-  `shared_deck_repository.py`), only the `shared_decks` /
-  `shared_deck_items` / `shared_deck_terms` / `shared_deck_imports` rows
-  are removed. `user_word_progress`, `shared_deck_words`, and
-  `user_deck_subscriptions` are left untouched by this function.
-- Both review-recording endpoints (`POST
-  /shared-decks/{id}/words/{lexeme_id}/review`, `PATCH
-  .../progress`) gate on `shared_deck_exists()`, which requires a live
-  `shared_decks` row. Once that row is gone, a subscriber who already had
-  the word in progress gets **HTTP 404** on every further rating/status
-  change for that word -- confirmed with a real request in Round 8.
-- On **SQLite** (no FK on `shared_deck_words.shared_deck_id` or
-  `user_deck_subscriptions.shared_deck_id`), the subscriber's study queue
-  keeps returning the word after unpublish -- confirmed with a real
-  `GET /study-items/lexemes` call. The word is visible but every rating
-  attempt 404s: a dead card, not a silent disappearance.
-- On **Postgres**, both of those columns declare `ON DELETE CASCADE`
-  (`database.py:914`, `database.py:946`), which would remove the deck-word
-  link and the subscription row when the deck row is deleted, making the
-  word vanish from the study queue instead. **This has not been executed**
-  -- no Neon/production access was used for this investigation, so it is a
-  code-path inference from the schema declaration only, not a confirmed
-  runtime result. It is also unconfirmed whether the live Neon database
-  actually carries this constraint: `CREATE TABLE IF NOT EXISTS` is a
-  no-op against a table that predates this FK, and the additive
-  `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` migration only adds columns,
-  never a foreign key, on an existing table.
-- **Personal data is not deleted either way.** A direct SQLite query
-  after unpublish, in the Round 8 smoke run, showed the subscriber's
-  `user_word_progress` row for the word fully intact (status, level,
-  correct/wrong counts, `next_review_at` all preserved) -- the failure
-  mode is access being blocked, not data loss.
-- **Product policy is not yet decided**: should a subscriber be able to
-  keep studying words from a deck its owner has unpublished, or is
-  blocking further review the intended behavior? Resolving that is
-  deferred to a future phase/batch -- this phase deliberately does not
-  soften the `shared_deck_exists()` guard, unify the SQLite/Postgres
-  behavior, or change what survives unpublish, since that requires the
-  policy decision first.
-- `backend/scripts/smoke_test_shared_lexeme_progress.py` now has a set of
-  checks (see `run_unpublish_boundary_checks()`, labeled `KNOWN ISSUE` in
-  their assertion names) that pin down this current behavior as a
-  regression baseline. If/when the policy above is decided and the
-  behavior changes, those specific checks need to be deliberately updated
-  to match the new intended behavior -- a future fix that leaves them
-  passing unchanged has probably not actually changed anything.
+**Decided policy** (Phase 6 Round 0): owner unpublish means "closed to
+new users", not "existing subscribers lose their progress". A personal
+`user_word_progress` row is the user's own learning asset and is never
+cut off by someone else unpublishing the deck it came from.
+
+- `delete_shared_deck()` (`shared_deck_repository.py`) no longer deletes
+  the `shared_decks` row. It only flips `visibility` away from
+  `'public'` (a soft unpublish) -- `shared_deck_items`, `shared_deck_terms`,
+  `shared_deck_imports`, `shared_deck_words`, `user_deck_subscriptions`,
+  and `user_word_progress` are all left exactly as they were. This also
+  means the PostgreSQL `ON DELETE CASCADE` on
+  `shared_deck_words.shared_deck_id` / `user_deck_subscriptions.shared_deck_id`
+  (`database.py:914`, `database.py:946`) is simply never triggered by this
+  path any more -- unpublish never issues the `shared_decks` DELETE that
+  would fire it, so SQLite and PostgreSQL now behave identically here
+  without needing a schema change or a live Neon check.
+- `list_shared_decks()`, `get_shared_deck()`, and `import_shared_deck()`
+  are unchanged: all three still require `visibility = 'public'`, so a
+  brand new user still cannot list, view the detail of, or import an
+  unpublished deck. This is what keeps unpublish meaning "no new
+  adoption".
+- The per-word write endpoints (`POST
+  /shared-decks/{id}/words/{lexeme_id}/review`, `PATCH .../progress`) now
+  gate on `shared_deck_word_access_allowed(shared_deck_id, user_id, lexeme_id)`
+  (`shared_deck_repository.py`) instead of the old `shared_deck_exists()`
+  (public-only) check. It allows the write when the deck is still public,
+  **or** when the requesting user already holds an active
+  `user_deck_subscriptions` row for that deck -- i.e. only someone who
+  adopted the deck before it was unpublished. The guard also verifies that
+  the requested `lexeme_id` belongs to that exact `shared_deck_id`; a
+  public deck or active subscription is never a blanket permission to
+  write progress for an unrelated shared word. `shared_deck_exists()`
+  itself is unchanged and still backs the new-user-facing list/detail
+  surfaces.
+- No bulk copy was introduced to make this work. An existing subscriber's
+  continued access is still purely a reference through their own
+  `user_deck_subscriptions` + `shared_deck_words` + `lexemes` +
+  `user_word_progress` rows -- the same no-copy storage model the deck
+  used while it was public (see "User-published shared decks" above).
+  Nothing is duplicated per subscriber, so this does not grow with import
+  count.
+- `backend/scripts/smoke_test_shared_lexeme_progress.py`'s
+  `run_unpublish_boundary_checks()` was updated to verify this policy
+  directly: an existing subscriber's review/status writes now return 200
+  (checks 15/15b) and actually update `user_word_progress` (16b/16c), the
+  word stays in their study queue as a live (not dead) card (17), and the
+  `shared_decks` row survives with a non-`'public'` visibility (17c/17d).
+  The same smoke also checks that a lexeme from another deck is rejected
+  both before and after unpublish (13e/15c). New checks (18/18b/18c)
+  confirm a brand new user still gets blocked from the list, detail, and
+  import of an unpublished deck.
