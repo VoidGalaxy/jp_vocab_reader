@@ -855,11 +855,19 @@ export default function HomePage() {
       window.localStorage.getItem(READING_SESSION_KEY),
     );
     if (readingSession) {
+      // The saved-word CTA/basket are real data and stay restored no matter
+      // how old the session is, but the save confirmation message ("단어
+      // N개를 저장했습니다...") reads as a just-now event -- only restore it
+      // when the session was last touched today, otherwise leave it blank.
+      const sessionUpdatedAt = new Date(readingSession.updatedAt);
+      const isMessageFresh =
+        !Number.isNaN(sessionUpdatedAt.getTime()) &&
+        sessionUpdatedAt.toDateString() === new Date().toDateString();
       setReadingText(readingSession.originalText);
       setAnalyzedReadingText(readingSession.analyzedText);
       setReadingSelectedDeckId(readingSession.deckId);
       setReadingTokens(readingSession.tokens);
-      setReadingMessage(readingSession.message);
+      setReadingMessage(isMessageFresh ? readingSession.message : "");
       setIsReadingTextCollapsed(readingSession.isTextCollapsed);
       setRecentlySavedVocabItemIds(readingSession.recentlySavedVocabItemIds);
       setCurrentSelectedTokenKey(readingSession.selectedTokenKey);
@@ -1618,6 +1626,17 @@ export default function HomePage() {
     ) {
       return;
     }
+    // Clear the previous session's leftover state here rather than relying
+    // on performReadingAnalyze's own reset -- that only runs once analysis
+    // actually starts, so a still-empty deckId below would otherwise leave
+    // a stale CTA/message from the old (possibly days-old, restored)
+    // session sitting under the freshly-loaded sample text.
+    setRecentlySavedVocabItemIds([]);
+    setReadingMessage("");
+    setCurrentSelectedTokenKey(null);
+    setReadingScrollFraction(null);
+    setIsReadingSessionRestored(false);
+
     // readingSelectedDeckId may still be empty this early (decks load
     // async on mount) -- fall back to the same default-deck resolution
     // loadDecks() itself seeds that state with, so clicking the sample CTA
@@ -1630,6 +1649,8 @@ export default function HomePage() {
     setActiveTab("reading");
     if (deckId) {
       void performReadingAnalyze(SAMPLE_TEXT, deckId);
+    } else {
+      setReadingMessage("읽기 덱을 불러온 뒤 다시 시도해주세요.");
     }
   }
 
