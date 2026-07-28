@@ -608,8 +608,8 @@ export function SharedDeckSection({
           ) : null}
           {selectedDeck.is_owner ? (
             <p className="muted-text shared-deck-owner-hint">
-              공유 취소하면 공유 목록에서만 내려가며, 이미 가져간 개인 덱은
-              삭제되지 않아요.
+              공유를 중단하면 다른 사용자는 이 공유덱을 더 이상 새로 가져올
+              수 없어요.
             </p>
           ) : null}
 

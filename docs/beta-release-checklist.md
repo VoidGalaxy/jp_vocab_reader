@@ -120,6 +120,13 @@ Repeat the standard sentence 20-50 times as one pasted block and confirm:
 - [ ] A deck the current user published can be unpublished / share-canceled
       (and, where supported, deleted).
 
+**Known risk (confirmed 2026-07-28, Phase 5 QA):** unpublishing a
+lexeme-based shared deck currently blocks subscriber review/status writes
+with a 404 rather than preserving their ability to keep studying. See
+"Known issue: owner unpublish blocks subscriber review access" in
+`docs/architecture/shared-lexeme-progress-storage.md` for the full
+investigation and open policy question.
+
 **Known risk (confirmed 2026-07-14):** importing a large recommended deck is
 slow — importing the 684-word N5 deck took ~2 minutes end-to-end against the
 Neon backend (`backend/app/repositories/shared_deck_repository.py`

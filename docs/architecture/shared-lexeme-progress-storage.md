@@ -973,3 +973,56 @@ modified from Claude Code -- verify directly via the Neon dashboard if
 confirmation is needed. All subsequent verification in this phase
 (smoke test script, `compileall`) was pointed at a local, disposable SQLite
 file only.
+
+## Known issue: owner unpublish blocks subscriber review access
+
+Confirmed 2026-07-28 (jp_vocab_reader Phase 5, Round 7-9 QA), via a real
+SQLite smoke run (not just static reading):
+
+- When a deck owner unpublishes/deletes a lexeme-based shared deck
+  (`DELETE /shared-decks/{id}`, `delete_shared_deck()` in
+  `shared_deck_repository.py`), only the `shared_decks` /
+  `shared_deck_items` / `shared_deck_terms` / `shared_deck_imports` rows
+  are removed. `user_word_progress`, `shared_deck_words`, and
+  `user_deck_subscriptions` are left untouched by this function.
+- Both review-recording endpoints (`POST
+  /shared-decks/{id}/words/{lexeme_id}/review`, `PATCH
+  .../progress`) gate on `shared_deck_exists()`, which requires a live
+  `shared_decks` row. Once that row is gone, a subscriber who already had
+  the word in progress gets **HTTP 404** on every further rating/status
+  change for that word -- confirmed with a real request in Round 8.
+- On **SQLite** (no FK on `shared_deck_words.shared_deck_id` or
+  `user_deck_subscriptions.shared_deck_id`), the subscriber's study queue
+  keeps returning the word after unpublish -- confirmed with a real
+  `GET /study-items/lexemes` call. The word is visible but every rating
+  attempt 404s: a dead card, not a silent disappearance.
+- On **Postgres**, both of those columns declare `ON DELETE CASCADE`
+  (`database.py:914`, `database.py:946`), which would remove the deck-word
+  link and the subscription row when the deck row is deleted, making the
+  word vanish from the study queue instead. **This has not been executed**
+  -- no Neon/production access was used for this investigation, so it is a
+  code-path inference from the schema declaration only, not a confirmed
+  runtime result. It is also unconfirmed whether the live Neon database
+  actually carries this constraint: `CREATE TABLE IF NOT EXISTS` is a
+  no-op against a table that predates this FK, and the additive
+  `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` migration only adds columns,
+  never a foreign key, on an existing table.
+- **Personal data is not deleted either way.** A direct SQLite query
+  after unpublish, in the Round 8 smoke run, showed the subscriber's
+  `user_word_progress` row for the word fully intact (status, level,
+  correct/wrong counts, `next_review_at` all preserved) -- the failure
+  mode is access being blocked, not data loss.
+- **Product policy is not yet decided**: should a subscriber be able to
+  keep studying words from a deck its owner has unpublished, or is
+  blocking further review the intended behavior? Resolving that is
+  deferred to a future phase/batch -- this phase deliberately does not
+  soften the `shared_deck_exists()` guard, unify the SQLite/Postgres
+  behavior, or change what survives unpublish, since that requires the
+  policy decision first.
+- `backend/scripts/smoke_test_shared_lexeme_progress.py` now has a set of
+  checks (see `run_unpublish_boundary_checks()`, labeled `KNOWN ISSUE` in
+  their assertion names) that pin down this current behavior as a
+  regression baseline. If/when the policy above is decided and the
+  behavior changes, those specific checks need to be deliberately updated
+  to match the new intended behavior -- a future fix that leaves them
+  passing unchanged has probably not actually changed anything.
