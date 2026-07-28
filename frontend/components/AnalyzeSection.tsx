@@ -499,7 +499,7 @@ function ClassifyResultSummary({
   onGoToVocab,
 }: ClassifyResultSummaryProps) {
   return (
-    <div className="classify-result-summary index-card-shell">
+    <div className="classify-result-summary">
       <ShioriStamp variant="success" label="완료" />
       <h3>단어 나누기를 마쳤어요.</h3>
       <CoverageSummary stats={coverageStats} />
