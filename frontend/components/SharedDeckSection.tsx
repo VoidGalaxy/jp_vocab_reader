@@ -377,7 +377,7 @@ export function SharedDeckSection({
 
   return (
     <section className="tab-panel shared-deck-section" aria-live="polite">
-      <section className="panel-card hero-card shared-hero-card">
+      <section className="panel-card hero-card shared-hero-card card-stack-surface">
         <div className="panel-card-header">
           <h2 className="panel-card-title">
             <ShioriMark className="shared-deck-title-mark" />
@@ -429,15 +429,8 @@ export function SharedDeckSection({
             ) : null}
             <span>{message}</span>
           </p>
-          <div className="shared-deck-message-actions">
-            <button
-              type="button"
-              className="secondary-button compact-button"
-              onClick={onGoToVocab}
-            >
-              어휘 노트 보기
-            </button>
-            {messageTone === "success" ? (
+          {messageTone === "success" ? (
+            <div className="shared-deck-message-actions">
               <button
                 type="button"
                 className="ghost-button compact-button"
@@ -445,8 +438,8 @@ export function SharedDeckSection({
               >
                 복습 시작
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
