@@ -98,6 +98,174 @@ def count_rows(table: str, where: str = "1=1", params: tuple = ()) -> int:
     return int(row["c"])
 
 
+def run_unpublish_boundary_checks() -> None:
+    """Records what CURRENTLY happens to a subscriber when the owner of a
+    lexeme-mode shared deck unpublishes it.
+
+    These checks deliberately assert today's KNOWN-BROKEN behavior so it is
+    visible and regression-locked -- not that it is correct. The subscriber's
+    user_word_progress row survives the unpublish, but every further
+    review/status write is rejected 404 by the shared_deck_exists() guard in
+    app/main.py while the word is still served in their study queue. Whether
+    that should change is a product policy decision that was deliberately
+    deferred; if a later round settles it, check 15/15b/17 below are what must
+    be updated.
+
+    SQLite only. The PostgreSQL schema declares ON DELETE CASCADE on
+    shared_deck_words/user_deck_subscriptions (app/database.py) where the
+    SQLite schema declares no foreign key at all, so post-unpublish behavior
+    there is expected to differ and is NOT covered by this script.
+    """
+    from fastapi.testclient import TestClient
+
+    import app.main as main_module
+
+    def register(client, email: str) -> tuple[dict[str, str], int]:
+        body = client.post(
+            "/auth/register",
+            json={"email": email, "password": "smoke-test-pw", "display_name": email},
+        ).json()
+        return (
+            {"Authorization": f"Bearer {body['access_token']}"},
+            int(body["user"]["id"]),
+        )
+
+    with TestClient(main_module.app) as client:
+        owner_headers, _owner_id = register(client, "unpublish-owner@smoke.test")
+        sub_headers, sub_id = register(client, "unpublish-subscriber@smoke.test")
+
+        # Owner publishes a personal deck -- publish_deck() writes lexemes +
+        # shared_deck_words, i.e. this produces a lexeme-mode shared deck.
+        deck_id = client.post(
+            "/decks",
+            json={"name": "언퍼블리시 경계 테스트 덱"},
+            headers=owner_headers,
+        ).json()["id"]
+        client.post(
+            "/vocab-items",
+            json={
+                "surface": "旅",
+                "base_form": "旅",
+                "reading": "たび",
+                "part_of_speech": "명사",
+                "meaning_ko": "여행",
+                "deck_id": deck_id,
+            },
+            headers=owner_headers,
+        )
+        shared_deck_id = client.post(
+            f"/decks/{deck_id}/publish",
+            json={"title": "언퍼블리시 경계 공유덱", "description": ""},
+            headers=owner_headers,
+        ).json()["shared_deck_id"]
+        check(
+            "13. publishing a personal deck produces a lexeme-mode shared deck",
+            is_lexeme_deck(shared_deck_id),
+        )
+
+        with get_connection() as connection:
+            lexeme_id = int(
+                connection.execute(
+                    "SELECT lexeme_id FROM shared_deck_words WHERE shared_deck_id = ?",
+                    (shared_deck_id,),
+                ).fetchone()["lexeme_id"]
+            )
+
+        # Subscriber imports and reviews once, while the deck is still public.
+        resp = client.post(
+            f"/shared-decks/{shared_deck_id}/import", headers=sub_headers
+        )
+        check("13b. subscriber can import the shared deck", resp.status_code == 200)
+        resp = client.post(
+            f"/shared-decks/{shared_deck_id}/words/{lexeme_id}/review",
+            json={"rating": "good"},
+            headers=sub_headers,
+        )
+        check(
+            "13c. subscriber can review a word while the deck is published",
+            resp.status_code == 200,
+        )
+        check(
+            "13d. that review created the subscriber's own progress row",
+            count_rows(
+                "user_word_progress",
+                "user_id = ? AND lexeme_id = ?",
+                (sub_id, lexeme_id),
+            )
+            == 1,
+        )
+
+        resp = client.delete(f"/shared-decks/{shared_deck_id}", headers=owner_headers)
+        check("14. owner can unpublish their shared deck", resp.status_code == 200)
+
+        # --- everything below records current, known-broken behavior --------
+        review_after = client.post(
+            f"/shared-decks/{shared_deck_id}/words/{lexeme_id}/review",
+            json={"rating": "good"},
+            headers=sub_headers,
+        )
+        print(f"       -> review after unpublish: HTTP {review_after.status_code}")
+        check(
+            "15. KNOWN ISSUE: subscriber review after owner unpublish returns 404",
+            review_after.status_code == 404,
+        )
+        status_after = client.patch(
+            f"/shared-decks/{shared_deck_id}/words/{lexeme_id}/progress",
+            json={"status": "unknown"},
+            headers=sub_headers,
+        )
+        print(f"       -> status change after unpublish: HTTP {status_after.status_code}")
+        check(
+            "15b. KNOWN ISSUE: subscriber status change after unpublish returns 404",
+            status_after.status_code == 404,
+        )
+
+        with get_connection() as connection:
+            row = connection.execute(
+                """
+                SELECT status, review_level, correct_count, wrong_count, next_review_at
+                FROM user_word_progress
+                WHERE user_id = ? AND lexeme_id = ?
+                """,
+                (sub_id, lexeme_id),
+            ).fetchone()
+        check(
+            "16. the subscriber's progress row SURVIVES the unpublish", row is not None
+        )
+        if row:
+            print(
+                "       -> surviving progress row: "
+                f"status={row['status']!r} review_level={row['review_level']} "
+                f"correct={row['correct_count']} wrong={row['wrong_count']} "
+                f"next_review_at={row['next_review_at']!r}"
+            )
+            check(
+                "16b. the pre-unpublish review is still recorded in that row",
+                int(row["review_level"]) > 0 and int(row["correct_count"]) == 1,
+            )
+
+        # On SQLite nothing cascades, so the word keeps being served -- which is
+        # what turns the 404 above into a visibly dead card rather than a
+        # silently vanished one.
+        queue = client.get("/study-items/lexemes", headers=sub_headers).json()
+        queued = [item for item in queue if item["lexeme_id"] == lexeme_id]
+        check(
+            "17. KNOWN ISSUE (SQLite): word is STILL in the study queue after unpublish",
+            len(queued) == 1,
+        )
+        if queued:
+            print(f"       -> queue entry source_label={queued[0]['source_label']!r}")
+        check(
+            "17b. subscription row also survives on SQLite (no FK cascade declared)",
+            count_rows(
+                "user_deck_subscriptions",
+                "user_id = ? AND shared_deck_id = ?",
+                (sub_id, shared_deck_id),
+            )
+            == 1,
+        )
+
+
 def main() -> int:
     print(f"using scratch db: {_SCRATCH_DB}")
     init_db()
@@ -259,6 +427,8 @@ def main() -> int:
         "12b. list_vocab_items still returns it",
         any(item["id"] == created_item["id"] for item in list_vocab_items(importer_id)),
     )
+
+    run_unpublish_boundary_checks()
 
     print()
     if FAILURES:
