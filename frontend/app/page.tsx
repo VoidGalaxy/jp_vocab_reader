@@ -2073,7 +2073,7 @@ export default function HomePage() {
       setPublishTitle("");
       setPublishDescription("");
       setDeckMessage(
-        `${result.title} 덱을 공유 덱으로 등록했습니다. 단어 수 ${result.vocab_count}개, 용어 수 ${result.custom_term_count}개를 복사했습니다.`,
+        `${result.title} 덱을 공유 덱으로 등록했습니다. 단어 수 ${result.vocab_count}개, 용어 수 ${result.custom_term_count}개가 포함됐어요.`,
       );
       await loadSharedDecks();
     } catch (error) {
