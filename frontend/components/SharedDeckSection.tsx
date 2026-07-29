@@ -609,7 +609,8 @@ export function SharedDeckSection({
           {selectedDeck.is_owner ? (
             <p className="muted-text shared-deck-owner-hint">
               공유를 중단하면 다른 사용자는 이 공유덱을 더 이상 새로 가져올
-              수 없어요.
+              수 없고, 이 덱 책장 목록에서도 보이지 않게 돼요. 이미 학습
+              중인 사용자는 복습 탭에서 계속 이어갈 수 있어요.
             </p>
           ) : null}
 

@@ -1003,7 +1003,14 @@ cut off by someone else unpublishing the deck it came from.
   are unchanged: all three still require `visibility = 'public'`, so a
   brand new user still cannot list, view the detail of, or import an
   unpublished deck. This is what keeps unpublish meaning "no new
-  adoption".
+  adoption". Note this `WHERE` clause is unconditional -- it also hides
+  the deck from the *owner's own* bookshelf/detail view, and from an
+  existing subscriber's `SharedDeckSection` list, once unpublished. Only
+  the Study-tab/review-status path (via `shared_deck_word_access_allowed`)
+  stays reachable for them. This is an accepted UX trade-off from Phase 6
+  Round 1-3/7 (avoids a second visibility model just for "subscribed but
+  unpublished"), not a bug -- restoring bookshelf visibility for existing
+  subscribers is a candidate for a later phase, not this one.
 - The per-word write endpoints (`POST
   /shared-decks/{id}/words/{lexeme_id}/review`, `PATCH .../progress`) now
   gate on `shared_deck_word_access_allowed(shared_deck_id, user_id, lexeme_id)`
