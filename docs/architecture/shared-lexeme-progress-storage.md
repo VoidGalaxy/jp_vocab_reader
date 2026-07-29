@@ -1045,6 +1045,23 @@ cut off by someone else unpublishing the deck it came from.
   "다시 공유하기" button was added, since exercising it would need real
   browser QA at 1280/375/320 that this round's environment can't run; that
   is left as a small, well-scoped Round 7-9 candidate, not a blocker.
+- **Update, Phase 7 Round 7-9 (frontend republish wiring)**:
+  `SharedDeckSection.tsx` gained an owner-only "다시 공유하기" button, shown
+  in the detail heading only when `is_owner && !is_published` (never for a
+  subscriber; a published owner still sees "공유 취소" instead, never both).
+  `page.tsx`'s new `republishSharedDeck()` calls `POST
+  /shared-decks/{id}/republish` and, on success, re-fetches via
+  `loadSharedDecks()` plus a non-toggling refresh of the open detail pane.
+  While wiring this, `unpublishSharedDeck()`'s old behavior -- locally
+  filtering the deck out of `sharedDecks` and closing the detail pane on
+  success -- was replaced with the same `loadSharedDecks()`
+  refetch-in-place pattern, since that local removal contradicted Round
+  1-2's "owner/subscriber keep seeing the unpublished deck" policy within
+  the same browser session (a manual refresh was previously required to
+  see it again). Card-grid republish button was deliberately left out
+  (detail-only) to avoid growing the card's already-conditional button
+  row; Codex browser QA (1280/768/375/320) confirmed the badge/button
+  swap and no console errors.
 - The per-word write endpoints (`POST
   /shared-decks/{id}/words/{lexeme_id}/review`, `PATCH .../progress`) now
   gate on `shared_deck_word_access_allowed(shared_deck_id, user_id, lexeme_id)`

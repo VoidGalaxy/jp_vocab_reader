@@ -126,6 +126,16 @@ Repeat the standard sentence 20-50 times as one pasted block and confirm:
       serves the words (not a 404 dead card).
 - [ ] After unpublish, a user who never imported the deck gets 404 on its
       list/detail/import.
+- [ ] After unpublish, the owner and any already-subscribed user still see
+      the deck in their own shared-deck bookshelf/list and detail, tagged
+      with a calm "공유 중단됨" badge — it does not vanish from their own
+      view, only from a brand new user's.
+- [ ] In that unpublished detail view, the owner sees a "다시 공유하기"
+      button (no "공유 취소" button); a subscriber sees the badge plus
+      "열기"/status controls but never a republish button.
+- [ ] Republishing (owner-only; non-owner gets 403) flips the deck back to
+      public: the badge disappears, "공유 취소" reappears, and a brand new
+      user can list/view/import it again.
 
 **Resolved (Phase 6 Round 0-3, 2026-07-29):** owner unpublish is now a
 soft-unpublish (`shared_decks.visibility` flips away from `'public'`; the
@@ -136,6 +146,15 @@ subscriber keeps reference-based review/status access through their own
 `docs/architecture/shared-lexeme-progress-storage.md` for the full design
 and `backend/scripts/smoke_test_shared_lexeme_progress.py`'s
 `run_unpublish_boundary_checks()` for the regression coverage.
+
+**Resolved (Phase 7, 2026-07-29):** the owner's and existing subscribers'
+own list/detail views were reopened for an unpublished deck (`is_published`
+response field + "공유 중단됨" badge), and an owner-only `POST
+/shared-decks/{id}/republish` was added and wired to a "다시 공유하기"
+button in the unpublished detail view — a pure `visibility` flip back to
+`'public'`, still no bulk copy and no change to `import_shared_deck()`'s
+public-only new-user gate. See the same "Owner unpublish policy" section
+for the full Round 1-9 history.
 
 **Known risk (confirmed 2026-07-14):** importing a large recommended deck is
 slow — importing the 684-word N5 deck took ~2 minutes end-to-end against the
