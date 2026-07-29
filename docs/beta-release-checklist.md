@@ -205,6 +205,57 @@ confirms the seed script's *current code path* end to end locally; it does
 not change the production-verification follow-up above, which still
 requires checking the live Render/Neon N1-N5 rows directly.
 
+**Production verification procedure (Phase 10 Round 4-6, designed but NOT
+executed):** this is a procedure for whoever runs the actual check later,
+not a report that the check has been done. As of this writing the
+production state is still **unconfirmed** -- nothing below has been run
+against Render/Neon.
+
+1. *Purpose.* Confirm whether the live N1-N5 `shared_decks` rows on
+   Render/Neon are lexeme-mode (have `shared_deck_words` rows) or still
+   legacy-mode (`shared_deck_items` only, pre-lexeme-migration).
+2. *Preconditions.* Requires explicit user/Codex approval before running,
+   requires production (Render/Neon) access/credentials, must stay
+   **read-only** (no writes, no re-seeding, no migration as part of this
+   check), and does not relax the local-work rule that this repo's own
+   Claude/agent sessions never touch Neon directly.
+3. *Option 1 -- API check (lighter weight).* `GET /shared-decks` on the
+   deployed Render backend returns a `mode` field per deck
+   (`SharedDeckSummaryResponse.mode`, `app/schemas.py`) that the server
+   computes from `is_lexeme_deck()` -- this does **not** depend on the
+   caller's auth state (it's not user-scoped like `is_owner`/`imported_at`),
+   so a single anonymous request is enough; logging in as any particular
+   user is not required. Procedure: call `GET /shared-decks`, find each
+   N1-N5 title in the response, read its `mode`. `"subscribed"` = lexeme-mode
+   confirmed; `"copied"` = still legacy. `GET /shared-decks/{id}` (detail)
+   reports the same `mode` per-deck if a narrower check is preferred.
+4. *Option 2 -- DB check (heavier, only if Option 1 isn't sufficient).*
+   Read-only SQL to run manually against the production database (example
+   only, not executed here):
+   ```sql
+   -- find the N1-N5 deck ids/titles
+   SELECT id, title FROM shared_decks WHERE title LIKE 'JLPT N%추천 어휘%';
+   -- for each id: does it have lexeme-mode word rows?
+   SELECT 1 FROM shared_deck_words WHERE shared_deck_id = ?;
+   -- for each id: does it still have legacy rows?
+   SELECT 1 FROM shared_deck_items WHERE shared_deck_id = ?;
+   ```
+5. *Interpretation.* `shared_deck_words` row exists / API `mode` is
+   `"subscribed"` -> lexeme-mode confirmed for that deck. No
+   `shared_deck_words` row / API `mode` is `"copied"` -> that deck is still
+   legacy-mode. A mixed result across N1-N5 (some lexeme, some legacy) means
+   a per-deck re-registration/migration decision, not a blanket one.
+6. *If the result is false (still legacy) for any deck.* Re-running
+   `seed_jlpt_shared_decks.py --apply` against production to re-register
+   that deck is a **separate, destructive/production-affecting task**
+   requiring its own approval -- it is out of scope for this verification
+   step and must not be done as a side effect of just checking the state.
+7. *Current limitation.* The Phase 9 local smoke
+   (`smoke_test_jlpt_seed_lexeme_mode.py`) only proves the seed script's
+   *code path* produces lexeme-mode output against a local SQLite fixture.
+   It says nothing about what is actually sitting in production today --
+   that remains unconfirmed until Option 1 or 2 above is actually run.
+
 ## 8. Feedback — Final Test
 
 - [ ] Global app feedback (하단/사이드바 피드백 버튼) submits successfully.
