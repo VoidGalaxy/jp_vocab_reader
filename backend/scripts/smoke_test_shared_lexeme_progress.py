@@ -664,6 +664,33 @@ def main() -> int:
         == 1,
     )
 
+    # --- 2b. Owner cannot import/subscribe to their own shared deck --------
+    with get_connection() as connection:
+        import_count_before = connection.execute(
+            "SELECT import_count FROM shared_decks WHERE id = ?", (shared_deck_id,)
+        ).fetchone()["import_count"]
+    owner_import_result = import_shared_deck(owner_id, shared_deck_id)
+    check(
+        "6b. owner cannot import their own lexeme-mode shared deck",
+        owner_import_result == "forbidden",
+    )
+    check(
+        "6c. owner self-import attempt did not create a subscription row",
+        count_rows(
+            "user_deck_subscriptions", "user_id = ? AND shared_deck_id = ?",
+            (owner_id, shared_deck_id),
+        )
+        == 0,
+    )
+    with get_connection() as connection:
+        import_count_after = connection.execute(
+            "SELECT import_count FROM shared_decks WHERE id = ?", (shared_deck_id,)
+        ).fetchone()["import_count"]
+    check(
+        "6d. owner self-import attempt did not increment import_count",
+        import_count_after == import_count_before,
+    )
+
     # --- 3. Re-importing the same deck must not duplicate the subscription -
     result_again = import_shared_deck(importer_id, shared_deck_id)
     check(
@@ -731,6 +758,15 @@ def main() -> int:
     check(
         "11c. legacy import still copies into vocab_items",
         count_rows("vocab_items", "user_id = ?", (importer_id,)) == 1,
+    )
+    owner_legacy_result = import_shared_deck(owner_id, legacy_deck_id)
+    check(
+        "11d. owner cannot import their own legacy shared deck",
+        owner_legacy_result == "forbidden",
+    )
+    check(
+        "11e. owner self-import attempt did not create a personal deck copy",
+        count_rows("decks", "user_id = ?", (owner_id,)) == 0,
     )
     delete_shared_deck(owner_id, legacy_deck_id)
 

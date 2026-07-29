@@ -580,6 +580,10 @@ def post_shared_deck_import(
     shared_deck_id: int, http_request: Request
 ) -> SharedDeckImportResponse:
     imported = import_shared_deck(current_user_id(http_request), shared_deck_id)
+    if imported == "forbidden":
+        raise HTTPException(
+            status_code=403, detail="자신이 공유한 덱은 가져올 수 없어요."
+        )
     if not imported:
         raise HTTPException(status_code=404, detail="shared deck not found")
     return SharedDeckImportResponse(**imported)

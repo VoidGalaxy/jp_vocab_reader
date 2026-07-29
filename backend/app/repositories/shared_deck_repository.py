@@ -454,7 +454,7 @@ def republish_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] |
     }
 
 
-def import_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | None:
+def import_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | str | None:
     """Dispatches on how this shared deck's words are stored:
 
     - lexeme-mode deck (has shared_deck_words rows, e.g. anything the JLPT
@@ -465,6 +465,14 @@ def import_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | No
     - legacy deck (shared_deck_items only, e.g. anything published from a
       personal deck before this change): unchanged copy-into-vocab_items
       behavior, so existing shared decks keep working exactly as before.
+
+    Either branch returns "forbidden" (see main.py's 403 mapping, same
+    sentinel style as delete_shared_deck()/republish_shared_deck()) when the
+    caller is the deck's own owner -- self-importing would create a
+    meaningless user_deck_subscriptions row (lexeme-mode) or a personal-deck
+    copy of one's own shared deck (legacy-mode), neither of which the
+    frontend ever triggers post Phase-9's UI guard, but nothing previously
+    stopped a direct API call from doing it.
     """
     if is_lexeme_deck(shared_deck_id):
         return _import_lexeme_shared_deck(user_id, shared_deck_id)
@@ -473,11 +481,11 @@ def import_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | No
 
 def _import_lexeme_shared_deck(
     user_id: int, shared_deck_id: int
-) -> dict[str, Any] | None:
+) -> dict[str, Any] | str | None:
     with get_connection() as connection:
         deck = connection.execute(
             """
-            SELECT id, title
+            SELECT id, title, owner_user_id
             FROM shared_decks
             WHERE id = ?
               AND visibility = 'public'
@@ -486,6 +494,8 @@ def _import_lexeme_shared_deck(
         ).fetchone()
         if not deck:
             return None
+        if int(deck["owner_user_id"]) == user_id:
+            return "forbidden"
 
     word_count = count_shared_deck_words(shared_deck_id)
     _subscription, created = get_or_create_subscription(user_id, shared_deck_id)
@@ -524,12 +534,12 @@ def _import_lexeme_shared_deck(
 
 def _import_shared_deck_legacy(
     user_id: int, shared_deck_id: int
-) -> dict[str, Any] | None:
+) -> dict[str, Any] | str | None:
     timestamp = now_iso()
     with get_connection() as connection:
         deck = connection.execute(
             """
-            SELECT id, title, description
+            SELECT id, title, description, owner_user_id
             FROM shared_decks
             WHERE id = ?
               AND visibility = 'public'
@@ -538,6 +548,8 @@ def _import_shared_deck_legacy(
         ).fetchone()
         if not deck:
             return None
+        if int(deck["owner_user_id"]) == user_id:
+            return "forbidden"
 
         deck_name = get_unique_imported_deck_name(connection, user_id, deck["title"])
         cursor = connection.execute(

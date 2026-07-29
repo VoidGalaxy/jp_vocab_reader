@@ -47,6 +47,19 @@ def check(label: str, condition: bool) -> None:
         FAILURES.append(label)
 
 
+def create_other_user(email: str, display_name: str) -> int:
+    timestamp = now_iso()
+    with get_connection() as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO users (email, display_name, auth_provider, created_at, updated_at)
+            VALUES (?, ?, 'local', ?, ?)
+            """,
+            (email, display_name, timestamp, timestamp),
+        )
+        return int(cursor.lastrowid)
+
+
 def create_shared_deck(owner_user_id: int, title: str) -> int:
     timestamp = now_iso()
     with get_connection() as connection:
@@ -92,11 +105,14 @@ def main() -> int:
         # back to the shared dev user (see app/auth.py
         # get_current_user_optional_or_dev), same as the local frontend.
 
-        # --- seed one lexeme-mode deck (owned by whatever the dev user's id
-        # turns out to be, via /me) --------------------------------------
+        # --- seed one lexeme-mode deck, owned by a separate user (not the
+        # dev user making these requests) -- Phase 10 added an owner
+        # self-import guard, so the deck owner and the importer below must
+        # be different accounts, same as in real usage. ---------------------
         me = client.get("/me").json()
         dev_user_id = me["id"]
-        shared_deck_id = create_shared_deck(dev_user_id, "JLPT 추천 어휘 N5 (phase2 스모크)")
+        other_owner_id = create_other_user("other-owner@smoke.test", "Other Owner")
+        shared_deck_id = create_shared_deck(other_owner_id, "JLPT 추천 어휘 N5 (phase2 스모크)")
         lexeme_ids = [
             add_lexeme_word(
                 shared_deck_id, i,
