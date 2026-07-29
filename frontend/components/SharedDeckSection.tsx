@@ -281,7 +281,8 @@ export function SharedDeckSection({
     // to let an already-subscribed user open their own word list -- never
     // as a new-import CTA (see docs/architecture/shared-lexeme-progress-storage.md
     // "Owner unpublish policy" Round 2 update).
-    const showActionButton = published || (isSubscribedMode && alreadyImported);
+    const showActionButton =
+      !deck.is_owner && (published || (isSubscribedMode && alreadyImported));
     return (
       <article
         key={deck.id}
@@ -389,6 +390,18 @@ export function SharedDeckSection({
               disabled={isUnpublishing}
             >
               {isUnpublishing ? "공유 취소 중..." : "공유 취소"}
+            </button>
+          ) : null}
+          {deck.is_owner && !published && onRepublishSharedDeck ? (
+            <button
+              type="button"
+              className="secondary-button compact-button"
+              onClick={() => onRepublishSharedDeck(deck.id)}
+              disabled={republishingDeckId === deck.id}
+            >
+              {republishingDeckId === deck.id
+                ? "다시 공유하는 중..."
+                : "다시 공유하기"}
             </button>
           ) : null}
         </div>
