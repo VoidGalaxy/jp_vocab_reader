@@ -39,7 +39,7 @@ See [docs/dictionary-data.md](docs/dictionary-data.md) for supported JSON format
 
 ## 향후 서비스형 구조 계획
 
-여러 사용자가 각자의 덱, 단어장, 사용자 정의 용어, 학습 기록을 분리해 쓰고 공개 덱을 공유/가져오기 할 수 있도록 서비스형 구조 전환을 계획한다. 자세한 DB/API/권한 전환 방향은 [docs/service-architecture.md](docs/service-architecture.md)를 참고한다.
+여러 사용자가 각자의 덱, 단어장, 사용자 정의 용어, 학습 기록을 분리해 쓰고 공개 덱을 공유/가져오기 할 수 있도록 서비스형 구조 전환을 계획한다. [docs/service-architecture.md](docs/service-architecture.md)는 이 전환의 **초기 설계 초안(historical)**이며, 이후 실제로 바뀐 부분과 어긋나는 서술이 남아 있다. 현재 기준 문서는 용도별로 다음을 참고한다: 공유덱 lexeme/subscription 정책은 [docs/architecture/shared-lexeme-progress-storage.md](docs/architecture/shared-lexeme-progress-storage.md), 베타/릴리스 점검 항목은 [docs/beta-release-checklist.md](docs/beta-release-checklist.md).
 백엔드 DB 접근 로직은 `backend/app/repositories`의 기능별 repository로 1차 분리했다.
 백엔드는 회원가입/로그인 API와 JWT access token을 지원한다. 개발 모드에서는 토큰이 없는 요청이 기존처럼 `dev@example.local` 사용자로 fallback한다.
 토큰을 보내면 해당 사용자 기준으로 개인 덱, 단어장, 사용자 정의 용어를 조회/수정한다.
@@ -287,6 +287,7 @@ Set `NEXT_PUBLIC_API_BASE_URL` to the deployed backend URL before building or de
 - 공유 탭에서 공개 공유 덱 목록과 상세 미리보기를 확인하고, 원하는 공유 덱을 현재 사용자 계정의 개인 덱으로 가져올 수 있습니다.
 - 가져오기가 성공하면 새로 생성된 덱이 단어장 탭의 선택 덱으로 즉시 반영됩니다.
 - 가져온 덱의 단어 학습 상태는 `unknown`, 정답/오답/복습 단계는 0, 다음 복습일은 비어 있는 상태로 시작합니다.
+- 위 가져오기 설명은 legacy 방식(개인 덱 사본 생성) 기준입니다. JLPT 추천 어휘 같은 lexeme-mode 공유덱은 개인 덱을 새로 만들지 않고 학습 목록에 구독(subscription)만 추가합니다 — 자세한 구분은 [docs/architecture/shared-lexeme-progress-storage.md](docs/architecture/shared-lexeme-progress-storage.md) 참고.
 - 일반 사용자의 덱 공유는 공유 탭의 서버형 직접 공유를 사용합니다.
 - CSV/JSON 파일 내보내기와 가져오기는 백업이나 수동 이동이 필요한 고급 사용자용 기능이며, 단어장 관리의 고급 백업/파일 내보내기 섹션에서 사용할 수 있습니다.
 

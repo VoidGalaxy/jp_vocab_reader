@@ -1,4 +1,4 @@
-# 서비스형 구조 전환 설계
+# 서비스형 구조 전환 설계 (historical draft)
 
 이 문서는 현재 로컬 SQLite 기반 `jp-vocab-reader`를 여러 사용자가 함께 쓰는 웹서비스로 확장하기 위한 설계 초안이다. 현재는 백엔드 회원가입/로그인 API와 JWT access token을 지원하며, 토큰이 없으면 개발용 기본 사용자로 fallback한다.
 
