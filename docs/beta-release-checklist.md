@@ -194,6 +194,17 @@ deck specifically. Follow-up: run `is_lexeme_deck()` (or the equivalent
 `SELECT 1 FROM shared_deck_words WHERE shared_deck_id = ?` check) against
 the production N1-N5 deck ids to close this out definitively.
 
+**Local evidence added (Phase 9 Round 7-9, 2026-07-30):**
+`backend/scripts/smoke_test_jlpt_seed_lexeme_mode.py` now calls
+`seed_jlpt_shared_decks.py`'s own `run_apply_lexeme()` against a tiny
+fixture package (SQLite scratch DB only) and asserts the result is
+lexeme-mode (`is_lexeme_deck()` true, `shared_deck_words` populated, no
+legacy `shared_deck_items`/`shared_deck_terms` rows) and that a subsequent
+import stays subscription-only with no `vocab_items` bulk copy. This
+confirms the seed script's *current code path* end to end locally; it does
+not change the production-verification follow-up above, which still
+requires checking the live Render/Neon N1-N5 rows directly.
+
 ## 8. Feedback — Final Test
 
 - [ ] Global app feedback (하단/사이드바 피드백 버튼) submits successfully.
