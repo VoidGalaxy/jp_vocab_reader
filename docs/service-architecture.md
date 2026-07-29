@@ -2,6 +2,16 @@
 
 이 문서는 현재 로컬 SQLite 기반 `jp-vocab-reader`를 여러 사용자가 함께 쓰는 웹서비스로 확장하기 위한 설계 초안이다. 현재는 백엔드 회원가입/로그인 API와 JWT access token을 지원하며, 토큰이 없으면 개발용 기본 사용자로 fallback한다.
 
+> **Historical note (Phase 9, 2026-07-30):** 이 문서는 서비스 전환 초기 설계
+> 초안이며, 아래 "Shared Deck Market Foundation 완료" 절이 설명하는 구현도 그
+> 시점의 legacy copy-mode(개인 `vocab_items`로 단어를 복사하는 방식)에 대한
+> 기록이다. Phase 6부터 신규 공유덱은 lexeme/`shared_deck_words` + 구독
+> (subscription) 구조로 바뀌어, lexeme-mode 공유덱을 가져올 때는 `vocab_items`
+> bulk copy가 없다. 현재 정책의 기준 문서는
+> `docs/architecture/shared-lexeme-progress-storage.md`이며, 이 문서 본문에서
+> "가져오면 개인 덱으로 복사한다"는 서술은 legacy copy-mode(그 이전에 발행된
+> 일부 공유덱)에만 해당한다.
+
 ## A. 현재 구조 요약
 
 - 현재 앱은 SQLite 기반 로컬 앱 구조다.
