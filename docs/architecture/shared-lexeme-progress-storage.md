@@ -1062,6 +1062,16 @@ cut off by someone else unpublishing the deck it came from.
   (detail-only) to avoid growing the card's already-conditional button
   row; Codex browser QA (1280/768/375/320) confirmed the badge/button
   swap and no console errors.
+- **Update, Phase 8 Round 4-6 (card-grid republish button)**: the
+  card-grid omission above was revisited and reversed -- `renderDeckCard()`
+  gained the same owner-only "다시 공유하기" button (`deck.is_owner &&
+  !published && onRepublishSharedDeck`), reusing the existing
+  `republishSharedDeck()`/`onRepublishSharedDeck`/`republishingDeckId`
+  plumbing with no new state, confirm dialog, or fetch call. While there,
+  `showActionButton` also gained a `!deck.is_owner` guard so an owner's own
+  card (published or not) never shows the import/"열기" action button
+  meant for non-owners -- it previously showed regardless of ownership
+  whenever the deck was published.
 - The per-word write endpoints (`POST
   /shared-decks/{id}/words/{lexeme_id}/review`, `PATCH .../progress`) now
   gate on `shared_deck_word_access_allowed(shared_deck_id, user_id, lexeme_id)`
