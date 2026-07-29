@@ -110,9 +110,13 @@ Repeat the standard sentence 20-50 times as one pasted block and confirm:
 
 - [ ] Deck titles/descriptions read "JLPT 추천 어휘" / "추천 어휘 덱", never
       "공식 JLPT 단어장" or "공식 JLPT 덱" as a claim of official status.
-- [ ] Importing a shared deck succeeds and lands in the vocab tab. **For
-      large decks (N1/N2/N3), expect this to take several minutes — see the
-      known risk below before assuming it's stuck.**
+- [ ] Importing a shared deck succeeds. A lexeme-mode deck (the current
+      JLPT recommended decks, and anything published after the Phase 6
+      lexeme migration) lands in "학습 목록" and should complete quickly
+      regardless of deck size. A legacy copy-mode deck (published before
+      that migration, if any still exist) lands in the vocab tab and can
+      still take noticeably longer for large word counts — see the updated
+      known-risk note below before assuming either case is stuck.
 - [ ] An already-imported deck shows the "가져옴" badge with its import
       date.
 - [ ] Re-importing an already-imported deck prompts a confirmation instead
@@ -156,21 +160,39 @@ button in the unpublished detail view — a pure `visibility` flip back to
 public-only new-user gate. See the same "Owner unpublish policy" section
 for the full Round 1-9 history.
 
-**Known risk (confirmed 2026-07-14):** importing a large recommended deck is
-slow — importing the 684-word N5 deck took ~2 minutes end-to-end against the
-Neon backend (`backend/app/repositories/shared_deck_repository.py`
-`import_shared_deck` inserts each vocab/custom-term row with its own
-`connection.execute(...)` call in a Python loop, so the wall-clock time
-scales with word count and per-statement network latency to the DB). N4
-(640 words) will be similar; N3/N2 (~1.8k words) and N1 (3.5k words) will
-take proportionally longer — plausibly 5-10+ minutes for N1. The UI shows a
-"가져오는 중..." state the whole time with no progress indicator, so a beta
-user importing N1/N2/N3 may reasonably assume the app is frozen. This is a
-pre-existing performance characteristic, not something introduced by this
-check — decide before wide beta rollout whether to warn users, recommend
-starting with N5/N4, or batch the inserts (out of scope for this checklist
-pass; flagged for a follow-up, not fixed here to avoid an unreviewed
-backend write-path change this close to launch).
+**Known risk (confirmed 2026-07-14) — re-assessed (Phase 8 Round 7,
+2026-07-29):** the original finding below measured the *legacy* copy-mode
+import path only. `import_shared_deck()` dispatches on `is_lexeme_deck()`
+(`backend/app/repositories/shared_deck_repository.py`): a shared deck with
+no `shared_deck_words` rows still falls through to
+`_import_shared_deck_legacy()`, which inserts each vocab/custom-term row
+with its own `connection.execute(...)` call in a Python loop, so wall-clock
+time still scales with word count and per-statement DB latency — the
+original 684-word N5 measurement (~2 minutes) and the projected 5-10+
+minutes for N1 (3.5k words) still apply to any deck that takes this path.
+
+Since the Phase 6 lexeme migration, a deck with at least one
+`shared_deck_words` row instead takes `_import_lexeme_shared_deck()`, which
+does a small, constant number of queries per import (one visibility check,
+one `COUNT(*)` on `shared_deck_words`, one subscription lookup/upsert) —
+no per-word insert loop and no `vocab_items` writes at all, so import time
+should not meaningfully scale with deck size on this path.
+`backend/scripts/seed_jlpt_shared_decks.py`, the current registration
+script for the N5-N1 recommended decks, writes every word through
+`upsert_lexeme()` + `add_word_to_shared_deck()` — i.e. the lexeme-mode
+structure.
+
+**Limitation of this re-assessment:** the above is a code-path /
+local-SQLite finding, not a re-measurement against production. Neon access
+is out of scope for this check, so whether the live N1-N5 `shared_decks`
+rows on Render/Neon currently have `shared_deck_words` populated (vs. still
+being pre-migration legacy rows) was not independently confirmed. If they
+are confirmed lexeme-mode, the "5-10+ minutes for N1" estimate no longer
+applies to them; any shared deck that still predates the lexeme migration
+still hits the legacy O(N) path and the original estimate stands for that
+deck specifically. Follow-up: run `is_lexeme_deck()` (or the equivalent
+`SELECT 1 FROM shared_deck_words WHERE shared_deck_id = ?` check) against
+the production N1-N5 deck ids to close this out definitively.
 
 ## 8. Feedback — Final Test
 
