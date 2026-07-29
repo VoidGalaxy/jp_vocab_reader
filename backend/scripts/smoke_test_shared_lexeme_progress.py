@@ -433,6 +433,155 @@ def run_unpublish_boundary_checks() -> None:
             import_resp.status_code == 404,
         )
 
+        # --- Phase 7 Round 5: owner republish (see
+        # docs/architecture/shared-lexeme-progress-storage.md -- "Owner
+        # unpublish policy" republish decision). republish_shared_deck() is a
+        # pure visibility flip back to 'public', the mirror image of
+        # delete_shared_deck() -- nothing else (subscriptions, progress,
+        # shared_deck_words) should move.
+        non_owner_republish = client.post(
+            f"/shared-decks/{shared_deck_id}/republish", headers=sub_headers
+        )
+        check(
+            "23. a non-owner cannot republish someone else's deck (403)",
+            non_owner_republish.status_code == 403,
+        )
+        missing_republish = client.post(
+            "/shared-decks/999999999/republish", headers=owner_headers
+        )
+        check(
+            "23b. republishing a nonexistent shared deck is 404",
+            missing_republish.status_code == 404,
+        )
+
+        with get_connection() as connection:
+            progress_before_republish = connection.execute(
+                """
+                SELECT status, review_level, correct_count, wrong_count
+                FROM user_word_progress
+                WHERE user_id = ? AND lexeme_id = ?
+                """,
+                (sub_id, lexeme_id),
+            ).fetchone()
+
+        republish_resp = client.post(
+            f"/shared-decks/{shared_deck_id}/republish", headers=owner_headers
+        )
+        check(
+            "24. owner can republish their own unpublished deck (200)",
+            republish_resp.status_code == 200,
+        )
+        check(
+            "24b. shared_decks.visibility is back to 'public'",
+            count_rows(
+                "shared_decks", "id = ? AND visibility = 'public'", (shared_deck_id,)
+            )
+            == 1,
+        )
+
+        owner_listing_republished = client.get(
+            "/shared-decks", headers=owner_headers
+        ).json()
+        owner_entry_republished = next(
+            (item for item in owner_listing_republished if item["id"] == shared_deck_id),
+            None,
+        )
+        check(
+            "25. republished deck reappears in owner's list with is_published=True",
+            owner_entry_republished is not None
+            and owner_entry_republished["is_published"] is True,
+        )
+
+        sub_listing_republished = client.get("/shared-decks", headers=sub_headers).json()
+        sub_entry_republished = next(
+            (item for item in sub_listing_republished if item["id"] == shared_deck_id),
+            None,
+        )
+        check(
+            "26. republished deck reappears in subscriber's list with is_published=True",
+            sub_entry_republished is not None
+            and sub_entry_republished["is_published"] is True,
+        )
+
+        new_listing_republished = client.get("/shared-decks", headers=new_headers).json()
+        new_entry_republished = next(
+            (item for item in new_listing_republished if item["id"] == shared_deck_id),
+            None,
+        )
+        check(
+            "27. republished deck now appears in a brand new user's public list too",
+            new_entry_republished is not None
+            and new_entry_republished["is_published"] is True,
+        )
+        new_detail_republished = client.get(
+            f"/shared-decks/{shared_deck_id}", headers=new_headers
+        )
+        check(
+            "27b. a brand new user's detail is 200 again after republish",
+            new_detail_republished.status_code == 200,
+        )
+
+        new_import_republished = client.post(
+            f"/shared-decks/{shared_deck_id}/import", headers=new_headers
+        )
+        check(
+            "28. a brand new user can import the deck again after republish (200)",
+            new_import_republished.status_code == 200,
+        )
+        check(
+            "28b. that import created a subscription (no vocab_items copy)",
+            count_rows(
+                "user_deck_subscriptions",
+                "user_id = ? AND shared_deck_id = ?",
+                (_new_user_id, shared_deck_id),
+            )
+            == 1,
+        )
+
+        with get_connection() as connection:
+            progress_after_republish = connection.execute(
+                """
+                SELECT status, review_level, correct_count, wrong_count
+                FROM user_word_progress
+                WHERE user_id = ? AND lexeme_id = ?
+                """,
+                (sub_id, lexeme_id),
+            ).fetchone()
+        check(
+            "29. the existing subscriber's progress row is untouched by republish",
+            progress_before_republish is not None
+            and progress_after_republish is not None
+            and dict(progress_before_republish) == dict(progress_after_republish),
+        )
+        check(
+            "29b. shared_deck_words row for this deck still exists",
+            count_rows(
+                "shared_deck_words",
+                "shared_deck_id = ? AND lexeme_id = ?",
+                (shared_deck_id, lexeme_id),
+            )
+            == 1,
+        )
+        check(
+            "29c. the original subscriber's subscription row still exists",
+            count_rows(
+                "user_deck_subscriptions",
+                "user_id = ? AND shared_deck_id = ?",
+                (sub_id, shared_deck_id),
+            )
+            == 1,
+        )
+
+        review_after_republish = client.post(
+            f"/shared-decks/{shared_deck_id}/words/{lexeme_id}/review",
+            json={"rating": "good"},
+            headers=sub_headers,
+        )
+        check(
+            "30. existing subscriber can still review after republish (200)",
+            review_after_republish.status_code == 200,
+        )
+
 
 def main() -> int:
     print(f"using scratch db: {_SCRATCH_DB}")

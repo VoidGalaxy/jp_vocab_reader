@@ -308,6 +308,17 @@ class SharedDeckDeleteResponse(BaseModel):
     message: str
 
 
+# Additive (Phase 7 Round 5, see
+# docs/architecture/shared-lexeme-progress-storage.md -- "Owner unpublish
+# policy" republish decision). Mirrors SharedDeckDeleteResponse's shape --
+# the owner-only reversal of that same action.
+class SharedDeckRepublishResponse(BaseModel):
+    ok: bool = True
+    shared_deck_id: int
+    title: str
+    message: str
+
+
 class SharedDeckImportResponse(BaseModel):
     deck_id: int
     deck_name: str

@@ -1021,6 +1021,30 @@ cut off by someone else unpublishing the deck it came from.
   an unpublished-specific line plus a short subscriber-facing line. No
   republish/re-import/management controls were added, and the word
   list/StatusSelect for an already-subscribed viewer is untouched.
+- **Update, Phase 7 Round 4-5 (republish investigation + minimal
+  backend)**: `publish_deck()` (`shared_deck_repository.py`) always
+  `INSERT`s a brand new `shared_decks` row keyed off the personal
+  `source_deck_id` -- it never checks for an existing (even
+  soft-unpublished) row first. Calling it again after unpublish would
+  therefore create a second, unrelated `shared_deck_id`, leaving existing
+  subscribers' `user_deck_subscriptions` still pointed at the old
+  (still-unpublished) id -- it does **not** "reactivate" anything, and the
+  personal-deck publish form (`VocabSection`) isn't even reachable from
+  `SharedDeckSection`'s unpublished-deck detail. Reusing it for republish
+  was rejected as both riskier (touches the word-upsert publish path) and
+  the wrong UX anchor (personal deck, not the shared deck being reopened).
+  Instead, `republish_shared_deck(user_id, shared_deck_id)` was added as
+  the direct owner-only mirror of `delete_shared_deck()`: it only flips a
+  `shared_decks` row's `visibility` back to `'public'` when the caller is
+  the owner, never touching `shared_deck_words`/
+  `user_deck_subscriptions`/`user_word_progress` (see
+  `smoke_test_shared_lexeme_progress.py` checks 23-30). `POST
+  /shared-decks/{id}/republish` is wired in `main.py`. Deliberately
+  title/description-only-untouched (there is no shared-deck-detail edit
+  surface to begin with) and backend-only this round -- no frontend
+  "다시 공유하기" button was added, since exercising it would need real
+  browser QA at 1280/375/320 that this round's environment can't run; that
+  is left as a small, well-scoped Round 7-9 candidate, not a blocker.
 - The per-word write endpoints (`POST
   /shared-decks/{id}/words/{lexeme_id}/review`, `PATCH .../progress`) now
   gate on `shared_deck_word_access_allowed(shared_deck_id, user_id, lexeme_id)`

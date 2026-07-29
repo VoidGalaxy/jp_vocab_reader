@@ -414,6 +414,46 @@ def delete_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | st
     }
 
 
+def republish_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | str:
+    """Owner-only reversal of delete_shared_deck() above (see
+    docs/architecture/shared-lexeme-progress-storage.md -- "Owner unpublish
+    policy", Phase 7 Round 5 republish decision). Only flips
+    shared_decks.visibility back to 'public' when it isn't already --
+    never touches shared_deck_items/terms/imports/shared_deck_words/
+    user_deck_subscriptions/user_word_progress, so an existing subscriber's
+    progress is untouched (nothing was touched by unpublish either) and no
+    bulk copy is ever introduced. Once visibility is back to 'public',
+    list_shared_decks()/get_shared_deck()/import_shared_deck() all pick the
+    deck back up for a brand new user automatically, since they already
+    gate on visibility='public' -- no separate re-enable logic needed
+    there. Deliberately does not touch title/description: there is no
+    shared-deck-detail edit surface today, so republish is a pure
+    visibility flip, nothing more.
+    """
+    with get_connection() as connection:
+        deck = connection.execute(
+            "SELECT id, owner_user_id, title, visibility FROM shared_decks WHERE id = ?",
+            (shared_deck_id,),
+        ).fetchone()
+        if not deck:
+            return "not_found"
+        if int(deck["owner_user_id"]) != user_id:
+            return "forbidden"
+
+        title = deck["title"]
+        if deck["visibility"] != "public":
+            connection.execute(
+                "UPDATE shared_decks SET visibility = 'public', updated_at = ? WHERE id = ?",
+                (now_iso(), shared_deck_id),
+            )
+
+    return {
+        "shared_deck_id": shared_deck_id,
+        "title": title,
+        "message": "다시 공유했습니다. 새 사용자도 이제 가져올 수 있어요.",
+    }
+
+
 def import_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | None:
     """Dispatches on how this shared deck's words are stored:
 

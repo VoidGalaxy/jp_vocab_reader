@@ -60,6 +60,7 @@ from app.repositories.shared_deck_repository import (
     import_shared_deck,
     list_shared_decks,
     publish_deck,
+    republish_shared_deck,
     shared_deck_word_access_allowed,
 )
 from app.repositories.stats_repository import build_stats
@@ -116,6 +117,7 @@ from app.schemas import (
     SharedDeckDeleteResponse,
     SharedDeckDetailResponse,
     SharedDeckImportResponse,
+    SharedDeckRepublishResponse,
     SharedDeckSummaryResponse,
     StatsResponse,
     StudyItemsResponse,
@@ -595,6 +597,23 @@ def remove_shared_deck(
             status_code=403, detail="only the owner can unpublish this shared deck"
         )
     return SharedDeckDeleteResponse(**result)
+
+
+@app.post(
+    "/shared-decks/{shared_deck_id}/republish",
+    response_model=SharedDeckRepublishResponse,
+)
+def republish_shared_deck_endpoint(
+    shared_deck_id: int, http_request: Request
+) -> SharedDeckRepublishResponse:
+    result = republish_shared_deck(current_user_id(http_request), shared_deck_id)
+    if result == "not_found":
+        raise HTTPException(status_code=404, detail="shared deck not found")
+    if result == "forbidden":
+        raise HTTPException(
+            status_code=403, detail="only the owner can republish this shared deck"
+        )
+    return SharedDeckRepublishResponse(**result)
 
 
 # --- Lexeme-mode shared deck word progress ----------------------------------
