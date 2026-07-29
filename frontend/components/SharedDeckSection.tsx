@@ -616,7 +616,8 @@ export function SharedDeckSection({
               >
                 닫기
               </button>
-              {(selectedDeck.mode === "subscribed" && selectedAlreadyImported) ||
+              {selectedDeck.is_owner ||
+              (selectedDeck.mode === "subscribed" && selectedAlreadyImported) ||
               !selectedDeckPublished ? null : (
                 <button
                   type="button"
