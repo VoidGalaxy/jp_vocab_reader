@@ -140,6 +140,16 @@ type SharedDeckDeleteResponse = {
   message: string;
 };
 
+// Phase 7 Round 5/8 -- see docs/architecture/shared-lexeme-progress-storage.md
+// "Owner unpublish policy" republish decision. Same shape as the delete
+// response above; it's the owner-only reversal of that same action.
+type SharedDeckRepublishResponse = {
+  ok: boolean;
+  shared_deck_id: number;
+  title: string;
+  message: string;
+};
+
 // Response from PATCH/POST .../shared-decks/{id}/words/{lexeme_id}/(progress|review)
 // -- see docs/architecture/shared-lexeme-progress-storage.md.
 type LexemeWordProgressResponse = {
@@ -814,6 +824,9 @@ export default function HomePage() {
     null,
   );
   const [unpublishingSharedDeckId, setUnpublishingSharedDeckId] = useState<
+    number | null
+  >(null);
+  const [republishingSharedDeckId, setRepublishingSharedDeckId] = useState<
     number | null
   >(null);
   // Subscribed shared-deck word status (see
@@ -2005,6 +2018,26 @@ export default function HomePage() {
     setIsLoadingSharedDeckDetail(false);
   }
 
+  // Best-effort re-fetch of an already-open detail pane's own data (its
+  // is_published, is_owner, etc.) after unpublish/republish -- unlike
+  // loadSharedDeckDetail() above, this never toggles the pane closed, and a
+  // failure here is silent because loadSharedDecks() (called by both
+  // callers right before this) already surfaces the authoritative list
+  // state and any error message for the action itself.
+  async function refreshOpenSharedDeckDetail(sharedDeckId: number) {
+    if (selectedSharedDeckId !== sharedDeckId) {
+      return;
+    }
+    try {
+      const data = await requestJson<SharedDeckDetail>(
+        `/shared-decks/${sharedDeckId}`,
+      );
+      setSelectedSharedDeck(data);
+    } catch {
+      // ignore -- see comment above
+    }
+  }
+
   function goToVocabTab() {
     setActiveTab("vocab");
     // No specific deck context to hand off here (unlike goToVocabFromReading/
@@ -2120,13 +2153,13 @@ export default function HomePage() {
         `/shared-decks/${sharedDeckId}`,
         { method: "DELETE" },
       );
-      setSharedDecks((currentDecks) =>
-        currentDecks.filter((deck) => deck.id !== sharedDeckId),
-      );
-      if (selectedSharedDeckId === sharedDeckId) {
-        closeSharedDeckDetail();
-      }
       setSharedDeckMessage("공유덱을 공유 목록에서 내렸습니다.");
+      // Owner/existing subscribers keep seeing this deck (now unpublished)
+      // in their own list/detail -- see docs/architecture/shared-lexeme-progress-storage.md
+      // "Owner unpublish policy" -- so re-fetch rather than filtering it out
+      // locally, and refresh the open detail pane in place if it's this deck.
+      await loadSharedDecks();
+      await refreshOpenSharedDeckDetail(sharedDeckId);
     } catch (error) {
       if (isHttpError(error, 401)) {
         setSharedDeckMessage(
@@ -2136,14 +2169,50 @@ export default function HomePage() {
         setSharedDeckMessage("내가 올린 공유덱만 공유 취소할 수 있습니다.");
       } else if (isHttpError(error, 404)) {
         setSharedDeckMessage("이미 삭제되었거나 존재하지 않는 공유덱입니다.");
-        setSharedDecks((currentDecks) =>
-          currentDecks.filter((deck) => deck.id !== sharedDeckId),
-        );
+        await loadSharedDecks();
       } else {
         setSharedDeckMessage("공유를 취소하지 못했어요. 잠시 후 다시 시도해주세요.");
       }
     } finally {
       setUnpublishingSharedDeckId(null);
+    }
+  }
+
+  async function republishSharedDeck(sharedDeckId: number) {
+    if (
+      !window.confirm(
+        "이 공유덱을 다시 공유 목록에 올릴까요? 새 사용자도 가져올 수 있게 돼요.",
+      )
+    ) {
+      return;
+    }
+
+    setRepublishingSharedDeckId(sharedDeckId);
+    setSharedDeckMessage("");
+
+    try {
+      const result = await requestJson<SharedDeckRepublishResponse>(
+        `/shared-decks/${sharedDeckId}/republish`,
+        { method: "POST" },
+      );
+      setSharedDeckMessage(result.message || "다시 공유했습니다.");
+      await loadSharedDecks();
+      await refreshOpenSharedDeckDetail(sharedDeckId);
+    } catch (error) {
+      if (isHttpError(error, 401)) {
+        setSharedDeckMessage(
+          "로그인 후 사용할 수 있습니다. 저장한 단어와 복습 기록을 이어서 보려면 로그인해주세요.",
+        );
+      } else if (isHttpError(error, 403)) {
+        setSharedDeckMessage("내가 올린 공유덱만 다시 공유할 수 있습니다.");
+      } else if (isHttpError(error, 404)) {
+        setSharedDeckMessage("이미 삭제되었거나 존재하지 않는 공유덱입니다.");
+        await loadSharedDecks();
+      } else {
+        setSharedDeckMessage("다시 공유하지 못했어요. 잠시 후 다시 시도해주세요.");
+      }
+    } finally {
+      setRepublishingSharedDeckId(null);
     }
   }
 
@@ -3528,6 +3597,7 @@ export default function HomePage() {
             importingDeckId={importingSharedDeckId}
             importedDeckId={importedSharedDeckId}
             unpublishingDeckId={unpublishingSharedDeckId}
+            republishingDeckId={republishingSharedDeckId}
             message={sharedDeckMessage}
             updatingWordLexemeId={updatingWordLexemeId}
             onRefresh={() => void loadSharedDecks()}
@@ -3535,6 +3605,7 @@ export default function HomePage() {
             onCloseDetail={closeSharedDeckDetail}
             onImportDeck={(deckId) => void importSharedDeckToMyDeck(deckId)}
             onUnpublishDeck={(deckId) => void unpublishSharedDeck(deckId)}
+            onRepublishSharedDeck={(deckId) => void republishSharedDeck(deckId)}
             onUpdateWordStatus={(sharedDeckId, lexemeId, status) =>
               void updateSharedDeckWordStatus(sharedDeckId, lexemeId, status)
             }

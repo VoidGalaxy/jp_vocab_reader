@@ -151,6 +151,10 @@ type SharedDeckSectionProps = {
   importingDeckId: number | null;
   importedDeckId: number | null;
   unpublishingDeckId: number | null;
+  // Phase 7 Round 8 (see docs/architecture/shared-lexeme-progress-storage.md
+  // -- "Owner unpublish policy" republish decision): mirrors
+  // unpublishingDeckId above, just for the reverse action.
+  republishingDeckId: number | null;
   message: string;
   // Subscribed-deck word status (see
   // docs/architecture/shared-lexeme-progress-storage.md) -- lexeme_id of
@@ -162,6 +166,7 @@ type SharedDeckSectionProps = {
   onCloseDetail: () => void;
   onImportDeck: (deckId: number) => void;
   onUnpublishDeck: (deckId: number) => void;
+  onRepublishSharedDeck?: (sharedDeckId: number) => void | Promise<void>;
   onUpdateWordStatus: (sharedDeckId: number, lexemeId: number, status: TokenStatus) => void;
   onGoToVocab: () => void;
   onGoToStudyToday: () => void;
@@ -176,6 +181,7 @@ export function SharedDeckSection({
   importingDeckId,
   importedDeckId,
   unpublishingDeckId,
+  republishingDeckId,
   message,
   updatingWordLexemeId,
   onRefresh,
@@ -183,6 +189,7 @@ export function SharedDeckSection({
   onCloseDetail,
   onImportDeck,
   onUnpublishDeck,
+  onRepublishSharedDeck,
   onUpdateWordStatus,
   onGoToVocab,
   onGoToStudyToday,
@@ -623,6 +630,18 @@ export function SharedDeckSection({
                   {unpublishingDeckId === selectedDeck.id
                     ? "공유 취소 중..."
                     : "공유 취소"}
+                </button>
+              ) : null}
+              {selectedDeck.is_owner && !selectedDeckPublished ? (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => onRepublishSharedDeck?.(selectedDeck.id)}
+                  disabled={republishingDeckId === selectedDeck.id}
+                >
+                  {republishingDeckId === selectedDeck.id
+                    ? "다시 공유하는 중..."
+                    : "다시 공유하기"}
                 </button>
               ) : null}
             </div>
