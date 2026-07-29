@@ -250,6 +250,14 @@ class SharedDeckSummaryResponse(BaseModel):
     # copies into vocab_items, unchanged). Known ahead of import so the
     # frontend can show the right button/label before the user clicks.
     mode: str = "copied"
+    # Additive (Phase 7 Round 1, see
+    # docs/architecture/shared-lexeme-progress-storage.md -- "Owner
+    # unpublish policy"). True when shared_decks.visibility = 'public'.
+    # False means the owner unpublished it; the deck is only reachable here
+    # at all because the caller is the owner or an existing active
+    # subscriber -- a brand new user never sees an unpublished deck in this
+    # list/detail to begin with.
+    is_published: bool = True
 
 
 class SharedDeckItemResponse(BaseModel):

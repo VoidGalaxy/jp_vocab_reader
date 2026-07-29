@@ -237,6 +237,24 @@ def run_unpublish_boundary_checks() -> None:
             cross_deck_review.status_code == 404,
         )
 
+        # Public (still-published) responses report is_published=True before
+        # we flip visibility below -- confirms the field isn't just hardcoded.
+        public_listing = client.get("/shared-decks", headers=sub_headers).json()
+        public_listing_entry = next(
+            item for item in public_listing if item["id"] == shared_deck_id
+        )
+        check(
+            "13f. public deck list entry reports is_published=True",
+            public_listing_entry["is_published"] is True,
+        )
+        public_detail = client.get(
+            f"/shared-decks/{shared_deck_id}", headers=sub_headers
+        ).json()
+        check(
+            "13g. public deck detail reports is_published=True",
+            public_detail["is_published"] is True,
+        )
+
         resp = client.delete(f"/shared-decks/{shared_deck_id}", headers=owner_headers)
         check("14. owner can unpublish their shared deck", resp.status_code == 200)
 
@@ -332,6 +350,65 @@ def run_unpublish_boundary_checks() -> None:
                 "shared_decks", "id = ? AND visibility = 'public'", (shared_deck_id,)
             )
             == 0,
+        )
+
+        # --- Phase 7 Round 1: owner/subscriber list+detail access reopens ----
+        # (see docs/architecture/shared-lexeme-progress-storage.md -- "Owner
+        # unpublish policy" Round 1 update). Unpublish no longer hides the
+        # deck from the owner's own bookshelf or an existing subscriber's
+        # SharedDeckSection list/detail -- only a brand new user stays
+        # locked out (checked further below).
+        owner_listing_after = client.get("/shared-decks", headers=owner_headers).json()
+        owner_listing_entry = next(
+            (item for item in owner_listing_after if item["id"] == shared_deck_id),
+            None,
+        )
+        check(
+            "19. owner's own list shows the deck again after unpublish",
+            owner_listing_entry is not None,
+        )
+        check(
+            "19b. that list entry reports is_published=False",
+            owner_listing_entry is not None
+            and owner_listing_entry["is_published"] is False,
+        )
+        owner_detail_after = client.get(
+            f"/shared-decks/{shared_deck_id}", headers=owner_headers
+        )
+        check(
+            "20. owner's own detail is 200 again after unpublish",
+            owner_detail_after.status_code == 200,
+        )
+        check(
+            "20b. that detail reports is_published=False",
+            owner_detail_after.status_code == 200
+            and owner_detail_after.json()["is_published"] is False,
+        )
+
+        sub_listing_after = client.get("/shared-decks", headers=sub_headers).json()
+        sub_listing_entry = next(
+            (item for item in sub_listing_after if item["id"] == shared_deck_id),
+            None,
+        )
+        check(
+            "21. existing subscriber's list shows the deck again after unpublish",
+            sub_listing_entry is not None,
+        )
+        check(
+            "21b. that list entry reports is_published=False",
+            sub_listing_entry is not None and sub_listing_entry["is_published"] is False,
+        )
+        sub_detail_after = client.get(
+            f"/shared-decks/{shared_deck_id}", headers=sub_headers
+        )
+        check(
+            "22. existing subscriber's detail is 200 again after unpublish",
+            sub_detail_after.status_code == 200,
+        )
+        check(
+            "22b. that detail reports is_published=False",
+            sub_detail_after.status_code == 200
+            and sub_detail_after.json()["is_published"] is False,
         )
 
         # --- a brand new user must still be fully locked out -----------------

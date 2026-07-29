@@ -76,6 +76,25 @@ function JlptLevelTag({ level }: { level: string }) {
   );
 }
 
+// Phase 7 Round 1 added `is_published` to the API response (see
+// docs/architecture/shared-lexeme-progress-storage.md -- "Owner unpublish
+// policy"). Treat a missing/undefined value as published for backward
+// compatibility with any response shape that predates the field.
+function isDeckPublished(deck: { is_published?: boolean }): boolean {
+  return deck.is_published !== false;
+}
+
+// Calm, non-alarming status pill -- an owner unpublishing their own deck (or
+// a subscriber whose deck got unpublished) is a normal state change, not an
+// error, so this deliberately avoids the danger-button's red tone.
+function UnpublishedBadge() {
+  return (
+    <span className="shared-deck-status-badge shared-deck-status-badge-unpublished">
+      공유 중단됨
+    </span>
+  );
+}
+
 // UI-only display label -- the underlying deck.title in the DB may still be
 // the older "N5어휘모음" form (see getJlptLevel's pattern below); this only
 // normalizes what's rendered, never the stored data.
@@ -174,6 +193,7 @@ export function SharedDeckSection({
     ? Boolean(selectedDeck.imported_at) || importedDeckId === selectedDeck.id
     : false;
   const selectedLevel = selectedDeck ? getJlptLevel(selectedDeck.title) : null;
+  const selectedDeckPublished = selectedDeck ? isDeckPublished(selectedDeck) : true;
 
   // 학습 목록 카드함 검색/필터 -- 구독 덱 단어가 수백~수천 개여도 스크롤로만
   // 뒤지지 않도록. 다른 덱을 열거나 검색어/필터를 바꾸면 표시 개수를 다시
@@ -249,6 +269,12 @@ export function SharedDeckSection({
     // never need a "다시 가져오기" re-copy confirm -- once subscribed,
     // the same button just opens the deck's word list instead.
     const isSubscribedMode = deck.mode === "subscribed";
+    const published = isDeckPublished(deck);
+    // Once unpublished, the only reason this button should still appear is
+    // to let an already-subscribed user open their own word list -- never
+    // as a new-import CTA (see docs/architecture/shared-lexeme-progress-storage.md
+    // "Owner unpublish policy" Round 2 update).
+    const showActionButton = published || (isSubscribedMode && alreadyImported);
     return (
       <article
         key={deck.id}
@@ -263,6 +289,7 @@ export function SharedDeckSection({
           <div className="shared-deck-title-row">
             <h3>{getDisplayTitle(deck, level)}</h3>
             {level ? <JlptLevelTag level={level} /> : null}
+            {!published ? <UnpublishedBadge /> : null}
           </div>
           <div className="shared-deck-meta-row">
             <span className="shared-deck-word-count-badge">
@@ -303,49 +330,51 @@ export function SharedDeckSection({
                 ? "상세 닫기"
                 : "상세 보기"}
           </button>
-          <button
-            type="button"
-            className={
-              alreadyImported
-                ? "secondary-button compact-button"
-                : "compact-button"
-            }
-            onClick={() => {
-              if (isSubscribedMode && alreadyImported) {
-                onSelectDeck(deck.id);
-                return;
+          {showActionButton ? (
+            <button
+              type="button"
+              className={
+                alreadyImported
+                  ? "secondary-button compact-button"
+                  : "compact-button"
               }
-              handleImportClick(deck);
-            }}
-            disabled={isImporting}
-            title={
-              !isSubscribedMode && alreadyImported
-                ? "이미 가져온 덱이에요. 다시 가져오면 확인 후 새로 추가돼요."
-                : undefined
-            }
-          >
-            {isImporting ? (
-              "가져오는 중..."
-            ) : isSubscribedMode && alreadyImported ? (
-              <>
-                <BookIcon className="button-icon" />열기
-              </>
-            ) : alreadyImported ? (
-              <>
-                <RotateIcon className="button-icon" />
-                다시 가져오기
-              </>
-            ) : isSubscribedMode ? (
-              <>
-                <CardFileIcon className="button-icon" />학습 목록에 추가
-              </>
-            ) : (
-              <>
-                <CardFileIcon className="button-icon" />내 노트에 가져오기
-              </>
-            )}
-          </button>
-          {deck.is_owner ? (
+              onClick={() => {
+                if (isSubscribedMode && alreadyImported) {
+                  onSelectDeck(deck.id);
+                  return;
+                }
+                handleImportClick(deck);
+              }}
+              disabled={isImporting}
+              title={
+                !isSubscribedMode && alreadyImported
+                  ? "이미 가져온 덱이에요. 다시 가져오면 확인 후 새로 추가돼요."
+                  : undefined
+              }
+            >
+              {isImporting ? (
+                "가져오는 중..."
+              ) : isSubscribedMode && alreadyImported ? (
+                <>
+                  <BookIcon className="button-icon" />열기
+                </>
+              ) : alreadyImported ? (
+                <>
+                  <RotateIcon className="button-icon" />
+                  다시 가져오기
+                </>
+              ) : isSubscribedMode ? (
+                <>
+                  <CardFileIcon className="button-icon" />학습 목록에 추가
+                </>
+              ) : (
+                <>
+                  <CardFileIcon className="button-icon" />내 노트에 가져오기
+                </>
+              )}
+            </button>
+          ) : null}
+          {deck.is_owner && published ? (
             <button
               type="button"
               className="danger-secondary-button compact-button"
@@ -532,6 +561,7 @@ export function SharedDeckSection({
               <div className="shared-deck-title-row">
                 <h2>{getDisplayTitle(selectedDeck, selectedLevel)}</h2>
                 {selectedLevel ? <JlptLevelTag level={selectedLevel} /> : null}
+                {!selectedDeckPublished ? <UnpublishedBadge /> : null}
                 {selectedAlreadyImported ? (
                   <span
                     className="shared-deck-imported-badge"
@@ -566,7 +596,8 @@ export function SharedDeckSection({
               >
                 닫기
               </button>
-              {selectedDeck.mode === "subscribed" && selectedAlreadyImported ? null : (
+              {(selectedDeck.mode === "subscribed" && selectedAlreadyImported) ||
+              !selectedDeckPublished ? null : (
                 <button
                   type="button"
                   className={selectedAlreadyImported ? "secondary-button" : undefined}
@@ -582,7 +613,7 @@ export function SharedDeckSection({
                         : "내 노트에 가져오기"}
                 </button>
               )}
-              {selectedDeck.is_owner ? (
+              {selectedDeck.is_owner && selectedDeckPublished ? (
                 <button
                   type="button"
                   className="danger-secondary-button"
@@ -608,9 +639,13 @@ export function SharedDeckSection({
           ) : null}
           {selectedDeck.is_owner ? (
             <p className="muted-text shared-deck-owner-hint">
-              공유를 중단하면 다른 사용자는 이 공유덱을 더 이상 새로 가져올
-              수 없고, 이 덱 책장 목록에서도 보이지 않게 돼요. 이미 학습
-              중인 사용자는 복습 탭에서 계속 이어갈 수 있어요.
+              {selectedDeckPublished
+                ? "공유를 중단하면 다른 사용자는 이 공유덱을 더 이상 새로 가져올 수 없고, 이 덱 책장 목록에서도 보이지 않게 돼요. 이미 학습 중인 사용자는 복습 탭에서 계속 이어갈 수 있어요."
+                : "이 덱은 더 이상 공유 목록에 보이지 않지만, 이미 학습 중인 사용자는 복습을 이어갈 수 있어요."}
+            </p>
+          ) : !selectedDeckPublished ? (
+            <p className="muted-text shared-deck-subscriber-hint">
+              새 사용자는 더 이상 가져올 수 없지만, 내 복습은 계속 이어져요.
             </p>
           ) : null}
 

@@ -226,6 +226,12 @@ export type SharedDeckSummary = {
   // exactly like before. Known ahead of import, so the UI can show the
   // right button/label before the user clicks.
   mode?: "copied" | "subscribed";
+  // Additive (Phase 7 Round 1, see
+  // docs/architecture/shared-lexeme-progress-storage.md -- "Owner unpublish
+  // policy"). false = owner unpublished this deck; still visible here only
+  // because the caller is the owner or an existing subscriber. UI
+  // badges/copy for this are a later round, not this one.
+  is_published?: boolean;
 };
 
 export type SharedDeckItem = {

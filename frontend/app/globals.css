@@ -4837,6 +4837,27 @@ input.reading-vocab-item-checkbox {
   transform: rotate(-2deg);
 }
 
+/* Calm "state changed" pill for an unpublished shared deck (Phase 7 Round 2,
+   see docs/architecture/shared-lexeme-progress-storage.md -- "Owner
+   unpublish policy"). Deliberately neutral, not the danger-button's red --
+   an owner unpublishing their own deck, or a subscriber whose deck lost
+   public visibility, is a normal state, not an error. */
+.shared-deck-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.shared-deck-status-badge-unpublished {
+  background: var(--soft-bg);
+  color: var(--muted);
+}
+
 .shared-deck-description {
   display: -webkit-box;
   margin: 0;
@@ -5727,6 +5748,35 @@ input.reading-vocab-item-checkbox {
     padding-bottom: 0;
   }
 
+  .shared-deck-section .hero-card,
+  .shared-deck-section .desk-surface-section,
+  .shared-deck-section .shared-deck-detail {
+    box-sizing: border-box;
+    max-width: calc(100vw - 40px);
+  }
+
+  .shared-deck-section .shared-deck-card,
+  .shared-deck-section .shared-deck-detail > *,
+  .shared-deck-section .result-heading,
+  .shared-deck-section .shared-detail-columns,
+  .shared-deck-section .shared-deck-title-row {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .shared-deck-section .shared-deck-imported-badge,
+  .shared-deck-section .shared-deck-byline {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .shared-deck-section .shared-deck-imported-badge {
+    transform: none;
+  }
+
   /* The desktop shelf-ledge line reads as "books resting on a shelf" under
      a horizontal row of cards -- stacked single-column on mobile there's
      no row to sit under, so it's just a stray line under the last card.
@@ -5741,6 +5791,7 @@ input.reading-vocab-item-checkbox {
      a shorter band keeps the title/description from starting too far down
      the card. */
   .brand-deck-cover {
+    margin: -14px -14px 0;
     padding: 7px 14px;
   }
 

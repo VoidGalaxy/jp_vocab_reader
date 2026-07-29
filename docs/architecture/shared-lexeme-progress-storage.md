@@ -999,18 +999,28 @@ cut off by someone else unpublishing the deck it came from.
   path any more -- unpublish never issues the `shared_decks` DELETE that
   would fire it, so SQLite and PostgreSQL now behave identically here
   without needing a schema change or a live Neon check.
-- `list_shared_decks()`, `get_shared_deck()`, and `import_shared_deck()`
-  are unchanged: all three still require `visibility = 'public'`, so a
-  brand new user still cannot list, view the detail of, or import an
+- `import_shared_deck()` is unchanged: still requires
+  `visibility = 'public'`, so a brand new user still cannot import an
   unpublished deck. This is what keeps unpublish meaning "no new
-  adoption". Note this `WHERE` clause is unconditional -- it also hides
-  the deck from the *owner's own* bookshelf/detail view, and from an
-  existing subscriber's `SharedDeckSection` list, once unpublished. Only
-  the Study-tab/review-status path (via `shared_deck_word_access_allowed`)
-  stays reachable for them. This is an accepted UX trade-off from Phase 6
-  Round 1-3/7 (avoids a second visibility model just for "subscribed but
-  unpublished"), not a bug -- restoring bookshelf visibility for existing
-  subscribers is a candidate for a later phase, not this one.
+  adoption".
+- **Update, Phase 7 Round 1** (backend):
+  `list_shared_decks()`/`get_shared_deck()`'s `WHERE` clause is no longer
+  unconditionally `visibility = 'public'`. A logged-in caller who is the
+  deck's owner, or holds an active `user_deck_subscriptions` row for it,
+  now also matches, so the deck reappears on their own list/detail once
+  unpublished (a brand new/logged-out user is unaffected -- still
+  public-only). Both responses now also carry `is_published: boolean`
+  (`shared_decks.visibility == 'public'`) so the frontend can tell the two
+  cases apart.
+- **Update, Phase 7 Round 2** (frontend, `SharedDeckSection.tsx`): renders
+  `is_published === false` (missing/undefined still treated as published)
+  as a calm "공유 중단됨" status pill on the card and detail heading, hides
+  the owner's "공유 취소" button and any import/add CTA once unpublished
+  (an already-subscribed user's "열기" button is kept -- that opens their
+  existing word list, not a new import), and swaps the owner-hint copy for
+  an unpublished-specific line plus a short subscriber-facing line. No
+  republish/re-import/management controls were added, and the word
+  list/StatusSelect for an already-subscribed viewer is untouched.
 - The per-word write endpoints (`POST
   /shared-decks/{id}/words/{lexeme_id}/review`, `PATCH .../progress`) now
   gate on `shared_deck_word_access_allowed(shared_deck_id, user_id, lexeme_id)`

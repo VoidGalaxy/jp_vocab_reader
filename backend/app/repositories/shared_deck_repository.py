@@ -226,6 +226,17 @@ def list_shared_decks(user_id: int | None = None) -> list[dict[str, Any]]:
     # (personal deck was copied) and the new user_deck_subscriptions row
     # (lexeme-mode deck, nothing copied) -- whichever one exists for this
     # deck/user is what "가져옴" should reflect.
+    #
+    # Phase 7 Round 1 (see docs/architecture/shared-lexeme-progress-storage.md
+    # "Owner unpublish policy" update): the WHERE clause below is no longer
+    # unconditionally `visibility = 'public'`. A logged-in owner/subscriber
+    # now also matches on `owner_user_id = ?` / an active
+    # user_deck_subscriptions row, so an unpublished deck reappears on their
+    # own list. When user_id is None, both of those extra params bind to
+    # NULL, `owner_user_id = NULL` and `user_id = NULL` in the EXISTS
+    # subquery are never true in SQLite/PostgreSQL, so the clause collapses
+    # back to the original public-only behavior -- no separate code path
+    # needed for the logged-out case.
     with get_connection() as connection:
         rows = connection.execute(
             """
@@ -233,6 +244,7 @@ def list_shared_decks(user_id: int | None = None) -> list[dict[str, Any]]:
                    shared_decks.owner_user_id, users.display_name AS owner_display_name,
                    shared_decks.vocab_count, shared_decks.custom_term_count,
                    shared_decks.import_count, shared_decks.created_at,
+                   shared_decks.visibility,
                    COALESCE(
                        (
                            SELECT MAX(shared_deck_imports.imported_at)
@@ -251,21 +263,33 @@ def list_shared_decks(user_id: int | None = None) -> list[dict[str, Any]]:
             FROM shared_decks
             LEFT JOIN users ON users.id = shared_decks.owner_user_id
             WHERE shared_decks.visibility = 'public'
+               OR shared_decks.owner_user_id = ?
+               OR EXISTS (
+                   SELECT 1 FROM user_deck_subscriptions
+                   WHERE user_deck_subscriptions.shared_deck_id = shared_decks.id
+                     AND user_deck_subscriptions.user_id = ?
+                     AND user_deck_subscriptions.is_active = TRUE
+               )
             ORDER BY shared_decks.created_at DESC, shared_decks.id DESC
             """,
-            (user_id, user_id),
+            (user_id, user_id, user_id, user_id),
         ).fetchall()
     results = [row_to_dict(row) for row in rows]
     lexeme_deck_ids = list_lexeme_deck_ids()
     for result in results:
         result["is_owner"] = user_id is not None and result["owner_user_id"] == user_id
         result["mode"] = "subscribed" if result["id"] in lexeme_deck_ids else "copied"
+        result["is_published"] = result.pop("visibility") == "public"
     return results
 
 
 def get_shared_deck(
     shared_deck_id: int, user_id: int | None = None, due_only: bool = False
 ) -> dict[str, Any] | None:
+    # Phase 7 Round 1: same access widening as list_shared_decks() above --
+    # owner/active-subscriber can still reach detail after unpublish, a new
+    # or logged-out user (user_id=None) still gets the public-only behavior
+    # (extra params bind to NULL and the OR branches never match).
     with get_connection() as connection:
         deck = connection.execute(
             """
@@ -273,7 +297,7 @@ def get_shared_deck(
                    shared_decks.owner_user_id, users.display_name AS owner_display_name,
                    shared_decks.vocab_count, shared_decks.custom_term_count,
                    shared_decks.import_count, shared_decks.created_at,
-                   shared_decks.updated_at,
+                   shared_decks.updated_at, shared_decks.visibility,
                    COALESCE(
                        (
                            SELECT MAX(shared_deck_imports.imported_at)
@@ -292,9 +316,18 @@ def get_shared_deck(
             FROM shared_decks
             LEFT JOIN users ON users.id = shared_decks.owner_user_id
             WHERE shared_decks.id = ?
-              AND shared_decks.visibility = 'public'
+              AND (
+                  shared_decks.visibility = 'public'
+                  OR shared_decks.owner_user_id = ?
+                  OR EXISTS (
+                      SELECT 1 FROM user_deck_subscriptions
+                      WHERE user_deck_subscriptions.shared_deck_id = shared_decks.id
+                        AND user_deck_subscriptions.user_id = ?
+                        AND user_deck_subscriptions.is_active = TRUE
+                  )
+              )
             """,
-            (user_id, user_id, shared_deck_id),
+            (user_id, user_id, shared_deck_id, user_id, user_id),
         ).fetchone()
         if not deck:
             return None
@@ -326,6 +359,7 @@ def get_shared_deck(
     result = row_to_dict(deck)
     result["is_owner"] = user_id is not None and result["owner_user_id"] == user_id
     result["mode"] = "subscribed" if lexeme_mode else "copied"
+    result["is_published"] = result.pop("visibility") == "public"
     if lexeme_mode:
         # Word data lives in lexemes/shared_deck_words, overlaid with this
         # user's progress (see docs/architecture/shared-lexeme-progress-storage.md)
