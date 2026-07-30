@@ -205,11 +205,10 @@ confirms the seed script's *current code path* end to end locally; it does
 not change the production-verification follow-up above, which still
 requires checking the live Render/Neon N1-N5 rows directly.
 
-**Production verification procedure (Phase 10 Round 4-6, designed but NOT
-executed):** this is a procedure for whoever runs the actual check later,
-not a report that the check has been done. As of this writing the
-production state is still **unconfirmed** -- nothing below has been run
-against Render/Neon.
+**Production verification procedure (Phase 10 Round 4-6; API check executed
+in Phase 11 Round 1):** this procedure was originally written before the
+production check. The user-approved API result is recorded below; the
+read-only DB fallback remains unexecuted.
 
 1. *Purpose.* Confirm whether the live N1-N5 `shared_decks` rows on
    Render/Neon are lexeme-mode (have `shared_deck_words` rows) or still
@@ -253,8 +252,28 @@ against Render/Neon.
 7. *Current limitation.* The Phase 9 local smoke
    (`smoke_test_jlpt_seed_lexeme_mode.py`) only proves the seed script's
    *code path* produces lexeme-mode output against a local SQLite fixture.
-   It says nothing about what is actually sitting in production today --
-   that remains unconfirmed until Option 1 or 2 above is actually run.
+   It says nothing about what is actually sitting in production today by
+   itself; the Phase 11 API check below records the live API state observed
+   on 2026-07-30.
+
+**Production API result (Phase 11 Round 1, 2026-07-30):** with user approval,
+Codex ran one anonymous read-only `GET /shared-decks` request against the
+deployed Render backend. No write endpoint, Neon SQL, or `.env` access was
+used. All live N1-N5 shared decks returned `mode: "copied"`, so the live
+production data is still legacy-mode even though the current seed script's
+local code path now produces lexeme-mode decks.
+
+| deck title | deck id | mode | interpretation | checked_at | endpoint |
+| --- | ---: | --- | --- | --- | --- |
+| N1어휘모음 | 9 | copied | still legacy-mode | 2026-07-30 | GET /shared-decks |
+| N2어휘모음 | 8 | copied | still legacy-mode | 2026-07-30 | GET /shared-decks |
+| N3어휘모음 | 7 | copied | still legacy-mode | 2026-07-30 | GET /shared-decks |
+| N4어휘모음 | 2 | copied | still legacy-mode | 2026-07-30 | GET /shared-decks |
+| N5어휘모음 | 1 | copied | still legacy-mode | 2026-07-30 | GET /shared-decks |
+
+Follow-up: production re-registration or migration to lexeme-mode must be a
+separate approved task. Do not re-run `seed_jlpt_shared_decks.py --apply`
+against production as part of verification.
 
 ## 8. Feedback — Final Test
 
