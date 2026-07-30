@@ -275,6 +275,179 @@ Follow-up: production re-registration or migration to lexeme-mode must be a
 separate approved task. Do not re-run `seed_jlpt_shared_decks.py --apply`
 against production as part of verification.
 
+### Phase 12: production transition runbook (designed Round 0-3, NOT executed)
+
+This section documents the planned procedure for moving the live N1-N5
+`shared_decks` rows off the legacy copied-mode path. **Nothing in this
+section has been run against production.** Everything below is either a
+design decision (Round 0-1) or something verified only on a disposable local
+SQLite scratch DB (Round 2). Where a claim is local-only evidence, it says so
+explicitly — never read anything here as "done in production."
+
+**Decided strategy (Round 0-1): option A, then option B — never option C.**
+
+1. Create brand new lexeme-mode N1-N5 shared decks (title
+   `"JLPT N1 추천 어휘"` through `"JLPT N5 추천 어휘"`, the existing local
+   package titles in `backend/data/jlpt/packages/`) via
+   `seed_jlpt_shared_decks.py --apply` (no `--legacy`). Because
+   `find_shared_deck_by_title()` matches on an exact title string and the
+   live decks are titled `"N1어휘모음"`..`"N5어휘모음"` (confirmed different
+   strings, Phase 11/Round 1), this creates **new** `shared_decks` rows —
+   it does not reuse, overwrite, or in-place-convert the existing rows.
+2. Once the new lexeme rows are confirmed healthy (see precheck/steps
+   below), soft-unpublish the existing legacy copied-mode N1-N5 rows via
+   `POST /shared-decks/{id}` delete (i.e. `delete_shared_deck()` —
+   `visibility` flip only, same mechanism as the existing "owner unpublish"
+   feature already in production).
+3. **Option C (converting an existing legacy row in place by adding
+   `shared_deck_words` to it) was rejected in Round 0/1** — reusing an
+   existing legacy row's id would flip `is_lexeme_deck()` to `True` for that
+   id, and `get_shared_deck()` would switch that id's detail view entirely to
+   the lexeme-mode branch (`shared_deck_words` + `user_word_progress`) —
+   an already-imported legacy subscriber has no `user_word_progress` row, so
+   their real, already-recorded progress (in their own `vocab_items`) would
+   appear to vanish from that deck's detail screen even though nothing was
+   actually deleted. This risk is why a brand new row (option A) was chosen
+   over any in-place approach.
+4. **Keep the "both decks visible" window as short as practical.** Round 1
+   found the frontend (`getDisplayTitle()`/`getDeckDescription()`/
+   `getDeckCoverProps()` in `SharedDeckSection.tsx` and `shared.tsx`) render
+   *any* deck matching the JLPT level pattern with the same normalized
+   display title (`"JLPT 추천 어휘 {level}"`), same description, same cover
+   art — regardless of whether the underlying DB title is
+   `"N1어휘모음"` or `"JLPT N1 추천 어휘"`. A new user has effectively no way
+   to tell the two N1 cards apart before importing either one. This is a
+   known, **not fixed in Phase 12** frontend limitation — it is the reason
+   step 2 above should follow step 1 promptly rather than leaving both decks
+   public indefinitely, and it is a frontend follow-up candidate for a phase
+   after this one (no frontend files were touched in Phase 12).
+
+#### Precheck (must be done, and re-confirmed, before any production write)
+
+- [ ] Re-run the Phase 11 read-only `GET /shared-decks` check to reconfirm
+      current production N1-N5 deck id/title/mode/vocab_count immediately
+      before executing (state may have changed since 2026-07-30).
+- [ ] Confirm the new-deck title policy is still
+      `"JLPT N1 추천 어휘"`..`"JLPT N5 추천 어휘"` (from
+      `backend/data/jlpt/packages/jlpt_n{1..5}_recommended_deck.json`,
+      `deck.name`) and that it still does **not** string-match any live
+      production title.
+- [ ] **production `owner_user_id` of the existing N1-N5 rows is unconfirmed
+      by API alone** (Round 1 finding) — record as "unconfirmed", do not
+      assume it matches or differs from the seed script's dev/admin account.
+      If this needs resolving, that requires a separate, explicitly approved
+      read-only Neon check — never assume it or query it as a side effect of
+      an unrelated step.
+- [ ] Any check requiring direct Neon SQL access is out of scope for this
+      runbook and needs its own separate approval — the API-only checks above
+      (`GET /shared-decks`) are the default, lighter-weight path (same
+      reasoning as the Phase 10/11 verification procedure above).
+
+#### Execution steps (documented for approval; NOT executed this round)
+
+1. Pick a maintenance window / low-traffic time.
+2. Confirm a production database backup/snapshot exists and is recent
+   (Render/Neon backup policy — outside this repo's scope to configure from
+   here).
+3. Run `seed_jlpt_shared_decks.py --apply` (no `--legacy`) against
+   production for N1-N5, one deck package at a time.
+4. `GET /shared-decks` — confirm 5 new rows exist with the expected titles.
+5. Confirm each new row's `mode` is `"subscribed"`.
+6. Confirm the existing legacy N1-N5 rows still report `mode: "copied"`
+   (untouched) with their original ids/vocab_count.
+7. Using a disposable test account, import one new lexeme deck and time it —
+   expect near-instant completion (subscription-only, no per-word insert
+   loop), unlike the legacy path's documented 5-10+ minute risk for N1-sized
+   decks (see the "Known risk" note above).
+8. Soft-unpublish the existing legacy copied N1-N5 rows (owner-only unpublish
+   call, same mechanism already live for user-published decks).
+9. From a logged-out/brand-new-account view, confirm the legacy rows no
+   longer appear in `GET /shared-decks` and only the new lexeme rows do.
+10. Spot-check at least one real existing user who previously imported a
+    legacy N1-N5 deck: confirm their personal deck/vocab_items/review data
+    and SRS state are completely unaffected (see "legacy subscriber gap"
+    below for the one thing that **does** change for them).
+
+None of steps 1-10 above have been executed. Executing them against
+production requires its own explicit, separate user approval, distinct from
+this documentation round.
+
+#### Rollback / abort conditions
+
+- If step 3 does not produce a new `shared_decks` row per deck — stop, do
+  not proceed to any later step.
+- If a new row's `mode` is not `"subscribed"` — stop; do **not** unpublish
+  the corresponding legacy row.
+- If importing a new row (step 7) increases the test account's `vocab_items`
+  count (i.e. it silently took the legacy/bulk-copy path) — stop and
+  investigate before touching any legacy row.
+- Do not let both the legacy and new decks stay publicly visible longer than
+  necessary to complete steps 4-7 — per the frontend display-collision
+  finding above, an extended dual-visible window is itself a UX risk, not
+  just an inefficiency.
+- If soft-unpublishing a legacy row (step 8) causes an unexpected problem,
+  it can be reversed with the existing owner-only republish call (flips
+  `visibility` back to `'public'`; never touches
+  `shared_deck_items`/`shared_deck_words`/`user_deck_subscriptions`/
+  `user_word_progress`) — this reversal is safe to use during the runbook
+  itself.
+- Deleting or modifying the newly-seeded lexeme rows (as opposed to simply
+  not proceeding further) is **out of scope for this runbook** and requires
+  its own separate approval — this procedure only ever adds new rows and
+  flips existing rows' visibility, nothing more.
+
+#### Legacy subscriber gap (found in Round 2 local smoke, must be disclosed)
+
+- A user who already imported a legacy copied-mode N1-N5 deck keeps their
+  personal deck, `vocab_items`, and review/SRS history completely intact,
+  regardless of anything done to the original shared deck afterward — this
+  was true before Phase 12 and nothing in this runbook changes it.
+- However, once the *original* shared deck (the one they imported from) is
+  soft-unpublished, that user's own shared-deck bookshelf/list/detail view
+  **no longer shows that original shared-deck card** — the same as a brand
+  new user would experience. This is because the existing "owner unpublish
+  — subscriber keeps seeing it" policy (see "Owner unpublish policy" in
+  `docs/architecture/shared-lexeme-progress-storage.md`) was implemented and
+  regression-tested only for **lexeme-mode subscriptions**
+  (`user_deck_subscriptions`); a legacy-mode import only ever creates a
+  `shared_deck_imports` row, which `list_shared_decks()`/`get_shared_deck()`
+  never check in their post-unpublish visibility-widening logic.
+  Confirmed locally by `smoke_test_jlpt_seed_coexistence.py` check 30
+  (see below).
+- **This is not data loss** — only the shared-deck-listing entry pointing
+  back at the origin disappears from that user's own view; their personal
+  vocabulary/progress is untouched and keeps working in the vocab/study
+  tabs exactly as before.
+- Whether to extend the unpublish-visibility-widening logic to also check
+  `shared_deck_imports` (so a legacy importer keeps seeing the origin card
+  too, matching lexeme-mode subscribers) is left as a **future phase
+  decision** — no backend code was changed in Phase 12 to address this.
+
+#### Round 2 local smoke evidence (`backend/scripts/smoke_test_jlpt_seed_coexistence.py`)
+
+Verified locally only (disposable SQLite scratch DB, 30/30 checks passing as
+of Round 2, 2026-07-31) — never against production:
+
+- A simulated legacy copied-mode deck (`"N1어휘모음"`) and a newly seeded
+  lexeme-mode deck (`"JLPT N1 추천 어휘"`) coexist as two separate
+  `shared_decks` rows with the correct `mode` each (`"copied"` /
+  `"subscribed"`).
+- Importing the new lexeme deck is subscription-only: `mode: "subscribed"`,
+  a `user_deck_subscriptions` row is created, and the importer's
+  `vocab_items` count and personal deck count are both unchanged.
+- Importing the legacy deck, by contrast, still takes the bulk-copy path:
+  `mode: "copied"`, `vocab_items` count increases by the deck's word count,
+  and a personal deck is created — reconfirms the legacy performance risk
+  documented above still applies to any deck that stays on that path.
+- After soft-unpublishing the legacy deck: the row and its
+  `shared_deck_items` rows survive untouched, the already-imported legacy
+  subscriber's personal `vocab_items`/deck counts are unaffected, and both a
+  logged-out caller and a brand-new logged-in user see only the lexeme deck
+  in `GET`-equivalent `list_shared_decks()` results — confirming the "A then
+  B" strategy's intended new-user-facing outcome.
+- The legacy subscriber gap described above (check 30) was also caught by
+  this same smoke run.
+
 ## 8. Feedback — Final Test
 
 - [ ] Global app feedback (하단/사이드바 피드백 버튼) submits successfully.

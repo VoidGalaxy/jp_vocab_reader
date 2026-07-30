@@ -1102,3 +1102,18 @@ cut off by someone else unpublishing the deck it came from.
   both before and after unpublish (13e/15c). New checks (18/18b/18c)
   confirm a brand new user still gets blocked from the list, detail, and
   import of an unpublished deck.
+- **Scope gap found in Phase 12 Round 2 (local smoke only, not fixed this
+  phase):** everything above is scoped to a **lexeme-mode subscription**
+  (`user_deck_subscriptions`). A user who imported a deck through the
+  **legacy** copy path only ever gets a `shared_deck_imports` row, which
+  `list_shared_decks()`/`get_shared_deck()`'s post-unpublish
+  visibility-widening `WHERE` clause never checks. So once a legacy deck's
+  owner soft-unpublishes it, an existing legacy importer's own shared-deck
+  bookshelf/list/detail **stops showing that origin deck card**, same as a
+  brand new user -- their personal `vocab_items`/deck/review data is
+  completely unaffected (nothing above changes), only the shared-deck
+  listing entry pointing back at the source disappears for them too. Found
+  by `backend/scripts/smoke_test_jlpt_seed_coexistence.py` check 30; see
+  the Phase 12 production runbook section in `docs/beta-release-checklist.md`
+  for disclosure/handling. Extending the widening to also check
+  `shared_deck_imports` is left as a future-phase decision, not done here.
