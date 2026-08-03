@@ -466,6 +466,45 @@ of Round 2, 2026-07-31) — never against production:
 - The legacy subscriber gap described above (check 30) was also caught by
   this same smoke run.
 
+#### Phase 16: read-only post-transition health checks
+
+This is **not** part of the Phase 12/14 runbook above and does not execute
+any of its steps. The runbook describes how the production transition was
+performed (a one-time, approved write procedure); this subsection describes
+how to *re-confirm afterward*, on a recurring basis, that production still
+looks the way the runbook recorded it — a read-only check, safe to re-run
+any time, that never calls a write endpoint, never touches Neon SQL
+directly, and never reads `.env`.
+
+Two scripts, both under `backend/scripts/`:
+
+- `check_production_shared_decks.py <backend base URL>` — calls exactly one
+  endpoint, anonymous `GET /shared-decks` (no `Authorization` header, the
+  same view a new visitor gets), and confirms: the five lexeme-mode JLPT
+  decks (ids 12-16) are present with the expected title, `mode:
+  "subscribed"`, `is_published: true`, and vocab count from the Phase 14
+  table above; and the five legacy copied-mode decks (ids 9/8/7/2/1) do
+  **not** appear in the public list. Exits non-zero if anything doesn't
+  match. The backend base URL is always passed as a CLI argument — never
+  hardcode or commit a real production URL (see the rule at the top of this
+  file).
+- `check_jlpt_package_safety.py` — local-only, no network calls. Confirms
+  the 5 approved
+  `backend/data/jlpt/packages/jlpt_n{1..5}_recommended_deck.json` files
+  exist, `deck.name`/`vocab_items` count/`custom_terms` match the last
+  verified snapshot, none of the known forbidden-copy phrases appear, and
+  `git check-ignore` still treats each file as **not** ignored (i.e. the
+  `.gitignore` exception documented in "Git Safety" below is still wired
+  correctly).
+
+If either script reports a failure: stop and report it, the same as any
+other check in this document. Do not respond to a failure by re-running
+`seed_jlpt_shared_decks.py --apply`, calling `DELETE`/`POST .../republish`,
+or editing `packages/` files to make the check pass — a failing check here
+means something about production or the local packages drifted from what
+was recorded, which needs its own investigation and its own explicit
+approval to fix, not a silent patch to match reality.
+
 ## 8. Feedback — Final Test
 
 - [ ] Global app feedback (하단/사이드바 피드백 버튼) submits successfully.
