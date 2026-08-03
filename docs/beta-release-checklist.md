@@ -494,7 +494,11 @@ of Round 2, 2026-07-31) — never against production:
 - [ ] No large dictionary dump is staged: `jmdict_full.json`,
       `en_ko_full.json(.gz)`, `kaikki_raw.jsonl(.gz)`,
       `krdict_reverse_full.json(.gz)`.
-- [ ] `backend/data/jlpt/{raw,work,reviewed,packages}/` are not staged.
+- [ ] `backend/data/jlpt/{raw,work,reviewed}/` and unapproved files under
+      `backend/data/jlpt/packages/` are not staged. The five approved
+      `backend/data/jlpt/packages/jlpt_n{1..5}_recommended_deck.json`
+      packages are allowed after re-checking deck name, item counts, and
+      `custom_terms == 0`.
 - [ ] No secret value appears anywhere in the diff being pushed.
 
 ## 11. Beta User Announcement
