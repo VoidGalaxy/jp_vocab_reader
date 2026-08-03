@@ -3598,6 +3598,7 @@ export default function HomePage() {
             importedDeckId={importedSharedDeckId}
             unpublishingDeckId={unpublishingSharedDeckId}
             republishingDeckId={republishingSharedDeckId}
+            canManageSharedDecks={!isDevUser}
             message={sharedDeckMessage}
             updatingWordLexemeId={updatingWordLexemeId}
             onRefresh={() => void loadSharedDecks()}

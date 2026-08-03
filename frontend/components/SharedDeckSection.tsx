@@ -155,6 +155,7 @@ type SharedDeckSectionProps = {
   // -- "Owner unpublish policy" republish decision): mirrors
   // unpublishingDeckId above, just for the reverse action.
   republishingDeckId: number | null;
+  canManageSharedDecks: boolean;
   message: string;
   // Subscribed-deck word status (see
   // docs/architecture/shared-lexeme-progress-storage.md) -- lexeme_id of
@@ -182,6 +183,7 @@ export function SharedDeckSection({
   importedDeckId,
   unpublishingDeckId,
   republishingDeckId,
+  canManageSharedDecks,
   message,
   updatingWordLexemeId,
   onRefresh,
@@ -277,6 +279,7 @@ export function SharedDeckSection({
     // the same button just opens the deck's word list instead.
     const isSubscribedMode = deck.mode === "subscribed";
     const published = isDeckPublished(deck);
+    const canManageDeck = canManageSharedDecks && deck.is_owner;
     // Once unpublished, the only reason this button should still appear is
     // to let an already-subscribed user open their own word list -- never
     // as a new-import CTA (see docs/architecture/shared-lexeme-progress-storage.md
@@ -382,7 +385,7 @@ export function SharedDeckSection({
               )}
             </button>
           ) : null}
-          {deck.is_owner && published ? (
+          {canManageDeck && published ? (
             <button
               type="button"
               className="danger-secondary-button compact-button"
@@ -392,7 +395,7 @@ export function SharedDeckSection({
               {isUnpublishing ? "공유 취소 중..." : "공유 취소"}
             </button>
           ) : null}
-          {deck.is_owner && !published && onRepublishSharedDeck ? (
+          {canManageDeck && !published && onRepublishSharedDeck ? (
             <button
               type="button"
               className="secondary-button compact-button"
@@ -634,7 +637,7 @@ export function SharedDeckSection({
                         : "내 노트에 가져오기"}
                 </button>
               )}
-              {selectedDeck.is_owner && selectedDeckPublished ? (
+              {canManageSharedDecks && selectedDeck.is_owner && selectedDeckPublished ? (
                 <button
                   type="button"
                   className="danger-secondary-button"
@@ -646,7 +649,7 @@ export function SharedDeckSection({
                     : "공유 취소"}
                 </button>
               ) : null}
-              {selectedDeck.is_owner && !selectedDeckPublished ? (
+              {canManageSharedDecks && selectedDeck.is_owner && !selectedDeckPublished ? (
                 <button
                   type="button"
                   className="secondary-button"
@@ -670,7 +673,7 @@ export function SharedDeckSection({
               자료와 내부 사전 데이터를 바탕으로 구성했습니다.
             </p>
           ) : null}
-          {selectedDeck.is_owner ? (
+          {canManageSharedDecks && selectedDeck.is_owner ? (
             <p className="muted-text shared-deck-owner-hint">
               {selectedDeckPublished
                 ? "공유를 중단하면 새 사용자는 더 이상 이 덱을 가져올 수 없어요. 이미 학습 중인 사용자는 복습을 계속 이어갈 수 있고, 이 덱은 내 책장에서도 계속 볼 수 있어요."

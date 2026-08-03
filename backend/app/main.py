@@ -14,6 +14,7 @@ from app.analyzer import EXCLUDED_POS, analyzer
 from app.analyzer import find_example_sentence, split_sentences
 from app.auth import (
     create_access_token,
+    get_current_user_required,
     get_current_user_optional_or_dev,
     hash_password,
     verify_password,
@@ -331,6 +332,10 @@ def current_user_id(request: Request) -> int:
     return int(get_current_user_optional_or_dev(request)["id"])
 
 
+def required_user_id(request: Request) -> int:
+    return int(get_current_user_required(request)["id"])
+
+
 @app.post("/auth/register", response_model=AuthTokenResponse)
 def register_user(request: AuthRegisterRequest) -> AuthTokenResponse:
     email = normalize_email(request.email)
@@ -593,7 +598,7 @@ def post_shared_deck_import(
 def remove_shared_deck(
     shared_deck_id: int, http_request: Request
 ) -> SharedDeckDeleteResponse:
-    result = delete_shared_deck(current_user_id(http_request), shared_deck_id)
+    result = delete_shared_deck(required_user_id(http_request), shared_deck_id)
     if result == "not_found":
         raise HTTPException(status_code=404, detail="shared deck not found")
     if result == "forbidden":
@@ -610,7 +615,7 @@ def remove_shared_deck(
 def republish_shared_deck_endpoint(
     shared_deck_id: int, http_request: Request
 ) -> SharedDeckRepublishResponse:
-    result = republish_shared_deck(current_user_id(http_request), shared_deck_id)
+    result = republish_shared_deck(required_user_id(http_request), shared_deck_id)
     if result == "not_found":
         raise HTTPException(status_code=404, detail="shared deck not found")
     if result == "forbidden":

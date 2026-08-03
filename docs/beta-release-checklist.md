@@ -275,14 +275,14 @@ Follow-up: production re-registration or migration to lexeme-mode must be a
 separate approved task. Do not re-run `seed_jlpt_shared_decks.py --apply`
 against production as part of verification.
 
-### Phase 12: production transition runbook (designed Round 0-3, NOT executed)
+### Phase 12/14: production transition runbook and execution record
 
 This section documents the planned procedure for moving the live N1-N5
-`shared_decks` rows off the legacy copied-mode path. **Nothing in this
-section has been run against production.** Everything below is either a
-design decision (Round 0-1) or something verified only on a disposable local
+`shared_decks` rows off the legacy copied-mode path. **This
+section was not run against production at Phase 12.** Phase 14 execution is recorded below. The original planning details include
+design decisions (Round 0-1) and evidence verified only on a disposable local
 SQLite scratch DB (Round 2). Where a claim is local-only evidence, it says so
-explicitly — never read anything here as "done in production."
+explicitly.
 
 **Decided strategy (Round 0-1): option A, then option B — never option C.**
 
@@ -343,7 +343,7 @@ explicitly — never read anything here as "done in production."
       (`GET /shared-decks`) are the default, lighter-weight path (same
       reasoning as the Phase 10/11 verification procedure above).
 
-#### Execution steps (documented for approval; NOT executed this round)
+#### Execution steps
 
 1. Pick a maintenance window / low-traffic time.
 2. Confirm a production database backup/snapshot exists and is recent
@@ -368,9 +368,27 @@ explicitly — never read anything here as "done in production."
     and SRS state are completely unaffected (see "legacy subscriber gap"
     below for the one thing that **does** change for them).
 
-None of steps 1-10 above have been executed. Executing them against
-production requires its own explicit, separate user approval, distinct from
-this documentation round.
+Phase 14 executed the production transition with separate approvals for the
+two write steps. First, five new lexeme-mode decks were created from the
+checked-in package JSONs. Second, the old copied-mode decks were
+soft-unpublished through the owner UI. No Neon SQL was run from Codex, no
+`.env` file was read, and the old rows were not deleted.
+
+| level | old copied id/title | final old state | new lexeme id/title | final new state |
+| --- | --- | --- | --- | --- |
+| N1 | 9 / N1어휘모음 | hidden from public list | 12 / JLPT N1 추천 어휘 | public, mode=subscribed, vocab_count=3475 |
+| N2 | 8 / N2어휘모음 | hidden from public list | 13 / JLPT N2 추천 어휘 | public, mode=subscribed, vocab_count=1830 |
+| N3 | 7 / N3어휘모음 | hidden from public list | 14 / JLPT N3 추천 어휘 | public, mode=subscribed, vocab_count=1834 |
+| N4 | 2 / N4어휘모음 | hidden from public list | 15 / JLPT N4 추천 어휘 | public, mode=subscribed, vocab_count=640 |
+| N5 | 1 / N5어휘모음 | hidden from public list | 16 / JLPT N5 추천 어휘 | public, mode=subscribed, vocab_count=684 |
+
+Post-execution read-only `GET /shared-decks` confirmed that only the five new
+lexeme-mode JLPT decks are present in the public list. During execution two
+seed-script issues were found and fixed before continuing: PostgreSQL insert
+id handling for `lexemes`, and per-word connection churn in
+`seed_jlpt_shared_decks.py`. After the transition, an additional safeguard was
+added so unauthenticated/dev-fallback users cannot see or call owner-only
+shared-deck management actions for the newly seeded dev-owned decks.
 
 #### Rollback / abort conditions
 

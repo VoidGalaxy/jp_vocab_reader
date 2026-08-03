@@ -1117,3 +1117,11 @@ cut off by someone else unpublishing the deck it came from.
   the Phase 12 production runbook section in `docs/beta-release-checklist.md`
   for disclosure/handling. Extending the widening to also check
   `shared_deck_imports` is left as a future-phase decision, not done here.
+- **Phase 14 production transition outcome:** the live JLPT recommendation
+  shelf now uses five new lexeme-mode rows (`shared_deck_id` 12-16,
+  `mode="subscribed"`) and the old copied-mode rows (`shared_deck_id`
+  9/8/7/2/1) have been soft-unpublished through the owner UI. This does not
+  delete old rows or previously imported personal vocabulary; it only changes
+  what appears in the public shared-deck list. The legacy subscriber gap above
+  therefore remains the expected behavior for users who had already imported
+  the old copied-mode rows.
