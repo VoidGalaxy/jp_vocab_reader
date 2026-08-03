@@ -82,7 +82,7 @@ backend/data/jlpt/*.json
 backend/data/jlpt/raw/
 backend/data/jlpt/work/
 backend/data/jlpt/reviewed/
-backend/data/jlpt/packages/
+backend/data/jlpt/packages/*
 backend/data/jlpt/*_quality_draft.csv
 backend/data/jlpt/*_normalized.csv
 backend/data/jlpt/*_reviewed.csv
@@ -92,6 +92,16 @@ backend/data/jlpt/*_recommended_deck.json
 !backend/data/jlpt/samples/
 !backend/data/jlpt/n5_sample.csv
 !backend/data/jlpt/README.md
+
+# Final reviewed JLPT recommended-deck packages: promoted into Git so the
+# Render deploy carries production seed input directly (see docs/jlpt-decks.md).
+# Only these 5 approved files -- raw/work/reviewed and any other packages/
+# contents remain ignored.
+!backend/data/jlpt/packages/jlpt_n1_recommended_deck.json
+!backend/data/jlpt/packages/jlpt_n2_recommended_deck.json
+!backend/data/jlpt/packages/jlpt_n3_recommended_deck.json
+!backend/data/jlpt/packages/jlpt_n4_recommended_deck.json
+!backend/data/jlpt/packages/jlpt_n5_recommended_deck.json
 
 # Local agent tooling (machine-local, never committed)
 .claude/settings.local.json

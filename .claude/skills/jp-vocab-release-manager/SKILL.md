@@ -52,7 +52,7 @@ Never stage or commit:
 - `backend/data/jlpt/raw/`
 - `backend/data/jlpt/work/`
 - `backend/data/jlpt/reviewed/`
-- `backend/data/jlpt/packages/`
+- `backend/data/jlpt/packages/` — except the 5 approved recommended-deck packages below, which are intentionally tracked so Render deploys carry production seed input
 - `backend/data/dictionary/jmdict_full.json`
 - `backend/data/dictionary/en_ko_full.json`
 - `backend/data/dictionary/en_ko_full.json.gz`
@@ -68,6 +68,18 @@ Never stage or commit:
 - `.claude/settings.local.json`
 
 Treat untracked `.agents/` as a separate tooling decision. Do not include it in feature commits unless the task explicitly adds project skills there.
+
+## Approved packages/ Exceptions
+
+Only these 5 files inside `backend/data/jlpt/packages/` may be staged or committed. Everything else in that directory (intermediate builds, drafts, anything not on this list) stays forbidden:
+
+- `backend/data/jlpt/packages/jlpt_n1_recommended_deck.json`
+- `backend/data/jlpt/packages/jlpt_n2_recommended_deck.json`
+- `backend/data/jlpt/packages/jlpt_n3_recommended_deck.json`
+- `backend/data/jlpt/packages/jlpt_n4_recommended_deck.json`
+- `backend/data/jlpt/packages/jlpt_n5_recommended_deck.json`
+
+Before staging any of these, re-run the forbidden-copy search below against them and confirm `deck.name`, `vocab_items` count, and `custom_terms` count match the last verified snapshot — do not accept silent content drift.
 
 ## Validation Commands
 
