@@ -17,10 +17,6 @@ from app.database import get_connection, init_db, now_iso  # noqa: E402
 from app.jlpt_level_service import extract_jlpt_level_from_title  # noqa: E402
 from app.repositories.deck_package_repository import import_deck_package  # noqa: E402
 from app.repositories.deck_repository import list_decks  # noqa: E402
-from app.repositories.lexeme_repository import (  # noqa: E402
-    add_word_to_shared_deck,
-    upsert_lexeme,
-)
 from app.repositories.shared_deck_repository import publish_deck  # noqa: E402
 from app.repositories.user_repository import (  # noqa: E402
     get_dev_user_by_email,
@@ -45,6 +41,99 @@ def find_shared_deck_by_title(connection, owner_user_id: int, title: str) -> int
         (owner_user_id, title),
     ).fetchone()
     return int(row["id"]) if row else None
+
+
+def upsert_seed_lexeme(
+    connection,
+    *,
+    surface: str,
+    base_form: str,
+    reading: str = "",
+    part_of_speech: str = "",
+    meaning_ko: str = "",
+    dictionary_gloss: str = "",
+    jlpt_level: str | None = None,
+) -> int:
+    timestamp = now_iso()
+    base_form = (base_form or surface or "").strip() or surface.strip()
+    surface = surface.strip() or base_form
+    reading = (reading or "").strip()
+    part_of_speech = (part_of_speech or "").strip()
+    existing = connection.execute(
+        """
+        SELECT id FROM lexemes
+        WHERE base_form = ? AND reading = ? AND part_of_speech = ?
+        """,
+        (base_form, reading, part_of_speech),
+    ).fetchone()
+    if existing:
+        lexeme_id = int(existing["id"])
+        connection.execute(
+            """
+            UPDATE lexemes
+            SET surface = ?,
+                meaning_ko = ?,
+                dictionary_gloss = ?,
+                jlpt_level = COALESCE(?, jlpt_level),
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                surface,
+                meaning_ko.strip(),
+                dictionary_gloss.strip(),
+                jlpt_level,
+                timestamp,
+                lexeme_id,
+            ),
+        )
+        return lexeme_id
+
+    cursor = connection.execute(
+        """
+        INSERT INTO lexemes (
+            surface, base_form, reading, part_of_speech, meaning_ko,
+            dictionary_gloss, jlpt_level, source_type, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'jlpt', ?, ?)
+        """,
+        (
+            surface,
+            base_form,
+            reading,
+            part_of_speech,
+            meaning_ko.strip(),
+            dictionary_gloss.strip(),
+            jlpt_level,
+            timestamp,
+            timestamp,
+        ),
+    )
+    return int(cursor.lastrowid)
+
+
+def add_seed_word_to_shared_deck(
+    connection, shared_deck_id: int, lexeme_id: int, sort_order: int
+) -> None:
+    timestamp = now_iso()
+    connection.execute(
+        """
+        INSERT INTO shared_deck_words (
+            shared_deck_id, lexeme_id, sort_order, created_at,
+            display_meaning_ko, example_sentence, context_explanation_ko,
+            tags_json, published_note
+        )
+        VALUES (?, ?, ?, ?, NULL, NULL, NULL, NULL, NULL)
+        ON CONFLICT (shared_deck_id, lexeme_id) DO UPDATE SET
+            sort_order = excluded.sort_order,
+            display_meaning_ko = excluded.display_meaning_ko,
+            example_sentence = excluded.example_sentence,
+            context_explanation_ko = excluded.context_explanation_ko,
+            tags_json = excluded.tags_json,
+            published_note = excluded.published_note
+        """,
+        (shared_deck_id, lexeme_id, sort_order, timestamp),
+    )
 
 
 def run_dry_run_lexeme(package: DeckPackage) -> int:
@@ -114,25 +203,27 @@ def run_apply_lexeme(package: DeckPackage) -> int:
                 f"(shared_deck_id={shared_deck_id})"
             )
 
-    registered = 0
-    for sort_order, vocab_item in enumerate(package.vocab_items):
-        base_form = (vocab_item.base_form or vocab_item.surface or "").strip()
-        if not base_form:
-            continue
-        lexeme_id = upsert_lexeme(
-            surface=vocab_item.surface or base_form,
-            base_form=base_form,
-            reading=vocab_item.reading,
-            part_of_speech=vocab_item.part_of_speech,
-            meaning_ko=vocab_item.meaning_ko,
-            dictionary_gloss=vocab_item.dictionary_gloss,
-            jlpt_level=jlpt_level,
-            source_type="jlpt",
-        )
-        add_word_to_shared_deck(shared_deck_id, lexeme_id, sort_order)
-        registered += 1
+        registered = 0
+        total = len(package.vocab_items)
+        for sort_order, vocab_item in enumerate(package.vocab_items):
+            base_form = (vocab_item.base_form or vocab_item.surface or "").strip()
+            if not base_form:
+                continue
+            lexeme_id = upsert_seed_lexeme(
+                connection,
+                surface=vocab_item.surface or base_form,
+                base_form=base_form,
+                reading=vocab_item.reading,
+                part_of_speech=vocab_item.part_of_speech,
+                meaning_ko=vocab_item.meaning_ko,
+                dictionary_gloss=vocab_item.dictionary_gloss,
+                jlpt_level=jlpt_level,
+            )
+            add_seed_word_to_shared_deck(connection, shared_deck_id, lexeme_id, sort_order)
+            registered += 1
+            if registered % 500 == 0:
+                print(f"registered progress: {registered}/{total} lexeme(s)")
 
-    with get_connection() as connection:
         connection.execute(
             """
             UPDATE shared_decks
