@@ -164,6 +164,8 @@ def _is_insert_with_id(query: str) -> bool:
         "shared_deck_items",
         "shared_deck_terms",
         "shared_deck_imports",
+        "lexemes",
+        "user_deck_subscriptions",
     }
 
 
