@@ -74,6 +74,10 @@ type StudyItemsResponse = {
 
 const SHARED_DECK_STUDY_ID_PREFIX = "shared:";
 
+function isSharedDeckStudyId(deckId: string) {
+  return deckId.startsWith(SHARED_DECK_STUDY_ID_PREFIX);
+}
+
 type LexemeReviewResponse = {
   lexeme_id: number;
   status: string;
@@ -1356,9 +1360,10 @@ export default function HomePage() {
     setVocabMessage("");
 
     try {
+      const safeDeckId = isSharedDeckStudyId(deckId) ? "all" : deckId;
       const params = new URLSearchParams();
-      if (deckId !== "all") {
-        params.set("deck_id", deckId);
+      if (safeDeckId !== "all") {
+        params.set("deck_id", safeDeckId);
       }
       if (vocabStatusFilter !== "all") {
         params.set("status", vocabStatusFilter);
@@ -1897,7 +1902,8 @@ export default function HomePage() {
 
   async function loadCustomTerms(deckId: string = selectedVocabDeckId) {
     try {
-      const query = deckId !== "all" ? `?deck_id=${deckId}` : "";
+      const safeDeckId = isSharedDeckStudyId(deckId) ? "all" : deckId;
+      const query = safeDeckId !== "all" ? `?deck_id=${safeDeckId}` : "";
       const data = await requestJson<CustomTermsResponse>(
         `/custom-terms${query}`,
       );
@@ -1914,7 +1920,8 @@ export default function HomePage() {
     setStudyStatsMessage("");
 
     try {
-      const query = deckId !== "all" ? `?deck_id=${deckId}` : "";
+      const safeDeckId = isSharedDeckStudyId(deckId) ? "all" : deckId;
+      const query = safeDeckId !== "all" ? `?deck_id=${safeDeckId}` : "";
       const data = await requestJson<StatsResponse>(`/stats${query}`);
       setStudyStats(data);
     } catch (error) {
@@ -3182,10 +3189,13 @@ export default function HomePage() {
   }
 
   function goToVocabFromStudy() {
-    setSelectedVocabDeckId(selectedStudyDeckId);
+    const vocabDeckId = isSharedDeckStudyId(selectedStudyDeckId)
+      ? "all"
+      : selectedStudyDeckId;
+    setSelectedVocabDeckId(vocabDeckId);
     setActiveTab("vocab");
-    void loadVocabItems(selectedStudyDeckId);
-    void loadCustomTerms(selectedStudyDeckId);
+    void loadVocabItems(vocabDeckId);
+    void loadCustomTerms(vocabDeckId);
   }
 
   async function submitStudyReview(rating: ReviewResult) {
@@ -3731,8 +3741,8 @@ async function requestJson<T>(
   if (!response.ok) {
     let rawDetail = "";
     try {
-      const data = (await response.json()) as { detail?: string };
-      rawDetail = data.detail ?? "";
+      const data = (await response.json()) as { detail?: unknown };
+      rawDetail = normalizeHttpDetail(data.detail);
     } catch {
       rawDetail = "";
     }
@@ -3826,6 +3836,28 @@ class ApiError extends Error {
 
 function isHttpError(error: unknown, status: number) {
   return error instanceof ApiError && error.status === status;
+}
+
+function normalizeHttpDetail(detail: unknown) {
+  if (typeof detail === "string") {
+    return detail;
+  }
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === "string") {
+          return item;
+        }
+        if (item && typeof item === "object" && "msg" in item) {
+          const message = (item as { msg?: unknown }).msg;
+          return typeof message === "string" ? message : "";
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join("; ");
+  }
+  return "";
 }
 
 function getHttpErrorMessage(status: number, detail: string) {
