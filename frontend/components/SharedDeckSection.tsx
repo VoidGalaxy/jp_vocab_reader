@@ -483,6 +483,15 @@ export function SharedDeckSection({
           </p>
           {messageTone === "success" ? (
             <div className="shared-deck-message-actions">
+              {importedDeckId ? (
+                <button
+                  type="button"
+                  className="secondary-button compact-button"
+                  onClick={() => onSelectDeck(importedDeckId)}
+                >
+                  학습 목록 보기
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="ghost-button compact-button"
