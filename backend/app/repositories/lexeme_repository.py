@@ -284,7 +284,10 @@ def _normalize_progress_overlay(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_shared_deck_words_with_progress(
-    shared_deck_id: int, user_id: int, due_only: bool = False
+    shared_deck_id: int,
+    user_id: int,
+    due_only: bool = False,
+    limit: int | None = None,
 ) -> list[dict[str, Any]]:
     """shared_deck_words + lexemes, left-joined with this user's
     user_word_progress. A word with no progress row still comes back (as
@@ -300,6 +303,23 @@ def list_shared_deck_words_with_progress(
     progress-less/unclassified rows, so subscribing to a large lexeme deck
     (e.g. JLPT N1) flooded the due-today queue with every never-reviewed
     word at once, even though /stats reported 0 due for the same lexemes.
+
+    limit (Phase 21 Round 1): pushed down as a real SQL LIMIT, not a
+    post-fetch Python slice -- safe to do exactly here because
+    shared_deck_words has a UNIQUE(shared_deck_id, lexeme_id) constraint, so
+    within one deck there is no cross-row duplication to worry about; the
+    ORDER BY (backed by the existing idx_shared_deck_words_deck(shared_deck_id,
+    sort_order) index) still fully determines which rows the database
+    returns first. `?` placeholders are adapted to `%s` for PostgreSQL by
+    the existing adapt_query() in app/database.py the same way every other
+    placeholder in this query already is, so plain `LIMIT ?` needs no
+    engine-specific handling. Omitting limit (None) keeps the previous
+    full-scan behavior unchanged -- only list_subscribed_lexeme_study_items'
+    single-shared_deck_id path passes it through; the multi-deck "all mode"
+    merge still fetches full per-deck results and slices in Python, because
+    a lexeme can appear in more than one subscribed deck, which a per-deck
+    SQL LIMIT could under-fill after cross-deck dedup (see Round 0 writeup
+    in docs/architecture/shared-lexeme-progress-storage.md).
     """
     params: list[Any] = [user_id, shared_deck_id]
     due_clause = ""
@@ -312,6 +332,11 @@ def list_shared_deck_words_with_progress(
               )
         """
         params.append(now_iso())
+
+    limit_clause = ""
+    if limit is not None:
+        limit_clause = "LIMIT ?"
+        params.append(limit)
 
     with get_connection() as connection:
         rows = connection.execute(
@@ -340,6 +365,7 @@ def list_shared_deck_words_with_progress(
             WHERE shared_deck_words.shared_deck_id = ?
             {due_clause}
             ORDER BY shared_deck_words.sort_order ASC, shared_deck_words.id ASC
+            {limit_clause}
             """,
             tuple(params),
         ).fetchall()
@@ -550,14 +576,31 @@ def list_subscribed_lexeme_study_items(
     but only if the user is actually subscribed to it (never leaks a
     non-subscribed deck's words through this study-queue path).
 
-    limit (Phase 20 Round 2): caps the number of items returned, applied as
-    a plain slice over the already deck-ordered/sort_order-ordered merged
-    list -- deliberately NOT pushed down as a SQL LIMIT per deck, since that
-    would cap each subscribed deck independently instead of the combined
-    total. Only the caller decides when to pass it (e.g. the frontend's
-    "new word" session, see docs/architecture/shared-lexeme-progress-storage.md);
-    omitting it (None) keeps returning everything, unchanged from before
-    this parameter existed. This does not change what counts as
+    limit (Phase 20 Round 2, pushed to SQL for the single-deck case in Phase
+    21 Round 1): caps the number of items returned.
+
+    - When shared_deck_id is given (one deck only, so the loop below runs
+      exactly once), limit is passed straight through to
+      list_shared_deck_words_with_progress() as a real SQL LIMIT --
+      shared_deck_words' UNIQUE(shared_deck_id, lexeme_id) constraint means
+      a single deck can never contribute a duplicate lexeme_id, so pushing
+      the limit into the query for this path is exact, not an
+      approximation: the database now reads/returns at most `limit` rows
+      instead of the full deck (e.g. all 3,475 N1 words) before Python ever
+      sees them.
+    - When shared_deck_id is None (the "all subscribed decks" merge), each
+      deck is still fetched in full and limit is only applied as a final
+      Python slice over the deck-ordered/sort_order-ordered merged+deduped
+      list, exactly as before this round. This is deliberate, not an
+      oversight: the same lexeme_id can be linked into more than one
+      subscribed deck, so pushing a per-deck SQL LIMIT into this branch
+      could under-fill the final result after cross-deck dedup (see the
+      Phase 21 Round 0 writeup in
+      docs/architecture/shared-lexeme-progress-storage.md) -- out of scope
+      for this round.
+
+    Either way, omitting limit (None) keeps returning everything, unchanged
+    from before this parameter existed. This does not change what counts as
     due/new -- it only trims how many of them come back in one response, so
     it must never be used to make /stats-reported counts (due_count,
     new_count) look smaller than they are; those still read the full
@@ -568,8 +611,10 @@ def list_subscribed_lexeme_study_items(
         if shared_deck_id not in subscribed_ids_set:
             return []
         subscribed_ids = [shared_deck_id]
+        sql_limit = limit
     else:
         subscribed_ids = sorted(subscribed_ids_set)
+        sql_limit = None
     if not subscribed_ids:
         return []
 
@@ -584,7 +629,9 @@ def list_subscribed_lexeme_study_items(
     seen_lexeme_ids: set[int] = set()
     items: list[dict[str, Any]] = []
     for deck_id in subscribed_ids:
-        words = list_shared_deck_words_with_progress(deck_id, user_id, due_only=due_only)
+        words = list_shared_deck_words_with_progress(
+            deck_id, user_id, due_only=due_only, limit=sql_limit
+        )
         for word in words:
             lexeme_id = word["lexeme_id"]
             if lexeme_id in seen_lexeme_ids:
