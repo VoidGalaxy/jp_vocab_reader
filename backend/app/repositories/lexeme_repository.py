@@ -288,6 +288,7 @@ def list_shared_deck_words_with_progress(
     user_id: int,
     due_only: bool = False,
     limit: int | None = None,
+    exclude_known: bool = False,
 ) -> list[dict[str, Any]]:
     """shared_deck_words + lexemes, left-joined with this user's
     user_word_progress. A word with no progress row still comes back (as
@@ -320,6 +321,26 @@ def list_shared_deck_words_with_progress(
     a lexeme can appear in more than one subscribed deck, which a per-deck
     SQL LIMIT could under-fill after cross-deck dedup (see Round 0 writeup
     in docs/architecture/shared-lexeme-progress-storage.md).
+
+    exclude_known (Phase 22 Round 1): drops rows whose progress status is
+    exactly 'known', applied in the WHERE clause -- i.e. before ORDER BY and
+    before limit -- so a caller combining exclude_known=True with limit gets
+    up to `limit` non-known rows, not "up to `limit` rows, then whatever's
+    left after a caller-side known filter" (which is what
+    list_subscribed_lexeme_study_items + GET /study-items/lexemes used to
+    do: the limit was applied first, known was filtered out of that already-
+    limited slice afterwards in main.py, so a deck with known words sorted
+    early could return fewer than `limit` items even though enough
+    non-known words existed further down the deck). A progress-less row
+    (status IS NULL, i.e. "new") is never dropped by this -- only an actual
+    'known' status is. Combining this with due_only=True is redundant but
+    harmless: due_only's own clause already restricts to
+    status IN ('unknown', 'uncertain'), which can never include 'known', so
+    the two conditions never disagree. Defaults to False so the deck-detail
+    caller (get_shared_deck_data() in shared_deck_repository.py) keeps
+    showing known words unchanged -- only list_subscribed_lexeme_study_items
+    (the study-queue path behind GET /study-items/lexemes, which never wants
+    known words back regardless of due_only/limit) passes True.
     """
     params: list[Any] = [user_id, shared_deck_id]
     due_clause = ""
@@ -332,6 +353,15 @@ def list_shared_deck_words_with_progress(
               )
         """
         params.append(now_iso())
+
+    exclude_known_clause = ""
+    if exclude_known:
+        exclude_known_clause = """
+              AND (
+                  user_word_progress.status IS NULL
+                  OR user_word_progress.status != 'known'
+              )
+        """
 
     limit_clause = ""
     if limit is not None:
@@ -364,6 +394,7 @@ def list_shared_deck_words_with_progress(
                AND user_word_progress.user_id = ?
             WHERE shared_deck_words.shared_deck_id = ?
             {due_clause}
+            {exclude_known_clause}
             ORDER BY shared_deck_words.sort_order ASC, shared_deck_words.id ASC
             {limit_clause}
             """,
@@ -605,6 +636,20 @@ def list_subscribed_lexeme_study_items(
     it must never be used to make /stats-reported counts (due_count,
     new_count) look smaller than they are; those still read the full
     underlying data untouched.
+
+    known words (Phase 22 Round 1): this study-queue view never wants
+    'known' words back, in either the single-deck or the "all decks" path --
+    GET /study-items/lexemes (main.py) has always filtered them out of the
+    final response regardless of due_only/limit. Previously that filtering
+    happened only in main.py, *after* limit had already picked a fixed-size
+    slice, so a deck with 'known' words sorted early could return fewer than
+    `limit` items even though enough non-known words existed further down.
+    Every call to list_shared_deck_words_with_progress() below now passes
+    exclude_known=True, so known words are dropped in SQL before ORDER
+    BY/LIMIT -- both the single-deck SQL LIMIT path and the all-mode
+    Python-slice path now fill up to `limit` from non-known words only. This
+    does not change get_shared_deck_data() (deck detail), which never calls
+    this function and keeps showing known words unchanged.
     """
     subscribed_ids_set = list_subscribed_shared_deck_ids(user_id)
     if shared_deck_id is not None:
@@ -630,7 +675,7 @@ def list_subscribed_lexeme_study_items(
     items: list[dict[str, Any]] = []
     for deck_id in subscribed_ids:
         words = list_shared_deck_words_with_progress(
-            deck_id, user_id, due_only=due_only, limit=sql_limit
+            deck_id, user_id, due_only=due_only, limit=sql_limit, exclude_known=True
         )
         for word in words:
             lexeme_id = word["lexeme_id"]

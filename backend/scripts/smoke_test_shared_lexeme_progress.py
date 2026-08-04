@@ -739,6 +739,168 @@ def run_new_lexeme_limit_checks() -> None:
         )
 
 
+def run_known_exclusion_checks() -> None:
+    """Phase 22 Round 1: 'known' words must be excluded in SQL, before
+    ORDER BY/LIMIT, not filtered out of an already-limited slice afterwards
+    (which is what GET /study-items/lexemes used to do in main.py -- a deck
+    with 'known' words sorted early could return fewer than `limit` items
+    even though enough non-known words existed further down the deck).
+
+    Uses a dedicated 50-word deck with the first 15 words marked 'known' and
+    one interior word marked 'uncertain', so the fixture actually exercises
+    the "known words sorted before the limit cutoff" scenario Round 0
+    identified, rather than a fixture too small to distinguish a real fix
+    from a coincidence.
+    """
+    from fastapi.testclient import TestClient
+
+    import app.main as main_module
+
+    owner_id = create_user("known-owner@smoke.test", "Known Owner")
+    subscriber_id = create_user("known-subscriber@smoke.test", "Known Subscriber")
+    shared_deck_id = create_shared_deck(owner_id, "known 제외 테스트 덱")
+
+    word_count = 50
+    known_count = 15
+    lexeme_ids: list[int] = []
+    for sort_order in range(word_count):
+        lexeme_id = upsert_lexeme(
+            surface=f"기지단어{sort_order}",
+            base_form=f"기지단어{sort_order}",
+            reading=f"きちたんご{sort_order}",
+            part_of_speech="명사",
+            meaning_ko=f"기지단어뜻{sort_order}",
+            jlpt_level="N1",
+            source_type="jlpt",
+        )
+        lexeme_ids.append(lexeme_id)
+        with get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO shared_deck_words (shared_deck_id, lexeme_id, sort_order, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (shared_deck_id, lexeme_id, sort_order, now_iso()),
+            )
+    with get_connection() as connection:
+        connection.execute(
+            "UPDATE shared_decks SET vocab_count = ? WHERE id = ?",
+            (word_count, shared_deck_id),
+        )
+
+    import_result = import_shared_deck(subscriber_id, shared_deck_id)
+    check(
+        "40. known-exclusion fixture: import subscribes without bulk-copy",
+        import_result and import_result.get("mode") == "subscribed",
+    )
+
+    # The first 15 words (by sort_order) are marked 'known' -- exactly the
+    # "known words sorted early" scenario from the Round 0 writeup. One
+    # interior non-known word (index 20) is marked 'uncertain' so the
+    # due_only interaction check below has a real due item to find.
+    for lexeme_id in lexeme_ids[:known_count]:
+        update_word_status(subscriber_id, lexeme_id, "known")
+    update_word_status(subscriber_id, lexeme_ids[20], "uncertain")
+    non_known_count = word_count - known_count
+
+    # --- deck detail path (exclude_known defaults to False): unaffected ----
+    detail_words = list_shared_deck_words_with_progress(shared_deck_id, subscriber_id)
+    check(
+        "41. deck-detail call (exclude_known default False) still returns all 50 words",
+        len(detail_words) == word_count,
+    )
+    check(
+        "41b. deck-detail call still includes the known words",
+        sum(1 for item in detail_words if item["status"] == "known") == known_count,
+    )
+
+    # --- study-queue path (repository layer): exclude_known=True hardcoded -
+    limited_non_known = list_subscribed_lexeme_study_items(
+        subscriber_id, shared_deck_id=shared_deck_id, limit=30
+    )
+    check(
+        "42. study-queue limit=30 still returns 30 items even with 15 known words sorted first",
+        len(limited_non_known) == 30,
+    )
+    check(
+        "42b. none of the 30 returned items are 'known'",
+        all(item["status"] != "known" for item in limited_non_known),
+    )
+    check(
+        "42c. the 30 returned are exactly the first 30 non-known words by sort_order",
+        [item["lexeme_id"] for item in limited_non_known] == lexeme_ids[known_count : known_count + 30],
+    )
+
+    unlimited_non_known = list_subscribed_lexeme_study_items(
+        subscriber_id, shared_deck_id=shared_deck_id
+    )
+    check(
+        "43. study-queue with no limit returns all non-known words, and none are 'known'",
+        len(unlimited_non_known) == non_known_count
+        and all(item["status"] != "known" for item in unlimited_non_known),
+    )
+
+    due_only_items = list_subscribed_lexeme_study_items(
+        subscriber_id, shared_deck_id=shared_deck_id, due_only=True
+    )
+    check(
+        "44. due_only=true + exclude_known together still find the one genuinely due "
+        "('uncertain') word -- exclude_known doesn't interfere with due detection",
+        len(due_only_items) == 1 and due_only_items[0]["lexeme_id"] == lexeme_ids[20],
+    )
+
+    # --- study-queue path (HTTP layer): GET /study-items/lexemes -----------
+    # Exercises the exact same "known words sorted early" scenario end to
+    # end through the real HTTP endpoints (import -> mark known via PATCH
+    # .../progress -> GET /study-items/lexemes?limit=30), using its own
+    # fresh registered user rather than reusing subscriber_id directly.
+    with TestClient(main_module.app) as client:
+        register_resp = client.post(
+            "/auth/register",
+            json={
+                "email": "known-http-subscriber@smoke.test",
+                "password": "smoke-test-pw",
+                "display_name": "Known HTTP Subscriber",
+            },
+        ).json()
+        http_headers = {"Authorization": f"Bearer {register_resp['access_token']}"}
+
+        import_resp = client.post(
+            f"/shared-decks/{shared_deck_id}/import", headers=http_headers
+        )
+        check("45. HTTP import succeeds for the known-exclusion deck", import_resp.status_code == 200)
+
+        for lexeme_id in lexeme_ids[:known_count]:
+            mark_known_resp = client.patch(
+                f"/shared-decks/{shared_deck_id}/words/{lexeme_id}/progress",
+                json={"status": "known"},
+                headers=http_headers,
+            )
+            if mark_known_resp.status_code != 200:
+                check(
+                    f"45b. PATCH .../words/{lexeme_id}/progress to 'known' succeeds",
+                    False,
+                )
+                break
+        else:
+            check("45b. all 15 PATCH .../progress calls to mark words 'known' succeeded", True)
+
+        limited_resp = client.get(
+            "/study-items/lexemes",
+            params={"shared_deck_id": shared_deck_id, "limit": 30},
+            headers=http_headers,
+        )
+        check(
+            "46. GET /study-items/lexemes?limit=30 still returns exactly 30 items "
+            "even with 15 known words sorted first",
+            limited_resp.status_code == 200 and len(limited_resp.json()) == 30,
+        )
+        check(
+            "46b. none of the 30 items in the HTTP response are 'known'",
+            all(item["status"] != "known" for item in limited_resp.json()),
+        )
+
+
 def main() -> int:
     print(f"using scratch db: {_SCRATCH_DB}")
     init_db()
@@ -986,6 +1148,7 @@ def main() -> int:
 
     run_unpublish_boundary_checks()
     run_new_lexeme_limit_checks()
+    run_known_exclusion_checks()
 
     print()
     if FAILURES:
