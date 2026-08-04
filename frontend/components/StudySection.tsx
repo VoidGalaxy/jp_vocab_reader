@@ -321,6 +321,14 @@ export function StudySection({
   };
   const visibleProgress =
     items.length > 0 ? `${Math.min(currentIndex + 1, items.length)} / ${items.length}` : "0 / 0";
+  // NEW_LEXEME_STUDY_LIMIT (30, page.tsx) only caps shared-deck lexeme
+  // "new" sessions -- a specific shared deck's "새 단어 학습" queue really
+  // is capped at 30 (Phase 20-24), but "all" mode mixes in personal
+  // vocab_items' new words too, which have no such cap, so this hint would
+  // be inaccurate there. Only show it for the one case where "30개" is
+  // always true: a single selected shared deck's new-word session.
+  const isSharedDeckSelected = selectedDeckId.startsWith("shared:");
+  const showNewLexemeLimitHint = studyMode === "new" && isSharedDeckSelected;
   // While a card is actively on screen, the dashboard/CTA chrome above it is
   // hidden -- the review flow should read as one focused flashcard, not a
   // stats screen with a card wedged underneath it.
@@ -488,6 +496,9 @@ export function StudySection({
             <p className="study-card-recent-hint">
               원문 읽기에서 담은 단어를 바로 복습해요. ({items.length}개 단어)
             </p>
+          ) : null}
+          {showNewLexemeLimitHint ? (
+            <p className="study-card-recent-hint">새 단어는 한 번에 30개씩 가볍게 시작해요.</p>
           ) : null}
           <div
             className="progress-bar study-card-progress"
