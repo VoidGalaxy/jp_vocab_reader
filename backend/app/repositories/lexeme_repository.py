@@ -288,17 +288,24 @@ def list_shared_deck_words_with_progress(
 ) -> list[dict[str, Any]]:
     """shared_deck_words + lexemes, left-joined with this user's
     user_word_progress. A word with no progress row still comes back (as
-    unclassified/level 0/no dates) -- it must never be dropped just because
-    the user hasn't touched it yet.
+    unclassified/level 0/no dates) when due_only is False -- it must never
+    be dropped just because the user hasn't touched it yet.
+
+    due_only's "due" definition is deliberately kept identical to
+    get_subscribed_lexeme_stats_summary()'s due_count (Phase 20 Round 1, see
+    docs/architecture/shared-lexeme-progress-storage.md): a lexeme with no
+    user_word_progress row yet, or with status still 'unclassified', is
+    "new", not "due" -- it belongs in the new/unclassified study path, not
+    the due-today one. Before this change due_only also matched
+    progress-less/unclassified rows, so subscribing to a large lexeme deck
+    (e.g. JLPT N1) flooded the due-today queue with every never-reviewed
+    word at once, even though /stats reported 0 due for the same lexemes.
     """
     params: list[Any] = [user_id, shared_deck_id]
     due_clause = ""
     if due_only:
         due_clause = """
-              AND (
-                  user_word_progress.status IS NULL
-                  OR user_word_progress.status IN ('unknown', 'uncertain', 'unclassified')
-              )
+              AND user_word_progress.status IN ('unknown', 'uncertain')
               AND (
                   user_word_progress.next_review_at IS NULL
                   OR user_word_progress.next_review_at <= ?
@@ -518,7 +525,10 @@ def record_lexeme_review(
 
 
 def list_subscribed_lexeme_study_items(
-    user_id: int, shared_deck_id: int | None = None, due_only: bool = False
+    user_id: int,
+    shared_deck_id: int | None = None,
+    due_only: bool = False,
+    limit: int | None = None,
 ) -> list[dict[str, Any]]:
     """Study-queue view over every shared deck the user actively subscribes
     to (Phase 3, see docs/architecture/shared-lexeme-progress-storage.md --
@@ -539,6 +549,19 @@ def list_subscribed_lexeme_study_items(
     If shared_deck_id is given, only that one deck's words are returned --
     but only if the user is actually subscribed to it (never leaks a
     non-subscribed deck's words through this study-queue path).
+
+    limit (Phase 20 Round 2): caps the number of items returned, applied as
+    a plain slice over the already deck-ordered/sort_order-ordered merged
+    list -- deliberately NOT pushed down as a SQL LIMIT per deck, since that
+    would cap each subscribed deck independently instead of the combined
+    total. Only the caller decides when to pass it (e.g. the frontend's
+    "new word" session, see docs/architecture/shared-lexeme-progress-storage.md);
+    omitting it (None) keeps returning everything, unchanged from before
+    this parameter existed. This does not change what counts as
+    due/new -- it only trims how many of them come back in one response, so
+    it must never be used to make /stats-reported counts (due_count,
+    new_count) look smaller than they are; those still read the full
+    underlying data untouched.
     """
     subscribed_ids_set = list_subscribed_shared_deck_ids(user_id)
     if shared_deck_id is not None:
@@ -574,6 +597,8 @@ def list_subscribed_lexeme_study_items(
                     "source_label": titles.get(deck_id) or "가져온 덱",
                 }
             )
+    if limit is not None:
+        items = items[:limit]
     return items
 
 

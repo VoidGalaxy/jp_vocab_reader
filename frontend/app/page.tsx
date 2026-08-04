@@ -78,6 +78,13 @@ function isSharedDeckStudyId(deckId: string) {
   return deckId.startsWith(SHARED_DECK_STUDY_ID_PREFIX);
 }
 
+// Phase 20 Round 2: caps how many never-reviewed shared-deck lexemes a "새
+// 단어" (new word) session pulls in at once -- subscribing to a large
+// lexeme-mode deck (e.g. JLPT N1, 3,475 words) otherwise puts all of them
+// in a single session. Only applied to the "new" mode fetches below; "오늘
+// 복습" (today/due) and status-filtered modes are unaffected.
+const NEW_LEXEME_STUDY_LIMIT = 30;
+
 type LexemeReviewResponse = {
   lexeme_id: number;
   status: string;
@@ -2981,7 +2988,7 @@ export default function HomePage() {
   }
 
   async function fetchLexemeStudyItems(
-    options: { sharedDeckId?: number; dueOnly?: boolean } = {},
+    options: { sharedDeckId?: number; dueOnly?: boolean; limit?: number } = {},
   ) {
     const params = new URLSearchParams();
     if (options.sharedDeckId !== undefined) {
@@ -2989,6 +2996,9 @@ export default function HomePage() {
     }
     if (options.dueOnly) {
       params.set("due_only", "true");
+    }
+    if (options.limit !== undefined) {
+      params.set("limit", String(options.limit));
     }
     const query = params.toString() ? `?${params.toString()}` : "";
     return requestJson<StudyLexemeItem[]>(`/study-items/lexemes${query}`);
@@ -3003,14 +3013,21 @@ export default function HomePage() {
         return [];
       }
       const sharedDeckId = Number(deckId.slice(SHARED_DECK_STUDY_ID_PREFIX.length));
+      if (mode === "new") {
+        const newLexemeItems = await fetchLexemeStudyItems({
+          sharedDeckId,
+          limit: NEW_LEXEME_STUDY_LIMIT,
+        });
+        return newLexemeItems
+          .filter((item) => item.status === "unclassified")
+          .map(toLexemeStudyCardItem);
+      }
       const lexemeItems = await fetchLexemeStudyItems({
         sharedDeckId,
         dueOnly: mode === "today",
       });
       let filtered = lexemeItems;
-      if (mode === "new") {
-        filtered = lexemeItems.filter((item) => item.status === "unclassified");
-      } else if (mode === "uncertain") {
+      if (mode === "uncertain") {
         filtered = lexemeItems.filter((item) => item.status === "uncertain");
       } else if (mode === "unknown") {
         filtered = lexemeItems.filter(
@@ -3068,7 +3085,7 @@ export default function HomePage() {
       if (deckId !== "all") {
         return vocabCards;
       }
-      const lexemeItems = await fetchLexemeStudyItems();
+      const lexemeItems = await fetchLexemeStudyItems({ limit: NEW_LEXEME_STUDY_LIMIT });
       const newLexemeCards = lexemeItems
         .filter((item) => item.status === "unclassified")
         .map(toLexemeStudyCardItem);

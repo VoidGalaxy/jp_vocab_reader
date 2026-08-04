@@ -35,8 +35,10 @@ os.environ["DATABASE_URL"] = f"sqlite:///{_SCRATCH_DB.as_posix()}"
 
 from app.database import get_connection, init_db, now_iso  # noqa: E402
 from app.repositories.lexeme_repository import (  # noqa: E402
+    get_subscribed_lexeme_stats_summary,
     is_lexeme_deck,
     list_shared_deck_words_with_progress,
+    list_subscribed_lexeme_study_items,
     record_lexeme_review,
     update_word_status,
     upsert_lexeme,
@@ -583,6 +585,160 @@ def run_unpublish_boundary_checks() -> None:
         )
 
 
+def run_new_lexeme_limit_checks() -> None:
+    """Phase 20 Round 2: the "new word" session's limit param, exercised
+    against a deck big enough (50 words) to actually distinguish a real cap
+    from a coincidentally-small fixture. Mirrors the JLPT N1 flooding
+    scenario (Round 0/1) at a smaller, fast-to-run scale.
+
+    Uses a dedicated user/deck so it doesn't interact with the shared 5-word
+    fixture and its progress-row assertions used earlier in main().
+    """
+    from fastapi.testclient import TestClient
+
+    import app.main as main_module
+
+    owner_id = create_user("limit-owner@smoke.test", "Limit Owner")
+    limit_user_id = create_user("limit-subscriber@smoke.test", "Limit Subscriber")
+    shared_deck_id = create_shared_deck(owner_id, "대형 lexeme 상한 테스트 덱")
+
+    word_count = 50
+    lexeme_ids: list[int] = []
+    for sort_order in range(word_count):
+        lexeme_id = upsert_lexeme(
+            surface=f"단어{sort_order}",
+            base_form=f"단어{sort_order}",
+            reading=f"たんご{sort_order}",
+            part_of_speech="명사",
+            meaning_ko=f"단어뜻{sort_order}",
+            jlpt_level="N1",
+            source_type="jlpt",
+        )
+        lexeme_ids.append(lexeme_id)
+        with get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO shared_deck_words (shared_deck_id, lexeme_id, sort_order, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (shared_deck_id, lexeme_id, sort_order, now_iso()),
+            )
+    with get_connection() as connection:
+        connection.execute(
+            "UPDATE shared_decks SET vocab_count = ? WHERE id = ?",
+            (word_count, shared_deck_id),
+        )
+
+    import_result = import_shared_deck(limit_user_id, shared_deck_id)
+    check(
+        "31. limit-check fixture: import subscribes without bulk-copy",
+        import_result and import_result.get("mode") == "subscribed",
+    )
+    check(
+        "31b. limit-check fixture: importing did not pre-create progress rows",
+        count_rows("user_word_progress", "user_id = ?", (limit_user_id,)) == 0,
+    )
+
+    # --- repository layer: limit applied, limit omitted, limit + due_only --
+    limited_items = list_subscribed_lexeme_study_items(
+        limit_user_id, shared_deck_id=shared_deck_id, limit=30
+    )
+    check(
+        "32. list_subscribed_lexeme_study_items(limit=30) returns exactly 30 of 50 new words",
+        len(limited_items) == 30,
+    )
+    check(
+        "32b. the 30 returned are the first 30 by sort_order (stable ordering)",
+        [item["lexeme_id"] for item in limited_items] == lexeme_ids[:30],
+    )
+
+    unlimited_items = list_subscribed_lexeme_study_items(
+        limit_user_id, shared_deck_id=shared_deck_id
+    )
+    check(
+        "33. list_subscribed_lexeme_study_items(limit=None) still returns all 50 (unchanged default)",
+        len(unlimited_items) == word_count,
+    )
+
+    due_only_with_limit = list_subscribed_lexeme_study_items(
+        limit_user_id, shared_deck_id=shared_deck_id, due_only=True, limit=30
+    )
+    check(
+        "34. due_only=true + limit=30 still returns 0 (Round 1 due definition preserved, "
+        "not just masked by the limit)",
+        len(due_only_with_limit) == 0,
+    )
+
+    # --- HTTP layer: GET /study-items/lexemes -------------------------------
+    with TestClient(main_module.app) as client:
+        register_resp = client.post(
+            "/auth/register",
+            json={
+                "email": "limit-http-subscriber@smoke.test",
+                "password": "smoke-test-pw",
+                "display_name": "Limit HTTP Subscriber",
+            },
+        ).json()
+        http_headers = {"Authorization": f"Bearer {register_resp['access_token']}"}
+
+        import_resp = client.post(
+            f"/shared-decks/{shared_deck_id}/import", headers=http_headers
+        )
+        check("35. HTTP import succeeds for the limit-check deck", import_resp.status_code == 200)
+
+        limited_resp = client.get(
+            "/study-items/lexemes",
+            params={"shared_deck_id": shared_deck_id, "limit": 30},
+            headers=http_headers,
+        )
+        check("36. GET /study-items/lexemes?limit=30 succeeds", limited_resp.status_code == 200)
+        check(
+            "36b. GET /study-items/lexemes?limit=30 returns exactly 30 items",
+            len(limited_resp.json()) == 30,
+        )
+
+        unlimited_resp = client.get(
+            "/study-items/lexemes",
+            params={"shared_deck_id": shared_deck_id},
+            headers=http_headers,
+        )
+        check(
+            "37. GET /study-items/lexemes without limit still returns all 50 (default unchanged)",
+            len(unlimited_resp.json()) == word_count,
+        )
+
+        due_only_limited_resp = client.get(
+            "/study-items/lexemes",
+            params={"shared_deck_id": shared_deck_id, "due_only": "true", "limit": 30},
+            headers=http_headers,
+        )
+        check(
+            "38. GET /study-items/lexemes?due_only=true&limit=30 still returns 0 "
+            "(Round 1 due_only fix preserved under the new limit param)",
+            due_only_limited_resp.status_code == 200 and len(due_only_limited_resp.json()) == 0,
+        )
+
+        invalid_limit_resp = client.get(
+            "/study-items/lexemes",
+            params={"shared_deck_id": shared_deck_id, "limit": 0},
+            headers=http_headers,
+        )
+        check(
+            "39. GET /study-items/lexemes?limit=0 is rejected (400), not silently treated as unlimited",
+            invalid_limit_resp.status_code == 400,
+        )
+
+        negative_limit_resp = client.get(
+            "/study-items/lexemes",
+            params={"shared_deck_id": shared_deck_id, "limit": -1},
+            headers=http_headers,
+        )
+        check(
+            "39b. GET /study-items/lexemes?limit=-1 is also rejected (400)",
+            negative_limit_resp.status_code == 400,
+        )
+
+
 def main() -> int:
     print(f"using scratch db: {_SCRATCH_DB}")
     init_db()
@@ -712,6 +868,37 @@ def main() -> int:
         all(item["status"] == "unclassified" and item["review_level"] == 0 for item in overlay),
     )
 
+    # --- 4b. Phase 20 Round 1: due_only=true must agree with /stats' own
+    # due_count definition -- a lexeme with no user_word_progress row yet is
+    # "new", never "due", in both places (see lexeme_repository.py's
+    # list_shared_deck_words_with_progress docstring). Before this fix,
+    # due_only=true still matched progress-less rows, so subscribing to a
+    # large deck (e.g. JLPT N1) flooded the due-today queue with every
+    # never-reviewed word while /stats reported 0 due for the same lexemes.
+    stats_before_any_review = get_subscribed_lexeme_stats_summary(importer_id)
+    check(
+        "8c. stats summary reports due_count=0 before any progress row exists",
+        stats_before_any_review["due_count"] == 0,
+    )
+    check(
+        "8d. stats summary reports new_count for every progress-less word",
+        stats_before_any_review["new_count"] == len(words),
+    )
+    due_only_before_any_review = list_shared_deck_words_with_progress(
+        shared_deck_id, importer_id, due_only=True
+    )
+    check(
+        "8e. due_only=true returns zero progress-less words (matches stats due_count=0)",
+        len(due_only_before_any_review) == 0,
+    )
+    non_due_only_overlay = list_shared_deck_words_with_progress(
+        shared_deck_id, importer_id, due_only=False
+    )
+    check(
+        "8f. due_only=false (new/unclassified path) still returns every word",
+        len(non_due_only_overlay) == len(words),
+    )
+
     # --- 5. status change -> lazy create ------------------------------------
     target_lexeme_id = lexeme_ids[0]
     updated = update_word_status(importer_id, target_lexeme_id, "unknown")
@@ -721,6 +908,22 @@ def main() -> int:
         count_rows("user_word_progress", "user_id = ?", (importer_id,)) == 1,
     )
     check("9c. status was actually applied", updated and updated["status"] == "unknown")
+
+    # Positive case for the Round 1 due_only fix: once a real progress row
+    # exists with status 'unknown' and no future next_review_at, it IS due --
+    # the fix narrows due_only to exclude progress-less rows, it must not
+    # also start excluding genuinely-due rows that do have a progress row.
+    due_only_after_status_change = list_shared_deck_words_with_progress(
+        shared_deck_id, importer_id, due_only=True
+    )
+    check(
+        "9d. due_only=true now includes the word with a real 'unknown' progress row",
+        any(item["lexeme_id"] == target_lexeme_id for item in due_only_after_status_change),
+    )
+    check(
+        "9e. due_only=true still excludes the remaining progress-less words",
+        len(due_only_after_status_change) == 1,
+    )
 
     # --- 6. review rating -> lazy create + SRS schedule ---------------------
     review_lexeme_id = lexeme_ids[1]
@@ -782,6 +985,7 @@ def main() -> int:
     )
 
     run_unpublish_boundary_checks()
+    run_new_lexeme_limit_checks()
 
     print()
     if FAILURES:

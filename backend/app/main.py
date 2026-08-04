@@ -693,10 +693,13 @@ def get_study_lexeme_items(
     http_request: Request,
     shared_deck_id: int | None = Query(default=None),
     due_only: bool = Query(default=False),
+    limit: int | None = Query(default=None),
 ) -> list[StudyLexemeItemResponse]:
+    if limit is not None and limit <= 0:
+        raise HTTPException(status_code=400, detail="invalid limit")
     user_id = current_user_id(http_request)
     items = list_subscribed_lexeme_study_items(
-        user_id, shared_deck_id=shared_deck_id, due_only=due_only
+        user_id, shared_deck_id=shared_deck_id, due_only=due_only, limit=limit
     )
     return [
         StudyLexemeItemResponse(
