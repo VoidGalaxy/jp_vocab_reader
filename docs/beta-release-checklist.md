@@ -194,6 +194,11 @@ deck specifically. Follow-up: run `is_lexeme_deck()` (or the equivalent
 `SELECT 1 FROM shared_deck_words WHERE shared_deck_id = ?` check) against
 the production N1-N5 deck ids to close this out definitively.
 
+**Resolved (Phase 14):** the production N1-N5 transition described in this
+follow-up was executed and confirmed — see "Phase 12/14: production
+transition runbook and execution record" below for the execution record and
+per-deck `mode: "subscribed"` confirmation.
+
 **Local evidence added (Phase 9 Round 7-9, 2026-07-30):**
 `backend/scripts/smoke_test_jlpt_seed_lexeme_mode.py` now calls
 `seed_jlpt_shared_decks.py`'s own `run_apply_lexeme()` against a tiny

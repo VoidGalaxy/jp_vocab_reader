@@ -190,6 +190,18 @@ Frontend:
 - Open the shared tab and view shared deck detail
 - Confirm CSV download and JSON deck package export/import remain available
 
+Read-only health checks (safe to re-run anytime, no writes):
+
+- `backend/scripts/check_production_shared_decks.py <backend base URL>` calls
+  a single anonymous `GET /shared-decks` against the deployed backend to
+  confirm the public shared-deck list still matches the last verified state.
+- `backend/scripts/check_jlpt_package_safety.py` checks the local approved
+  JLPT package JSON files only, no network calls.
+
+See "Phase 16: read-only post-transition health checks" in
+[beta-release-checklist.md](beta-release-checklist.md) for the full
+procedure and what each script verifies.
+
 ## 11. Troubleshooting Order
 
 1. Check backend logs for import, dependency, or SQLite file errors.
