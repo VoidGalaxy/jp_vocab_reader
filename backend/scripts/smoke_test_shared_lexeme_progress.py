@@ -901,6 +901,168 @@ def run_known_exclusion_checks() -> None:
         )
 
 
+def run_all_mode_limit_cap_checks() -> None:
+    """Phase 24 Round 1: the "all subscribed decks" merge in
+    list_subscribed_lexeme_study_items() now caps each deck's SQL fetch at
+    `limit` (previously it always fetched every subscribed deck in full,
+    over suspicion -- since Phase 21 Round 0 -- that a per-deck cap "could
+    under-fill" the merged/deduped result if the same lexeme_id repeats
+    across decks). Phase 24 Round 0/1 re-derived that capping at exactly
+    `limit` (not some smaller fraction) can never under-fill -- see the
+    docstring on list_subscribed_lexeme_study_items() for the argument.
+
+    This fixture is deliberately overlap-heavy to stress-test that claim:
+    - deck A: 25 words, all distinct, all new/non-known.
+    - deck B: 45 words -- its first 25 (by sort_order) are the *exact same
+      lexeme_ids* as deck A (so B's own SQL LIMIT window is mostly consumed
+      by rows that will get deduped away), followed by 20 more words unique
+      to B.
+    A subscriber to both decks, with limit=30, needs deck A's 25 plus 5 of
+    deck B's fresh tail -- which per the proof must appear within B's first
+    `limit`(=30) rows even though B's duplicate block alone is 25 rows long
+    (25 dup + 5 fresh = 30, exactly filling B's capped window). If the
+    per-deck cap could under-fill, this is the fixture that would expose it
+    (getting fewer than 30, or dropping some of B's fresh tail).
+
+    Verified two ways:
+    - a hand-computed expected lexeme_id sequence (deck A's 25, then B's
+      first 5 fresh words, in that order)
+    - an independent re-implementation of the *old* (pre-Phase 24) full-scan
+      algorithm (list_shared_deck_words_with_progress(..., limit=None) per
+      deck, Python dedup, then slice) run against the same fixture -- the
+      new capped call must match it exactly, not just in count.
+    """
+    owner_id = create_user("allmode-owner@smoke.test", "All-mode Owner")
+    subscriber_id = create_user("allmode-subscriber@smoke.test", "All-mode Subscriber")
+
+    deck_a_id = create_shared_deck(owner_id, "all모드 cap 테스트 덱 A")
+    deck_a_lexeme_ids: list[int] = []
+    for sort_order in range(25):
+        lexeme_id = upsert_lexeme(
+            surface=f"올모드단어A{sort_order}",
+            base_form=f"올모드단어A{sort_order}",
+            reading=f"おーるもーどたんごA{sort_order}",
+            part_of_speech="명사",
+            meaning_ko=f"올모드단어A뜻{sort_order}",
+            jlpt_level="N1",
+            source_type="jlpt",
+        )
+        deck_a_lexeme_ids.append(lexeme_id)
+        with get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO shared_deck_words (shared_deck_id, lexeme_id, sort_order, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (deck_a_id, lexeme_id, sort_order, now_iso()),
+            )
+    with get_connection() as connection:
+        connection.execute(
+            "UPDATE shared_decks SET vocab_count = ? WHERE id = ?", (25, deck_a_id)
+        )
+
+    deck_b_id = create_shared_deck(owner_id, "all모드 cap 테스트 덱 B")
+    # First 25 positions of deck B reuse deck A's exact lexeme_ids (the
+    # duplicate block) -- this is what makes deck B's own SQL LIMIT window
+    # mostly "wasted" on rows that will get deduped away against deck A.
+    for sort_order, lexeme_id in enumerate(deck_a_lexeme_ids):
+        with get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO shared_deck_words (shared_deck_id, lexeme_id, sort_order, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (deck_b_id, lexeme_id, sort_order, now_iso()),
+            )
+    deck_b_fresh_lexeme_ids: list[int] = []
+    for offset in range(20):
+        sort_order = 25 + offset
+        lexeme_id = upsert_lexeme(
+            surface=f"올모드단어B{offset}",
+            base_form=f"올모드단어B{offset}",
+            reading=f"おーるもーどたんごB{offset}",
+            part_of_speech="명사",
+            meaning_ko=f"올모드단어B뜻{offset}",
+            jlpt_level="N1",
+            source_type="jlpt",
+        )
+        deck_b_fresh_lexeme_ids.append(lexeme_id)
+        with get_connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO shared_deck_words (shared_deck_id, lexeme_id, sort_order, created_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (deck_b_id, lexeme_id, sort_order, now_iso()),
+            )
+    with get_connection() as connection:
+        connection.execute(
+            "UPDATE shared_decks SET vocab_count = ? WHERE id = ?", (45, deck_b_id)
+        )
+
+    for deck_id in (deck_a_id, deck_b_id):
+        import_result = import_shared_deck(subscriber_id, deck_id)
+        check(
+            f"47. all-mode cap fixture: import subscribes to deck {deck_id} without bulk-copy",
+            import_result and import_result.get("mode") == "subscribed",
+        )
+
+    all_mode_capped = list_subscribed_lexeme_study_items(subscriber_id, limit=30)
+    expected_sequence = deck_a_lexeme_ids + deck_b_fresh_lexeme_ids[:5]
+    check(
+        "48. all-mode limit=30 over two heavily-overlapping decks returns exactly 30 items "
+        "(no under-fill from the per-deck SQL LIMIT cap)",
+        len(all_mode_capped) == 30,
+    )
+    check(
+        "48b. the 30 returned are exactly deck A's 25 words followed by deck B's first "
+        "5 fresh (non-duplicate) words, in that order",
+        [item["lexeme_id"] for item in all_mode_capped] == expected_sequence,
+    )
+
+    # Independent cross-check: re-run the *old* (pre-Phase 24) algorithm by
+    # hand -- full per-deck fetch (limit=None) + Python dedup + final slice
+    # -- against the same fixture, and assert it matches the new capped call
+    # exactly. This is the real regression guard: any future change that
+    # reintroduces under-fill would diverge from this independent
+    # re-implementation, not just from a hardcoded expectation.
+    def simulate_old_full_scan_all_mode(limit: int) -> list[int]:
+        seen: set[int] = set()
+        sequence: list[int] = []
+        for deck_id in sorted((deck_a_id, deck_b_id)):
+            words = list_shared_deck_words_with_progress(
+                deck_id, subscriber_id, due_only=False, limit=None, exclude_known=True
+            )
+            for word in words:
+                lexeme_id = word["lexeme_id"]
+                if lexeme_id in seen:
+                    continue
+                seen.add(lexeme_id)
+                sequence.append(lexeme_id)
+        return sequence[:limit]
+
+    check(
+        "49. new capped all-mode result matches an independent re-implementation of the "
+        "old full-scan-then-slice algorithm exactly",
+        [item["lexeme_id"] for item in all_mode_capped] == simulate_old_full_scan_all_mode(30),
+    )
+
+    # --- known-exclusion still applies per-deck under the cap ---------------
+    # Mark one of the duplicate-block lexemes 'known' -- it must disappear
+    # from both decks' contributions (SQL exclude_known runs before ORDER
+    # BY/LIMIT in each per-deck fetch), so the all-mode result should still
+    # be 30 items, just with one different tail word pulled in from deck B.
+    update_word_status(subscriber_id, deck_a_lexeme_ids[0], "known")
+    all_mode_with_one_known = list_subscribed_lexeme_study_items(subscriber_id, limit=30)
+    check(
+        "50. marking one duplicate-block lexeme 'known' still yields exactly 30 items "
+        "(known-exclusion + per-deck cap compose correctly)",
+        len(all_mode_with_one_known) == 30
+        and all(item["status"] != "known" for item in all_mode_with_one_known)
+        and deck_a_lexeme_ids[0] not in {item["lexeme_id"] for item in all_mode_with_one_known},
+    )
+
+
 def main() -> int:
     print(f"using scratch db: {_SCRATCH_DB}")
     init_db()
@@ -1149,6 +1311,7 @@ def main() -> int:
     run_unpublish_boundary_checks()
     run_new_lexeme_limit_checks()
     run_known_exclusion_checks()
+    run_all_mode_limit_cap_checks()
 
     print()
     if FAILURES:

@@ -608,7 +608,8 @@ def list_subscribed_lexeme_study_items(
     non-subscribed deck's words through this study-queue path).
 
     limit (Phase 20 Round 2, pushed to SQL for the single-deck case in Phase
-    21 Round 1): caps the number of items returned.
+    21 Round 1, and for each deck in the "all subscribed decks" merge in
+    Phase 24 Round 1): caps the number of items returned.
 
     - When shared_deck_id is given (one deck only, so the loop below runs
       exactly once), limit is passed straight through to
@@ -619,16 +620,37 @@ def list_subscribed_lexeme_study_items(
       approximation: the database now reads/returns at most `limit` rows
       instead of the full deck (e.g. all 3,475 N1 words) before Python ever
       sees them.
-    - When shared_deck_id is None (the "all subscribed decks" merge), each
-      deck is still fetched in full and limit is only applied as a final
-      Python slice over the deck-ordered/sort_order-ordered merged+deduped
-      list, exactly as before this round. This is deliberate, not an
-      oversight: the same lexeme_id can be linked into more than one
-      subscribed deck, so pushing a per-deck SQL LIMIT into this branch
-      could under-fill the final result after cross-deck dedup (see the
-      Phase 21 Round 0 writeup in
-      docs/architecture/shared-lexeme-progress-storage.md) -- out of scope
-      for this round.
+    - When shared_deck_id is None (the "all subscribed decks" merge), every
+      deck in the loop is now *also* capped at exactly `limit` rows (not a
+      smaller per-deck fraction) via the same sql_limit passed to
+      list_shared_deck_words_with_progress(), instead of always fetching each
+      subscribed deck in full. This was deliberately deferred at Phase 21
+      Round 0 on suspicion it "could under-fill" the merged result once a
+      lexeme_id repeated across decks got deduped away -- re-examined in
+      Phase 24 Round 0/1 and it turns out capping at exactly `limit` (as
+      opposed to some smaller sub-limit) can never under-fill, for a
+      dedup+order-preserving reason worth spelling out:
+
+      Process decks in the existing fixed order (ascending shared_deck_id),
+      accumulating `seen` as we go. For any deck D processed while
+      len(seen) = S < limit, the number of D's first-`limit` rows (by
+      sort_order) that duplicate something already in `seen` can be at most
+      S (a set can't have more matches against `seen` than `seen` itself
+      contains). So D's first-`limit` window has at least `limit - S` rows
+      that are *not* duplicates -- i.e. at least as many fresh items as are
+      still needed to reach `limit` overall, provided D itself has at least
+      `limit` eligible rows to offer. That means the item that would end up
+      being the limit-th unique item in a full, uncapped scan can never sit
+      beyond position `limit` within its own deck: by the time you'd reach
+      it, either an earlier deck already supplied the missing count, or its
+      own deck's first-`limit` window already contains enough fresh rows to
+      supply it. So this SQL LIMIT and the previous full-scan-then-slice
+      approach are provably equivalent in count, identity, and order -- not
+      an approximation traded for speed. (Only a per-deck cap *smaller* than
+      the overall `limit` could under-fill; that is not what this does.)
+      See the cross-deck-duplicate fixture in
+      smoke_test_shared_lexeme_progress.py for an empirical check of this on
+      a deliberately overlap-heavy pair of decks.
 
     Either way, omitting limit (None) keeps returning everything, unchanged
     from before this parameter existed. This does not change what counts as
@@ -656,12 +678,14 @@ def list_subscribed_lexeme_study_items(
         if shared_deck_id not in subscribed_ids_set:
             return []
         subscribed_ids = [shared_deck_id]
-        sql_limit = limit
     else:
         subscribed_ids = sorted(subscribed_ids_set)
-        sql_limit = None
     if not subscribed_ids:
         return []
+    # Same cap for both paths (Phase 24 Round 1) -- see the docstring above
+    # for why capping each deck at exactly `limit`, not a smaller fraction
+    # of it, cannot under-fill the all-mode merge.
+    sql_limit = limit
 
     with get_connection() as connection:
         placeholders = ", ".join("?" for _ in subscribed_ids)

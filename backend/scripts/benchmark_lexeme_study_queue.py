@@ -285,6 +285,32 @@ def time_scenario(
     }
 
 
+def simulate_pre_phase24_all_mode(
+    subscriber_id: int, deck_ids: list[int], limit: int
+) -> list[int]:
+    """Re-implements the pre-Phase-24 all-mode algorithm by hand: fetch each
+    subscribed deck in full (limit=None), dedup by lexeme_id in Python, then
+    slice to `limit` -- exactly what list_subscribed_lexeme_study_items()
+    did before this round capped each deck's SQL fetch at `limit`. Kept
+    side by side with the real (now-capped) call below so this benchmark
+    shows the actual before/after cost on the same data in the same run,
+    not just a one-time number from an earlier phase.
+    """
+    seen: set[int] = set()
+    sequence: list[int] = []
+    for deck_id in sorted(deck_ids):
+        words = list_shared_deck_words_with_progress(
+            deck_id, subscriber_id, due_only=False, limit=None, exclude_known=True
+        )
+        for word in words:
+            lexeme_id = word["lexeme_id"]
+            if lexeme_id in seen:
+                continue
+            seen.add(lexeme_id)
+            sequence.append(lexeme_id)
+    return sequence[:limit]
+
+
 def print_scenarios_table(rows: list[dict[str, Any]]) -> None:
     header = f"{'scenario':<55} {'returned_count':<20} {'min_ms':>10} {'median_ms':>10}"
     print(header)
@@ -353,7 +379,13 @@ def main() -> int:
             ),
         ),
         time_scenario(
-            "all N1+N2+N3, study-queue, limit=30, due_only=false",
+            "all N1+N2+N3, study-queue, limit=30 (pre-Phase24 full-scan simulation)",
+            lambda: simulate_pre_phase24_all_mode(
+                subscriber_id, [deck["shared_deck_id"] for deck in decks], 30
+            ),
+        ),
+        time_scenario(
+            "all N1+N2+N3, study-queue, limit=30 (Phase24 per-deck SQL LIMIT cap)",
             lambda: list_subscribed_lexeme_study_items(subscriber_id, limit=30),
         ),
         time_scenario(
@@ -370,6 +402,24 @@ def main() -> int:
 
     print("=== scenarios ===")
     print_scenarios_table(scenarios)
+
+    # Extra, non-assertive detail: confirm the Phase 24 capped call and the
+    # pre-Phase24 full-scan simulation return the *same* items on this data,
+    # not just similar timings -- the speedup shown in the table above is
+    # free (same result), not a tradeoff.
+    old_sequence = simulate_pre_phase24_all_mode(
+        subscriber_id, [deck["shared_deck_id"] for deck in decks], 30
+    )
+    new_sequence = [
+        item["lexeme_id"]
+        for item in list_subscribed_lexeme_study_items(subscriber_id, limit=30)
+    ]
+    print()
+    print(
+        "note: pre-Phase24 simulation and Phase24-capped call return "
+        f"{'identical' if old_sequence == new_sequence else 'DIFFERENT'} "
+        f"item sequences ({len(old_sequence)} vs {len(new_sequence)} items)"
+    )
 
     # Extra, non-assertive detail for the raw detail-view scenario: how many
     # of its 30 returned rows are 'known' -- illustrates why
