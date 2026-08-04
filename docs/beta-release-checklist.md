@@ -481,8 +481,13 @@ looks the way the runbook recorded it — a read-only check, safe to re-run
 any time, that never calls a write endpoint, never touches Neon SQL
 directly, and never reads `.env`.
 
-Two scripts, both under `backend/scripts/`:
+Three scripts, all under `backend/scripts/`:
 
+- `run_shared_deck_health_checks.py <backend base URL>` — convenience
+  wrapper for routine post-deploy checks. It runs the local package safety
+  check first, then the production public-list check, and stops immediately
+  if either one fails. Use this after deployments that touch shared-deck
+  behavior, JLPT packages, import/review flows, or environment wiring.
 - `check_production_shared_decks.py <backend base URL>` — calls exactly one
   endpoint, anonymous `GET /shared-decks` (no `Authorization` header, the
   same view a new visitor gets), and confirms: the five lexeme-mode JLPT

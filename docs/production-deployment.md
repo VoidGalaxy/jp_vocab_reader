@@ -192,6 +192,15 @@ Frontend:
 
 Read-only health checks (safe to re-run anytime, no writes):
 
+- Run after each production deploy that touches shared decks, JLPT packages,
+  shared-deck import/review logic, or deployment configuration. It is also
+  safe to run as a lightweight recurring check:
+
+```bash
+cd backend
+python scripts/run_shared_deck_health_checks.py https://<backend-base-url>
+```
+
 - `backend/scripts/check_production_shared_decks.py <backend base URL>` calls
   a single anonymous `GET /shared-decks` against the deployed backend to
   confirm the public shared-deck list still matches the last verified state.
