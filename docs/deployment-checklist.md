@@ -83,7 +83,7 @@ For deployment, set `CORS_ORIGINS` to exact frontend origins, separated by comma
 
 ## 6. Database
 
-The app currently uses SQLite through `sqlite3`.
+Local development uses SQLite through `sqlite3` by default. Production uses Neon PostgreSQL -- see [production-deployment.md](production-deployment.md) for the tested production DB shape.
 
 - Empty `DATABASE_URL` uses `backend/vocab.db`.
 - `sqlite:///./vocab.db` uses a relative SQLite file path from the backend process working directory.
@@ -97,15 +97,15 @@ The app currently uses SQLite through `sqlite3`.
 - File permissions and persistent disk behavior matter. Ephemeral containers can lose `vocab.db`.
 - Back up `backend/vocab.db` before deployment tests that write data.
 
-## 8. PostgreSQL TODO
+## 8. PostgreSQL Migration Checks
 
-PostgreSQL connection support exists behind `DATABASE_URL`, but data migration and external managed database validation are still follow-up work.
+PostgreSQL connection support exists behind `DATABASE_URL`. Production already runs on Neon PostgreSQL (see [production-deployment.md](production-deployment.md)); the SQLite-to-PostgreSQL data migration for that cutover was intentionally skipped because the SQLite database held test data only (see [postgres-data-migration.md](postgres-data-migration.md)).
 
-Before switching:
+Repeat these checks before pointing a new environment at PostgreSQL:
 
-- Plan existing SQLite data migration.
+- Plan existing SQLite data migration, if that environment's SQLite data must be preserved.
 - Re-check repository queries that depend on SQLite syntax, row behavior, `?` placeholders, and datetime string comparisons.
-- Test against the target managed PostgreSQL service before production traffic.
+- Test against the target managed PostgreSQL service before routing traffic to it.
 
 ## 9. OpenAI API Key
 
