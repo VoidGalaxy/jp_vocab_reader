@@ -18,6 +18,16 @@ Production deployment is considered successful when:
 - The Vercel frontend can register/login, analyze text, save vocabulary, and read saved data through the Render backend.
 - CORS allows the exact Vercel frontend origin.
 
+## Post-Deploy Quick Check
+
+After each production deploy, run the fastest read-only checks before deeper browser verification:
+
+1. Confirm `GET /health` succeeds.
+2. From `backend`, run `python scripts/run_shared_deck_health_checks.py <backend-base-url>` to verify the public shared-deck list and local JLPT package safety without writes.
+3. In the frontend, verify login/logout, one analyze/save flow, and one study session.
+
+See [deployment-checklist.md](deployment-checklist.md) for platform-neutral checks and [Section 10](#10-smoke-test-after-deployment) for the fuller smoke list.
+
 ## 2. Frontend Deployment
 
 Use `frontend` as the project root.

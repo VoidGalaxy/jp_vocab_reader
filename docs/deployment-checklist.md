@@ -1,6 +1,6 @@
 # Deployment Checklist
 
-This project is still in the pre-deployment stage. Do not connect production services or switch databases during this check. For platform-oriented production setup, see [production-deployment.md](production-deployment.md).
+Use this checklist for local runs, release preparation, and lightweight post-deploy verification. Keep local run steps on local development services; for platform-specific production setup and operating checks, see [production-deployment.md](production-deployment.md).
 
 ## 1. Local Run
 
