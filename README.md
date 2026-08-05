@@ -1,5 +1,7 @@
 # jp-vocab-reader
 
+일본어 원서/웹소설 학습자를 위한 자동 단어장 생성 웹서비스입니다.
+
 ## Recommended Production Deployment
 
 - Frontend: Vercel
@@ -37,16 +39,14 @@ See [docs/dictionary-data.md](docs/dictionary-data.md) for supported JSON format
 - 가져오기 시 새 개인 덱이 생성되고, 이름이 겹치면 `덱 이름 (가져옴)`, `덱 이름 (가져옴 2)`처럼 중복되지 않게 저장됩니다.
 - 가져온 단어의 학습 상태는 `unknown`, 맞음/틀림 횟수와 복습 레벨은 `0`, 복습 날짜는 비어 있는 상태로 시작합니다.
 
-## 향후 서비스형 구조 계획
+## 서비스형 구조와 기준 문서
 
-여러 사용자가 각자의 덱, 단어장, 사용자 정의 용어, 학습 기록을 분리해 쓰고 공개 덱을 공유/가져오기 할 수 있도록 서비스형 구조 전환을 계획한다. [docs/service-architecture.md](docs/service-architecture.md)는 이 전환의 **초기 설계 초안(historical)**이며, 이후 실제로 바뀐 부분과 어긋나는 서술이 남아 있다. 현재 기준 문서는 용도별로 다음을 참고한다: 공유덱 lexeme/subscription 정책은 [docs/architecture/shared-lexeme-progress-storage.md](docs/architecture/shared-lexeme-progress-storage.md), 베타/릴리스 점검 항목은 [docs/beta-release-checklist.md](docs/beta-release-checklist.md).
+여러 사용자가 각자의 덱, 단어장, 사용자 정의 용어, 학습 기록을 분리해 쓰고 공개 덱을 공유/가져오기 할 수 있는 서비스형 구조를 사용한다. [docs/service-architecture.md](docs/service-architecture.md)는 이 전환의 **초기 설계 초안(historical)**이며, 이후 실제로 바뀐 부분과 어긋나는 서술이 남아 있다. 현재 기준 문서는 용도별로 다음을 참고한다: 공유덱 lexeme/subscription 정책은 [docs/architecture/shared-lexeme-progress-storage.md](docs/architecture/shared-lexeme-progress-storage.md), 베타/릴리스 점검 항목은 [docs/beta-release-checklist.md](docs/beta-release-checklist.md).
 백엔드 DB 접근 로직은 `backend/app/repositories`의 기능별 repository로 1차 분리했다.
 백엔드는 회원가입/로그인 API와 JWT access token을 지원한다. 개발 모드에서는 토큰이 없는 요청이 기존처럼 `dev@example.local` 사용자로 fallback한다.
 토큰을 보내면 해당 사용자 기준으로 개인 덱, 단어장, 사용자 정의 용어를 조회/수정한다.
 프론트엔드는 상단 계정 영역에서 로그인/회원가입/로그아웃을 제공하고, 로그인 성공 시 access token만 `localStorage`에 저장해 이후 API 요청에 사용한다.
 저장된 토큰이 만료되었거나 잘못되면 프론트엔드는 토큰을 제거하고 개발 모드 사용자 기준 데이터로 다시 전환한다.
-
-일본어 원서/웹소설 학습자를 위한 자동 단어장 생성 웹서비스입니다.
 
 ## 기본 사용 흐름
 
@@ -56,7 +56,7 @@ See [docs/dictionary-data.md](docs/dictionary-data.md) for supported JSON format
 4. 단어장 탭에서 저장한 단어를 검색, 필터링, 수정하고 덱별로 관리합니다.
 5. 단어장 탭의 `이 덱 학습하기` 또는 학습 탭에서 오늘 복습, 헷갈리는 단어, 모르는 단어, 전체 학습 모드로 바로 복습합니다.
 
-## Mobile Polish
+## 모바일 레이아웃
 
 - 모바일 폭에서 탭, 분석 카드, 단어장 toolbar, 학습 카드, 공유 덱 카드가 터치하기 쉬운 간격과 버튼 크기를 갖도록 정리했습니다.
 - 긴 일본어 단어, 원문, 예문, 공유 덱 설명은 화면 밖으로 넘치지 않도록 줄바꿈과 가로 스크롤 동작을 보강했습니다.
@@ -79,14 +79,14 @@ See [docs/dictionary-data.md](docs/dictionary-data.md) for supported JSON format
 - 학습 통계와 덱별 진도 표시
 - CSV 내보내기
 
-## 기술 스택 예정
+## 기술 스택
 
 - Frontend: Next.js
 - Backend: FastAPI
 - Tokenizer: SudachiPy
 - Database: SQLite for local development, PostgreSQL for deployment/production
 
-## Backend MVP 실행
+## Backend 실행
 
 ```bash
 cd backend
@@ -122,11 +122,7 @@ DB는 기본적으로 `backend/vocab.db` SQLite 파일을 사용한다. 다른 S
 DATABASE_URL=sqlite:///./vocab.db
 ```
 
-기본 로컬 개발 DB는 SQLite이며, `DATABASE_URL`이 비어 있으면 기존 `backend/vocab.db`를 계속 사용한다. 배포/운영 DB는 PostgreSQL을 사용한다. PostgreSQL 전환 계획은 [docs/postgres-migration-plan.md](docs/postgres-migration-plan.md)를 참고한다. 배포 전 환경변수, CORS, 빌드, smoke test 점검은 [docs/deployment-checklist.md](docs/deployment-checklist.md)를 참고한다. 실제 호스팅 플랫폼에 올릴 때의 실행 명령과 설정 순서는 [docs/production-deployment.md](docs/production-deployment.md)를 참고한다.
-
-PostgreSQL migration foundation is now available behind `DATABASE_URL`. Leave `DATABASE_URL` empty to keep the existing SQLite development DB, or set a `postgresql://...` URL for a PostgreSQL database after installing backend requirements. See [docs/postgres-migration.md](docs/postgres-migration.md).
-
-SQLite -> PostgreSQL data migration tooling is available in `backend/scripts`, but run it only when existing SQLite data must be preserved. The current production setup starts from a clean PostgreSQL database because `backend/vocab.db` contains only test data. See [docs/postgres-data-migration.md](docs/postgres-data-migration.md).
+로컬 개발 DB는 SQLite이며, `DATABASE_URL`이 비어 있으면 기존 `backend/vocab.db`를 계속 사용한다. 배포/운영 DB는 PostgreSQL을 사용한다. PostgreSQL 전환 계획은 [docs/postgres-migration-plan.md](docs/postgres-migration-plan.md)를 참고한다. 기존 SQLite 데이터를 보존해야 할 때만 [docs/postgres-data-migration.md](docs/postgres-data-migration.md)의 마이그레이션 절차를 별도로 검토한다. 배포 전 환경변수, CORS, 빌드, smoke test 점검은 [docs/deployment-checklist.md](docs/deployment-checklist.md)를 참고한다. 실제 호스팅 플랫폼에 올릴 때의 실행 명령과 설정 순서는 [docs/production-deployment.md](docs/production-deployment.md)를 참고한다.
 
 헬스체크:
 
@@ -282,17 +278,9 @@ Set `NEXT_PUBLIC_API_BASE_URL` to the deployed backend URL before building or de
 
 ## 공개 공유 덱
 
-가져오기 동작은 덱 종류에 따라 다릅니다. 아래 설명은 legacy 방식(개인 덱 사본 생성) 기준이며, JLPT 추천 어휘 같은 lexeme-mode 공유덱은 개인 덱을 새로 만들지 않고 학습 목록에 구독(subscription)만 추가합니다.
-
 - 단어장 탭의 관리 패널에서 현재 선택한 개인 덱을 서버의 공개 공유 덱으로 등록할 수 있습니다.
-- 공유 덱에는 단어, 뜻, 읽기, 예문, 해당 덱 전용 사용자 정의 용어만 복사되며 개인 학습 기록은 포함하지 않습니다.
-- 공유 탭에서 공개 공유 덱 목록과 상세 미리보기를 확인하고, 원하는 공유 덱을 현재 사용자 계정의 개인 덱으로 가져올 수 있습니다.
-- 가져오기가 성공하면 새로 생성된 덱이 단어장 탭의 선택 덱으로 즉시 반영됩니다.
-- 가져온 덱의 단어 학습 상태는 `unknown`, 정답/오답/복습 단계는 0, 다음 복습일은 비어 있는 상태로 시작합니다.
-- 위 가져오기 설명은 legacy 방식(개인 덱 사본 생성) 기준입니다. JLPT 추천 어휘 같은 lexeme-mode 공유덱은 개인 덱을 새로 만들지 않고 학습 목록에 구독(subscription)만 추가합니다 — 자세한 구분은 [docs/architecture/shared-lexeme-progress-storage.md](docs/architecture/shared-lexeme-progress-storage.md) 참고.
-- 일반 사용자의 덱 공유는 공유 탭의 서버형 직접 공유를 사용합니다.
+- 공유 덱에는 단어, 뜻, 읽기, 예문, 해당 덱 전용 사용자 정의 용어만 포함되며 개인 학습 기록은 포함하지 않습니다.
+- 공유 탭에서 공개 공유 덱 목록과 상세 미리보기를 확인하고, 원하는 공유 덱을 학습 목록에 추가할 수 있습니다.
+- JLPT 추천 어휘 같은 lexeme-mode 공유덱은 개인 덱을 새로 만들지 않고 학습 목록에 구독(subscription)만 추가합니다.
+- 기존 legacy 방식으로 발행된 공유덱은 가져오기 시 개인 덱이 생성될 수 있습니다. 자세한 구분은 [docs/architecture/shared-lexeme-progress-storage.md](docs/architecture/shared-lexeme-progress-storage.md)를 참고합니다.
 - CSV/JSON 파일 내보내기와 가져오기는 백업이나 수동 이동이 필요한 고급 사용자용 기능이며, 단어장 관리의 고급 백업/파일 내보내기 섹션에서 사용할 수 있습니다.
-
-## Development Database
-
-The backend uses SQLite for local development when `DATABASE_URL` is empty. PostgreSQL is the deployment/production database selected with a `postgresql://` or `postgres://` `DATABASE_URL`.
