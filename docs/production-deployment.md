@@ -133,7 +133,7 @@ If the browser shows a CORS error, first verify:
 
 ## 6. Backend Start Command
 
-Run from the `backend` directory:
+This is the same production start command introduced in [Section 3](#3-backend-deployment), restated here as a standalone reference. Run from the `backend` directory:
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -143,7 +143,7 @@ Some hosts expose the port as a different variable. If so, adapt only the port e
 
 ## 7. Frontend API URL
 
-The frontend reads:
+This is the same `NEXT_PUBLIC_API_BASE_URL` set in [Section 2](#2-frontend-deployment); this section adds the local-fallback behavior to be aware of. The frontend reads:
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=https://your-backend-domain.example
@@ -228,7 +228,7 @@ procedure and what each script verifies.
 3. Check `JWT_SECRET_KEY` is set in backend production.
 4. Check `CORS_ORIGINS` and `NEXT_PUBLIC_API_BASE_URL` together.
 5. Check that `NEXT_PUBLIC_API_BASE_URL` uses `https://` and points to the Render backend URL.
-6. Check that `CORS_ORIGINS` or `CORS_ALLOW_ORIGINS` includes the Vercel frontend origin with `https://`.
+6. Check that `CORS_ORIGINS` or `CORS_ALLOW_ORIGINS` includes the Vercel frontend origin with `https://` (see [Section 5](#5-cors) for the full CORS troubleshooting list).
 7. Check whether the SQLite file path is accidentally being used instead of Neon PostgreSQL.
 8. Check frontend build-time environment variables.
 9. Check browser network responses for `401`, `404`, `500`, CORS failures, `Failed to fetch`, or mixed content.
