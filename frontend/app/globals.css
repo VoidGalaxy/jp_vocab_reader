@@ -3970,7 +3970,14 @@ input.reading-vocab-item-checkbox {
 .study-cta-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(247, 236, 208, 0.52)),
+    var(--surface-stage);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66);
 }
 
 /* Non-primary tiles (새 단어 학습/어려운 단어 복습/덱별 학습) were nearly as
@@ -3980,20 +3987,34 @@ input.reading-vocab-item-checkbox {
    recommended action. Lighter fill/border/shadow/weight here; the primary
    modifier still overrides these back up to full weight. */
 .study-cta-button {
+  position: relative;
   display: grid;
-  gap: 4px;
+  gap: 2px;
   justify-items: center;
-  padding: 11px 10px;
-  border: 1px solid var(--border);
+  min-height: 66px;
+  padding: 12px 10px;
+  border: 0;
   border-radius: 10px;
   color: var(--text-secondary);
-  background: var(--soft-bg);
+  background: transparent;
   box-shadow: none;
   text-align: center;
 }
 
 .study-cta-button:hover {
-  border-color: var(--primary);
+  background: rgba(255, 255, 255, 0.52);
+  transform: translateY(-1px);
+}
+
+.study-cta-button + .study-cta-button::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  width: 1px;
+  background: var(--border);
+  opacity: 0.74;
 }
 
 .study-cta-label {
@@ -4015,10 +4036,19 @@ input.reading-vocab-item-checkbox {
    filled in the primary color so it outranks the other three quick-start
    tiles instead of sitting as an equal-weight grid cell. */
 .study-cta-button-primary {
-  border-color: var(--primary);
   color: #ffffff;
   background: linear-gradient(180deg, #3d7885 0%, var(--primary) 100%);
   box-shadow: 0 10px 22px rgba(61, 120, 133, 0.22);
+}
+
+.study-cta-button-primary:hover {
+  background: linear-gradient(180deg, #3d7885 0%, var(--primary) 100%);
+  box-shadow: 0 12px 24px rgba(61, 120, 133, 0.25);
+}
+
+.study-cta-button-primary::before,
+.study-cta-button-primary + .study-cta-button::before {
+  display: none;
 }
 
 .study-cta-button-primary .study-cta-hint {
@@ -6015,6 +6045,11 @@ input.reading-vocab-item-checkbox {
 
   .study-cta-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .study-cta-button + .study-cta-button::before {
+    display: none;
   }
 
   .study-control-footer {
