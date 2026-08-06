@@ -2334,6 +2334,17 @@ select {
   flex: 0 0 auto;
 }
 
+/* Shown only when the deck picker above has a shared deck selected (see
+   StudySection's isSharedDeckSelected) -- /stats only understands personal
+   deck_id, so the 학습 모드 option counts stay account-wide even though the
+   deck picker right next to them now reads a specific shared deck. This
+   note doesn't change those numbers, just labels what they actually are. */
+.study-shared-stats-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* Full stats-panel behind a native <details> toggle -- keeps the tab's
    dominant real estate for the study-start flow while the full numbers
    stay one tap away instead of disappearing entirely. */

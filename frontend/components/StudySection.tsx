@@ -423,6 +423,12 @@ export function StudySection({
                   )}
                 </button>
               </div>
+              {isSharedDeckSelected ? (
+                <p className="muted-text study-shared-stats-hint">
+                  공유덱 전용 통계는 아직 지원하지 않아, 위 학습 모드 옆 숫자는 전체
+                  단어장 기준이에요.
+                </p>
+              ) : null}
             </div>
           </details>
 
