@@ -2828,15 +2828,23 @@ select {
   width: 100%;
 }
 
+/* Softened -- same "N repeated tiles in a row" fix as .study-cta-button
+   (Phase 41): each of the 5 stats used to be its own bordered + --soft-bg
+   card, so the completion screen ended with five little boxes lined up
+   inside the already-boxed .complete-card. The color ramp now lives only
+   on the top accent line; a thin dashed rule between adjacent stats (not
+   a border-radius/border/background 조합) carries the "these are distinct
+   counts" read instead. */
 .study-complete-stat {
   display: grid;
   gap: 4px;
-  border: 1px solid var(--border);
+  padding: 8px 10px 4px;
   border-top: 3px solid var(--border-strong);
-  border-radius: 10px;
-  padding: 10px 8px;
-  background: var(--soft-bg);
   text-align: center;
+}
+
+.study-complete-stat + .study-complete-stat {
+  border-left: 1px dashed var(--border);
 }
 
 .study-complete-stat span {
@@ -2871,7 +2879,6 @@ select {
 
 .study-complete-stat-total {
   border-top-color: var(--accent);
-  background: var(--panel-bg);
 }
 
 .study-complete-stat-total strong {
@@ -5004,6 +5011,19 @@ input.reading-vocab-item-checkbox {
   font-size: 12px;
 }
 
+/* Phase 43: the detail panel's title/byline/action-button header sat
+   directly against the description text below it with no visual pause --
+   inside .shared-deck-detail's own border+shadow "book" card, that read as
+   one dense fused block rather than a header over a body. A single dashed
+   rule (same divider tone .management-card/.study-options-collapsible use)
+   separates them without adding another nested box; scoped to the detail
+   panel only so the plain .result-heading used elsewhere (단어장 목록 등)
+   is untouched. */
+.shared-deck-detail > .result-heading {
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+}
+
 /* Softer than .danger-button -- "공유 취소" only removes the deck from the
    public list (the owner's own deck and anyone who already imported it are
    untouched), so it reads as a reversible secondary action rather than a
@@ -5327,22 +5347,31 @@ input.reading-vocab-item-checkbox {
    vocab-row-* sub-classes below (headword/meaning/badges/detail/status)
    keep their existing names, same pattern as .reader-paper keeping its
    reader-mode-* header sub-classes. */
+/* Phase 43: a resting box-shadow on every row (same idea as Phase 41's
+   shared-deck-grid fix) meant a full list of 20-30 words stacked that many
+   little card shadows on top of the drawer's own soft-bg fill -- box-in-
+   box-in-box down the whole list. Border lightened to --paper-border and
+   the resting shadow dropped; a row only lifts to the fuller border/shadow
+   on :hover or once expanded (.vocab-row-expanded below), so elevation
+   reads as "this one's active", not a default every row carries. */
 .vocabulary-index-row {
   position: relative;
   overflow: hidden;
   padding: 10px 14px 10px 20px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--paper-border);
   border-radius: 10px;
   background: var(--panel-bg);
-  box-shadow: 0 2px 6px rgba(120, 98, 40, 0.05);
+  box-shadow: none;
   transition:
     background var(--motion-fast) var(--ease-soft),
+    border-color var(--motion-fast) var(--ease-soft),
     box-shadow var(--motion-fast) var(--ease-soft);
 }
 
 .vocabulary-index-row:hover {
+  border-color: var(--border);
   background: var(--panel-bg);
-  box-shadow: 0 5px 14px rgba(120, 98, 40, 0.1);
+  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.07);
 }
 
 .vocab-row-expanded {
@@ -6156,6 +6185,19 @@ input.reading-vocab-item-checkbox {
   .study-complete-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
+  }
+
+  /* 2-column layout breaks the desktop "divider before every stat but the
+     first" rule -- that would draw a stray vertical line at the start of
+     each new row. Only the second column of each row (again/hard on row 1,
+     good/easy on row 2) actually sits next to a sibling, so the divider
+     moves to :nth-child(2n) here instead. */
+  .study-complete-stat {
+    border-left: none;
+  }
+
+  .study-complete-stat:nth-child(2n) {
+    border-left: 1px dashed var(--border);
   }
 
   .study-complete-stat-total {
