@@ -1302,6 +1302,18 @@ button {
   opacity: 0.35;
 }
 
+/* Phase 41: shared-deck grid cards each carry .card-stack-surface, but in a
+   multi-column (or, on mobile, single-column) repeating list, N cards each
+   growing their own little "stack of 3" reads as N boxes-on-boxes instead
+   of one shelf -- the grid already has its own single shelf-ledge line
+   (.shared-deck-grid::before/::after) to carry that "resting on a surface"
+   read, so the per-card ghost layers are dropped here specifically. Detail
+   panel/hero cards elsewhere keep the effect untouched. */
+.shared-deck-grid .card-stack-surface::before,
+.shared-deck-grid .card-stack-surface::after {
+  content: none;
+}
+
 /* index-card-shell -- base "this is an index card" treatment (thin border,
    small radius, soft shadow) reused wherever a single word/deck/word-panel
    needs to read as a physical index card rather than a generic bordered
@@ -4675,6 +4687,30 @@ input.reading-vocab-item-checkbox {
     inset 3px 0 6px -4px rgba(60, 45, 20, 0.35),
     0 12px 26px rgba(120, 98, 40, 0.09);
   transform: translateY(-2px);
+}
+
+/* Phase 41: lighter edge/lift specifically for cards repeating in the shelf
+   grid (.shared-deck-detail below keeps the full-weight card treatment --
+   it's the one full-width panel on screen, not a repeated tile). Same
+   shadow recipe, lower alpha, so a row/column of these doesn't compound
+   into a stack of heavy boxes; the cover band + shelf ledge still carry the
+   "shelf of books" read. Excludes .selected-shared-deck-card so its
+   existing primary-color highlight (a functional "this one's open" cue,
+   not decoration) keeps its full-strength border/ring untouched -- a plain
+   .shared-deck-card selector here would otherwise outrank that single-class
+   rule on specificity and silently override it. */
+.shared-deck-grid > .shared-deck-card:not(.selected-shared-deck-card) {
+  border-color: var(--paper-border);
+  box-shadow:
+    inset 3px 0 5px -4px rgba(60, 45, 20, 0.22),
+    0 6px 14px rgba(120, 98, 40, 0.05);
+}
+
+.shared-deck-grid > .shared-deck-card:not(.selected-shared-deck-card):hover {
+  box-shadow:
+    inset 3px 0 5px -4px rgba(60, 45, 20, 0.22),
+    0 9px 18px rgba(120, 98, 40, 0.08);
+  transform: translateY(-1px);
 }
 
 /* Course-card "cover" band -- full-bleed strip across the top of the card
