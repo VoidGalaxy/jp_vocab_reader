@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { AppEmptyState } from "./BrandElements";
 import { ShioriStamp } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
@@ -285,6 +286,18 @@ export function StudySection({
   onShowAnswer,
   onReview,
 }: StudySectionProps) {
+  // Answer reveal pushes the rating grid below the fold on common phone
+  // heights (confirmed at 375x812/390x844/320x640 -- the fixed bottom nav
+  // eats ~60-90px), so every card would otherwise need a manual scroll
+  // just to find 다시/어려움/보통/쉬움. "nearest" is a no-op on desktop
+  // where the grid is already in view.
+  const ratingGridRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (isAnswerVisible) {
+      ratingGridRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [isAnswerVisible, currentItem?.id]);
+
   const totalStudied =
     sessionCounts.again + sessionCounts.hard + sessionCounts.good + sessionCounts.easy;
   // One combined line instead of a separate paragraph per rating -- the
@@ -613,7 +626,12 @@ export function StudySection({
               ) : (
                 <p className="study-example-empty">저장된 문맥 예문이 없어요.</p>
               )}
-              <div className="study-rating-grid" role="group" aria-label="복습 평가">
+              <div
+                className="study-rating-grid"
+                role="group"
+                aria-label="복습 평가"
+                ref={ratingGridRef}
+              >
                 {ratingButtons.map(({ result, label, hint, className, icon: Icon }) => (
                   <button
                     key={result}

@@ -594,6 +594,15 @@ button {
     padding-bottom: calc(64px + env(safe-area-inset-bottom));
   }
 
+  /* Reserves space for the fixed bottom nav when the rating grid is
+     auto-scrolled into view on answer reveal (see StudySection.tsx) --
+     without this, scrollIntoView treats the nav's screen space as
+     available viewport and stops short, leaving 다시/어려움 tucked behind
+     the nav bar on common phone heights. */
+  .study-rating-grid {
+    scroll-margin-bottom: calc(64px + env(safe-area-inset-bottom) + 12px);
+  }
+
   .app-bottom-nav-item {
     display: flex;
     flex: 1 1 0;

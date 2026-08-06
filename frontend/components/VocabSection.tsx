@@ -722,7 +722,15 @@ export function VocabSection({
                     <button
                       type="button"
                       className="danger-button compact-button"
-                      onClick={() => onDeleteCustomTerm(term.id)}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `"${term.term}" 용어를 삭제할까요?`,
+                          )
+                        ) {
+                          onDeleteCustomTerm(term.id);
+                        }
+                      }}
                     >
                       삭제
                     </button>
