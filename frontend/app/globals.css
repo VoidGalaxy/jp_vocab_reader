@@ -2821,11 +2821,18 @@ select {
   animation: app-slide-up var(--motion-slow) var(--ease-soft) both;
 }
 
+/* Phase 44: a dashed rule under the stamp/title splits the card into a
+   quiet "header" (완료 stamp + one line) and a "body" (the counts/notes/
+   actions below) -- like a small stamped record with a rule under its
+   heading, rather than every element just stacking in the same grid gap
+   as an undifferentiated results block. */
 .study-complete-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
   gap: 8px;
   width: 100%;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
 }
 
 /* Softened -- same "N repeated tiles in a row" fix as .study-cta-button
@@ -2896,6 +2903,17 @@ select {
 .complete-card h3,
 .complete-card p {
   margin: 0;
+}
+
+/* Phase 44: the "다음 복습은 ..." line had no class, so it rendered in the
+   same full-strength ink as the h3 title right above the stats -- two
+   headline-weight statements back to back read as a results report, not a
+   closing note. .muted-text (the completionHint line just before it)
+   already gets the quieter tone; this trailing line follows it down to the
+   same register instead of snapping back to full contrast. */
+.complete-card > p:not(.muted-text) {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .study-ready-card p {
@@ -5425,13 +5443,19 @@ input.reading-vocab-item-checkbox {
   min-width: 0;
 }
 
+/* Phase 44: was --text/600 -- the same full-strength ink color as
+   .vocab-item-surface, just one size down, so the meaning competed with
+   the headword for "read me first" instead of following it. Dropped to
+   --text-secondary/500 so 단어 표면형 reads first and the meaning follows
+   as quieter supporting info; still large/dark enough to scan easily, not
+   --muted (that's reserved for genuinely incidental text elsewhere). */
 .vocab-row-meaning {
   flex: 1 1 140px;
   min-width: 0;
   margin: 0;
-  color: var(--text);
+  color: var(--text-secondary);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -6916,28 +6940,39 @@ input.reading-vocab-item-checkbox {
 /* .reading-vocab-status-badge and .legend-swatch reuse the same
    .token-chip-* classes for their color coding, but need the original
    filled-pill look (not the running-text underline treatment above) since
-   they're small standalone chips, not inline highlights inside prose. */
+   they're small standalone chips, not inline highlights inside prose.
+   Phase 44: .vocab-item-status-wrap (the Vocab row's status <select>,
+   already shaped into a small bookmark tag via clip-path) joins the same
+   group -- its own rule previously left it with no background at all, so
+   the "functionally clear status control" the wrapper's comment described
+   never actually rendered. Same fill/color as the other two so the row's
+   status control reads as the same color language as every other status
+   cue in the app, not a fourth palette. */
 .reading-vocab-status-badge.token-chip-known,
-.legend-swatch.token-chip-known {
+.legend-swatch.token-chip-known,
+.vocab-item-status-wrap.token-chip-known {
   background: #eef9f1;
   color: #1b6b3a;
   box-shadow: none;
 }
 
 .reading-vocab-status-badge.token-chip-uncertain,
-.legend-swatch.token-chip-uncertain {
+.legend-swatch.token-chip-uncertain,
+.vocab-item-status-wrap.token-chip-uncertain {
   background: #f0ecf9;
   color: #6f5f96;
 }
 
 .reading-vocab-status-badge.token-chip-unknown,
-.legend-swatch.token-chip-unknown {
+.legend-swatch.token-chip-unknown,
+.vocab-item-status-wrap.token-chip-unknown {
   background: #faeee2;
   color: #96603f;
 }
 
 .reading-vocab-status-badge.token-chip-unclassified,
-.legend-swatch.token-chip-unclassified {
+.legend-swatch.token-chip-unclassified,
+.vocab-item-status-wrap.token-chip-unclassified {
   background: #f1ead9;
   color: #6b5f3f;
   box-shadow: none;
