@@ -587,7 +587,7 @@ export function SharedDeckSection({
       </div>
 
       {selectedDeck ? (
-        <section className="shared-deck-detail">
+        <section className="shared-deck-detail app-slide-up" key={selectedDeck.id}>
           <div className="result-heading compact-heading">
             <div>
               <div className="shared-deck-title-row">
