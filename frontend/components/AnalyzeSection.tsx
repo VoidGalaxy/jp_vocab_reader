@@ -451,7 +451,9 @@ function ClassifyCardStage({
             {currentCardIndex + 1} / {totalCount}
           </span>
         </div>
-        <ClassifyWordCard token={currentToken} />
+        <div className="classify-word-card-content app-slide-up" key={currentCardIndex}>
+          <ClassifyWordCard token={currentToken} />
+        </div>
         <ClassifyActionGrid onClassify={onClassifyCurrent} />
         <div className="card-navigation">
           <button

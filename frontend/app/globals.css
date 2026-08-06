@@ -1781,6 +1781,18 @@ button:focus-visible {
   text-align: right;
 }
 
+/* Wraps ClassifyWordCard's own content (word/reading/meaning/example) so it
+   can re-play .app-slide-up per card via a key on this div, the same
+   "card advances" pattern .study-front already uses in the review flow.
+   Kept as its own grid+gap (matching .classify-word-card's own gap) rather
+   than putting the class directly on .classify-word-card, since that outer
+   card also holds the action grid and nav button, which should stay put
+   while only the word content re-enters. */
+.classify-word-card-content {
+  display: grid;
+  gap: 16px;
+}
+
 .classify-reading {
   margin-top: -6px;
   text-align: center;
