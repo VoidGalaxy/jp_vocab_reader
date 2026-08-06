@@ -4550,12 +4550,16 @@ input.reading-vocab-item-checkbox {
   justify-self: start;
 }
 
+/* Dashed outline only (no fill) -- .backup-tools now sits on the
+   .vocab-management-panel soft surface via .management-card, so a filled
+   --soft-bg box on top of that near-identical tan would just look like a
+   second box; the dashed edge alone still marks it as a secondary,
+   advanced disclosure. */
 .backup-tools {
   display: grid;
   gap: 10px;
   border: 1px dashed var(--border);
   border-radius: 10px;
-  background: var(--soft-bg);
   padding: 12px;
 }
 
@@ -5605,18 +5609,30 @@ input.reading-vocab-item-checkbox {
   transform: none;
 }
 
+/* Softened -- 덱 관리/덱 공유/고급 used to each be their own
+   .management-card box (border + white-78% fill), so opening 관리 stacked
+   three bordered/shadowed cards on top of each other and read as an admin
+   settings screen. One shared soft surface now holds all three as
+   sections of a single note; .management-card itself carries no
+   border/background of its own (see below), just a dashed rule between
+   sections. */
 .vocab-management-panel {
   display: grid;
-  gap: 12px;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--surface-stage);
 }
 
 .management-card {
   display: grid;
   gap: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.78);
+  padding: 10px 0;
+}
+
+.management-card + .management-card {
+  border-top: 1px dashed var(--border);
+  padding-top: 18px;
 }
 
 .management-card-header h2 {
@@ -5632,13 +5648,16 @@ input.reading-vocab-item-checkbox {
   align-items: center;
 }
 
+/* Softened to the same soft-surface note treatment as
+   .vocab-management-panel above, instead of its own border + white-72%
+   card -- keeps 사용자 정의 용어 from reading as a fourth stray admin box
+   once 관리 is already open above it. */
 .custom-term-section {
   display: grid;
   gap: 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
-  background: rgba(255, 255, 255, 0.72);
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--surface-stage);
 }
 
 .compact-heading {
@@ -5796,7 +5815,7 @@ input.reading-vocab-item-checkbox {
   .shared-deck-card,
   .shared-deck-detail,
   .vocab-form-panel,
-  .management-card,
+  .vocab-management-panel,
   .custom-term-section,
   .panel-card {
     padding: 14px;
