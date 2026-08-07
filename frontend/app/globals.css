@@ -7344,7 +7344,13 @@ input.reading-vocab-item-checkbox {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
+  /* Was white-space: nowrap -- fine for the usual short 품사/기본형 tag,
+     but an unusually long reading (e.g. a long compound word) forced this
+     pill to its full unwrapped text width, which pushed .study-card wider
+     than the viewport and caused page-wide horizontal scroll on mobile.
+     max-width + anywhere let it wrap instead of blowing out the layout. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 /* Secondary-actions footer: word navigation and meaning edit/report read

@@ -479,6 +479,26 @@ export function VocabSection({
       ) : null}
 
           </section>
+          {/* Moved ahead of 덱 공유 (Phase 46) -- 사용자 정의 용어 관리 is a
+              one-button entry point, but 덱 공유's publish form + advanced
+              backup/CSV panel used to sit between it and 덱 관리, adding a
+              long scroll (~1.6k px on mobile) just to reach this toggle. */}
+          <section className="management-card">
+            <div className="management-card-header">
+              <h2>고급</h2>
+              <p className="muted-text">작품별 사용자 용어와 보조 관리 기능이에요.</p>
+            </div>
+            <div className="management-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => setIsCustomTermManagerOpen((open) => !open)}
+                aria-expanded={isCustomTermManagerOpen}
+              >
+                사용자 정의 용어 관리
+              </button>
+            </div>
+          </section>
           <section className="management-card">
             <div className="management-card-header">
               <h2>덱 공유</h2>
@@ -593,22 +613,6 @@ export function VocabSection({
         </div>
       </div>
 
-          </section>
-          <section className="management-card">
-            <div className="management-card-header">
-              <h2>고급</h2>
-              <p className="muted-text">작품별 사용자 용어와 보조 관리 기능이에요.</p>
-            </div>
-            <div className="management-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setIsCustomTermManagerOpen((open) => !open)}
-                aria-expanded={isCustomTermManagerOpen}
-              >
-                사용자 정의 용어 관리
-              </button>
-            </div>
           </section>
         </div>
       ) : null}
@@ -767,8 +771,9 @@ export function VocabSection({
           </div>
         ) : (
           <p className="empty">
-            등록된 사용자 정의 용어가 없어요. 작품 고유명사나 자주 나오는
-            용어를 추가하면 분석 결과에 먼저 반영돼요.
+            {selectedDeckId === ""
+              ? "덱을 선택하면 그 덱에 등록한 사용자 정의 용어를 볼 수 있어요."
+              : "등록된 사용자 정의 용어가 없어요. 작품 고유명사나 자주 나오는 용어를 추가하면 분석 결과에 먼저 반영돼요."}
           </p>
         )}
       </div>
