@@ -285,6 +285,18 @@ against production as part of verification.
 
 ### Phase 12/14: production transition runbook and execution record
 
+**Status (re-confirmed Phase 50): this runbook already ran once** — see the
+"Phase 14 executed..." execution record below, with the resulting deck
+ids/modes/vocab_counts. The Precheck/Execution/Rollback subsections below are
+kept as a historical record of that one-time transition, not an outstanding
+pre-release task; the `- [ ]` items in Precheck describe what was checked
+before that run, not something to redo before every release. Do not re-run
+the execution steps (or `seed_jlpt_shared_decks.py --apply`) against
+production as part of routine release prep — that would create duplicate
+shared decks. See "Phase 16: read-only post-transition health checks" below
+for the correct routine (read-only, safe to re-run) way to confirm
+production still matches this record.
+
 This section documents the planned procedure for moving the live N1-N5
 `shared_decks` rows off the legacy copied-mode path. **This
 section was not run against production at Phase 12.** Phase 14 execution is recorded below. The original planning details include
@@ -483,6 +495,13 @@ how to *re-confirm afterward*, on a recurring basis, that production still
 looks the way the runbook recorded it — a read-only check, safe to re-run
 any time, that never calls a write endpoint, never touches Neon SQL
 directly, and never reads `.env`.
+
+**Rehearsal status (Phase 50):** these scripts were not actually run this
+phase — no production backend base URL was provided in that session, and
+this doc's own rule (never write a real URL here) means one can't be
+hardcoded to unblock it. Recorded as blocked, not attempted-and-passed. Run
+them with an explicitly-provided URL the next time this checklist is worked
+end to end before a real release.
 
 Three scripts, all under `backend/scripts/`:
 
