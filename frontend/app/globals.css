@@ -5570,7 +5570,12 @@ input.reading-vocab-item-checkbox {
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
+  /* Same fix as .token-sheet-meta-tag -- a long 품사/기본형/덱 이름 value
+     (e.g. a long custom-term part_of_speech) forced this pill to its full
+     unwrapped width and clipped the tail against the card edge instead of
+     wrapping. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .vocab-item-review-meta {
@@ -5708,6 +5713,26 @@ input.reading-vocab-item-checkbox {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+
+/* 덱 삭제 -- separated from 덱 만들기 by a dashed rule + small label so it
+   reads as its own "위험 구역" instead of sitting right above the create
+   form with no visual break (see Phase 47 QA notes). */
+.deck-danger-zone {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
+.deck-danger-zone-label {
+  flex: 0 0 100%;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 /* Softened to the same soft-surface note treatment as

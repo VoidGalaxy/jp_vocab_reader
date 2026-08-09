@@ -436,26 +436,6 @@ export function VocabSection({
               <p className="muted-text">새 덱을 만들거나 현재 선택한 덱을 삭제해요.</p>
             </div>
 
-      <div className="management-actions">
-        {selectedDeckId !== "all" && selectedDeckId !== "" ? (
-          <button
-            type="button"
-            className="danger-button"
-            onClick={() => onDeleteDeck(Number(selectedDeckId))}
-            disabled={selectedDeckId === defaultDeckId}
-            title={
-              selectedDeckId === defaultDeckId
-                ? "기본 단어장은 삭제할 수 없어요."
-                : undefined
-            }
-          >
-            현재 덱 삭제
-          </button>
-        ) : (
-          <span className="muted-text">삭제하려면 특정 덱을 선택하세요.</span>
-        )}
-      </div>
-
       <div className="deck-create">
         <input
           value={newDeckName}
@@ -477,6 +457,30 @@ export function VocabSection({
           {deckMessage}
         </p>
       ) : null}
+
+      {/* Separated from 덱 만들기 above by its own divider + label so the
+          destructive action reads as a distinct "위험 구역", not the first
+          thing this card shows (see Phase 47 QA notes). */}
+      <div className="deck-danger-zone">
+        <span className="deck-danger-zone-label">위험 구역</span>
+        {selectedDeckId !== "all" && selectedDeckId !== "" ? (
+          <button
+            type="button"
+            className="danger-button-subtle"
+            onClick={() => onDeleteDeck(Number(selectedDeckId))}
+            disabled={selectedDeckId === defaultDeckId}
+            title={
+              selectedDeckId === defaultDeckId
+                ? "기본 단어장은 삭제할 수 없어요."
+                : undefined
+            }
+          >
+            현재 덱 삭제
+          </button>
+        ) : (
+          <span className="muted-text">삭제하려면 특정 덱을 선택하세요.</span>
+        )}
+      </div>
 
           </section>
           {/* Moved ahead of 덱 공유 (Phase 46) -- 사용자 정의 용어 관리 is a
@@ -725,7 +729,7 @@ export function VocabSection({
                     </button>
                     <button
                       type="button"
-                      className="danger-button compact-button"
+                      className="danger-button-subtle compact-button"
                       onClick={() => {
                         if (
                           window.confirm(
