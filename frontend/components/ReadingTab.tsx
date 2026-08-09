@@ -501,13 +501,20 @@ export function ReadingTab({
                   </button>
                 </AppEmptyState>
               ) : null}
-              <textarea
-                id="reading-source-text"
-                value={text}
-                onChange={(event) => onTextChange(event.target.value)}
-                placeholder="彼は闇の中で声を聞いた。少女は約束を思い出した。"
-                rows={4}
-              />
+              {/* .reading-note-sheet -- purely a decoration hook (washi-tape
+                  corners via ::before/::after, .reader-start-card only) so the
+                  textarea reads as a note taped onto the notebook page
+                  instead of a bare form field. No behavior change: the
+                  textarea itself keeps its existing id/value/handlers. */}
+              <div className="reading-note-sheet">
+                <textarea
+                  id="reading-source-text"
+                  value={text}
+                  onChange={(event) => onTextChange(event.target.value)}
+                  placeholder="彼は闇の中で声を聞いた。少女は約束を思い出した。"
+                  rows={4}
+                />
+              </div>
               <div className="reading-input-footer">
                 {needsDeckRecovery ? (
                   <DeckLoadRecovery

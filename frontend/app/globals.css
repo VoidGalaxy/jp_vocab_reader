@@ -208,6 +208,23 @@
   }
 }
 
+/* Same entrance as app-slide-up, but holds a fixed tilt throughout --
+   .bookmark-inspector's docked-desktop placement uses this instead of
+   app-slide-up so a static `transform: rotate(...)` isn't silently
+   overridden by the animation's own transform (an animated property wins
+   over a separately-declared static value for the property it animates,
+   for the animation's whole fill-mode span). */
+@keyframes app-slide-up-tilt {
+  from {
+    opacity: 0;
+    transform: translateY(10px) rotate(-1.2deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(-1.2deg);
+  }
+}
+
 @keyframes app-pop {
   from {
     opacity: 0;
@@ -3061,24 +3078,26 @@ select {
   line-height: 1.65;
 }
 
-/* First-visit-only variant: the one paper card the whole pre-result
-   screen lives in (title -> optional sample guide -> textarea -> primary
-   action), same opaque-panel tone as the other tabs' top hero card. Its
-   nested .analyze-form/textarea keep the stripped-down "open page" styling
-   from above -- they don't need their own border now that this outer card
-   already provides one. */
+/* Casual Sticker Reader (Phase 55) -- first-visit variant: a notebook page
+   with the input textarea taped down like a note (see .reading-note-sheet
+   below), not the earlier "manuscript" card (diagonal ink wash + an
+   abstract torn-paper rectangle floating off the corner). Same opaque-panel
+   tone as the other tabs' top hero card; .analyze-form/textarea keep the
+   stripped-down "open page" styling from above -- they don't need their own
+   border now that this outer card already provides one. */
 .reader-start-card {
   position: relative;
   overflow: hidden;
   border: 1px solid var(--border-strong);
   border-radius: 26px;
   padding: 28px;
-  background:
-    linear-gradient(135deg, rgba(47, 100, 112, 0.14), transparent 32%),
-    linear-gradient(180deg, rgba(255, 252, 242, 0.98), rgba(245, 236, 214, 0.82));
+  background: var(--panel-bg);
   box-shadow: 0 22px 46px rgba(100, 80, 34, 0.16);
 }
 
+/* Notebook-ring binding down the left edge -- same dashed-spine language
+   .reader-workspace uses below it, so the intro card and the workspace it
+   leads into read as pages of one notebook. */
 .reader-start-card::before {
   content: "";
   position: absolute;
@@ -3087,41 +3106,51 @@ select {
   border-radius: 999px;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(47, 100, 112, 0.5) 0,
-    rgba(47, 100, 112, 0.5) 8px,
+    var(--screen-accent, var(--accent)) 0,
+    var(--screen-accent, var(--accent)) 8px,
     transparent 8px,
     transparent 18px
   );
-  opacity: 0.55;
-}
-
-.reader-start-card::after {
-  content: "";
-  position: absolute;
-  right: -46px;
-  bottom: -40px;
-  width: 190px;
-  height: 150px;
-  border: 1px solid rgba(110, 91, 47, 0.16);
-  border-radius: 18px;
-  background:
-    linear-gradient(90deg, rgba(47, 100, 112, 0.12), transparent 34px),
-    repeating-linear-gradient(
-      180deg,
-      transparent 0,
-      transparent 18px,
-      rgba(110, 91, 47, 0.12) 18px,
-      rgba(110, 91, 47, 0.12) 19px
-    ),
-    rgba(255, 252, 242, 0.78);
-  box-shadow: -18px -18px 0 rgba(255, 252, 242, 0.36);
-  transform: rotate(-8deg);
-  pointer-events: none;
+  opacity: 0.5;
 }
 
 .reader-start-card > * {
   position: relative;
   z-index: 1;
+}
+
+/* .reading-note-sheet -- wraps the textarea so a "taped-down note" accent
+   can be added via ::before/::after without the pseudo-element rendering
+   issues of styling a <textarea> directly. Undecorated everywhere else;
+   only .reader-start-card's first-visit variant below adds the tape, so
+   the collapsed manuscript-tray textarea (once a result exists) stays
+   plain. */
+.reading-note-sheet {
+  position: relative;
+}
+
+.reader-start-card .reading-note-sheet::before,
+.reader-start-card .reading-note-sheet::after {
+  content: "";
+  position: absolute;
+  top: -7px;
+  z-index: 2;
+  width: 46px;
+  height: 18px;
+  border: 1px solid rgba(217, 122, 74, 0.4);
+  background: rgba(217, 122, 74, 0.32);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
+  pointer-events: none;
+}
+
+.reader-start-card .reading-note-sheet::before {
+  left: 22px;
+  transform: rotate(-5deg);
+}
+
+.reader-start-card .reading-note-sheet::after {
+  right: 26px;
+  transform: rotate(4deg);
 }
 
 /* The empty-text sample guide sits inside the intro card now, not as its
@@ -3725,15 +3754,20 @@ input.reading-vocab-item-checkbox {
    paper card (still visually lighter than the reader-paper hero above it:
    smaller radius, thinner shadow), distinct in weight from the drawer-pull
    below it, so the reading tab isn't four stacked look-alike boxes. */
+/* Casual Sticker Reader -- a dashed-top strip (echoes the notebook-ring
+   spine's own dash rhythm) instead of a fully bordered box, so the save
+   tray reads as a shelf attached under the reader page, not a fourth
+   admin panel stacked below it. */
 .reading-action-dock {
   display: grid;
   gap: 10px;
-  margin-top: 14px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--panel-bg);
-  box-shadow: 0 6px 14px var(--paper-shadow);
+  margin-top: 4px;
+  padding: 14px 4px 4px;
+  border: none;
+  border-top: 2px dashed var(--paper-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .save-dock-count {
@@ -6593,6 +6627,11 @@ input.reading-vocab-item-checkbox {
    workspace instead of unrelated floating boxes. Each section keeps its
    own card-tier styling (reader stays the "hero", tray/list stay
    "section") -- this only adds a connecting thread behind them. */
+/* Casual Sticker Reader (Phase 55) -- flattened from the earlier radial
+   teal-glow + heavy shadow treatment (read as a UI panel highlight, not
+   paper) to a plain desk-surface tone. The dashed spine (still the
+   notebook-ring binding) and the reader page's own tape corners now carry
+   the "bound notebook" read instead of a glow + an abstract floating tab. */
 .reader-workspace {
   position: relative;
   display: grid;
@@ -6600,10 +6639,8 @@ input.reading-vocab-item-checkbox {
   padding: 22px 22px 22px 36px;
   border: 1px solid rgba(110, 91, 47, 0.12);
   border-radius: 28px;
-  background:
-    radial-gradient(circle at 100% 0, rgba(47, 100, 112, 0.1), transparent 260px),
-    linear-gradient(180deg, rgba(255, 252, 242, 0.72), rgba(246, 238, 218, 0.52));
-  box-shadow: 0 18px 44px rgba(100, 80, 34, 0.08);
+  background: var(--surface-stage);
+  box-shadow: 0 10px 26px rgba(100, 80, 34, 0.07);
 }
 
 .reader-workspace::before {
@@ -6624,23 +6661,14 @@ input.reading-vocab-item-checkbox {
   opacity: 0.45;
 }
 
-.reader-workspace::after {
-  content: "";
-  position: absolute;
-  inset: 12px 12px auto auto;
-  width: 86px;
-  height: 26px;
-  border-radius: 0 0 14px 14px;
-  background: rgba(47, 100, 112, 0.12);
-  transform: rotate(2deg);
-  pointer-events: none;
-}
-
 /* reader-paper -- the reader canvas itself (renamed from .reader-mode,
    which now only prefixes the mode's own header/toggle sub-parts below).
    This is the screen's one hero surface: reader-first layout means this
-   card, not the toolbar above it, is what a first glance should land on. */
+   card, not the toolbar above it, is what a first glance should land on.
+   Two washi-tape corners (::before/::after) pin it to the workspace behind
+   it, like a page taped into a notebook rather than a floating card. */
 .reader-paper {
+  position: relative;
   border: 1px solid var(--paper-border);
   border-top: 2px solid var(--screen-accent, var(--accent));
   border-radius: 20px 18px 22px 18px;
@@ -6659,6 +6687,30 @@ input.reading-vocab-item-checkbox {
      one hero surface into the same "warm paper" family as the rest of the
      app instead of reading as a notch quieter than its siblings. */
   box-shadow: 0 16px 36px var(--paper-shadow);
+}
+
+.reader-paper::before,
+.reader-paper::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  z-index: 1;
+  width: 52px;
+  height: 18px;
+  border: 1px solid rgba(217, 122, 74, 0.4);
+  background: rgba(217, 122, 74, 0.32);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
+  pointer-events: none;
+}
+
+.reader-paper::before {
+  left: 36px;
+  transform: rotate(-4deg);
+}
+
+.reader-paper::after {
+  right: 40px;
+  transform: rotate(3deg);
 }
 
 .reader-mode-header-row {
@@ -6737,16 +6789,19 @@ input.reading-vocab-item-checkbox {
   white-space: nowrap;
 }
 
+/* Flattened from a filled --soft-bg box to a plain inline row -- this is a
+   live status readout, not a settings panel, and the boxed treatment made
+   it read like the row above a form instead of the reader's own
+   "how far in am I" glance. */
 .reader-progress-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(120px, 220px) auto;
   align-items: center;
   gap: 8px 14px;
-  margin-bottom: 8px;
-  padding: 6px 10px;
+  margin-bottom: 10px;
+  padding: 0 2px;
   border: none;
-  border-radius: 10px;
-  background: var(--soft-bg);
+  background: transparent;
 }
 
 .reader-progress-info {
@@ -6775,7 +6830,6 @@ input.reading-vocab-item-checkbox {
   height: 7px;
   border-radius: 999px;
   background: var(--border);
-  overflow: hidden;
 }
 
 /* Warm accent-to-primary gradient (was flat --primary) -- ties the one
@@ -6783,12 +6837,30 @@ input.reading-vocab-item-checkbox {
    accent used elsewhere in the reading surface (reader-workspace's dashed
    spine, the hero bookmark ribbon), instead of reading as a generic
    loading/upload bar. Thicker (was 4px) so it reads as a deliberate
-   progress ribbon, not a hairline. */
+   progress ribbon, not a hairline. A small round bead rides its trailing
+   edge -- the same "tassel charm" language as Shiori's bookmark design,
+   without needing the character art itself on something this small. Track
+   no longer clips (overflow removed) so the bead can sit half outside it. */
 .reader-progress-bar-fill {
+  position: relative;
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(90deg, var(--accent), var(--screen-accent, var(--primary)));
   transition: width var(--motion-base) var(--ease-soft);
+}
+
+.reader-progress-bar-fill::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--screen-accent, var(--primary));
+  border: 2px solid var(--paper-bg);
+  transform: translate(50%, -50%);
+  box-shadow: 0 2px 5px rgba(37, 43, 30, 0.22);
 }
 
 .reader-progress-actions {
@@ -7219,28 +7291,28 @@ input.reading-vocab-item-checkbox {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.35);
+  /* Warm near-black (was a cold navy rgba(15,23,42,...)) -- matches the
+     notebook-cover's own dark tone instead of a generic modal scrim. */
+  background: rgba(37, 43, 30, 0.4);
   padding: 0;
   animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
 }
 
-/* bookmark-inspector (renamed from .token-sheet) -- the word panel is a
-   bookmark memo tucked next to the reader paper, not a dev-tools/inspector
-   modal, so the outer wrapper's name now says so. A warm accent top edge
-   ties the panel to the reader paper/screen-accent underneath it, same
-   "attached note" language .classify-card already uses -- reads as a memo
-   pinned to the current page, not an unrelated inspector floating over
-   it. All of this card's inner part classes (token-sheet-header,
-   token-sheet-meaning-block, ...) keep their existing names -- only the
-   outer wrapper token changed. */
+/* bookmark-inspector (renamed from .token-sheet) -- Casual Sticker Reader:
+   a small sticky note pinned beside the reader page, not a bordered
+   dev-tools panel. The pin dot (::before) is the same accent-dot language
+   as Home's .home-notebook-pin. All of this card's inner part classes
+   (token-sheet-header, token-sheet-meaning-block, ...) keep their existing
+   names -- only the outer wrapper's own look changed. */
 .bookmark-inspector {
+  position: relative;
   width: 100%;
   max-width: 480px;
   max-height: 85vh;
   overflow-y: auto;
   border-top: 2px solid var(--screen-accent, var(--accent));
   border-radius: 16px 16px 0 0;
-  padding: 20px;
+  padding: 24px 20px 20px;
   background: var(--panel-bg);
   box-shadow: 0 -8px 30px rgba(120, 98, 40, 0.22);
   animation: app-slide-up var(--motion-base) var(--ease-soft) both;
@@ -7248,6 +7320,20 @@ input.reading-vocab-item-checkbox {
      platforms with always-visible scrollbars this was eating into the
      20px padding and making the panel feel tighter than it actually is. */
   scrollbar-width: thin;
+}
+
+.bookmark-inspector::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 1;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.25);
+  transform: translateX(-50%);
 }
 
 .bookmark-inspector::-webkit-scrollbar {
@@ -7348,18 +7434,32 @@ input.reading-vocab-item-checkbox {
 
 /* The single most practically useful fact on the card -- called out with
    its own tinted block, ahead of the (comparatively secondary) base_form/
-   POS/JLPT details below, and read on entry before anything else. */
-/* Left accent stripe gives this the same "memo/definition card" language
-   as .context-example-block's amber sticky-note strip below it, so the
-   two read as a matched pair of notes rather than one plain bordered box
-   and one accented one. */
+   POS/JLPT details below, and read on entry before anything else. A small
+   taped-on strip (::before) marks it instead of a colored border-left --
+   same washi-tape language as the reader page/start card, and this was
+   also the one recurring "side-tab accent border" the design detector kept
+   flagging here. */
 .token-sheet-meaning-block {
-  margin: 2px 0 4px;
-  padding: 14px 16px;
+  position: relative;
+  margin: 8px 0 4px;
+  padding: 16px 16px 14px;
   border: 1px solid var(--border-strong);
-  border-left: 4px solid var(--screen-accent, var(--accent));
-  border-radius: 4px 12px 12px 4px;
+  border-radius: 4px 14px 14px 14px;
   background: var(--soft-bg);
+}
+
+.token-sheet-meaning-block::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 14px;
+  z-index: 1;
+  width: 34px;
+  height: 12px;
+  border: 1px solid rgba(var(--primary-rgb), 0.4);
+  background: rgba(var(--primary-rgb), 0.32);
+  transform: rotate(-3deg);
+  pointer-events: none;
 }
 
 .token-sheet-meaning-label {
@@ -7423,6 +7523,7 @@ input.reading-vocab-item-checkbox {
 .token-sheet-basket-button {
   width: 100%;
   border: 1.5px dashed var(--screen-accent, var(--accent));
+  border-radius: 999px;
   color: var(--screen-accent, var(--accent));
   background: transparent;
 }
@@ -7515,6 +7616,30 @@ input.reading-vocab-item-checkbox {
   border-radius: 10px;
   padding: 12px 14px;
   background: #fdf9ee;
+}
+
+/* Reading tab only (this class is shared with the Analyze/Study "classify
+   card", which keep their own left-border-accent look untouched) -- same
+   taped-strip treatment as .token-sheet-meaning-block above, so the two
+   notes inside the bookmark-inspector read as a matched pair. */
+.bookmark-inspector .context-example-block {
+  position: relative;
+  border-left: 1px solid #ecdfb8;
+  border-radius: 4px 14px 14px 14px;
+}
+
+.bookmark-inspector .context-example-block::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 14px;
+  z-index: 1;
+  width: 34px;
+  height: 12px;
+  border: 1px solid rgba(232, 194, 92, 0.6);
+  background: rgba(232, 194, 92, 0.45);
+  transform: rotate(2deg);
+  pointer-events: none;
 }
 
 .context-example-label {
@@ -7703,7 +7828,13 @@ input.reading-vocab-item-checkbox {
     max-width: 380px;
     max-height: min(640px, calc(100vh - 48px));
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: 4px 16px 16px 16px;
+    /* A slight tilt, like a sticky note actually pinned beside the page --
+       only on the docked desktop placement; the mobile bottom sheet stays
+       straight (a tilted full-width sheet would just look broken). Swaps
+       the animation name (not a static transform -- see app-slide-up-tilt
+       above) so the tilt survives the entrance animation. */
+    animation-name: app-slide-up-tilt;
     box-shadow: 0 16px 40px rgba(120, 98, 40, 0.18);
   }
 
@@ -7720,13 +7851,6 @@ input.reading-vocab-item-checkbox {
     width: 5px;
   }
 
-  .reader-start-card::after {
-    width: 130px;
-    height: 108px;
-    right: -52px;
-    bottom: -38px;
-  }
-
   .reader-start-card .reading-input-open-title {
     font-size: 27px;
   }
@@ -7734,6 +7858,20 @@ input.reading-vocab-item-checkbox {
   .reader-start-card .reading-input-open textarea {
     min-height: 150px;
     padding: 14px;
+  }
+
+  .reader-start-card .reading-note-sheet::before,
+  .reader-start-card .reading-note-sheet::after {
+    width: 36px;
+    height: 15px;
+  }
+
+  .reader-start-card .reading-note-sheet::before {
+    left: 12px;
+  }
+
+  .reader-start-card .reading-note-sheet::after {
+    right: 14px;
   }
 
   .reading-panel--has-result .reading-input-open {
@@ -7751,13 +7889,22 @@ input.reading-vocab-item-checkbox {
     left: 10px;
   }
 
-  .reader-workspace::after {
-    width: 58px;
-    height: 18px;
+  .reader-paper {
+    padding: 18px 14px 14px;
   }
 
-  .reader-paper {
-    padding: 14px;
+  .reader-paper::before,
+  .reader-paper::after {
+    width: 36px;
+    height: 15px;
+  }
+
+  .reader-paper::before {
+    left: 16px;
+  }
+
+  .reader-paper::after {
+    right: 18px;
   }
 
   .reader-mode-header-row {
@@ -7797,7 +7944,10 @@ input.reading-vocab-item-checkbox {
   }
 
   .bookmark-inspector {
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    /* Top padding stays a touch taller than the side/bottom values (was an
+       even 16px) so the pin dot (::before, added in the base rule) has
+       clearance above the header row instead of crowding it. */
+    padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
   }
 
   .token-sheet-title-group {

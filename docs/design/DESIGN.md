@@ -51,8 +51,13 @@ pixel specs).
 - **App Shell** — rail/bottom-nav structure, tab routing, and account/feedback
   slots are unchanged in Phase 54 (see "Not yet redesigned" below); only
   Home's own content area follows the new direction so far.
-- **Reading + Inspector** (not yet redesigned this phase) — target: focus
-  reader layout, floating word-inspector sheet, sticker-style save tray.
+- **Reading + Inspector** (Phase 55) — notebook-page reader (`.reader-paper`,
+  `.reader-start-card`) with washi-tape corner accents, a pin-dotted
+  sticky-note word inspector (`.bookmark-inspector`, tilted on desktop,
+  straight bottom sheet on mobile), a thinner progress bar with a
+  bookmark-charm bead, and a dashed-strip save tray instead of a bordered
+  admin box. Candidate/word-list drawer still plain (Operate-mode list, out
+  of scope this pass).
 - **Vocab** (not yet redesigned) — target: sticker notebook/grid, not a
   list/admin table.
 - **Study** (not yet redesigned) — target: review card stack, soft sticker
@@ -83,7 +88,8 @@ pixel specs).
 
 ## Status
 
-Phase 54 covers the design contract plus App Shell/Home. Reading, Vocab,
-Study, and Shared Deck still carry the previous ("study desk") visual
+Phase 54 covered the design contract plus App Shell/Home. Phase 55 covers
+Reading + Inspector (reader page, start card, word inspector, save tray).
+Vocab, Study, and Shared Deck still carry the previous ("study desk") visual
 language and are the recommended order for follow-up phases (see the brief's
 "Implementation order recommendation").
