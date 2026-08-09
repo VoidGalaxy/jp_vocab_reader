@@ -1,6 +1,6 @@
 # Deployment Checklist
 
-Use this checklist for local runs, release preparation, and lightweight post-deploy verification. Keep local run steps on local development services; for platform-specific production setup and operating checks, see [production-deployment.md](production-deployment.md).
+Use this checklist for local runs, release preparation, and lightweight post-deploy verification. Keep local run steps on local development services; for platform-specific production setup and operating checks, see [production-deployment.md](production-deployment.md). For the viewport breakpoints and method behind the "Mobile-width tab/card/button layout" browser check below, see [qa-browser-checklist.md](qa-browser-checklist.md).
 
 ## 1. Local Run
 

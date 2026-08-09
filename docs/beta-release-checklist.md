@@ -5,7 +5,10 @@ deployment shape: Vercel (frontend), Render (backend), Neon PostgreSQL
 (database). For full environment-variable and platform setup details, see
 [deployment-checklist.md](deployment-checklist.md) and
 [production-deployment.md](production-deployment.md) — this doc is a
-short, checkable list for release day, not a replacement for those.
+short, checkable list for release day, not a replacement for those. For the
+*how* of viewport/mobile/long-content browser QA referenced in section 6
+below (breakpoints, overflow-check method, automation tooling gotchas), see
+[qa-browser-checklist.md](qa-browser-checklist.md).
 
 **Never write real URLs, secret values, tokens, or database connection
 strings into this file.** Use placeholders / checkmarks only.
