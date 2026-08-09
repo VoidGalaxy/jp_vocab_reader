@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { AppEmptyState } from "./BrandElements";
-import { ShioriStamp } from "./Shiori";
+import { ShioriGuideCard, ShioriStamp } from "./Shiori";
 import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import {
@@ -156,9 +156,11 @@ function ReaderSaveDock({
           {isSavingBatch ? "저장 중..." : `담은 단어 저장 (${selectedCount})`}
         </button>
       ) : (
-        <p className="save-dock-idle-hint muted-text">
-          원문에서 단어를 눌러 바구니에 담아보세요.
-        </p>
+        <ShioriGuideCard
+          variant="reading"
+          message="원문에서 단어를 눌러 바구니에 담아보세요."
+          className="save-dock-idle-hint"
+        />
       )}
 
       <div className="save-tray-quick-save">

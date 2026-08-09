@@ -6965,16 +6965,22 @@ input.reading-vocab-item-checkbox {
 
 .reader-progress-bar {
   width: 100%;
-  height: 4px;
+  height: 7px;
   border-radius: 999px;
   background: var(--border);
   overflow: hidden;
 }
 
+/* Warm accent-to-primary gradient (was flat --primary) -- ties the one
+   real "result" indicator on this screen to the same bookmark-orange
+   accent used elsewhere in the reading surface (reader-workspace's dashed
+   spine, the hero bookmark ribbon), instead of reading as a generic
+   loading/upload bar. Thicker (was 4px) so it reads as a deliberate
+   progress ribbon, not a hairline. */
 .reader-progress-bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--primary);
+  background: linear-gradient(90deg, var(--accent), var(--screen-accent, var(--primary)));
   transition: width var(--motion-base) var(--ease-soft);
 }
 
