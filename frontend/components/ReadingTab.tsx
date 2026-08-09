@@ -455,7 +455,12 @@ export function ReadingTab({
   const messageTone = classifyMessageTone(message);
 
   return (
-    <section className="tab-panel reading-panel" aria-live="polite">
+    <section
+      className={`tab-panel reading-panel${
+        hasResult ? " reading-panel--has-result" : " reading-panel--start"
+      }`}
+      aria-live="polite"
+    >
       <section
         className={`reading-input-open${hasResult ? "" : " reader-start-card"}`}
       >
