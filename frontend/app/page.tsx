@@ -3422,6 +3422,8 @@ export default function HomePage() {
             onStartTodayReview={goToStudyToday}
             onOpenAccount={openAccountMenu}
             onGoToVocab={() => void handleTabChange("vocab")}
+            sharedDeckCount={sharedDecks.length}
+            onGoToSharedDecks={() => void handleTabChange("shared")}
             recentWords={infoRecentWords.slice(0, 3)}
           />
         ) : null}

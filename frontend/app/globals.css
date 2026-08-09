@@ -1179,12 +1179,124 @@ button {
   margin-top: 4px;
 }
 
+/* Reading-first study desk -- library-card-stage (the same "card catalog
+   drawer" backdrop the reader/classify workspaces already use) becomes the
+   desk surface the hero and its tools visibly sit on, instead of each
+   floating separately on the plain page background. .home-desk-stage only
+   adds the grid/gap on top of that shared class. */
+.home-desk-stage {
+  display: grid;
+  gap: 16px;
+}
 
+.home-desk-tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+/* Base desk-tool tile -- overrides the app's default filled button chrome
+   (gradient fill, centered, inline-flex) with a left-aligned card layout;
+   .index-card-shell contributes the border/radius/shadow. Each modifier
+   below then gives its tool a distinct physical treatment (index card /
+   card stack / book cover) rather than three identical icon+heading+text
+   boxes. */
+.home-desk-tool {
+  display: grid;
+  gap: 8px;
+  justify-content: stretch;
+  padding: 14px 16px;
+  color: var(--text);
+  background: var(--panel-bg);
+  font-weight: 600;
+  text-align: left;
+  transition:
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
+}
+
+.home-desk-tool:not(:disabled):hover {
+  box-shadow: 0 12px 24px rgba(120, 98, 40, 0.14);
+}
+
+.home-desk-tool-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--screen-accent, var(--primary));
+}
+
+.home-desk-tool-label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-desk-tool-value {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 단어장 노트 -- a tilted index card, like one pulled loose from the
+   notebook stack. Matches the app's existing scattered-index-card tilt
+   convention (see .home-hero-preview-step above), not a barely-visible
+   nudge. */
+.home-desk-tool--vocab {
+  transform: rotate(-2.5deg);
+}
+
+.home-desk-tool--vocab:not(:disabled):hover {
+  transform: rotate(-2.5deg) translateY(-3px);
+}
+
+/* 오늘의 복습 -- .card-stack-surface gives it the layered-flashcards look,
+   so the review deck reads as an actual pile of cards, not a plain tile.
+   Shallower than the default ghost-layer depth (7px/14px) -- like
+   .shared-deck-grid's own override below, this tile sits in a repeating
+   grid that can wrap to multiple rows on narrow screens, and the default
+   depth is deep enough to lap into the tile below at the mobile 8px row
+   gap. */
+.home-desk-tool--review.card-stack-surface::before {
+  transform: translateY(4px) scale(0.99);
+}
+
+.home-desk-tool--review.card-stack-surface::after {
+  content: none;
+}
+
+.home-desk-tool--review:not(:disabled):hover {
+  transform: translateY(-3px);
+}
+
+/* 덱 책장 -- BrandDeckCover supplies its own top cover-band (icon + label)
+   sized for a 16px-padded, 16px-radius parent (matches .shared-deck-card's
+   own convention) -- this tile only needs the value line below the cover,
+   no icon/label of its own. */
+.home-desk-tool--shared {
+  gap: 10px;
+  padding: 16px 16px 14px;
+  border-radius: 16px;
+  overflow: hidden;
+  transform: rotate(2deg);
+}
+
+.home-desk-tool--shared:not(:disabled):hover {
+  transform: rotate(2deg) translateY(-3px);
+}
 
 @media (max-width: 640px) {
   .library-card-stage {
     padding: 14px;
     border-radius: 14px;
+  }
+
+  .home-desk-stage {
+    gap: 12px;
+  }
+
+  .home-desk-tools {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
   }
 
   .card-stack-surface::before,
