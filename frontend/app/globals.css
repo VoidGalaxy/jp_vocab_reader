@@ -55,6 +55,14 @@
   --bookmark-orange: var(--accent);
   --sage-green: #4f8c66;
   --rose: #b5495a;
+  /* Casual Sticker Reader (Phase 54) -- Home's notebook-cover hero. A
+     deliberately deeper/less-saturated green than --sage-green (which
+     stays the app's brighter accent elsewhere): this one has to work as a
+     large fill behind cream text, not as a small highlight. See
+     docs/design/DESIGN.md. */
+  --notebook-cover: #5b6a52;
+  --notebook-cover-deep: #3a4433;
+  --notebook-cream: #f7f1de;
   /* Vocab-status colors, tokenized so chip/badge/legend rules across the
      app read from one place instead of repeating the same hex per rule.
      Values match the existing token-chip palette (kept as-is; this only
@@ -838,214 +846,227 @@ button {
   gap: 18px;
 }
 
-/* Landing/onboarding hero shown above the account panel on the app's
-   default (analyze) tab -- reuses the same warm "paper" tones as the
-   reading tab so the first-impression promise ("모르는 단어만 골라 문맥
-   예문과 함께 복습") visually matches the actual reading experience it
-   points to. */
-.landing-hero-title {
-  margin: 0;
-  color: #22201a;
-  font-size: 26px;
-  font-weight: 800;
-  line-height: 1.45;
+
+/* Casual Sticker Reader (Phase 54) -- Home's notebook-cover hero. Replaces
+   the earlier "study desk" hero card: the day's one primary action now
+   lives on the cover itself (like a title embossed on a notebook), with a
+   small pinned sticky note and a corner-peeking Shiori, rather than a
+   cream card with a badge/illustration column. See
+   docs/design/DESIGN.md and docs/design/mockups/casual-sticker-reader-*.png.
+   .card-stack-surface (added alongside, in the component) supplies the
+   "pages peeking out from under the cover" read for free -- its ghost
+   layers already default to the app's cream --panel-bg. */
+.home-notebook-cover {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 30px 24px 26px;
+  border-radius: 26px;
+  background: linear-gradient(
+    165deg,
+    var(--notebook-cover) 0%,
+    var(--notebook-cover-deep) 100%
+  );
+  box-shadow: 0 20px 40px rgba(37, 43, 30, 0.28);
+  overflow: hidden;
 }
 
-/* Wide desktop only: the hero card now spans the full (widened) workspace,
-   so a 26px title left a lot of unused vertical/visual weight next to the
-   illustration -- bumped up so the hero fills its own card with intent
-   instead of reading as "a small card floating in a big one". */
+.home-notebook-pin {
+  position: absolute;
+  top: 15px;
+  left: 35px;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+}
+
+.home-notebook-sticky-note {
+  position: absolute;
+  top: 0;
+  left: 20px;
+  z-index: 1;
+  padding: 9px 14px 7px;
+  border: 1px solid var(--paper-border);
+  border-radius: 3px;
+  background: var(--panel-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.22);
+  transform: rotate(-4deg);
+}
+
+.home-notebook-body {
+  display: grid;
+  gap: 10px;
+  max-width: 420px;
+  margin-top: 22px;
+}
+
+.home-notebook-title {
+  margin: 0;
+  color: var(--notebook-cream);
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
 @media (min-width: 900px) {
-  .landing-hero-title {
+  .home-notebook-title {
     font-size: 32px;
   }
 }
 
-.landing-hero-subtitle {
+.home-notebook-subtitle {
   margin: 0;
-  color: #6b6248;
+  max-width: 36ch;
+  color: rgba(247, 241, 222, 0.78);
   font-size: 14px;
   line-height: 1.7;
 }
 
-.landing-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.home-notebook-cta {
+  justify-self: start;
   margin-top: 4px;
+  color: var(--notebook-cover-deep);
+  background: var(--notebook-cream);
 }
 
-/* One primary action per screen: the reading CTA takes its own full-width
-   row so the secondary 복습 button below never reads as its equal. */
-.home-hero-primary-cta {
-  flex: 1 1 100%;
-  justify-content: center;
+.home-notebook-cta:not(:disabled):hover {
+  background: #ffffff;
 }
 
-/* Tertiary "샘플로 체험" link -- kept reachable but visually well below the
-   two real CTAs instead of sitting in the same button row. */
-.home-hero-quiet-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 2px;
+/* Combined with .ghost-button in the selector (not just alongside it in
+   the className list) so this wins on specificity regardless of the two
+   rules' order in the file -- .ghost-button's own --muted text/--border
+   outline both disappear against the dark cover fill otherwise. */
+.ghost-button.home-notebook-sample-link {
+  justify-self: start;
+  color: rgba(247, 241, 222, 0.85);
+  border-color: rgba(247, 241, 222, 0.35);
 }
 
-/* Home hero -- lightweight-reader-first: title + 1-line subcopy + one
-   full-width primary CTA plus one secondary CTA, no illustration column.
-   The flow-preview card/companion (BrandReadingFlowIllustration) that used
-   to render here traded space for a graphic competing with the CTAs -- the
-   component itself is untouched and still available elsewhere. */
-.home-hero-main {
-  display: grid;
-  gap: 10px;
-  flex: 1 1 380px;
-  max-width: 560px;
-  min-width: 0;
+.ghost-button.home-notebook-sample-link:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.14);
 }
 
-/* Hero card becomes a row (copy left, desk illustration right) -- two
-   classes so this wins over .panel-card's own `display: grid` regardless
-   of stylesheet order. justify-content: flex-start (not space-between) on
-   purpose: with the workspace widened for V3, space-between pinned the
-   copy and the illustration to opposite edges of a now much wider card,
-   leaving a dead gap in the middle -- flex-start + a fixed gap keeps them
-   reading as one balanced group instead of two islands. */
-.home-hero-card.hero-card {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 20px;
+/* Corner-guide placement per the Shiori character rule -- a small peeking
+   figure, not a second hero illustration competing with the cover's own
+   title/CTA. */
+.home-notebook-shiori-corner {
+  position: absolute;
+  right: 2px;
+  bottom: -4px;
+  z-index: 1;
+  opacity: 0.96;
 }
 
-@media (min-width: 900px) {
-  .home-hero-card.hero-card {
-    gap: 48px;
+@media (min-width: 640px) {
+  .home-notebook-cover {
+    padding: 36px 40px 32px;
+  }
+
+  .home-notebook-body {
+    margin-top: 8px;
+  }
+
+  .home-notebook-shiori-corner {
+    right: 22px;
+    bottom: 0;
   }
 }
 
-/* "서재 히어로 비주얼" -- the Shiori hero PNG (already depicts her resting on
-   an open book) sits beside the hero copy on wide screens. Shrinks (not
-   hides) on mobile, per design brief: a quiet companion, never one that
-   crowds out the CTAs. */
-.home-hero-visual {
-  flex: 0 0 auto;
-  align-self: center;
+/* Sticker shortcut row -- 단어장/복습/덱, styled as small pinned stickers
+   next to the notebook rather than a second row of uniform admin tiles.
+   Each modifier below carries its own tilt and icon-badge tone so the row
+   reads as scattered stickers, not three identical boxes. */
+.home-sticker-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
 }
 
-.home-hero-greeting {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.home-hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  justify-self: start;
-  padding: 4px 12px 4px 8px;
-  border: 1px solid var(--paper-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--primary-dark);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.home-hero-badge-icon {
-  width: 14px;
-  height: 14px;
-}
-
-/* Wraps the flow-preview card so the word-card + bookmark ribbon below
-   have room to sit slightly outside its edges, like a small pile of
-   notebook scraps rather than one flat box. Purely a positioning
-   container -- no visual of its own. */
-.home-hero-illustration {
-  position: relative;
-  flex: 0 0 auto;
-  padding: 12px 20px 26px 6px;
-}
-
-.home-hero-preview {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 18px 20px;
-  border: 1px solid var(--paper-border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.55);
-}
-
-.home-hero-preview-step {
+.home-sticker-chip {
   display: grid;
   justify-items: center;
-  gap: 4px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 16px 12px;
   border: 1px solid var(--paper-border);
-  border-radius: 10px;
+  border-radius: 16px;
   background: var(--panel-bg);
-  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.07);
+  color: var(--text);
+  text-align: center;
+  box-shadow: 0 10px 20px rgba(120, 98, 40, 0.1);
+  transition:
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
 }
 
-/* Alternating tilt on the three step cards -- reads as a small loose stack
-   of index cards instead of one rigid three-column table. nth-of-type
-   counts only sibling <div>s (the arrows in between are <span>s), so this
-   targets the 1st/3rd step card without needing extra JSX hooks. */
-.home-hero-preview-step:nth-of-type(1) {
-  transform: rotate(-2.5deg);
+.home-sticker-chip:not(:disabled):hover {
+  box-shadow: 0 14px 26px rgba(120, 98, 40, 0.16);
 }
 
-.home-hero-preview-step:nth-of-type(3) {
-  transform: rotate(2deg);
+.home-sticker-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: #ffffff;
 }
 
-.home-hero-preview-word {
-  position: relative;
-  color: var(--primary-dark);
-  font-size: 20px;
+.home-sticker-chip-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.home-sticker-chip-label {
+  color: var(--text);
+  font-size: 14px;
   font-weight: 800;
 }
 
-/* A highlighter-marker swipe behind "復習" (the payoff step) -- a plain
-   background band under the text's lower half, not a border/underline, so
-   it reads as a highlighter stroke rather than a link or divider. */
-.home-hero-preview-step:nth-of-type(3) .home-hero-preview-word {
-  background-image: linear-gradient(
-    rgba(250, 204, 21, 0.55),
-    rgba(250, 204, 21, 0.55)
-  );
-  background-repeat: no-repeat;
-  background-size: 100% 38%;
-  background-position: 0 78%;
-}
-
-.home-hero-preview-caption {
+.home-sticker-chip-subtitle {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
+  line-height: 1.4;
 }
 
-.home-hero-preview-arrow {
-  color: var(--border-strong);
-  font-size: 16px;
-  font-weight: 700;
+.home-sticker-chip--vocab {
+  transform: rotate(-2deg);
 }
 
-/* Bookmark ribbon tab -- a notched strip peeking out of the flow card's
-   top edge, echoing a paper bookmark. Pure CSS (clip-path), no asset. */
-.home-hero-bookmark {
-  position: absolute;
-  top: 0;
-  left: 22px;
-  width: 16px;
-  height: 24px;
-  background: var(--accent);
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 76%, 0 100%);
-  box-shadow: 0 4px 10px rgba(217, 122, 74, 0.25);
+.home-sticker-chip--vocab:not(:disabled):hover {
+  transform: rotate(-2deg) translateY(-3px);
+}
+
+.home-sticker-chip--vocab .home-sticker-chip-icon {
+  background: var(--tone-ink-brown);
+}
+
+.home-sticker-chip--review {
+  transform: rotate(1.5deg);
+}
+
+.home-sticker-chip--review:not(:disabled):hover {
+  transform: rotate(1.5deg) translateY(-3px);
+}
+
+.home-sticker-chip--decks {
+  transform: rotate(-1deg);
+}
+
+.home-sticker-chip--decks:not(:disabled):hover {
+  transform: rotate(-1deg) translateY(-3px);
+}
+
+.home-sticker-chip--decks .home-sticker-chip-icon {
+  background: var(--tone-dusty-blue);
 }
 
 .info-strip-icon {
@@ -1083,15 +1104,6 @@ button {
   box-shadow: none;
 }
 
-.home-hero-card {
-  gap: 14px;
-  padding: 22px;
-  border-color: var(--paper-border);
-  border-top: 2px solid var(--screen-accent, var(--accent));
-  background: var(--paper-bg);
-  box-shadow: 0 14px 32px var(--paper-shadow);
-}
-
 /* Small count chip, now used by the 기록 tab's 오늘 학습 row (see
    InfoSection) -- home folds the same numbers into its CTA label instead. */
 .home-summary-chip {
@@ -1122,184 +1134,14 @@ button {
   font-size: 15px;
 }
 
-/* Index Card Study direction -- "최근 담은 단어" as small index cards
-   instead of just a number in a chip, echoing Design Lab Direction B's
-   Home mini-screen. Real data (page.tsx's infoRecentWords, already fetched
-   for the 기록 tab), sliced to 3. Wrapped with its own small section title
-   (home-recent-section-title) so the row doesn't appear out of context
-   right under the summary chips, and kept deliberately light (capped card
-   width, quieter shadow, smaller type) so it reads as a small aside, not
-   home's second hero. */
-.home-recent-section {
-  display: grid;
-  gap: 4px;
-  margin-bottom: -6px;
-}
-
-.home-recent-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.home-recent-section-title {
-  color: var(--screen-accent, var(--muted));
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-
-.home-recent-index-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 180px));
-  justify-content: start;
-  gap: 6px;
-}
-
-.home-recent-index-card {
-  padding: 6px 10px;
-  box-shadow: 0 3px 8px rgba(120, 98, 40, 0.05);
-}
-
-.home-recent-index-card-surface {
-  display: block;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.home-recent-index-card-reading {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-  margin-top: 1px;
-}
-
-.home-recent-index-card-meaning {
-  display: block;
-  color: var(--text-secondary);
-  font-size: 12px;
-  margin-top: 4px;
-}
-
-/* Reading-first study desk -- library-card-stage (the same "card catalog
-   drawer" backdrop the reader/classify workspaces already use) becomes the
-   desk surface the hero and its tools visibly sit on, instead of each
-   floating separately on the plain page background. .home-desk-stage only
-   adds the grid/gap on top of that shared class. */
-.home-desk-stage {
-  display: grid;
-  gap: 16px;
-}
-
-.home-desk-tools {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-}
-
-/* Base desk-tool tile -- overrides the app's default filled button chrome
-   (gradient fill, centered, inline-flex) with a left-aligned card layout;
-   .index-card-shell contributes the border/radius/shadow. Each modifier
-   below then gives its tool a distinct physical treatment (index card /
-   card stack / book cover) rather than three identical icon+heading+text
-   boxes. */
-.home-desk-tool {
-  display: grid;
-  gap: 8px;
-  justify-content: stretch;
-  padding: 14px 16px;
-  color: var(--text);
-  background: var(--panel-bg);
-  font-weight: 600;
-  text-align: left;
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft);
-}
-
-.home-desk-tool:not(:disabled):hover {
-  box-shadow: 0 12px 24px rgba(120, 98, 40, 0.14);
-}
-
-.home-desk-tool-icon {
-  width: 18px;
-  height: 18px;
-  color: var(--screen-accent, var(--primary));
-}
-
-.home-desk-tool-label {
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.home-desk-tool-value {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* 단어장 노트 -- a tilted index card, like one pulled loose from the
-   notebook stack. Matches the app's existing scattered-index-card tilt
-   convention (see .home-hero-preview-step above), not a barely-visible
-   nudge. */
-.home-desk-tool--vocab {
-  transform: rotate(-2.5deg);
-}
-
-.home-desk-tool--vocab:not(:disabled):hover {
-  transform: rotate(-2.5deg) translateY(-3px);
-}
-
-/* 오늘의 복습 -- .card-stack-surface gives it the layered-flashcards look,
-   so the review deck reads as an actual pile of cards, not a plain tile.
-   Shallower than the default ghost-layer depth (7px/14px) -- like
-   .shared-deck-grid's own override below, this tile sits in a repeating
-   grid that can wrap to multiple rows on narrow screens, and the default
-   depth is deep enough to lap into the tile below at the mobile 8px row
-   gap. */
-.home-desk-tool--review.card-stack-surface::before {
-  transform: translateY(4px) scale(0.99);
-}
-
-.home-desk-tool--review.card-stack-surface::after {
-  content: none;
-}
-
-.home-desk-tool--review:not(:disabled):hover {
-  transform: translateY(-3px);
-}
-
-/* 덱 책장 -- BrandDeckCover supplies its own top cover-band (icon + label)
-   sized for a 16px-padded, 16px-radius parent (matches .shared-deck-card's
-   own convention) -- this tile only needs the value line below the cover,
-   no icon/label of its own. */
-.home-desk-tool--shared {
-  gap: 10px;
-  padding: 16px 16px 14px;
-  border-radius: 16px;
-  overflow: hidden;
-  transform: rotate(2deg);
-}
-
-.home-desk-tool--shared:not(:disabled):hover {
-  transform: rotate(2deg) translateY(-3px);
-}
-
 @media (max-width: 640px) {
   .library-card-stage {
     padding: 14px;
     border-radius: 14px;
   }
 
-  .home-desk-stage {
-    gap: 12px;
-  }
-
-  .home-desk-tools {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  .home-sticker-row {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 8px;
   }
 
@@ -1319,39 +1161,12 @@ button {
     align-items: stretch;
   }
 
-  .home-hero-card {
-    gap: 12px;
-    padding: 20px;
-  }
-
-  .home-hero-visual {
-    order: 2;
-    align-self: center;
-    margin: 0 auto;
-  }
-
   /* Tighter cap than the base clamp() -- keeps the hero PNG from crowding
-     the CTAs above it on a narrow phone viewport. */
+     other content on a narrow phone viewport (design-lab's own preview
+     still uses .shiori-book-scene at "hero" size). */
   .shiori-book-scene .shiori-asset--hero {
     width: clamp(110px, 34vw, 160px);
     height: clamp(110px, 34vw, 160px);
-  }
-
-  .landing-hero-title {
-    font-size: 20px;
-  }
-
-  .landing-hero-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  /* In a column-direction flex container, `flex-basis: 100%` resolves
-     against the main axis (height, not width), so this stacked the
-     button at ~2x height and pushed the sibling CTA off-screen. Reset
-     to auto so `align-items: stretch` alone gives it full width. */
-  .home-hero-primary-cta {
-    flex: 0 1 auto;
   }
 }
 
@@ -6563,14 +6378,6 @@ input.reading-vocab-item-checkbox {
   .danger-button {
     min-width: 0;
     min-height: 42px;
-  }
-
-  /* Opt out of the app-wide mobile `button { width: 100% }` rule above --
-     same pattern as .reading-vocab-filter-button -- so this header button
-     stays a natural-width pill instead of squeezing the section title. */
-  .home-recent-section-header .compact-button {
-    width: auto;
-    min-width: 0;
   }
 
   .show-results-toggle {
