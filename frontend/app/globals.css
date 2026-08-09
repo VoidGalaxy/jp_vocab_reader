@@ -2031,6 +2031,15 @@ select {
   padding: 8px 10px;
   color: var(--text);
   background: var(--sheet-bg);
+  /* Chromium sizes a <select> to fit its longest <option> text regardless
+     of `width: 100%` -- a long deck/shared-deck title selected in the 학습
+     덱 or 덱 picker forced the select (and the row/page around it) far past
+     the viewport (Phase 48 QA: 390px viewport -> 692px select). Ellipsis on
+     the closed control's own display text keeps it within its layout width;
+     the native open dropdown list is unaffected. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .empty {
@@ -2575,6 +2584,24 @@ select {
   color: var(--muted);
   font-size: 14px;
   font-weight: 700;
+}
+
+/* A subscribed shared deck's title (source_label) can be long enough to
+   wrap this row to several lines, pushing the "N / total" counter onto its
+   own line instead of staying paired on the right (Phase 48 QA). Same
+   min-width:0 + ellipsis truncation already used for
+   .study-options-summary-hint -- the counter matters more here than the
+   full title. */
+.study-card-header span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.study-card-header strong {
+  flex: 0 0 auto;
 }
 
 .study-card-header-recent span:first-child {
@@ -5724,7 +5751,13 @@ input.reading-vocab-item-checkbox {
   align-items: center;
   gap: 8px;
   padding-top: 14px;
-  border-top: 1px dashed var(--border);
+  /* Solid, not dashed -- .management-card + .management-card already uses
+     a dashed rule for the 덱 관리/고급/덱 공유 section breaks just above
+     and below this card; a second dashed line for this in-card sub-group
+     stacked three dashed rules within ~400px on mobile (Phase 48 QA). Solid
+     keeps this readable as "a smaller grouping inside 덱 관리", not another
+     section boundary. */
+  border-top: 1px solid var(--border);
 }
 
 .deck-danger-zone-label {

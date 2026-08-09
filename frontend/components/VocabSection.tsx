@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { AppEmptyState, BrandSectionBadge } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
@@ -231,6 +231,16 @@ export function VocabSection({
   // seen first, so they now live behind one shared "더보기" disclosure.
   const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
   const [isCustomTermManagerOpen, setIsCustomTermManagerOpen] = useState(false);
+  // 사용자 정의 용어 관리를 열어도 실제 목록/입력 폼은 덱 관리/고급/덱 공유
+  // 카드 아래(모바일에서 2000px+ 스크롤 밖)에 렌더링돼 아무 반응이 없는
+  // 것처럼 보였다 (Phase 48 QA). 더보기의 직접 진입 버튼이든 고급 카드 안의
+  // 기존 토글이든, 열리는 순간 실제 내용으로 스크롤해 준다.
+  const customTermSectionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (isManagementOpen && isCustomTermManagerOpen) {
+      customTermSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [isManagementOpen, isCustomTermManagerOpen]);
   const hasActiveFilter =
     searchText.trim() !== "" || statusFilter !== "all" || dueOnly;
   const [isBackupToolsOpen, setIsBackupToolsOpen] = useState(false);
@@ -342,6 +352,21 @@ export function VocabSection({
               onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
             >
               {isNewVocabFormOpen ? "단어 추가 닫기" : "+ 단어 직접 추가"}
+            </button>
+            {/* 기존 경로(더보기 -> 덱/공유 관리 -> 고급 -> 토글)는 3단계였고,
+                열어도 실제 목록은 화면 밖이라 반응이 없는 것처럼 보였다
+                (Phase 48 QA). 자주 쓰는 편집 기능이라 더보기에서 바로
+                진입시키고, 다른 관리 카드도 함께 열어 기존 경로와 상태를
+                맞춘 뒤 위 useEffect가 실제 내용으로 스크롤해 준다. */}
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={() => {
+                setIsManagementOpen(true);
+                setIsCustomTermManagerOpen(true);
+              }}
+            >
+              사용자 정의 용어 관리
             </button>
             <button
               type="button"
@@ -650,7 +675,7 @@ export function VocabSection({
       )}
 
       {isManagementOpen && isCustomTermManagerOpen ? (
-      <div className="custom-term-section">
+      <div className="custom-term-section" ref={customTermSectionRef}>
         <div className="result-heading compact-heading">
           <div>
             <h2>사용자 정의 용어</h2>
