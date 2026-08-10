@@ -696,8 +696,17 @@ export function AnalyzeSection({
           </label>
 
           {showAllResults ? (
-            <div className="table-wrap">
-              <table>
+            <div className="classify-ledger-wrap">
+              <table className="classify-ledger">
+                <colgroup>
+                  <col className="classify-ledger-col-surface" />
+                  <col className="classify-ledger-col-baseform" />
+                  <col className="classify-ledger-col-reading" />
+                  <col className="classify-ledger-col-pos" />
+                  <col className="classify-ledger-col-meaning" />
+                  <col className="classify-ledger-col-example" />
+                  <col className="classify-ledger-col-status" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>단어</th>
@@ -712,17 +721,17 @@ export function AnalyzeSection({
                 <tbody>
                   {tokens.map((token, index) => (
                     <tr key={`${token.base_form}-${token.reading}-${index}`}>
-                      <td>
+                      <td data-label="단어">
                         <div>{token.surface}</div>
                         <QualityBadge qualityTag={token.quality_tag} />
                       </td>
-                      <td>{token.base_form}</td>
-                      <td>{token.reading}</td>
-                      <td>{token.part_of_speech}</td>
-                      <td>
+                      <td data-label="기본형">{token.base_form}</td>
+                      <td data-label="읽기">{token.reading}</td>
+                      <td data-label="품사">{token.part_of_speech}</td>
+                      <td data-label="뜻">
                         <div>{getDisplayMeaning(token.meaning_ko)}</div>
                       </td>
-                      <td>
+                      <td data-label="예문">
                         <span className="example-text">
                           <HighlightedExample
                             sentence={token.example_sentence}
@@ -732,7 +741,7 @@ export function AnalyzeSection({
                           />
                         </span>
                       </td>
-                      <td>
+                      <td data-label="상태">
                         <StatusSelect
                           value={token.status}
                           label={`${token.surface} 상태`}

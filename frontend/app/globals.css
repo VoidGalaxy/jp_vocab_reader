@@ -297,10 +297,10 @@ html {
 body {
   margin: 0;
   /* Defensive safety net -- every scrollable/wide element in the app
-     (.table-wrap, .tab-nav, filter-chip rows, ...) already scrolls
-     internally, so the page itself should never need to scroll
-     horizontally. Catches anything that slips through without changing
-     any layout that wasn't already overflowing. */
+     (.tab-nav, filter-chip rows, ...) already scrolls internally, so the
+     page itself should never need to scroll horizontally. Catches
+     anything that slips through without changing any layout that wasn't
+     already overflowing. */
   overflow-x: hidden;
   background-color: var(--page-bg);
   /* Fourth pass: the dot-grid alone read as faint noise rather than paper,
@@ -1901,11 +1901,6 @@ button:focus-visible {
   font-weight: 700;
 }
 
-td .term-badge {
-  margin-top: 4px;
-  margin-bottom: 0;
-}
-
 .classify-details {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2037,48 +2032,83 @@ td .term-badge {
   font-size: 14px;
 }
 
-.table-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel-bg);
-  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
+/* classify-ledger -- AnalyzeSection's opt-in "전체 결과를 목록으로 보기"
+   result list (the only <table> left in the app). Used to be a bare table
+   in a bordered/shadowed .table-wrap box with a forced 1520px min-width
+   that always required horizontal scroll, plus a sticky first column on
+   mobile -- read as a legacy admin data table. Still a real <table> (native
+   header/cell semantics matter for a 7-column list), but table-layout:
+   fixed + <colgroup> widths let it wrap to its container instead of
+   forcing scroll, and a receipt-style dashed top rule + dashed row
+   dividers replace the boxed border/shadow chrome. See the max-width:640px
+   block below for the stacked-row mobile variant. */
+.classify-ledger-wrap {
+  border-top: 1px dashed var(--border-strong);
+  padding-top: 10px;
 }
 
-table {
+.classify-ledger {
   width: 100%;
-  min-width: 1520px;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
-.custom-term-table table {
-  min-width: 980px;
+.classify-ledger-col-surface {
+  width: 15%;
 }
 
-th,
-td {
-  border-bottom: 1px solid var(--border);
-  padding: 11px 12px;
+.classify-ledger-col-baseform {
+  width: 12%;
+}
+
+.classify-ledger-col-reading {
+  width: 10%;
+}
+
+.classify-ledger-col-pos {
+  width: 10%;
+}
+
+.classify-ledger-col-meaning {
+  width: 19%;
+}
+
+.classify-ledger-col-example {
+  width: 22%;
+}
+
+.classify-ledger-col-status {
+  width: 140px;
+}
+
+.classify-ledger th,
+.classify-ledger td {
+  padding: 10px 8px;
   text-align: left;
   vertical-align: top;
-}
-
-th {
-  color: var(--text-secondary);
-  background: var(--soft-bg);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-td {
-  color: var(--text);
-  font-size: 14px;
+  border-bottom: 1px dashed var(--border);
   overflow-wrap: anywhere;
 }
 
-tr:last-child td {
+.classify-ledger th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+
+.classify-ledger td {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.classify-ledger tr:last-child td {
   border-bottom: 0;
+}
+
+.classify-ledger td .term-badge {
+  margin-top: 4px;
+  margin-bottom: 0;
 }
 
 select {
@@ -7003,39 +7033,62 @@ input.reading-vocab-sticker-toggle:checked {
     grid-column: 1 / -1;
   }
 
-  .table-wrap {
-    margin: 0 -2px;
-  }
-
-  table {
-    min-width: 920px;
-  }
-
   .custom-term-table table {
     min-width: 760px;
   }
 
-  th,
-  td {
-    padding: 10px;
-    font-size: 13px;
+  /* classify-ledger below 640px -- the fixed-column table row no longer
+     has room for 7 columns, so each row becomes a stacked label/value
+     list instead (a small sticky-note ledger entry, not a scrolling
+     table). The header row stays in the DOM for screen readers but is
+     visually hidden; .classify-ledger td::before prints the same label
+     text inline above each value so the row stays self-describing without
+     it. No horizontal scroll at any width down to 320px. */
+  .classify-ledger thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
-  td:first-child,
-  th:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    background: var(--panel-bg);
-    box-shadow: 1px 0 0 var(--border);
+  .classify-ledger,
+  .classify-ledger tbody,
+  .classify-ledger tr,
+  .classify-ledger td {
+    display: block;
+    width: 100%;
   }
 
-  th:first-child {
-    background: var(--soft-bg);
+  .classify-ledger tr {
+    padding: 10px 2px;
+    border-bottom: 1px dashed var(--border);
+  }
+
+  .classify-ledger tr:last-child {
+    border-bottom: none;
+  }
+
+  .classify-ledger td {
+    padding: 3px 2px;
+    border-bottom: none;
+  }
+
+  .classify-ledger td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 2px;
   }
 
   .example-text {
-    max-width: 220px;
+    max-width: none;
     -webkit-line-clamp: 3;
   }
 
