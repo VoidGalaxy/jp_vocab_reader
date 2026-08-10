@@ -90,8 +90,18 @@ pixel specs).
   small colored stamp-dot per count instead of a bar-chart-style top
   border. The quick-start tiles and stats-panel disclosure were already
   well de-boxed pre-Phase-58 and are left mostly as-is.
-- **Shared Deck** (not yet redesigned) — target: deck shelf/booklet/sticker-
-  pack treatment.
+- **Shared Deck** (Phase 59) — the deck grid reads as a shelf of recommended
+  notes/sticker packs (the existing `BrandDeckCover` book-cover treatment was
+  already strong and is reused as-is); the hero and card grid gained washi-tape
+  and pin accents consistent with the rest of the app. The open deck panel
+  (`.shared-deck-detail`) was split off from the card styling into its own
+  "opened notebook" look — ruled-paper background, asymmetric corner radius,
+  taped top edge — instead of sharing the closed-book spine treatment with the
+  grid cards. Unpublished/JLPT-level badges got a slight sticker-style tilt.
+  Owner/subscriber/newcomer button conditions, published/unpublished/
+  imported/subscribed logic, and the subscribed-mode word-list filter (which
+  already reuses Phase 57's Vocab-tab underline-tab styling) were left
+  untouched.
 
 ## Forbidden patterns
 
@@ -121,6 +131,7 @@ Reading + Inspector (reader page, start card, word inspector, save tray).
 Phase 56 covered the reading candidate word list (sticker tray). Phase 57
 covered the Vocab tab (hero/filters, word list, management panels). Phase 58
 covered the Study tab (hero, rating stamps, answer reveal, completion
-receipt). Shared Deck still carries the previous ("study desk") visual
-language and is next in the recommended follow-up order (see the brief's
-"Implementation order recommendation").
+receipt). Phase 59 covered the Shared Deck tab (hero, deck grid, and the
+opened-notebook detail panel). All primary tabs now carry the casual
+sticker reader visual language; see the brief's "Implementation order
+recommendation" for any further polish passes.

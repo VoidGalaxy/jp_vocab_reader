@@ -5023,9 +5023,28 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 12px;
 }
 
+/* Casual Sticker Reader (Phase 59) -- position:relative so .shared-hero-tape
+   (a real element, same recipe as the other tabs' hero tape -- this card
+   already spends both ::before/::after on .card-stack-surface) can sit half
+   outside the card's top edge. */
 .shared-hero-card {
-  padding: 14px 18px;
+  position: relative;
+  padding: 20px 18px 14px;
   border-top: 2px solid var(--screen-accent, var(--accent));
+}
+
+.shared-hero-tape {
+  position: absolute;
+  top: -6px;
+  left: 26px;
+  z-index: 1;
+  width: 46px;
+  height: 16px;
+  border: 1px solid rgba(217, 122, 74, 0.4);
+  background: rgba(217, 122, 74, 0.32);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
+  transform: rotate(-4deg);
+  pointer-events: none;
 }
 
 /* One "shelf" of cards under a small heading -- a display-only grouping of
@@ -5101,8 +5120,7 @@ input.reading-vocab-sticker-toggle:checked {
   pointer-events: none;
 }
 
-.shared-deck-card,
-.shared-deck-detail {
+.shared-deck-card {
   display: grid;
   gap: 10px;
   align-content: start;
@@ -5119,6 +5137,54 @@ input.reading-vocab-sticker-toggle:checked {
   transition:
     box-shadow var(--motion-fast) var(--ease-soft),
     transform var(--motion-fast) var(--ease-soft);
+}
+
+/* Casual Sticker Reader (Phase 59) -- the detail panel is a notebook page
+   opened up to read, not a shelved book cover, so it drops the card grid's
+   spine-gutter inset shadow (that cue specifically means "closed") in favor
+   of the same warm ruled-paper fill and washi-tape corner the reader page
+   and other tabs' detail views use. */
+.shared-deck-detail {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  border: 1px solid var(--paper-border);
+  border-radius: 4px 20px 20px 20px;
+  padding: 26px 20px 20px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0,
+      transparent 37px,
+      rgba(110, 91, 47, 0.05) 37px,
+      rgba(110, 91, 47, 0.05) 38px
+    ),
+    var(--paper-bg);
+  box-shadow: 0 16px 36px var(--paper-shadow);
+}
+
+.shared-deck-detail-tape {
+  position: absolute;
+  top: -6px;
+  left: 30px;
+  z-index: 1;
+  width: 46px;
+  height: 16px;
+  border: 1px solid rgba(217, 122, 74, 0.4);
+  background: rgba(217, 122, 74, 0.32);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
+  transform: rotate(-4deg);
+  pointer-events: none;
+}
+
+/* Higher specificity than the mobile ".shared-deck-section .shared-deck-detail
+   > *" reset further down (width: 100%, meant for the panel's real content
+   children) -- the tape is a direct child of .shared-deck-detail too, so
+   without this it silently stretched to the full card width below 640px,
+   pushing the page 1px past the viewport. */
+.shared-deck-section .shared-deck-detail > .shared-deck-detail-tape {
+  width: 46px;
 }
 
 .shared-deck-card:hover {
@@ -5277,6 +5343,23 @@ input.reading-vocab-sticker-toggle:checked {
   box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.12);
 }
 
+/* Small pin marker (same round-dot language as Home/Vocab's sticky-note
+   pins) on top of the open card's cover -- ".card-stack-surface" (already
+   applied to every card) guarantees position:relative here, so this just
+   needs its own absolute placement. */
+.shared-deck-pin {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  z-index: 3;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.25);
+  transform: translateX(-50%);
+}
+
 .shared-deck-card h3,
 .shared-deck-detail h3 {
   margin: 0 0 4px;
@@ -5334,6 +5417,7 @@ input.reading-vocab-sticker-toggle:checked {
   color: var(--primary-dark);
   background: var(--soft-bg);
   white-space: nowrap;
+  transform: rotate(-2deg);
 }
 
 /* A warm, single-hue ramp (light -> deep terracotta) reads as a difficulty
@@ -5409,9 +5493,14 @@ input.reading-vocab-sticker-toggle:checked {
   white-space: nowrap;
 }
 
+/* A slight tilt (opposite direction from .shared-deck-imported-badge's own
+   -2deg) reads as a small quiet stamp too, not a plain admin status pill --
+   still deliberately calm-toned (--muted on --soft-bg), never the danger
+   color, since an unpublished deck is a normal state change. */
 .shared-deck-status-badge-unpublished {
   background: var(--soft-bg);
   color: var(--muted);
+  transform: rotate(2deg);
 }
 
 .shared-deck-description {
@@ -6389,6 +6478,13 @@ input.reading-vocab-sticker-toggle:checked {
   .custom-term-section,
   .panel-card {
     padding: 14px;
+  }
+
+  /* Top padding stays a touch taller than the shared 14px above so
+     .shared-deck-detail-tape (added after this rule, so it wins) still has
+     clearance above the heading row on mobile. */
+  .shared-deck-detail {
+    padding-top: 20px;
   }
 
   .reading-hero-title {

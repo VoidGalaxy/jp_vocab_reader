@@ -295,6 +295,7 @@ export function SharedDeckSection({
             : "shared-deck-card card-stack-surface"
         }
       >
+        {isSelected ? <span className="shared-deck-pin" aria-hidden="true" /> : null}
         <BrandDeckCover {...getDeckCoverProps(deck, level)} />
         <div>
           <div className="shared-deck-title-row">
@@ -430,6 +431,7 @@ export function SharedDeckSection({
   return (
     <section className="tab-panel shared-deck-section" aria-live="polite">
       <section className="panel-card hero-card shared-hero-card card-stack-surface">
+        <span className="shared-hero-tape" aria-hidden="true" />
         <div className="panel-card-header">
           <h2 className="panel-card-title">
             <ShioriMark className="shared-deck-title-mark" />
@@ -588,6 +590,7 @@ export function SharedDeckSection({
 
       {selectedDeck ? (
         <section className="shared-deck-detail app-slide-up" key={selectedDeck.id}>
+          <span className="shared-deck-detail-tape" aria-hidden="true" />
           <div className="result-heading compact-heading">
             <div>
               <div className="shared-deck-title-row">
