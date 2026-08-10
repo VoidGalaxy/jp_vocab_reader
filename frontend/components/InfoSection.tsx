@@ -1,4 +1,5 @@
 import { AppEmptyState, BrandSectionBadge } from "./BrandElements";
+import { ShioriStamp } from "./Shiori";
 import { getDisplayMeaning } from "./shared";
 import {
   BookIcon,
@@ -27,8 +28,11 @@ type StudyLogPageProps = {
 // ---------------------------------------------------------------------------
 function StudyLogHero() {
   return (
-    <div className="reading-hero">
-      <h2 className="reading-hero-title">학습 통계</h2>
+    <div className="reading-hero study-log-hero">
+      <div className="study-log-hero-row">
+        <h2 className="reading-hero-title">학습 통계</h2>
+        <ShioriStamp variant="success" label="학습 기록" />
+      </div>
       <p className="reading-hero-subtitle">오늘까지의 학습 현황을 한눈에 확인하세요.</p>
     </div>
   );
@@ -293,7 +297,7 @@ export function StudyLogPage({
       ) : null}
 
       <div className="info-panel">
-        <section className="panel-card note-card info-panel-card">
+        <section className="panel-card info-panel-card study-log-policy-card paper-corner">
           <div className="panel-card-header">
             <h2 className="panel-card-title">
               <BrandSectionBadge icon={ShieldIcon} />

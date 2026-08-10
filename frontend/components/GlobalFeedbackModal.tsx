@@ -119,6 +119,7 @@ export function GlobalFeedbackModal({
         aria-label="베타 피드백 보내기"
         onClick={(event) => event.stopPropagation()}
       >
+        <span className="feedback-modal-tape" aria-hidden="true" />
         <div className="feedback-modal-header">
           <ShioriCharacter variant="default" className="feedback-modal-companion" />
           <div>

@@ -38,6 +38,7 @@ export function AppShell({
     <div className="app-shell">
       <aside className="library-rail" aria-label="일본어 단어장 주요 메뉴">
         <span className="library-rail-brand" aria-hidden="true">
+          <span className="library-rail-brand-tape" />
           <span className="library-rail-brand-icon">
             <BookIcon />
           </span>
@@ -56,6 +57,9 @@ export function AppShell({
               aria-current={item.isActive ? "page" : undefined}
               onClick={item.onClick}
             >
+              {item.isActive ? (
+                <span className="library-rail-pin" aria-hidden="true" />
+              ) : null}
               <item.icon className="library-rail-icon" />
               <span>{item.label}</span>
             </button>
@@ -86,6 +90,9 @@ export function AppShell({
             aria-current={item.isActive ? "page" : undefined}
             onClick={item.onClick}
           >
+            {item.isActive ? (
+              <span className="app-bottom-nav-pin" aria-hidden="true" />
+            ) : null}
             <item.icon className="app-bottom-nav-icon" />
             <span>{item.label}</span>
           </button>

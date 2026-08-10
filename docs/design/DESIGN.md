@@ -48,9 +48,19 @@ pixel specs).
   row of small sticker shortcuts (`.home-sticker-chip`) for 단어장/복습/덱 —
   qualitative subtitles, not counts. No separate "최근 담은 단어" dashboard
   section on Home; that detail lives on the 단어장 tab.
-- **App Shell** — rail/bottom-nav structure, tab routing, and account/feedback
-  slots are unchanged in Phase 54 (see "Not yet redesigned" below); only
-  Home's own content area follows the new direction so far.
+- **App Shell** (Phase 54 structure; Phase 60 finish) — rail/bottom-nav
+  structure, tab routing, and account/feedback slots were left unstyled in
+  Phase 54 so only Home's content area followed the new direction at the
+  time. Phase 60 finished the shell itself: the desktop library rail's brand
+  mark is taped down (`.library-rail-brand-tape`), and the active nav link
+  reads as a stuck-on bookmark tab (asymmetric corner, slight tilt, a small
+  pin dot) instead of a flat filled pill — same strong solid-primary fill,
+  so the active state is still unambiguous. The mobile bottom nav's active
+  tab picks up a matching pin dot and a rounded-top (not full-pill) shape
+  without changing its touch-target size. The topbar's feedback button is
+  now a small paper tag (`.app-topbar-feedback-button`) instead of a plain
+  ghost button. Tab routing, `activeTab` semantics, and the account
+  menu/login flow are untouched.
 - **Reading + Inspector** (Phase 55) — notebook-page reader (`.reader-paper`,
   `.reader-start-card`) with washi-tape corner accents, a pin-dotted
   sticky-note word inspector (`.bookmark-inspector`, tilted on desktop,
@@ -88,8 +98,10 @@ pixel specs).
   The saved-example callout is a taped note, not a colored-border callout.
   The completion card's stat row is a perforated "receipt" line with a
   small colored stamp-dot per count instead of a bar-chart-style top
-  border. The quick-start tiles and stats-panel disclosure were already
-  well de-boxed pre-Phase-58 and are left mostly as-is.
+  border. The quick-start tiles and stats-panel disclosure wrapper were
+  already well de-boxed pre-Phase-58 and were left as-is; `StatsPanel`'s own
+  internal number grid was still a 4-column grid of bordered mini-tiles at
+  the time and was addressed later, in Phase 60 (see below).
 - **Shared Deck** (Phase 59) — the deck grid reads as a shelf of recommended
   notes/sticker packs (the existing `BrandDeckCover` book-cover treatment was
   already strong and is reused as-is); the hero and card grid gained washi-tape
@@ -102,6 +114,23 @@ pixel specs).
   imported/subscribed logic, and the subscribed-mode word-list filter (which
   already reuses Phase 57's Vocab-tab underline-tab styling) were left
   untouched.
+- **Stats/Info + StatsPanel + Feedback** (Phase 60) — the 통계 tab's hero
+  pairs its title with a small `ShioriStamp` ("학습 기록" postmark), matching
+  the "오늘의 스탬프 로그" framing; the 저장 정책 card dropped the app-wide
+  `.note-card` colored-border-left accent (an admin-callout pattern) for a
+  plain `.panel-card` plus one corner fold, and the deck/word log rows
+  picked up the same asymmetric "index card" radius used elsewhere. Deeper
+  in `StatsPanel` (surfaced inside Study's "학습 현황 자세히 보기"
+  disclosure), the old 4-column grid of 7 bordered `.stat-card` mini-tiles
+  is now a wrapped row of quiet label/value pills, and the per-deck
+  `.deck-stat-row` boxes became a plain ledger list with a dashed divider
+  between rows instead of each deck getting its own bordered/soft-bg card.
+  `GlobalFeedbackModal` now reads as a small taped-down memo
+  (`.feedback-modal-tape`, asymmetric corner) instead of a centered dialog
+  box; its category `<select>` is an underline field (same recipe as the
+  reading/vocab/study tabs' own pickers) and its textarea sits on warm note
+  paper instead of the app-wide plain sheet background. Submit/cancel
+  enablement, validation, and payload fields are unchanged.
 
 ## Forbidden patterns
 
@@ -126,12 +155,16 @@ pixel specs).
 
 ## Status
 
-Phase 54 covered the design contract plus App Shell/Home. Phase 55 covered
-Reading + Inspector (reader page, start card, word inspector, save tray).
-Phase 56 covered the reading candidate word list (sticker tray). Phase 57
-covered the Vocab tab (hero/filters, word list, management panels). Phase 58
-covered the Study tab (hero, rating stamps, answer reveal, completion
-receipt). Phase 59 covered the Shared Deck tab (hero, deck grid, and the
-opened-notebook detail panel). All primary tabs now carry the casual
-sticker reader visual language; see the brief's "Implementation order
-recommendation" for any further polish passes.
+Phase 54 covered the design contract plus App Shell/Home (App Shell content
+only -- rail/bottom-nav/topbar chrome stayed unstyled at the time). Phase 55
+covered Reading + Inspector (reader page, start card, word inspector, save
+tray). Phase 56 covered the reading candidate word list (sticker tray).
+Phase 57 covered the Vocab tab (hero/filters, word list, management
+panels). Phase 58 covered the Study tab (hero, rating stamps, answer
+reveal, completion receipt). Phase 59 covered the Shared Deck tab (hero,
+deck grid, and the opened-notebook detail panel). Phase 60 finished the App
+Shell chrome itself (library rail/bottom-nav active states, topbar feedback
+button) and covered the Stats/Info tab, the shared `StatsPanel` component,
+and the `GlobalFeedbackModal`. All primary tabs and the app shell now carry
+the casual sticker reader visual language; see the brief's "Implementation
+order recommendation" for any further polish passes.
