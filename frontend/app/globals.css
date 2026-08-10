@@ -4736,6 +4736,19 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 8px;
 }
 
+/* Scoped to the Vocab tab's own use of .records-word-row (the 기록 tab's
+   log rows keep their base look) -- matches .vocabulary-index-row's
+   asymmetric "index card" radius/shadow so 사용자 정의 용어 reads as the
+   same card family as the main word list above it. */
+.records-word-row.custom-term-card {
+  border-radius: 10px 10px 10px 3px;
+  box-shadow: none;
+}
+
+.records-word-row.custom-term-card:hover {
+  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.1);
+}
+
 .custom-term-card-description {
   flex: 1 1 100%;
   color: var(--muted);
@@ -4792,6 +4805,15 @@ input.reading-vocab-sticker-toggle:checked {
 
 .management-card .deck-share-panel {
   grid-template-columns: 1fr;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Same de-boxing as .deck-share-panel above -- .management-card already
+   sits on the shared .vocab-management-panel surface, so 덱 만들기's own
+   card border was the one remaining boxed-form look inside "관리 쪽지". */
+.management-card .deck-create {
   border: 0;
   padding: 0;
   background: transparent;
@@ -5427,30 +5449,55 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 8px;
 }
 
-/* V3 final polish: bare <select> elements fall back to native browser
-   chrome (no border-radius/border rule targets `select` app-wide), so the
-   덱/정렬 selects looked like plain OS form controls next to the already
-   pill-styled search input. Matching their border/radius/background here
-   makes the whole row read as one "카드함 필터" tab group instead of two
-   different control styles side by side. */
+/* Casual Sticker Reader (Phase 57) -- was a bordered box matching the
+   search pill (V3 note above); now an underline-only field, same family as
+   the reading tab's own deck picker (.reading-deck-picker select) and the
+   candidate tray's filter/quick-select tabs, so 덱/정렬 read as labels
+   sitting on the notebook page rather than a boxed toolbar control. */
 .vocab-filter-group select {
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 6px 16px 6px 2px;
   color: var(--text);
-  background: var(--panel-bg);
+  background: transparent;
 }
 
-/* Vocab tab hero -- "내 학습 라이브러리" framing above the search/filter
-   toolbar, reusing the same warm-paper card look and hero-actions layout
-   the home dashboard and reading tab already use. */
+.vocab-filter-group select:focus {
+  border-bottom-color: var(--screen-accent, var(--primary));
+  outline: none;
+}
+
+/* Casual Sticker Reader (Phase 57) -- "내 단어 스티커 노트" framing. Kept
+   light/cream (not the dark notebook-cover green Home's hero uses -- this
+   screen carries a lot of live stats/controls, and white text on the dark
+   cover would fight them for contrast), but a corner washi-tape strip
+   (.vocab-hero-tape, a real element -- this card already spends both
+   ::before/::after on .card-stack-surface's "stack of pages" ghost layers)
+   ties it to the same material language as the reader page / start card. */
 .vocab-hero-card {
+  position: relative;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 16px 16px 12px;
   border-color: var(--paper-border);
   border-top: 2px solid var(--screen-accent, var(--accent));
   background: var(--paper-bg);
   box-shadow: 0 14px 32px var(--paper-shadow);
+  overflow: hidden;
+}
+
+.vocab-hero-tape {
+  position: absolute;
+  top: -6px;
+  left: 28px;
+  z-index: 1;
+  width: 46px;
+  height: 16px;
+  border: 1px solid rgba(217, 122, 74, 0.4);
+  background: rgba(217, 122, 74, 0.32);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
+  transform: rotate(-4deg);
+  pointer-events: none;
 }
 
 .vocab-hero-deck-label {
@@ -5527,41 +5574,59 @@ input.reading-vocab-sticker-toggle:checked {
   pointer-events: none;
 }
 
+/* Underline field, same family as the deck/sort selects above -- was a
+   bordered pill, the one remaining boxed control in this toolbar. */
 .vocab-search-input {
-  min-height: 42px;
-  padding-left: 32px;
+  min-height: 34px;
+  padding: 4px 4px 6px 28px;
+  border: none;
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: transparent;
+}
+
+.vocab-search-input:focus {
+  border-bottom-color: var(--screen-accent, var(--primary));
+  outline: none;
 }
 
 .vocab-status-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px 14px;
 }
 
+/* Casual Sticker Reader (Phase 57) -- underline text-tabs (same recipe as
+   the reading tab's candidate-tray filters), not filled pill buttons, so
+   "필터" reads as small labels on the notebook page rather than a second
+   toolbar stacked under the deck/search/sort row. */
 .vocab-filter-chip {
-  padding: 4px 11px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--soft-bg);
+  min-width: 0;
+  padding: 3px 1px 4px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .vocab-filter-chip:hover {
-  filter: brightness(0.97);
+  filter: none;
+  color: var(--text);
 }
 
 .vocab-filter-chip-active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
+  border-bottom-color: var(--primary);
+  background: transparent;
+  color: var(--text);
 }
 
 .vocab-filter-known.vocab-filter-chip-active {
-  border-color: #bfe3cc;
-  background: #eef9f1;
+  border-bottom-color: #1b6b3a;
+  background: transparent;
   color: #1b6b3a;
 }
 
@@ -5571,20 +5636,20 @@ input.reading-vocab-sticker-toggle:checked {
    to carry -- one status color language app-wide, and "모르는 단어" no
    longer reads as an error/warning chip here either. */
 .vocab-filter-uncertain.vocab-filter-chip-active {
-  border-color: #d7cce9;
-  background: #f4f1fa;
+  border-bottom-color: #6f5f96;
+  background: transparent;
   color: #6f5f96;
 }
 
 .vocab-filter-unknown.vocab-filter-chip-active {
-  border-color: #e8c7ae;
-  background: #fbf1e9;
+  border-bottom-color: #96603f;
+  background: transparent;
   color: #96603f;
 }
 
 .vocab-filter-unclassified.vocab-filter-chip-active {
-  border-color: #ddd0a8;
-  background: #ece4d0;
+  border-bottom-color: #6b5f3f;
+  background: transparent;
   color: #6b5f3f;
 }
 
@@ -5618,59 +5683,38 @@ input.reading-vocab-sticker-toggle:checked {
    the resting shadow dropped; a row only lifts to the fuller border/shadow
    on :hover or once expanded (.vocab-row-expanded below), so elevation
    reads as "this one's active", not a default every row carries. */
+/* Casual Sticker Reader (Phase 57) -- the old left-edge colored stripe
+   (::before) is gone: it duplicated the status the bookmark-flag select
+   already shows in the same row, and was the one remaining "side-tab
+   accent" pattern in this list. Left padding matches the right now that
+   nothing reserves space for a stripe. .paper-corner (already applied in
+   JSX) supplies the row's one physical cue -- a small folded page corner --
+   so 20-50 rows read as index cards in a drawer, not a stack of stripes. */
 .vocabulary-index-row {
   position: relative;
   overflow: hidden;
-  padding: 10px 14px 10px 20px;
+  padding: 10px 14px;
   border: 1px solid var(--paper-border);
-  border-radius: 10px;
+  border-radius: 10px 10px 10px 3px;
   background: var(--panel-bg);
   box-shadow: none;
   transition:
     background var(--motion-fast) var(--ease-soft),
     border-color var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft);
+    box-shadow var(--motion-fast) var(--ease-soft),
+    transform var(--motion-fast) var(--ease-soft);
 }
 
 .vocabulary-index-row:hover {
   border-color: var(--border);
   background: var(--panel-bg);
-  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.07);
+  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.1);
+  transform: translateY(-1px);
 }
 
 .vocab-row-expanded {
   border-color: var(--border-strong);
   box-shadow: 0 5px 14px rgba(120, 98, 40, 0.1);
-}
-
-/* Small colored index-card tab down the row's left edge, keyed to the
-   word's saved status -- the same "file card drawer" cue a physical index
-   card box uses, so status reads at a glance without opening the row. */
-.vocabulary-index-row::before {
-  content: "";
-  position: absolute;
-  top: 9px;
-  bottom: 9px;
-  left: 6px;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--status-unclassified-line);
-  /* Softened -- a full-strength status color down every row (most rows
-     are "모르는 단어") read as a harsh red rail down the whole list. Still
-     legible as a status cue, just quieter. */
-  opacity: 0.7;
-}
-
-.vocab-row-status-known::before {
-  background: var(--status-known-fg);
-}
-
-.vocab-row-status-uncertain::before {
-  background: var(--status-uncertain-fg);
-}
-
-.vocab-row-status-unknown::before {
-  background: var(--status-unknown-fg);
 }
 
 .vocab-row-main {
@@ -5854,13 +5898,34 @@ input.reading-vocab-sticker-toggle:checked {
 /* Note-card treatment: an accent rule instead of the study card's fuller
    callout box, and clamped to two lines so a long saved sentence can't
    make the library card tower over its neighbors. */
+/* Casual Sticker Reader (Phase 57) -- a small taped-on strip (::before)
+   instead of a colored border-left, same recipe as the reading tab's word
+   inspector (.token-sheet-meaning-block/.bookmark-inspector
+   .context-example-block), so the saved example reads as a note taped
+   inside the expanded row rather than a callout box. */
 .vocab-item-example {
+  position: relative;
   display: grid;
   gap: 4px;
-  border-left: 3px solid #e8c25c;
-  border-radius: 6px;
-  padding: 6px 10px;
+  margin-top: 4px;
+  border: 1px solid #ecdfb8;
+  border-radius: 4px 10px 10px 10px;
+  padding: 10px 10px 6px;
   background: #fdf9ee;
+}
+
+.vocab-item-example::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 12px;
+  z-index: 1;
+  width: 32px;
+  height: 11px;
+  border: 1px solid rgba(232, 194, 92, 0.6);
+  background: rgba(232, 194, 92, 0.45);
+  transform: rotate(-3deg);
+  pointer-events: none;
 }
 
 .vocab-item-example-label {
@@ -5921,11 +5986,33 @@ input.reading-vocab-sticker-toggle:checked {
    border/background of its own (see below), just a dashed rule between
    sections. */
 .vocab-management-panel {
+  position: relative;
   display: grid;
   gap: 4px;
-  padding: 14px 16px;
-  border-radius: 14px;
+  padding: 20px 16px 14px;
+  border-radius: 4px 14px 14px 14px;
   background: var(--surface-stage);
+}
+
+/* A small pinned-note tab instead of a card border -- ties this "관리
+   쪽지" (deck management/share/custom terms) surface to the same
+   washi-tape material as the reader page and Home's sticky note, so it
+   reads as a note tucked at the back of the notebook, not a settings
+   panel. */
+.vocab-management-panel::before,
+.custom-term-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 22px;
+  z-index: 1;
+  width: 44px;
+  height: 15px;
+  border: 1px solid rgba(217, 122, 74, 0.4);
+  background: rgba(217, 122, 74, 0.32);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
+  transform: rotate(-4deg) translateY(-4px);
+  pointer-events: none;
 }
 
 .management-card {
@@ -5970,12 +6057,22 @@ input.reading-vocab-sticker-toggle:checked {
   border-top: 1px solid var(--border);
 }
 
+/* A small torn warning tag instead of plain caption text -- stays casual
+   (this is still a note-tray label, not an admin-tool severity banner)
+   while still reading as distinctly "careful here" via color and shape. */
 .deck-danger-zone-label {
-  flex: 0 0 100%;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 2px 10px 2px 8px;
+  border: 1px solid rgba(193, 68, 59, 0.35);
+  border-radius: 3px 10px 10px 3px;
+  background: rgba(193, 68, 59, 0.08);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.02em;
+  transform: rotate(-1.5deg);
 }
 
 /* Softened to the same soft-surface note treatment as
@@ -5983,10 +6080,11 @@ input.reading-vocab-sticker-toggle:checked {
    card -- keeps 사용자 정의 용어 from reading as a fourth stray admin box
    once 관리 is already open above it. */
 .custom-term-section {
+  position: relative;
   display: grid;
   gap: 12px;
-  padding: 14px 16px;
-  border-radius: 14px;
+  padding: 20px 16px 14px;
+  border-radius: 4px 14px 14px 14px;
   background: var(--surface-stage);
 }
 
@@ -6337,13 +6435,12 @@ input.reading-vocab-sticker-toggle:checked {
   }
 
   /* Same app-wide mobile `button { width: 100% }` touch-target rule as the
-     reading tab's filter chips -- opt these small status filter chips back
-     out to their natural pill width so they wrap side-by-side. */
+     reading tab's filter tabs -- opt these small status filter tabs back
+     out to their natural text width so they wrap side-by-side. */
   .vocab-status-filters .vocab-filter-chip {
     width: auto;
     min-width: 0;
     min-height: 34px;
-    padding: 7px 12px;
   }
 
   .management-actions {

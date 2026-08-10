@@ -66,8 +66,20 @@ pixel specs).
   spacer) on already-known words so "why can't I add this" stays visible.
   Search/filter/quick-select are now underline text-tabs, not bordered pill
   buttons, to read as labels on the tray rather than a toolbar.
-- **Vocab** (not yet redesigned) — target: sticker notebook/grid, not a
-  list/admin table.
+- **Vocab** (Phase 57) — hero/filter toolbar match the reader's underline
+  text-tabs and washi-tape corner (`.vocab-hero-tape`); the word-list row's
+  old left-edge status stripe is gone (the bookmark-flag status select
+  already shows it) and rows use the same asymmetric "index card" radius as
+  the candidate tray; the expanded row's saved-example block is a taped
+  note, not a colored-border callout. Deck management/share/custom-term
+  panels (already de-boxed onto one shared surface pre-Phase-57) now carry
+  a pinned-note tape tab and a small torn "위험 구역" warning tag instead of
+  plain caption text. List stays a vertical, non-tilted list (not a
+  flex-wrap tray like the reading candidate list) -- an Operate screen with
+  20-50 interactive rows needs to stay scannable, and per-row decoration is
+  deliberately minimal for the same reason.
+- **Study** (not yet redesigned) — target: review card stack, soft sticker
+  rating buttons.
 - **Study** (not yet redesigned) — target: review card stack, soft sticker
   rating buttons.
 - **Shared Deck** (not yet redesigned) — target: deck shelf/booklet/sticker-
@@ -98,7 +110,8 @@ pixel specs).
 
 Phase 54 covered the design contract plus App Shell/Home. Phase 55 covered
 Reading + Inspector (reader page, start card, word inspector, save tray).
-Phase 56 covered the reading candidate word list (sticker tray). Vocab,
-Study, and Shared Deck still carry the previous ("study desk") visual
+Phase 56 covered the reading candidate word list (sticker tray). Phase 57
+covered the Vocab tab (hero/filters, word list, management panels). Study
+and Shared Deck still carry the previous ("study desk") visual
 language and are the recommended order for follow-up phases (see the brief's
 "Implementation order recommendation").

@@ -279,6 +279,7 @@ export function VocabSection({
   return (
     <section className="tab-panel vocab-panel" aria-live="polite">
       <section className="panel-card hero-card vocab-hero-card vocab-hero-compact card-stack-surface">
+        <span className="vocab-hero-tape" aria-hidden="true" />
         <div className="panel-card-header">
           <h2 className="panel-card-title">내 단어장</h2>
           <p className="panel-card-description">
@@ -874,7 +875,7 @@ export function VocabSection({
 
             return (
               <div
-                className={`vocabulary-index-row paper-corner vocab-row-status-${item.status}${isExpanded ? " vocab-row-expanded" : ""}`}
+                className={`vocabulary-index-row paper-corner${isExpanded ? " vocab-row-expanded" : ""}`}
                 key={item.id}
               >
                 <div className="vocab-row-main">
