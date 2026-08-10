@@ -78,10 +78,18 @@ pixel specs).
   flex-wrap tray like the reading candidate list) -- an Operate screen with
   20-50 interactive rows needs to stay scannable, and per-row decoration is
   deliberately minimal for the same reason.
-- **Study** (not yet redesigned) — target: review card stack, soft sticker
-  rating buttons.
-- **Study** (not yet redesigned) — target: review card stack, soft sticker
-  rating buttons.
+- **Study** (Phase 58) — hero card gets the washi-tape corner and the
+  deck/mode selects go underline (matching Reading/Vocab). The 4-way rating
+  grid is stamp-shaped (asymmetric per-corner radius, alternating tilt,
+  permanent inner ring) instead of 4 plain colored buttons -- colors, icons,
+  and labels are unchanged, only the chrome reads as a stamp now. Revealing
+  the answer pops the whole answer block in as one unit
+  (`.study-answer-reveal`, `app-pop`) instead of a bare fragment appearing.
+  The saved-example callout is a taped note, not a colored-border callout.
+  The completion card's stat row is a perforated "receipt" line with a
+  small colored stamp-dot per count instead of a bar-chart-style top
+  border. The quick-start tiles and stats-panel disclosure were already
+  well de-boxed pre-Phase-58 and are left mostly as-is.
 - **Shared Deck** (not yet redesigned) — target: deck shelf/booklet/sticker-
   pack treatment.
 
@@ -111,7 +119,8 @@ pixel specs).
 Phase 54 covered the design contract plus App Shell/Home. Phase 55 covered
 Reading + Inspector (reader page, start card, word inspector, save tray).
 Phase 56 covered the reading candidate word list (sticker tray). Phase 57
-covered the Vocab tab (hero/filters, word list, management panels). Study
-and Shared Deck still carry the previous ("study desk") visual
-language and are the recommended order for follow-up phases (see the brief's
+covered the Vocab tab (hero/filters, word list, management panels). Phase 58
+covered the Study tab (hero, rating stamps, answer reveal, completion
+receipt). Shared Deck still carries the previous ("study desk") visual
+language and is next in the recommended follow-up order (see the brief's
 "Implementation order recommendation").

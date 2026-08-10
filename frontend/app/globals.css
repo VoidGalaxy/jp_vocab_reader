@@ -2310,6 +2310,24 @@ select {
   min-width: 0;
 }
 
+/* Casual Sticker Reader (Phase 58) -- underline field, same family as the
+   reading/vocab tabs' own deck/sort pickers, instead of the app-wide
+   bordered-box <select> default. */
+.study-control-footer select {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: 6px 16px 6px 2px;
+  background: transparent;
+}
+
+.study-control-footer select:focus {
+  border-bottom-color: var(--screen-accent, var(--primary));
+  outline: none;
+}
+
 .study-start-button {
   flex: 0 0 auto;
 }
@@ -2556,12 +2574,15 @@ select {
   color: var(--primary-dark);
 }
 
+/* Dashed, no fill -- a quiet aside note (also used for the shared-deck
+   "새 단어 30개" hint), not a bordered callout box competing with the card
+   above it. */
 .study-card-recent-hint {
   margin: -4px 0 0;
-  padding: 6px 10px;
-  border: 1px solid var(--border);
+  padding: 6px 2px;
+  border: 1px dashed var(--border);
   border-radius: 8px;
-  background: var(--soft-bg);
+  background: transparent;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
@@ -2607,6 +2628,16 @@ select {
   font-weight: 700;
 }
 
+/* Wraps the whole revealed-answer block (meaning/tags/example/rating
+   stamps) in one element so app-pop can animate it as a single "sticker
+   flipped into place" moment -- was a bare Fragment, a direct child of
+   .study-card's own grid; same gap here keeps the vertical rhythm
+   identical to before the wrapper existed. */
+.study-answer-reveal {
+  display: grid;
+  gap: 20px;
+}
+
 /* The word's meaning is the one thing a learner is actually checking
    their recall against -- called out in its own hero block instead of
    sitting as an equal-weight grid cell next to 품사/기본형, so it reads
@@ -2642,14 +2673,32 @@ select {
   margin: 0;
 }
 
+/* Casual Sticker Reader (Phase 58) -- a taped-on strip (::before) instead
+   of a colored border-left, same recipe as the reading/vocab tabs' saved
+   examples. .paper-corner (already applied alongside in JSX) owns ::after
+   for its dog-ear fold, so ::before is free for the tape here. */
 .study-example-callout {
+  position: relative;
   display: grid;
   gap: 8px;
   border: 1px solid #ecdfb8;
-  border-left: 4px solid #e8c25c;
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 4px 10px 10px 10px;
+  padding: 16px 16px 14px;
   background: #fdf9ee;
+}
+
+.study-example-callout::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 14px;
+  z-index: 1;
+  width: 34px;
+  height: 12px;
+  border: 1px solid rgba(232, 194, 92, 0.6);
+  background: rgba(232, 194, 92, 0.45);
+  transform: rotate(-3deg);
+  pointer-events: none;
 }
 
 .study-example-heading {
@@ -2697,7 +2746,8 @@ select {
 .study-rating-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px 10px;
+  padding-top: 4px;
 }
 
 .rating-button {
@@ -2734,6 +2784,57 @@ select {
   color: rgba(255, 255, 255, 0.85);
   font-size: 11px;
   font-weight: 500;
+}
+
+/* Casual Sticker Reader (Phase 58) -- review's 4-way rating reads as 4
+   stamp seals, not 4 uniform admin buttons. Scoped to .study-rating-grid
+   (not the bare .rating-button, which AnalyzeSection's classify buttons
+   also use and stay untouched): an asymmetric radius plus a permanent
+   inner ring gives each one a rubber-stamp double edge, and an alternating
+   tilt scatters them like stickers -- straightening on hover/focus so the
+   one you're about to press reads clearly, and pressing "stamps it down"
+   (scale + the existing active ring) instead of just darkening. Colors,
+   icons, and labels are unchanged -- the 4-way meaning must stay as legible
+   as before, only the chrome around it changed. */
+.study-rating-grid .rating-button {
+  position: relative;
+  border-radius: 18px 18px 18px 5px;
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.4),
+    0 6px 14px rgba(37, 43, 30, 0.16);
+  transition:
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
+}
+
+.study-rating-grid .rating-button:nth-child(1) {
+  transform: rotate(-2deg);
+}
+
+.study-rating-grid .rating-button:nth-child(2) {
+  border-radius: 18px 18px 5px 18px;
+  transform: rotate(1.5deg);
+}
+
+.study-rating-grid .rating-button:nth-child(3) {
+  transform: rotate(-1deg);
+}
+
+.study-rating-grid .rating-button:nth-child(4) {
+  border-radius: 18px 18px 5px 18px;
+  transform: rotate(2deg);
+}
+
+.study-rating-grid .rating-button:not(:disabled):hover {
+  transform: rotate(0deg) translateY(-2px);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.5),
+    0 10px 18px rgba(37, 43, 30, 0.2);
+}
+
+.study-rating-grid .rating-button:not(:disabled):active {
+  transform: rotate(0deg) scale(0.94);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.6);
 }
 
 /* Rating colors are deliberately softer than the app's semantic --danger/
@@ -2805,33 +2906,55 @@ select {
   animation: app-slide-up var(--motion-slow) var(--ease-soft) both;
 }
 
-/* Phase 44: a dashed rule under the stamp/title splits the card into a
-   quiet "header" (완료 stamp + one line) and a "body" (the counts/notes/
-   actions below) -- like a small stamped record with a rule under its
-   heading, rather than every element just stacking in the same grid gap
-   as an undifferentiated results block. */
+/* Casual Sticker Reader (Phase 58) -- a perforated "receipt tear" line
+   (repeating-linear-gradient dashes) instead of a plain dashed rule, so
+   today's ratings read as a small torn-off stamp record, not a results
+   report. Can't use ::before/::after here -- .complete-card already spends
+   both on .card-stack-surface's "stack of pages" ghost layers -- so the
+   perforation lives on this element's own border/background instead. */
 .study-complete-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
   gap: 8px;
   width: 100%;
-  padding-top: 14px;
-  border-top: 1px dashed var(--border);
+  padding-top: 16px;
+  border-top: none;
+  background-image: linear-gradient(
+    to right,
+    var(--border-strong) 0,
+    var(--border-strong) 5px,
+    transparent 5px,
+    transparent 10px
+  );
+  background-repeat: repeat-x;
+  background-position: top;
+  background-size: 10px 1px;
 }
 
 /* Softened -- same "N repeated tiles in a row" fix as .study-cta-button
    (Phase 41): each of the 5 stats used to be its own bordered + --soft-bg
    card, so the completion screen ended with five little boxes lined up
-   inside the already-boxed .complete-card. The color ramp now lives only
-   on the top accent line; a thin dashed rule between adjacent stats (not
-   a border-radius/border/background 조합) carries the "these are distinct
-   counts" read instead. */
+   inside the already-boxed .complete-card. A small colored stamp dot
+   (::before) replaces the old top accent line -- reads as "this count got
+   its own little stamp", not a bar-chart axis; a thin dashed rule between
+   adjacent stats still carries the "these are distinct counts" read. */
 .study-complete-stat {
+  position: relative;
   display: grid;
+  justify-items: center;
   gap: 4px;
-  padding: 8px 10px 4px;
-  border-top: 3px solid var(--border-strong);
+  padding: 14px 10px 4px;
   text-align: center;
+}
+
+.study-complete-stat::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border-strong);
 }
 
 .study-complete-stat + .study-complete-stat {
@@ -2851,25 +2974,26 @@ select {
 
 /* Same rose/sand-amber/teal/sage ramp as the .rating-* buttons above, so the
    completion summary reads as the same 4-way story the learner just rated
-   through, not a second, differently-colored legend. */
-.study-complete-stat-again {
-  border-top-color: var(--rose);
+   through, not a second, differently-colored legend. Now the stamp dot's
+   color, not a top border-line's. */
+.study-complete-stat-again::before {
+  background: var(--rose);
 }
 
-.study-complete-stat-hard {
-  border-top-color: var(--sand-amber);
+.study-complete-stat-hard::before {
+  background: var(--sand-amber);
 }
 
-.study-complete-stat-good {
-  border-top-color: var(--primary);
+.study-complete-stat-good::before {
+  background: var(--primary);
 }
 
-.study-complete-stat-easy {
-  border-top-color: var(--sage-green);
+.study-complete-stat-easy::before {
+  background: var(--sage-green);
 }
 
-.study-complete-stat-total {
-  border-top-color: var(--accent);
+.study-complete-stat-total::before {
+  background: var(--accent);
 }
 
 .study-complete-stat-total strong {
@@ -4150,14 +4274,32 @@ input.reading-vocab-sticker-toggle:checked {
    already pairs .hero-card with .panel-card for that. Without it the
    panel rendered with no background at all, reading as transparent
    against the page. */
+/* Casual Sticker Reader (Phase 58) -- position:relative + overflow:hidden
+   so .study-hero-tape (a real element, not ::before -- kept consistent
+   with Vocab's own hero tape) can sit half outside the card's top edge. */
 .study-hero-card {
+  position: relative;
   display: grid;
   gap: 12px;
-  padding: 16px;
+  padding: 20px 16px 16px;
   border: 1px solid var(--border);
   border-top: 2px solid var(--screen-accent, var(--accent));
   background: var(--panel-bg);
   box-shadow: 0 12px 28px var(--paper-shadow);
+}
+
+.study-hero-tape {
+  position: absolute;
+  top: -6px;
+  left: 26px;
+  z-index: 1;
+  width: 46px;
+  height: 16px;
+  border: 1px solid rgba(217, 122, 74, 0.4);
+  background: rgba(217, 122, 74, 0.32);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
+  transform: rotate(-4deg);
+  pointer-events: none;
 }
 
 .study-hero-header {

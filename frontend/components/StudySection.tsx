@@ -186,6 +186,7 @@ function StudyQuickStartHero({
 
   return (
     <section className="study-hero-card hero-card">
+      <span className="study-hero-tape" aria-hidden="true" />
       <div className="study-hero-header">
         <CardsIcon className="study-hero-icon" />
         <div>
@@ -549,7 +550,7 @@ export function StudySection({
             <span>{currentItem.part_of_speech || "품사 없음"}</span>
           </div>
           {isAnswerVisible ? (
-            <>
+            <div className="study-answer-reveal app-pop">
               <div className="study-meaning-hero">
                 <span className="study-meaning-label">뜻</span>
                 <p className="study-meaning-text">
@@ -651,7 +652,7 @@ export function StudySection({
                   복습 결과를 저장하는 중이에요...
                 </p>
               ) : null}
-            </>
+            </div>
           ) : (
             <div className="study-actions">
               <button type="button" onClick={onShowAnswer}>
