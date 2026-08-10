@@ -56,8 +56,16 @@ pixel specs).
   sticky-note word inspector (`.bookmark-inspector`, tilted on desktop,
   straight bottom sheet on mobile), a thinner progress bar with a
   bookmark-charm bead, and a dashed-strip save tray instead of a bordered
-  admin box. Candidate/word-list drawer still plain (Operate-mode list, out
-  of scope this pass).
+  admin box. Candidate/word list redesigned in Phase 56 (see below).
+- **Reading candidate word list** (Phase 56) — `ReadingVocabPanel`'s
+  full-width row list is now a flex-wrap sticker tray
+  (`.reading-vocab-tray`/`.reading-vocab-sticker*`): each word is a small
+  content-sized note with an alternating tilt, a round pin toggle (was a
+  square checkbox) that gets a stamped ✓ seal when selected instead of an
+  inset accent bar, and a muted check-circle placeholder (not a blank
+  spacer) on already-known words so "why can't I add this" stays visible.
+  Search/filter/quick-select are now underline text-tabs, not bordered pill
+  buttons, to read as labels on the tray rather than a toolbar.
 - **Vocab** (not yet redesigned) — target: sticker notebook/grid, not a
   list/admin table.
 - **Study** (not yet redesigned) — target: review card stack, soft sticker
@@ -88,8 +96,9 @@ pixel specs).
 
 ## Status
 
-Phase 54 covered the design contract plus App Shell/Home. Phase 55 covers
+Phase 54 covered the design contract plus App Shell/Home. Phase 55 covered
 Reading + Inspector (reader page, start card, word inspector, save tray).
-Vocab, Study, and Shared Deck still carry the previous ("study desk") visual
+Phase 56 covered the reading candidate word list (sticker tray). Vocab,
+Study, and Shared Deck still carry the previous ("study desk") visual
 language and are the recommended order for follow-up phases (see the brief's
 "Implementation order recommendation").

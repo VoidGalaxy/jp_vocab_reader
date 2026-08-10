@@ -3397,7 +3397,7 @@ select {
    rule instead of inside a bordered box, so the "어휘 후보" list never
    competes with the reader for visual weight. */
 .reading-vocab-drawer {
-  border-top: 1px dashed var(--border);
+  border-top: 2px dashed var(--paper-border);
 }
 
 .reading-vocab-drawer-open {
@@ -3409,17 +3409,20 @@ select {
   width: 100%;
   align-items: center;
   gap: 8px;
-  padding: 10px 4px;
+  padding: 10px 8px;
+  border-radius: 10px;
   color: var(--muted);
   background: transparent;
   box-shadow: none;
   font-size: 12px;
   font-weight: 700;
   text-align: left;
+  transition: background-color var(--motion-fast) var(--ease-soft);
 }
 
 .reading-vocab-drawer-pull:not(:disabled):hover {
   color: var(--text);
+  background: var(--soft-bg);
   box-shadow: none;
   transform: none;
 }
@@ -3459,19 +3462,27 @@ select {
   transform: rotate(-90deg);
 }
 
+/* Casual Sticker Reader (Phase 56) -- search/filters/quick-select read as
+   small tabs and labels stuck along the top of the sticker tray, not a
+   toolbar box: underline-only active states instead of filled pill
+   buttons, no bordered surface behind the row itself. */
 .reading-vocab-controls {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
 }
 
 .reading-vocab-search-wrap {
   position: relative;
+  flex: 1 1 160px;
+  min-width: 130px;
 }
 
 .reading-vocab-search-icon {
   position: absolute;
   top: 50%;
-  left: 11px;
+  left: 4px;
   width: 14px;
   height: 14px;
   color: var(--muted);
@@ -3480,80 +3491,108 @@ select {
 }
 
 .reading-vocab-search {
-  min-height: 38px;
-  padding: 8px 12px 8px 32px;
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 4px 6px 22px;
+  border: none;
+  border-bottom: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: transparent;
   font-size: 13px;
+}
+
+.reading-vocab-search:focus {
+  border-bottom-color: var(--screen-accent, var(--primary));
+  outline: none;
 }
 
 .reading-vocab-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 3px 12px;
 }
 
 .reading-vocab-filter-button {
-  padding: 5px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--soft-bg);
+  min-width: 0;
+  padding: 3px 1px 4px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
 }
 
 .reading-vocab-filter-button:hover {
-  filter: brightness(0.97);
+  filter: none;
+  color: var(--text);
 }
 
 .reading-vocab-filter-active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: #ffffff;
+  border-bottom-color: var(--primary);
+  background: transparent;
+  color: var(--text);
 }
 
-/* Status-specific filter chips borrow the same warm palette as the reader
+/* Status-specific filter tabs borrow the same warm palette as the reader
    highlights/status badges once active, so "지금 어떤 상태로 걸러보고
-   있는지" reads at a glance without relying on the label text alone. */
+   있는지" reads at a glance without relying on the label text alone --
+   now a colored underline + label instead of a filled pill. */
 .reading-vocab-filter-known.reading-vocab-filter-active {
-  border-color: #bfe3cc;
-  background: #eef9f1;
+  border-bottom-color: #1b6b3a;
   color: #1b6b3a;
 }
 
-/* Same lavender/coral-beige status colors as .token-chip-uncertain/-unknown
-   and the vocab tab's own status filter chips -- was amber/rose here, the
-   one remaining spot using the old alarm-toned pair. */
 .reading-vocab-filter-uncertain.reading-vocab-filter-active {
-  border-color: #d7cce9;
-  background: #f4f1fa;
+  border-bottom-color: #6f5f96;
   color: #6f5f96;
 }
 
 .reading-vocab-filter-unknown.reading-vocab-filter-active {
-  border-color: #e8c7ae;
-  background: #fbf1e9;
+  border-bottom-color: #96603f;
   color: #96603f;
 }
 
 .reading-vocab-filter-unclassified.reading-vocab-filter-active {
-  border-color: #ddd0a8;
-  background: #ece4d0;
+  border-bottom-color: #6b5f3f;
   color: #6b5f3f;
 }
 
-/* Quick-select stays a loose row of ghost chips (no boxed surface) so it
-   reads as light shortcut actions, not a toolbar bolted onto the list. */
+/* Quick-select -- same light text-tab language as the filters above, a
+   dashed underline (vs. filters' solid one) so the two rows read as
+   related but distinct: "narrow the view" vs. "act on it". */
 .reading-vocab-quick-select {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 3px 14px;
+}
+
+.reading-vocab-quick-select-button {
+  min-width: 0;
+  padding: 3px 1px 4px;
+  border: none;
+  border-bottom: 1px dashed var(--border-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reading-vocab-quick-select-button:not(:disabled):hover {
+  border-bottom-color: var(--screen-accent, var(--accent));
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+  transform: none;
 }
 
 .reading-vocab-selection-summary {
   margin: 2px 0 0;
   padding-top: 10px;
-  border-top: 1px solid var(--border);
+  border-top: 1px dashed var(--border);
   color: var(--muted);
   font-size: 12px;
 }
@@ -3574,174 +3613,274 @@ select {
   color: var(--muted);
 }
 
-.reading-vocab-list {
-  display: grid;
-  gap: 6px;
+/* Sticker tray (Phase 56) -- replaces the stacked full-width row list.
+   flex-wrap so each word sticker is only as wide as its own content (not a
+   grid cell forced to a uniform column width), reading as a loose cluster
+   of notes pulled from the text rather than a table. */
+.reading-vocab-tray {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 14px 10px;
   margin: 0;
-  padding: 0;
-  max-height: 360px;
+  padding: 8px 6px;
+  max-height: 380px;
   overflow-y: auto;
+  overflow-x: hidden;
   list-style: none;
 }
 
-.reading-vocab-item-row {
+.reading-vocab-sticker-row {
+  position: relative;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
+/* Alternating tilt (same convention as the home sticker chips/hero preview
+   cards) so the tray reads as scattered notes, not a rigid grid -- reset
+   to upright on hover/focus so the active one doesn't fight the cursor. */
+.reading-vocab-sticker-row:nth-child(3n + 1) {
+  transform: rotate(-1.5deg);
+}
+
+.reading-vocab-sticker-row:nth-child(3n + 2) {
+  transform: rotate(1deg);
+}
+
+.reading-vocab-sticker-row:nth-child(3n) {
+  transform: rotate(-0.6deg);
+}
+
+.reading-vocab-sticker-row:hover,
+.reading-vocab-sticker-row:focus-within {
+  z-index: 1;
+  transform: rotate(0deg);
 }
 
 /* `input` prefix matters here: the global `input[type="checkbox"] { width:
    auto }` reset has equal-or-higher specificity than a bare class selector
    and was winning, silently shrinking this checkbox to the browser's tiny
-   native width regardless of the px value below. */
-input.reading-vocab-item-checkbox {
-  flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+   native width regardless of the px value below. Reskinned as a small
+   round pin (appearance: none + custom fill) instead of a square checkbox,
+   overlapping the sticker's top-left corner like a physical pin. */
+input.reading-vocab-sticker-toggle {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  margin: 0;
   min-height: 0;
-  accent-color: var(--primary);
+  appearance: none;
+  border: 2px solid var(--paper-bg);
+  border-radius: 50%;
+  background: var(--soft-bg);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.2);
+  cursor: pointer;
 }
 
-.reading-vocab-item-checkbox-placeholder {
-  flex: 0 0 auto;
-  width: 22px;
+input.reading-vocab-sticker-toggle:checked {
+  background: var(--primary);
 }
 
-.reading-vocab-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+.reading-vocab-sticker-toggle-placeholder {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  z-index: 2;
+  display: inline-flex;
   align-items: center;
-  gap: 6px 12px;
-  flex: 1 1 auto;
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 10px;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--paper-bg);
+  border-radius: 50%;
+  background: var(--soft-bg);
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.reading-vocab-sticker-toggle-placeholder svg {
+  width: 11px;
+  height: 11px;
+}
+
+.reading-vocab-sticker {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  width: auto;
+  min-width: 132px;
+  max-width: 224px;
+  padding: 14px 24px 10px 14px;
+  border: 1px solid var(--paper-border);
+  border-radius: 4px 12px 12px 12px;
   background: var(--panel-bg);
   color: var(--text);
   text-align: left;
-  transition: box-shadow 0.12s ease, border-color 0.12s ease;
+  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.1);
+  transition:
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
 }
 
-.reading-vocab-item:hover {
-  border-color: var(--border-strong);
-  transform: none;
+.reading-vocab-sticker:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(120, 98, 40, 0.16);
 }
 
-/* Checkbox-selected row -- a quiet accent bar, independent of
-   .reading-vocab-item-active (the amber "currently open in reader" cue)
-   so both can combine without one overriding the other's meaning. */
-.reading-vocab-item-row-checked .reading-vocab-item {
+/* Selected -- a stamped corner seal (::after) instead of an inset accent
+   bar, so a chosen word reads as "stuck onto the tray" rather than "a row
+   with its checkbox on". Independent of .reading-vocab-sticker-active (the
+   "currently open in reader" cue) so both can combine. */
+.reading-vocab-sticker-row-checked .reading-vocab-sticker {
   border-color: var(--primary);
-  box-shadow: inset 3px 0 0 var(--primary);
+  box-shadow: 0 8px 18px rgba(var(--primary-rgb), 0.22);
 }
 
-.reading-vocab-item-active {
+.reading-vocab-sticker-row-checked .reading-vocab-sticker::after {
+  content: "✓";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.25);
+}
+
+.reading-vocab-sticker-active {
   border-color: #f6d675;
   background: #fef3b8;
 }
 
-.reading-vocab-item-main {
+.reading-vocab-sticker-word-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
+  padding-right: 4px;
 }
 
-.reading-vocab-item-word {
-  font-weight: 700;
-  font-size: 14px;
+.reading-vocab-sticker-word {
+  font-weight: 800;
+  font-size: 15px;
+  overflow-wrap: anywhere;
 }
 
-.reading-vocab-item-reading {
+.reading-vocab-sticker-reading {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
-.reading-vocab-item-meaning {
+.reading-vocab-sticker-meaning {
   overflow: hidden;
-  color: var(--muted);
-  font-size: 13px;
+  max-width: 100%;
+  color: var(--text-secondary);
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.reading-vocab-item-meta {
+.reading-vocab-sticker-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
+  gap: 4px;
+  margin-top: 3px;
 }
 
 .reading-vocab-status-badge {
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 10.5px;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .reading-vocab-occurrence {
-  padding: 3px 10px;
+  padding: 2px 7px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--soft-bg);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 10.5px;
   white-space: nowrap;
 }
 
 .reading-vocab-saved-badge {
-  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
   border-radius: 999px;
-  background: var(--soft-bg);
-  color: var(--text-secondary);
-  font-size: 12px;
+  background: var(--status-known-bg);
+  color: var(--status-known-fg);
+  font-size: 10.5px;
   font-weight: 700;
   white-space: nowrap;
 }
 
-/* Quiet "tap to jump to this word in the text" affordance -- muted so it
-   doesn't compete with the status/occurrence/saved badges, just enough of
-   a visual cue that the row body itself is a distinct, clickable action
-   from the checkbox next to it. */
-.reading-vocab-item-goto-icon {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
+.reading-vocab-saved-badge-icon {
+  width: 10px;
+  height: 10px;
+}
+
+/* Quiet "tap to jump to this word in the text" affordance, now a small
+   fixed corner mark on the sticker itself (was inline with the status/
+   occurrence/saved badges, which crowded a card this small). */
+.reading-vocab-sticker-goto-icon {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 13px;
+  height: 13px;
   color: var(--muted);
-  opacity: 0.7;
+  opacity: 0.55;
 }
 
 @media (max-width: 640px) {
-  .reading-vocab-item {
-    grid-template-columns: 1fr;
-    justify-items: start;
+  /* Keeps the tray from ever pushing the fixed bottom nav further down the
+     page than the other reading-tab sections -- a shorter cap than
+     desktop's, and still its own scroll region rather than growing with
+     however many candidates the text has. */
+  .reading-vocab-tray {
+    max-height: 300px;
+    gap: 16px 8px;
   }
 
-  .reading-vocab-item-meta {
-    justify-content: flex-start;
+  .reading-vocab-sticker {
+    min-width: 118px;
+    max-width: 60vw;
   }
 
-  input.reading-vocab-item-checkbox,
-  .reading-vocab-item-checkbox-placeholder {
+  input.reading-vocab-sticker-toggle,
+  .reading-vocab-sticker-toggle-placeholder {
     width: 24px;
     height: 24px;
   }
 
   /* The app-wide mobile touch-target pass makes every <button> full-width
      (see the global `button { width: 100% }` mobile rule) -- right for the
-     save CTA above, but it stretches these small filter/quick-select chips
+     save CTA above, but it stretches these small filter/quick-select tabs
      into one-per-row blocks inside their flex-wrap rows. Opt them back out
-     to their natural pill width so they wrap side-by-side like chips. */
+     to their natural text width. */
   .reading-vocab-filters .reading-vocab-filter-button,
-  .reading-vocab-quick-select button {
+  .reading-vocab-quick-select-button {
     width: auto;
     min-width: 0;
     min-height: 34px;
-    padding: 7px 12px;
   }
 }
 

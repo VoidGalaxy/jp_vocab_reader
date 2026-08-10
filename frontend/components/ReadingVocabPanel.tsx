@@ -12,7 +12,13 @@ import type {
   ReadingVocabEntry,
   ReadingVocabFilter,
 } from "./coverageUtils";
-import { ChevronDownIcon, ChevronRightIcon, SearchIcon } from "./icons";
+import {
+  CardFileIcon,
+  CheckCircleIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  SearchIcon,
+} from "./icons";
 import { getDisplayMeaning, statusLabels } from "./shared";
 
 type ReadingVocabPanelProps = {
@@ -106,12 +112,12 @@ export function ReadingVocabPanel({
         onClick={() => setIsCollapsed((value) => !value)}
         aria-expanded={!isCollapsed}
       >
-        <SearchIcon className="reading-vocab-drawer-pull-icon" />
+        <CardFileIcon className="reading-vocab-drawer-pull-icon" />
         {/* Counts here stay list-scoped only. The basket total and the
             saveable total belong to the save dock above, which owns saving --
             repeating them here made two rows of near-identical chips. */}
         <span className="reading-vocab-drawer-pull-label">
-          어휘 후보 {entries.length}개
+          단어 스티커 트레이 · {entries.length}개
         </span>
         <ChevronDownIcon
           className={`reading-vocab-collapse-icon${
@@ -168,7 +174,7 @@ export function ReadingVocabPanel({
       >
         <button
           type="button"
-          className="ghost-button compact-button"
+          className="ghost-button compact-button reading-vocab-quick-select-button"
           title="전체 텍스트에서 저장 가능한 단어를 모두 바구니에 담아요"
           onClick={() => onReplaceSelection(entries.filter((e) => e.isSaveable))}
         >
@@ -176,7 +182,7 @@ export function ReadingVocabPanel({
         </button>
         <button
           type="button"
-          className="ghost-button compact-button"
+          className="ghost-button compact-button reading-vocab-quick-select-button"
           onClick={onClearSelection}
         >
           바구니 비우기
@@ -185,7 +191,7 @@ export function ReadingVocabPanel({
           <button
             key={mode}
             type="button"
-            className="ghost-button compact-button"
+            className="ghost-button compact-button reading-vocab-quick-select-button"
             title={hint}
             onClick={() =>
               onReplaceSelection(selectReadingVocabEntriesByMode(entries, mode))
@@ -210,7 +216,11 @@ export function ReadingVocabPanel({
               : "표시할 단어가 없어요."}
         </p>
       ) : (
-        <ul className="reading-vocab-list">
+        // Sticker tray -- a flex-wrap cluster of small word stickers, not a
+        // stacked list of full-width admin rows. Same data/handlers as
+        // before, just laid out and skinned differently (see
+        // .reading-vocab-tray / .reading-vocab-sticker* in globals.css).
+        <ul className="reading-vocab-tray">
           {visibleEntries.map((entry) => {
             const key = getTokenGroupKey(entry.token);
             const isActive =
@@ -223,44 +233,54 @@ export function ReadingVocabPanel({
             return (
               <li
                 key={`${key}-${entry.tokenIndex}`}
-                className={`reading-vocab-item-row${
-                  isChecked ? " reading-vocab-item-row-checked" : ""
+                className={`reading-vocab-sticker-row${
+                  isChecked ? " reading-vocab-sticker-row-checked" : ""
                 }`}
               >
                 {entry.isSaveable ? (
                   <input
                     type="checkbox"
-                    className="reading-vocab-item-checkbox"
+                    className="reading-vocab-sticker-toggle"
                     checked={isChecked}
                     onChange={() => onToggleSelect(key)}
                     aria-label={`${label} 저장 대상으로 선택`}
                   />
                 ) : (
+                  // Already-known words can't be added -- a muted check
+                  // mark (not a blank spacer) so the reason is visible at a
+                  // glance without relying on the status badge text alone.
                   <span
-                    className="reading-vocab-item-checkbox-placeholder"
+                    className="reading-vocab-sticker-toggle-placeholder"
                     aria-hidden="true"
-                  />
+                    title="이미 아는 단어라 담을 수 없어요"
+                  >
+                    <CheckCircleIcon />
+                  </span>
                 )}
                 <button
                   type="button"
-                  className={`reading-vocab-item${
-                    isActive ? " reading-vocab-item-active" : ""
+                  className={`reading-vocab-sticker${
+                    isActive ? " reading-vocab-sticker-active" : ""
                   }`}
                   onClick={() => onSelectToken(entry.tokenIndex)}
                   title={`${label} 원문 위치로 이동`}
                 >
-                  <span className="reading-vocab-item-main">
-                    <span className="reading-vocab-item-word">{label}</span>
+                  <ChevronRightIcon
+                    className="reading-vocab-sticker-goto-icon"
+                    aria-hidden="true"
+                  />
+                  <span className="reading-vocab-sticker-word-row">
+                    <span className="reading-vocab-sticker-word">{label}</span>
                     {entry.token.reading && entry.token.reading !== label ? (
-                      <span className="reading-vocab-item-reading">
+                      <span className="reading-vocab-sticker-reading">
                         {entry.token.reading}
                       </span>
                     ) : null}
                   </span>
-                  <span className="reading-vocab-item-meaning" title={meaning}>
+                  <span className="reading-vocab-sticker-meaning" title={meaning}>
                     {meaning}
                   </span>
-                  <span className="reading-vocab-item-meta">
+                  <span className="reading-vocab-sticker-meta">
                     <span
                       className={`reading-vocab-status-badge token-chip-${entry.status}`}
                     >
@@ -270,12 +290,11 @@ export function ReadingVocabPanel({
                       {entry.token.occurrence_count || 1}회
                     </span>
                     {entry.isSaved ? (
-                      <span className="reading-vocab-saved-badge">저장됨</span>
+                      <span className="reading-vocab-saved-badge">
+                        <CheckCircleIcon className="reading-vocab-saved-badge-icon" />
+                        저장됨
+                      </span>
                     ) : null}
-                    <ChevronRightIcon
-                      className="reading-vocab-item-goto-icon"
-                      aria-hidden="true"
-                    />
                   </span>
                 </button>
               </li>
