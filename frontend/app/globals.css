@@ -63,6 +63,64 @@
   --notebook-cover: #5b6a52;
   --notebook-cover-deep: #3a4433;
   --notebook-cream: #f7f1de;
+  /* Casual Sticker Reader (Phase 67) -- App Shell desk scene. Reuse these
+     for any future wood-desk-styled surface rather than inventing another
+     brown, the same way --notebook-cover is reused for cover-styled
+     surfaces. Only active at the >=1024px "true desktop" tier (see
+     .page/body in the Phase 67 media query below) -- mobile/tablet keep
+     the plain paper --page-bg unchanged. */
+  --desk-wood: #c9a06e;
+  --desk-wood-deep: #9c7248;
+  /* The app's own "warm notebook paper" background-image/repeat/size,
+     pulled out of the body rule below into shared custom properties so
+     Phase 67 can put the exact same paper texture on .page (now the
+     "board" sitting on the desk) at the desktop breakpoint without
+     duplicating an 8-layer gradient value by hand. body's own rule below
+     is unchanged in effect -- just reads from these instead of inlining
+     them. */
+  --paper-texture-image: radial-gradient(
+      circle,
+      rgba(61, 47, 20, 0.075) 1px,
+      transparent 1.4px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(61, 47, 20, 0.05) 0px,
+      rgba(61, 47, 20, 0.05) 1px,
+      transparent 1px,
+      transparent 32px
+    ),
+    radial-gradient(
+      ellipse 900px 480px at 50% -80px,
+      rgba(255, 250, 235, 0.5) 0%,
+      rgba(255, 250, 235, 0) 70%
+    ),
+    radial-gradient(
+      circle 620px at 100% 680px,
+      rgba(217, 122, 74, 0.065) 0%,
+      rgba(217, 122, 74, 0) 70%
+    ),
+    radial-gradient(
+      circle 520px at -6% 46%,
+      rgba(47, 100, 112, 0.055) 0%,
+      rgba(47, 100, 112, 0) 70%
+    ),
+    radial-gradient(
+      ellipse 1400px 420px at 50% 120%,
+      rgba(61, 47, 20, 0.06) 0%,
+      rgba(61, 47, 20, 0) 70%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(61, 47, 20, 0.045) 0px,
+      rgba(61, 47, 20, 0.045) 2px,
+      transparent 2px,
+      transparent 34px
+    ),
+    linear-gradient(180deg, #f7f1de 0, var(--page-bg) 260px);
+  --paper-texture-repeat: repeat, repeat-y, no-repeat, no-repeat, no-repeat,
+    no-repeat, repeat-x, no-repeat;
+  --paper-texture-size: 24px 24px, auto, auto, auto, auto, auto, auto, auto;
   /* Vocab-status colors, tokenized so chip/badge/legend rules across the
      app read from one place instead of repeating the same hex per rule.
      Values match the existing token-chip palette (kept as-is; this only
@@ -308,63 +366,13 @@ body {
      screen toward white. Added a second, ruled-notebook-line layer and
      turned every other layer's alpha up a step so the page itself reads as
      desk/notebook paper, not a plain tinted background with decoration on
-     top. */
-  background-image:
-    radial-gradient(circle, rgba(61, 47, 20, 0.075) 1px, transparent 1.4px),
-    repeating-linear-gradient(
-      180deg,
-      rgba(61, 47, 20, 0.05) 0px,
-      rgba(61, 47, 20, 0.05) 1px,
-      transparent 1px,
-      transparent 32px
-    ),
-    radial-gradient(
-      ellipse 900px 480px at 50% -80px,
-      rgba(255, 250, 235, 0.5) 0%,
-      rgba(255, 250, 235, 0) 70%
-    ),
-    radial-gradient(
-      circle 620px at 100% 680px,
-      rgba(217, 122, 74, 0.065) 0%,
-      rgba(217, 122, 74, 0) 70%
-    ),
-    radial-gradient(
-      circle 520px at -6% 46%,
-      rgba(47, 100, 112, 0.055) 0%,
-      rgba(47, 100, 112, 0) 70%
-    ),
-    /* V3: a soft "desk surface" pool low on the page -- with the sidebar
-       shrunk to a rail, more of this layer shows on wide screens, so this
-       one extra low, wide, very faint shadow gives the content a sense of
-       sitting on a surface rather than floating over an empty page. */
-    radial-gradient(
-      ellipse 1400px 420px at 50% 120%,
-      rgba(61, 47, 20, 0.06) 0%,
-      rgba(61, 47, 20, 0) 70%
-    ),
-    /* V3 content-canvas pass: faint repeating "book spine" columns --
-       opaque cards/panels sit on top and hide it completely, so this only
-       ever shows through in the wide empty gutters beside the centered
-       workspace, reading as a distant bookshelf instead of blank page. */
-    repeating-linear-gradient(
-      90deg,
-      rgba(61, 47, 20, 0.045) 0px,
-      rgba(61, 47, 20, 0.045) 2px,
-      transparent 2px,
-      transparent 34px
-    ),
-    linear-gradient(180deg, #f7f1de 0, var(--page-bg) 260px);
-  background-repeat: repeat, repeat-y, no-repeat, no-repeat, no-repeat, no-repeat,
-    repeat-x, no-repeat;
-  background-size:
-    24px 24px,
-    auto,
-    auto,
-    auto,
-    auto,
-    auto,
-    auto,
-    auto;
+     top. Phase 67: the actual gradient stack now lives in the
+     --paper-texture-* custom properties (see :root) so .page can reuse the
+     identical texture at the desktop breakpoint -- this rule's own
+     rendered output is unchanged. */
+  background-image: var(--paper-texture-image);
+  background-repeat: var(--paper-texture-repeat);
+  background-size: var(--paper-texture-size);
 }
 
 @media (max-width: 640px) {
@@ -814,6 +822,88 @@ button {
   transform: none;
 }
 
+/* Casual Sticker Reader (Phase 67) -- App Shell desk scene. Only at the
+   same >=1024px "true desktop" tier the reader/study board redesigns
+   (Phase 65/66) already gate on -- below that, everything in this block
+   is untouched and the app looks exactly as it did before this Phase.
+   Concept: body becomes a wood desk; .page (the one wrapper every tab
+   already renders inside, untouched in page.tsx) becomes a paper "board"
+   card resting on it, reusing the exact same --paper-texture-* the page
+   background always had. The rail's active link and the topbar get a
+   little more "physically attached to that board" treatment to match. */
+@media (min-width: 1024px) {
+  body {
+    background-color: var(--desk-wood);
+    background-image:
+      /* fine end-grain streaks, two pitches so it doesn't read as a flat
+         repeating stripe */
+      repeating-linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.05) 0px,
+        rgba(255, 255, 255, 0.05) 1px,
+        transparent 1px,
+        transparent 5px
+      ),
+      repeating-linear-gradient(
+        180deg,
+        rgba(70, 44, 20, 0.07) 0px,
+        rgba(70, 44, 20, 0.07) 1px,
+        transparent 1px,
+        transparent 9px
+      ),
+      /* soft overhead light pooling near the top of the desk */
+        radial-gradient(
+          ellipse 1400px 700px at 50% -10%,
+          rgba(255, 236, 202, 0.2) 0%,
+          transparent 60%
+        ),
+      linear-gradient(165deg, var(--desk-wood) 0%, var(--desk-wood-deep) 100%);
+    background-repeat: repeat-y, repeat-y, no-repeat, no-repeat;
+    background-size: auto, auto, auto, auto;
+  }
+
+  /* .page is the single top-level wrapper every screen already renders
+     inside (see app/page.tsx's <main className="page">) -- giving it its
+     own bounded, paper-textured, rounded surface turns it into a "board"
+     floating on the wood desk instead of a borderless column that just
+     happens to sit on a warm-tinted page. No page.tsx changes needed. */
+  .page {
+    max-width: min(1600px, 96vw);
+    margin: 20px auto;
+    min-height: calc(100vh - 40px);
+    padding: 26px 30px 40px;
+    border-radius: 28px;
+    background-color: var(--page-bg);
+    background-image: var(--paper-texture-image);
+    background-repeat: var(--paper-texture-repeat);
+    background-size: var(--paper-texture-size);
+    box-shadow:
+      0 34px 70px rgba(58, 38, 16, 0.35),
+      0 2px 0 rgba(255, 255, 255, 0.5) inset;
+  }
+
+  /* Topbar reads as a small paper toolbar tag clipped to the board's top
+     edge, not a borderless row of buttons floating on bare background. */
+  .app-topbar {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--paper-border);
+    background: var(--panel-bg);
+    box-shadow: 0 6px 16px rgba(120, 98, 40, 0.1);
+  }
+
+  /* Strengthens the active rail link from "highlighted row" to "bookmark
+     tab actually stuck to the board's edge" -- an asymmetric torn-tab
+     corner plus a few px of bleed past the rail's own right edge into the
+     gutter before the content column. */
+  .library-rail-link-active {
+    border-radius: 4px 16px 16px 4px;
+    margin-right: -9px;
+    padding-right: 11px;
+    box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.38);
+  }
+}
+
 .account-mode-switch {
   justify-self: center;
   min-width: 0;
@@ -1110,10 +1200,23 @@ button {
   }
 }
 
+/* Casual Sticker Reader (Phase 67) -- home-desk-scene: plain single-column
+   wrapper by default (mobile/tablet -- cover, then the shortcut row below
+   it, exactly as before this Phase). At the >=1024px desktop tier (see
+   the media query near the end of this block) it becomes a 2-column
+   stage: the cover on the left, the shortcut notes stacked vertically
+   beside it on the right, so the two read as one desk arrangement instead
+   of a hero card with an admin-tile row stacked underneath it. */
+.home-desk-scene {
+  display: grid;
+  gap: 18px;
+}
+
 /* Sticker shortcut row -- 단어장/복습/덱, styled as small pinned stickers
    next to the notebook rather than a second row of uniform admin tiles.
-   Each modifier below carries its own tilt and icon-badge tone so the row
-   reads as scattered stickers, not three identical boxes. */
+   Each modifier below carries its own tilt, icon-badge tone, and paper
+   treatment (folded corner / pin / stacked ghost sheet) so the row reads
+   as three different kinds of notes, not three identical boxes. */
 .home-sticker-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -1121,6 +1224,7 @@ button {
 }
 
 .home-sticker-chip {
+  position: relative;
   display: grid;
   justify-items: center;
   gap: 6px;
@@ -1168,8 +1272,12 @@ button {
   line-height: 1.4;
 }
 
+/* vocab -- an index-card note: a small folded top-right corner (the same
+   triangle language .paper-corner uses elsewhere) suggests a stack of
+   index cards rather than a flat tile. */
 .home-sticker-chip--vocab {
   transform: rotate(-2deg);
+  border-radius: 4px 16px 16px 16px;
 }
 
 .home-sticker-chip--vocab:not(:disabled):hover {
@@ -1180,6 +1288,21 @@ button {
   background: var(--tone-ink-brown);
 }
 
+.home-sticker-chip--vocab::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 14px 14px 0;
+  border-color: transparent var(--soft-bg) transparent transparent;
+  border-radius: 0 16px 0 0;
+}
+
+/* review -- a sticky note: a small pin dot (same accent-dot language as
+   the notebook cover's own pin) instead of just a tilt. */
 .home-sticker-chip--review {
   transform: rotate(1.5deg);
 }
@@ -1188,6 +1311,24 @@ button {
   transform: rotate(1.5deg) translateY(-3px);
 }
 
+.home-sticker-chip--review::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  z-index: 1;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.25);
+  transform: translateX(-50%);
+}
+
+/* decks -- a small booklet: a second ghost sheet peeking out from behind
+   (not a colored side border -- that reads as a generic admin-tile accent
+   rather than a stack of booklets), so this one reads as a short stack
+   rather than a single flat tile like the other two. */
 .home-sticker-chip--decks {
   transform: rotate(-1deg);
 }
@@ -1198,6 +1339,31 @@ button {
 
 .home-sticker-chip--decks .home-sticker-chip-icon {
   background: var(--tone-dusty-blue);
+}
+
+.home-sticker-chip--decks::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  transform: translate(4px, 4px) rotate(3deg);
+  border-radius: inherit;
+  background: var(--panel-bg);
+  border: 1px solid var(--paper-border);
+}
+
+@media (min-width: 1024px) {
+  .home-desk-scene {
+    grid-template-columns: minmax(0, 1.6fr) minmax(220px, 0.9fr);
+    align-items: start;
+    gap: 28px;
+  }
+
+  .home-sticker-row {
+    grid-template-columns: 1fr;
+    align-content: start;
+    margin-top: 12px;
+  }
 }
 
 .info-strip-icon {

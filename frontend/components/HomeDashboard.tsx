@@ -66,6 +66,15 @@ export function HomeDashboard({
 
   return (
     <section className="tab-panel home-dashboard" aria-live="polite">
+      {/* Casual Sticker Reader (Phase 67) -- home-desk-scene: on wide
+          desktop this becomes a 2-column stage (cover + a vertical stack
+          of shortcut notes beside it, like the mockup's "cover + floating
+          notes" desk arrangement) instead of the cover and the shortcut
+          row just stacking full-width one under the other. Below the
+          desktop breakpoint this is a plain single-column wrapper --
+          mobile/tablet render byte-for-byte the same as before this
+          Phase. */}
+      <div className="home-desk-scene">
       <section className="home-notebook-cover card-stack-surface">
         <span className="home-notebook-pin" aria-hidden="true" />
         <div className="home-notebook-sticky-note" aria-hidden="true">
@@ -134,6 +143,7 @@ export function HomeDashboard({
           <span className="home-sticker-chip-label">덱</span>
           <span className="home-sticker-chip-subtitle">{decksSubtitle}</span>
         </button>
+      </div>
       </div>
 
       <p className="info-strip info-strip-quiet">

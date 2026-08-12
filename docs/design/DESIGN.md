@@ -152,6 +152,15 @@ pixel specs).
   `app/globals.css` `:root`) — the Home notebook-cover hero's fill and ink
   colors. Reuse these for any future notebook-cover-styled surface rather
   than inventing new greens.
+- `--desk-wood`, `--desk-wood-deep` (Phase 67) — the App Shell desk scene's
+  wood-desk background, only active at the `>=1024px` desktop tier. Reuse
+  for any future wood-desk-styled surface rather than inventing another
+  brown.
+- `--paper-texture-image`/`--paper-texture-repeat`/`--paper-texture-size`
+  (Phase 67) — the app's existing warm-paper `body` background, pulled out
+  into custom properties so `.page` can reuse the identical texture as a
+  "board on the desk" surface at the desktop tier without duplicating the
+  gradient stack.
 
 ## Status
 
@@ -165,6 +174,21 @@ reveal, completion receipt). Phase 59 covered the Shared Deck tab (hero,
 deck grid, and the opened-notebook detail panel). Phase 60 finished the App
 Shell chrome itself (library rail/bottom-nav active states, topbar feedback
 button) and covered the Stats/Info tab, the shared `StatsPanel` component,
-and the `GlobalFeedbackModal`. All primary tabs and the app shell now carry
-the casual sticker reader visual language; see the brief's "Implementation
-order recommendation" for any further polish passes.
+and the `GlobalFeedbackModal`. Phase 65 restructured Reading + Inspector
+again, deeper than Phase 55's visual pass: the word inspector moved from a
+modal-only overlay to a real `>=1024px` pinned desk-scene column
+(`.reader-desk-scene`/`.reader-inspector-rail`) with an idle guide state,
+while mobile keeps the Phase 55 bottom-sheet modal unchanged. Phase 66 did
+the same structural pass for Study: the active/complete card now sits in a
+real `.study-card-stack` with two backing-sheet siblings on a dark felt
+`.study-board-scene`, replacing the single centered `.study-card` on a
+light desk tint. Phase 67 extended that same `>=1024px` desk-scene idea to
+the App Shell and Home: `body` becomes a wood-desk background and `.page`
+(the one wrapper every tab already renders inside) becomes a paper-textured
+board resting on it, the library rail's active link reads as a bookmark
+tab stuck to the board's edge, the topbar reads as a small paper toolbar
+tag, and Home's cover + shortcut notes arrange into one 2-column desk
+stage instead of stacking full-width. All of this is gated at the same
+`>=1024px` tier as Phase 65/66 and leaves mobile/tablet unchanged. See the
+brief's "Implementation order recommendation" for any further polish
+passes (Shared Deck shelf, Analyze/Stats/Feedback).
