@@ -4173,6 +4173,34 @@ input.reading-vocab-sticker-toggle:checked {
   box-shadow: none;
 }
 
+/* Casual Sticker Reader (Phase 65) -- count + primary action share one row
+   on wide screens instead of each stacking on its own full-width line, so
+   the dock reads as a slim shelf strip attached under the reader page
+   rather than a stacked mini-form. Stays a stacked column below 1024px
+   (phones/tablets), unchanged from before this Phase. */
+.save-tray-shelf-row {
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 1024px) {
+  .save-tray-shelf-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  .save-tray-shelf-row .save-dock-primary-button {
+    width: auto;
+  }
+
+  .save-tray-shelf-row .save-dock-idle-hint {
+    flex: 1 1 auto;
+  }
+}
+
 .save-dock-count {
   display: flex;
   flex-wrap: wrap;
@@ -7351,6 +7379,62 @@ input.reading-vocab-sticker-toggle:checked {
   opacity: 0.45;
 }
 
+/* Casual Sticker Reader (Phase 65) -- reader-desk-scene: the reader page
+   (.reader-paper) and the pinned word inspector (.reader-inspector-rail)
+   share one desk surface. Below 1024px this is a plain block (single
+   column, unchanged from before this Phase); at 1024px+ it becomes a real
+   2-column grid, so the inspector is a permanent part of the same scene
+   instead of something that floats on top of it. Keep this breakpoint in
+   sync with ReaderMode.tsx's isDesktopPinned matchMedia query and with
+   .reader-inspector-rail/.bookmark-inspector-pinned below. */
+.reader-desk-scene {
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .reader-desk-scene {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+    align-items: start;
+    gap: 20px;
+  }
+}
+
+/* reader-inspector-rail -- hidden below 1024px (mobile/tablet keep the
+   existing tap-to-open bottom sheet instead, rendered outside this scene
+   entirely). At 1024px+ it's a sticky column that holds either the idle
+   guide or the pinned word card, so scrolling the reader page keeps the
+   inspector in view the way a note pinned to an open notebook page would. */
+.reader-inspector-rail {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .reader-inspector-rail {
+    display: block;
+    position: sticky;
+    top: 24px;
+    align-self: start;
+  }
+}
+
+/* reader-inspector-idle -- a blank-note placeholder standing in for the
+   pinned inspector before any word is selected, so the desk scene never
+   shows a lopsided single reader column with empty space beside it. Only
+   ever visible at 1024px+ (its parent .reader-inspector-rail is display:
+   none below that), so no separate mobile rule is needed here. */
+.reader-inspector-idle {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 220px;
+  padding: 28px 22px;
+  border: 1.5px dashed var(--paper-border);
+  border-radius: 16px;
+  background: var(--soft-bg);
+  text-align: center;
+}
+
 /* reader-paper -- the reader canvas itself (renamed from .reader-mode,
    which now only prefixes the mode's own header/toggle sub-parts below).
    This is the screen's one hero surface: reader-first layout means this
@@ -8584,6 +8668,23 @@ input.reading-vocab-sticker-toggle:checked {
     box-shadow: 0 16px 40px rgba(120, 98, 40, 0.18);
   }
 
+}
+
+/* Casual Sticker Reader (Phase 65) -- bookmark-inspector-pinned: the
+   desk-scene variant of the same .bookmark-inspector card, sitting inside
+   the sticky .reader-inspector-rail column instead of a viewport-fixed
+   overlay. Reuses the docked-panel's tilt/shadow language above, but sized
+   to fill its grid column rather than capped to a fixed px width. */
+@media (min-width: 1024px) {
+  .bookmark-inspector-pinned {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100vh - 48px);
+    border: 1px solid var(--border);
+    border-radius: 4px 16px 16px 16px;
+    animation-name: app-slide-up-tilt;
+    box-shadow: 0 16px 40px rgba(120, 98, 40, 0.18);
+  }
 }
 
 @media (max-width: 640px) {

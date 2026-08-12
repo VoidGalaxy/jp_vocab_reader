@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet } from "./TokenDetailSheet";
+import { ShioriGuideCard } from "./Shiori";
 import { buildReaderLayout, getNavigableTokenIndexes } from "./readerLayout";
 import { getTokenGroupKey } from "./coverageUtils";
 
@@ -128,6 +129,14 @@ export function ReaderMode({
   // it for attention. Local-only UI state, no effect on the toggles'
   // values or behavior once opened.
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+  // Casual Sticker Reader (Phase 65) -- true 2-column "desk scene" (reader
+  // page + pinned word inspector) only kicks in at the same breakpoint as
+  // .reader-desk-scene's grid in globals.css (1024px); keep both in sync if
+  // this value ever changes. Starts false (matches SSR/first paint) and is
+  // only actually read once a token is selected, which never happens before
+  // this effect has had a chance to run once mounted -- so there is no
+  // hydration mismatch to worry about here.
+  const [isDesktopPinned, setIsDesktopPinned] = useState(false);
   // Guards against re-applying a restored selection every time tokens
   // change (e.g. after a status save) -- only ever resolved once, right
   // after a restore, then the user's own clicks take over.
@@ -183,6 +192,17 @@ export function ReaderMode({
     },
     [],
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const query = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktopPinned(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
 
   const layout = useMemo(
     () => buildReaderLayout(originalText, tokens),
@@ -460,6 +480,45 @@ export function ReaderMode({
   const hasNextUnknown = findNextUnknownPosition() !== -1;
   const isAtFirstOccurrence = activeSegmentKey === null;
 
+  // Built once and reused by both the pinned (desktop) and modal (mobile)
+  // TokenDetailSheet renders below, so the two presentations can never
+  // drift out of sync with each other's prop list.
+  const tokenDetailProps = activeToken
+    ? {
+        token: activeToken,
+        onClose: closeDetail,
+        onStatusChange: (status: TokenStatus) => {
+          if (activeIndex !== null) {
+            onStatusChange(activeIndex, status);
+          }
+        },
+        onPrevious: goToPrev,
+        onNext: goToNext,
+        canGoPrevious: canGoPrev,
+        canGoNext: canGoNext,
+        onNextUnknown: goToNextUnknown,
+        canGoNextUnknown: hasNextUnknown,
+        onFirstOccurrence: goToFirstOccurrence,
+        canGoFirstOccurrence: !isAtFirstOccurrence,
+        positionLabel:
+          navPosition !== -1
+            ? `${navPosition + 1} / ${navigableIndexes.length}`
+            : null,
+        isInBasket: isTokenInBasket(activeToken),
+        canAddToBasket: canAddToBasket(activeToken),
+        onToggleBasket: () => onToggleBasket(activeToken),
+        meaningEditItemId,
+        meaningEditDraft,
+        isSavingMeaningEdit,
+        meaningEditMessage,
+        onStartMeaningEdit,
+        onMeaningEditDraftChange,
+        onSaveMeaningEdit,
+        onCancelMeaningEdit,
+        onReportMeaning,
+      }
+    : null;
+
   return (
     <>
       {isSessionRestored ? (
@@ -474,6 +533,11 @@ export function ReaderMode({
           </button>
         </span>
       ) : null}
+      {/* reader-desk-scene: the reader page and the pinned word inspector
+          share one desk surface (grid, ≥1024px -- see globals.css). Below
+          that breakpoint this is just a plain block, so .reader-paper
+          stacks exactly as it did before this Phase. */}
+      <div className="reader-desk-scene">
       <div className="reader-paper hero-card card-stack-surface">
       <div className="reader-mode-header-row">
         <div>
@@ -629,43 +693,32 @@ export function ReaderMode({
           </div>
         </div>
       ) : null}
-      {activeToken ? (
-        <TokenDetailSheet
-          token={activeToken}
-          onClose={closeDetail}
-          onStatusChange={(status) => {
-            if (activeIndex !== null) {
-              onStatusChange(activeIndex, status);
-            }
-          }}
-          onPrevious={goToPrev}
-          onNext={goToNext}
-          canGoPrevious={canGoPrev}
-          canGoNext={canGoNext}
-          onNextUnknown={goToNextUnknown}
-          canGoNextUnknown={hasNextUnknown}
-          onFirstOccurrence={goToFirstOccurrence}
-          canGoFirstOccurrence={!isAtFirstOccurrence}
-          positionLabel={
-            navPosition !== -1
-              ? `${navPosition + 1} / ${navigableIndexes.length}`
-              : null
-          }
-          isInBasket={isTokenInBasket(activeToken)}
-          canAddToBasket={canAddToBasket(activeToken)}
-          onToggleBasket={() => onToggleBasket(activeToken)}
-          meaningEditItemId={meaningEditItemId}
-          meaningEditDraft={meaningEditDraft}
-          isSavingMeaningEdit={isSavingMeaningEdit}
-          meaningEditMessage={meaningEditMessage}
-          onStartMeaningEdit={onStartMeaningEdit}
-          onMeaningEditDraftChange={onMeaningEditDraftChange}
-          onSaveMeaningEdit={onSaveMeaningEdit}
-          onCancelMeaningEdit={onCancelMeaningEdit}
-          onReportMeaning={onReportMeaning}
-        />
-      ) : null}
       </div>
+
+      {/* Desktop-only pinned word inspector -- always mounted (an idle
+          Shiori guide when nothing is selected, or the same word card the
+          mobile sheet shows) so it reads as a permanent fixture of the desk
+          scene rather than something that only pops in once a word is
+          tapped. Hidden below the 1024px breakpoint; mobile keeps its
+          existing tap-to-open bottom sheet, rendered separately below. */}
+      <div className="reader-inspector-rail">
+        {tokenDetailProps && isDesktopPinned ? (
+          <TokenDetailSheet presentation="pinned" {...tokenDetailProps} />
+        ) : (
+          <div className="reader-inspector-idle">
+            <ShioriGuideCard
+              variant="reading"
+              size="md"
+              message="단어를 누르면 이 자리에서 뜻과 예문을 볼 수 있어요."
+            />
+          </div>
+        )}
+      </div>
+      </div>
+
+      {tokenDetailProps && !isDesktopPinned ? (
+        <TokenDetailSheet presentation="modal" {...tokenDetailProps} />
+      ) : null}
     </>
   );
 }

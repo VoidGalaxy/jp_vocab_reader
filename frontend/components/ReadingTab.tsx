@@ -137,31 +137,39 @@ function ReaderSaveDock({
 
   return (
     <section className="reading-action-dock" aria-label="저장 바구니">
-      <div className="save-dock-count">
-        <FolderIcon className="save-dock-icon" />
-        <span>
-          담은 단어 <strong className="save-dock-count-badge">{selectedCount}</strong>개
-        </span>
-        <span className="save-dock-saveable-chip">저장 가능 {summary.saveableCount}개</span>
-      </div>
+      {/* Casual Sticker Reader (Phase 65) -- count + primary action share one
+          "shelf" row on wide screens (≥1024px, see .save-tray-shelf-row in
+          globals.css) instead of each sitting on its own full-width line,
+          so this dock reads as a slim strip attached to the reader page
+          rather than a stacked mini-form. Stays stacked on narrower
+          viewports, unchanged from before. */}
+      <div className="save-tray-shelf-row">
+        <div className="save-dock-count">
+          <FolderIcon className="save-dock-icon" />
+          <span>
+            담은 단어 <strong className="save-dock-count-badge">{selectedCount}</strong>개
+          </span>
+          <span className="save-dock-saveable-chip">저장 가능 {summary.saveableCount}개</span>
+        </div>
 
-      {selectedCount > 0 ? (
-        <button
-          type="button"
-          className="save-dock-primary-button"
-          onClick={onSaveSelected}
-          disabled={isSavingBatch}
-        >
-          <FolderIcon className="button-icon" />
-          {isSavingBatch ? "저장 중..." : `담은 단어 저장 (${selectedCount})`}
-        </button>
-      ) : (
-        <ShioriGuideCard
-          variant="reading"
-          message="원문에서 단어를 눌러 바구니에 담아보세요."
-          className="save-dock-idle-hint"
-        />
-      )}
+        {selectedCount > 0 ? (
+          <button
+            type="button"
+            className="save-dock-primary-button"
+            onClick={onSaveSelected}
+            disabled={isSavingBatch}
+          >
+            <FolderIcon className="button-icon" />
+            {isSavingBatch ? "저장 중..." : `담은 단어 저장 (${selectedCount})`}
+          </button>
+        ) : (
+          <ShioriGuideCard
+            variant="reading"
+            message="원문에서 단어를 눌러 바구니에 담아보세요."
+            className="save-dock-idle-hint"
+          />
+        )}
+      </div>
 
       <div className="save-tray-quick-save">
         <button
