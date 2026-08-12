@@ -462,45 +462,74 @@ export function StudySection({
         <p className={`message message--${messageTone}`}>{message}</p>
       ) : null}
 
-      {/* Desk stage: every "focused single card" state (ready/empty/active/
-          complete) shares one wide backdrop instead of each .study-card
-          floating alone in the workspace's empty margins -- keeps the card
-          itself at its existing centered width/size, just gives the space
-          around it a subtle desk surface instead of reading as unfinished
-          empty page. */}
-      <div className="desk-surface desk-surface-stage">
+      {/* Casual Sticker Reader (Phase 66) -- study-board-scene: every
+          "focused single card" state (ready/empty/active/complete) sits on
+          one deep-green felt board instead of a light desk tint (reuses the
+          same --notebook-cover tokens Home's cover already uses -- see
+          docs/design/DESIGN.md). Active/complete additionally sit inside
+          .study-card-stack, which layers 2 real backing-sheet elements
+          behind the current card so review reads as flipping through a
+          pile of cards, not a single card centered on a page. Ready/empty
+          keep a single flat .study-card shell (no backing sheets -- there's
+          no pile to show yet), so they stay part of the same board world
+          per Phase 66's brief without pretending to be a stack. */}
+      <div className="study-board-scene">
       {!hasStarted && !currentItem && !isComplete ? (
-        <AppEmptyState
-          mood="review"
-          moodSize="md"
-          className="study-empty-flat study-ready-card"
-          title="학습할 단어를 불러오세요"
-          description="덱과 학습 모드를 선택한 뒤 복습을 시작할 수 있어요."
-        />
+        <div className="study-card-stack-stage">
+          <AppEmptyState
+            mood="review"
+            moodSize="md"
+            className="study-card hero-card study-ready-card"
+            title="학습할 단어를 불러오세요"
+            description="덱과 학습 모드를 선택한 뒤 복습을 시작할 수 있어요."
+          />
+        </div>
       ) : null}
 
       {hasStarted && !currentItem && !isComplete ? (
-        <AppEmptyState
-          mood="empty"
-          moodSize="lg"
-          className="study-empty-flat study-ready-card"
-          title={emptyMessages[studyMode]}
-          description={emptySecondaryMessages[studyMode]}
-        >
-          <div className="study-actions">
-            <button type="button" onClick={onGoToReading}>
-              <BookIcon className="button-icon" />
-              원문 읽기 시작
-            </button>
-            <button type="button" className="secondary-button" onClick={onGoToVocab}>
-              어휘 노트 보기
-            </button>
-          </div>
-        </AppEmptyState>
+        <div className="study-card-stack-stage">
+          <AppEmptyState
+            mood="empty"
+            moodSize="lg"
+            className="study-card hero-card study-ready-card"
+            title={emptyMessages[studyMode]}
+            description={emptySecondaryMessages[studyMode]}
+          >
+            <div className="study-actions">
+              <button type="button" onClick={onGoToReading}>
+                <BookIcon className="button-icon" />
+                원문 읽기 시작
+              </button>
+              <button type="button" className="secondary-button" onClick={onGoToVocab}>
+                어휘 노트 보기
+              </button>
+            </div>
+          </AppEmptyState>
+        </div>
       ) : null}
 
       {currentItem && !isComplete ? (
-        <div className="study-card hero-card paper-corner card-stack-surface">
+        <div className="study-card-stack-stage">
+        <div className="study-card-stack">
+          <span className="study-card-backing-sheet study-card-backing-sheet-outer" aria-hidden="true" />
+          <span className="study-card-backing-sheet study-card-backing-sheet-inner" aria-hidden="true" />
+          <div className="study-card hero-card paper-corner">
+          {/* Progress used to be a bold "N / total" number plus a full-width
+              linear bar -- a dashboard readout sitting on top of the card.
+              A small pinned marker tag reads as "this is card N of the pile"
+              instead, the way a paperclip note on a real card stack would.
+              Keeps the exact same progressbar semantics (aria-valuenow/max)
+              for assistive tech, just no longer drawn as a bar. */}
+          <span
+            className="study-progress-marker"
+            role="progressbar"
+            aria-label="세션 진행률"
+            aria-valuemin={0}
+            aria-valuemax={items.length}
+            aria-valuenow={Math.min(currentIndex + 1, items.length)}
+          >
+            {visibleProgress}
+          </span>
           <div
             className={`study-card-header${
               studyMode === "recent" ? " study-card-header-recent" : ""
@@ -510,7 +539,6 @@ export function StudySection({
               {modeLabel}
               {currentItem.item_type === "lexeme" ? ` · ${currentItem.source_label}` : ""}
             </span>
-            <strong>{visibleProgress}</strong>
           </div>
           {studyMode === "recent" ? (
             <p className="study-card-recent-hint">
@@ -520,25 +548,6 @@ export function StudySection({
           {showNewLexemeLimitHint ? (
             <p className="study-card-recent-hint">새 단어는 한 번에 30개씩 가볍게 시작해요.</p>
           ) : null}
-          <div
-            className="progress-bar study-card-progress"
-            role="progressbar"
-            aria-label="세션 진행률"
-            aria-valuemin={0}
-            aria-valuemax={items.length}
-            aria-valuenow={Math.min(currentIndex + 1, items.length)}
-          >
-            <div
-              style={{
-                width:
-                  items.length > 0
-                    ? `${Math.round(
-                        (Math.min(currentIndex + 1, items.length) / items.length) * 100,
-                      )}%`
-                    : "0%",
-              }}
-            />
-          </div>
           <div className="study-front app-slide-up" key={currentItem.id}>
             <div className="study-front-word">
               {currentItem.surface || currentItem.base_form}
@@ -628,7 +637,7 @@ export function StudySection({
                 <p className="study-example-empty">저장된 문맥 예문이 없어요.</p>
               )}
               <div
-                className="study-rating-grid"
+                className="study-rating-grid study-rating-stamp-tray"
                 role="group"
                 aria-label="복습 평가"
                 ref={ratingGridRef}
@@ -668,11 +677,17 @@ export function StudySection({
               {message}
             </p>
           ) : null}
+          </div>
+        </div>
         </div>
       ) : null}
 
       {isComplete ? (
-        <div className="study-card complete-card card-stack-surface">
+        <div className="study-card-stack-stage">
+        <div className="study-card-stack study-card-stack-receipt">
+          <span className="study-card-backing-sheet study-card-backing-sheet-outer" aria-hidden="true" />
+          <span className="study-card-backing-sheet study-card-backing-sheet-inner" aria-hidden="true" />
+          <div className="study-card complete-card paper-corner">
           <ShioriStamp variant="success" label="완료" />
           <h3>
             {studyMode === "recent"
@@ -728,6 +743,8 @@ export function StudySection({
               </button>
             ) : null}
           </div>
+          </div>
+        </div>
         </div>
       ) : null}
       </div>

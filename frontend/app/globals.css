@@ -693,9 +693,13 @@ button {
      auto-scrolled into view on answer reveal (see StudySection.tsx) --
      without this, scrollIntoView treats the nav's screen space as
      available viewport and stops short, leaving 다시/어려움 tucked behind
-     the nav bar on common phone heights. */
+     the nav bar on common phone heights. Bumped from +12px (Phase 45) to
+     +40px in Phase 66 -- the card-stack redesign's board padding/backing
+     sheets measurably shifted the settled scroll position closer to the
+     nav than the old flatter layout did, so the smaller buffer was no
+     longer leaving reliable clearance. */
   .study-rating-grid {
-    scroll-margin-bottom: calc(64px + env(safe-area-inset-bottom) + 12px);
+    scroll-margin-bottom: calc(64px + env(safe-area-inset-bottom) + 40px);
   }
 
   .app-bottom-nav-item {
@@ -2609,40 +2613,135 @@ select {
     inset 0 -16px 26px -20px rgba(120, 98, 40, 0.18);
 }
 
-/* Desk stage backdrop -- the 640px-wide .study-card inside still centers
-   itself, but now sits on a soft desk-surface panel instead of bare page
-   background, so the margins on either side read as "desk around the
-   card" rather than unfinished empty space. A faint horizontal line near
-   the bottom stands in for a desk edge; kept low-contrast so it never
-   competes with the card or its rating buttons. */
-.desk-surface-stage {
-  padding: 16px 16px 22px;
-  border-radius: 24px;
-}
-
 /* Same desk-surface recipe, padded/rounded for a full-width section body
-   (a list + its empty state) instead of desk-surface-stage's single
-   centered flashcard -- lets 단어/덱 tabs' main content area read as
-   "resting on the desk" too, at the same intensity tier as 복습's stage. */
+   (a list + its empty state) -- lets 단어/덱 tabs' main content area read
+   as "resting on the desk" too. Study's own active-session stage moved to
+   the darker felt-board treatment below (.study-board-scene, Phase 66) and
+   no longer shares this lighter recipe. */
 .desk-surface-section {
   padding: 16px;
   border-radius: 16px;
 }
 
-.desk-surface-stage::after {
+/* Casual Sticker Reader (Phase 66) -- study-board-scene: a deep-green felt
+   board (reuses Home's --notebook-cover tokens -- see docs/design/
+   DESIGN.md's "reuse these for any future notebook-cover-styled surface"
+   note) that every Study active-session state (ready/empty/active/
+   complete) sits on, replacing the old light .desk-surface-stage tint.
+   Light .study-card sheets read clearly against it the same way the
+   mockup's board scenes always place light cards on a dark board, never
+   text directly on the felt itself. */
+.study-board-scene {
+  position: relative;
+  padding: 28px 16px 30px;
+  border-radius: 28px;
+  background:
+    radial-gradient(
+      ellipse 70% 45% at 50% 0%,
+      rgba(255, 255, 255, 0.08) 0%,
+      transparent 70%
+    ),
+    linear-gradient(165deg, var(--notebook-cover) 0%, var(--notebook-cover-deep) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 16px 34px rgba(37, 43, 30, 0.22);
+  overflow: hidden;
+}
+
+/* Faint felt-weave dot texture -- a material cue, low-contrast enough to
+   never compete with the card stack sitting on top of it. */
+.study-board-scene::before {
   content: "";
   position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: 22px;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--border-strong) 50%,
-    transparent
+  inset: 0;
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 1.4px
   );
-  opacity: 0.6;
+  background-size: 14px 14px;
+  pointer-events: none;
+}
+
+.study-card-stack-stage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+}
+
+.study-card-stack-stage + .study-card-stack-stage {
+  margin-top: 16px;
+}
+
+/* study-card-stack -- the pile itself. .study-card (or .complete-card)
+   inside is the top sheet; the two backing-sheet spans below give it real
+   depth as siblings in the DOM rather than a single card's own pseudo-
+   element trim, so review reads as flipping through a stack instead of one
+   card floating on a page. */
+.study-card-stack {
+  position: relative;
+  width: min(640px, 100%);
+  padding-top: 14px;
+}
+
+.study-card-stack .study-card {
+  position: relative;
+  z-index: 2;
+}
+
+/* The completion receipt is narrower than the active-review card (see
+   .complete-card's own width above) -- narrows its backing-sheet pile to
+   match, so the ghost sheets don't peek out wider than the card sitting on
+   top of them. */
+.study-card-stack-receipt {
+  width: min(440px, 100%);
+}
+
+.study-card-backing-sheet {
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  top: 14px;
+  bottom: 0;
+  border-radius: 20px;
+  background: var(--panel-bg);
+  border: 1px solid rgba(110, 91, 47, 0.16);
+  box-shadow: 0 10px 20px rgba(37, 43, 30, 0.18);
+  pointer-events: none;
+}
+
+.study-card-backing-sheet-outer {
+  z-index: 0;
+  transform: rotate(-3deg) translate(-4px, 8px);
+  opacity: 0.82;
+}
+
+.study-card-backing-sheet-inner {
+  z-index: 1;
+  transform: rotate(2deg) translate(5px, 4px);
+  opacity: 0.9;
+}
+
+/* study-progress-marker -- replaces the old bold "N / total" number + a
+   full-width linear bar with one small pinned tag, like a paperclip note
+   on top of the pile ("card 3 of the stack") rather than a dashboard
+   readout. Keeps the same progressbar aria semantics (see StudySection.tsx)
+   even though it no longer draws as a bar. */
+.study-progress-marker {
+  position: absolute;
+  top: -14px;
+  left: 22px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.22);
+  transform: rotate(-3deg);
 }
 
 .study-card {
@@ -2665,22 +2764,6 @@ select {
    for the active flashcard instance that also carries that class. */
 .study-card.hero-card {
   border-radius: 20px;
-}
-
-/* Empty-state variant: the ready/empty placeholders previously used
-   .study-card too, so an opaque bordered+shadowed card sat nested inside
-   desk-surface-stage's own soft tinted surface -- "box inside a box" for a
-   screen that has nothing to show yet. Keeps .study-card's layout (width
-   cap, centering, internal gap) but drops the card shell, so the empty
-   state sits directly on the desk tint as the only surface. */
-.study-empty-flat {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 10px;
-  width: min(560px, 100%);
-  margin: 0 auto;
-  padding: 2px 16px;
 }
 
 .study-card-header {
@@ -2706,10 +2789,6 @@ select {
   text-overflow: ellipsis;
 }
 
-.study-card-header strong {
-  flex: 0 0 auto;
-}
-
 .study-card-header-recent span:first-child {
   color: var(--primary-dark);
 }
@@ -2726,10 +2805,6 @@ select {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-}
-
-.study-card-progress {
-  height: 6px;
 }
 
 .study-front {
@@ -2890,6 +2965,37 @@ select {
   padding-top: 4px;
 }
 
+/* Casual Sticker Reader (Phase 66) -- study-rating-stamp-tray: a co-class
+   on the same element as .study-rating-grid (not a replacement -- keeps
+   every existing selector, the scroll-margin-bottom bottom-nav clearance,
+   and ratingGridRef untouched). A perforated divider above the 4 stamps
+   marks this as its own "stamp tray" zone at the foot of the card, instead
+   of just the last row in a form. */
+.study-rating-stamp-tray {
+  position: relative;
+  margin-top: 4px;
+  padding-top: 16px;
+}
+
+.study-rating-stamp-tray::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-image: linear-gradient(
+    to right,
+    var(--border-strong) 0,
+    var(--border-strong) 5px,
+    transparent 5px,
+    transparent 10px
+  );
+  background-repeat: repeat-x;
+  background-size: 10px 1px;
+  opacity: 0.5;
+}
+
 .rating-button {
   display: grid;
   gap: 4px;
@@ -3041,17 +3147,45 @@ select {
 .complete-card {
   justify-items: center;
   text-align: center;
+  /* Narrower than the active-review .study-card -- a receipt slip, not a
+     flashcard, so it reads as its own object rather than the same-width
+     card just relabeled. */
+  width: min(440px, 100%);
+  padding-bottom: 36px;
   border-radius: 20px;
   box-shadow: 0 16px 36px var(--paper-shadow);
   animation: app-slide-up var(--motion-slow) var(--ease-soft) both;
 }
 
+/* Casual Sticker Reader (Phase 66) -- a second perforated tear line along
+   the card's own bottom edge (same recipe as .study-complete-stats' top
+   tear below), so the whole card reads as one torn-off receipt strip, not
+   just its stat row. ::before (not ::after) -- .complete-card also carries
+   .paper-corner, which already owns ::after for its folded-corner
+   triangle. */
+.complete-card::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  height: 1px;
+  background-image: linear-gradient(
+    to right,
+    var(--border-strong) 0,
+    var(--border-strong) 5px,
+    transparent 5px,
+    transparent 10px
+  );
+  background-repeat: repeat-x;
+  background-size: 10px 1px;
+  opacity: 0.55;
+}
+
 /* Casual Sticker Reader (Phase 58) -- a perforated "receipt tear" line
    (repeating-linear-gradient dashes) instead of a plain dashed rule, so
    today's ratings read as a small torn-off stamp record, not a results
-   report. Can't use ::before/::after here -- .complete-card already spends
-   both on .card-stack-surface's "stack of pages" ghost layers -- so the
-   perforation lives on this element's own border/background instead. */
+   report. */
 .study-complete-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
