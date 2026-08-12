@@ -506,6 +506,15 @@ export function SharedDeckSection({
         </div>
       ) : null}
 
+      {/* Casual Sticker Reader (Phase 69) -- shared-library-scene: wraps the
+          shelf sections (and the opened-notebook detail panel) in one
+          wooden cabinet backdrop at the >=1024px desktop tier (same wood
+          tokens Phase 67's App Shell desk introduced), so browsing decks
+          reads as pulling a booklet off a shelf inside a cabinet rather
+          than scrolling a card grid. Below that breakpoint this is a
+          plain wrapper -- mobile/tablet render exactly as before this
+          Phase. */}
+      <div className="shared-library-scene">
       <div className="desk-surface desk-surface-section">
       {isInitialLoading ? (
         <AppEmptyState
@@ -857,6 +866,7 @@ export function SharedDeckSection({
           </div>
         </section>
       ) : null}
+      </div>
     </section>
   );
 }

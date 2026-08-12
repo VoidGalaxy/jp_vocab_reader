@@ -189,6 +189,19 @@ board resting on it, the library rail's active link reads as a bookmark
 tab stuck to the board's edge, the topbar reads as a small paper toolbar
 tag, and Home's cover + shortcut notes arrange into one 2-column desk
 stage instead of stacking full-width. All of this is gated at the same
-`>=1024px` tier as Phase 65/66 and leaves mobile/tablet unchanged. See the
-brief's "Implementation order recommendation" for any further polish
-passes (Shared Deck shelf, Analyze/Stats/Feedback).
+`>=1024px` tier as Phase 65/66 and leaves mobile/tablet unchanged. Phase 68
+did the same structural pass for Vocab: the note screen becomes a
+`.vocab-notebook-scene` spread (filter index rail | word list | a
+selected-item note page on the right) instead of row-expansion pushing
+detail open inline everywhere; mobile keeps the original inline
+expansion, and management/share/custom-term panels moved below the
+spread instead of wedging between the filter and the list. Phase 69
+extended the same idea to Shared Deck: a `.shared-library-scene` wraps
+the shelf sections and the opened detail panel in a wood-cabinet
+backdrop (reusing Phase 67's `--desk-wood` tokens) at `>=1024px`, each
+`shelf-section` (recommended/mine/other) becomes its own light
+compartment card instead of sharing one flat backdrop, and deck cards get
+a subtle 1-2deg resting tilt that straightens on hover/selection.
+`BrandDeckCover` and every owner/subscriber/import condition are
+untouched. See the brief's "Implementation order recommendation" for any
+remaining polish passes (Analyze/Stats/Feedback).

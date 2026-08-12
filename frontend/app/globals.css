@@ -5534,6 +5534,107 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 12px;
 }
 
+/* Casual Sticker Reader (Phase 69) -- shared-library-scene: a plain
+   wrapper below the desktop tier (identical to before this Phase). At
+   >=1024px it becomes a wooden cabinet backdrop (reuses --desk-wood/
+   --desk-wood-deep, the same tokens Phase 67's App Shell desk uses) that
+   the shelf sections and the opened detail panel sit inside, so browsing
+   decks reads as a cabinet of shelves rather than a card grid on plain
+   page background. Keep this breakpoint in sync with the reader/study/
+   vocab desk scenes from Phase 65/66/68. */
+.shared-library-scene {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .shared-library-scene {
+    padding: 20px;
+    border-radius: 26px;
+    background: linear-gradient(
+      165deg,
+      var(--desk-wood) 0%,
+      var(--desk-wood-deep) 100%
+    );
+    box-shadow:
+      inset 0 2px 10px rgba(37, 23, 10, 0.35),
+      inset 0 -2px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  /* Each shelf section becomes its own light "compartment" resting inside
+     the dark cabinet, instead of all three groups sharing one flat
+     backdrop -- a real depth/shadow cue per shelf, not just a heading and
+     a dividing rule. */
+  .shared-library-scene .shelf-section {
+    padding: 14px 16px 22px;
+    border-radius: 4px 16px 16px 16px;
+    background: var(--panel-bg);
+    box-shadow: 0 10px 22px rgba(37, 23, 10, 0.16);
+  }
+
+  .shared-library-scene .shelf-section-title {
+    border-bottom-color: var(--border);
+  }
+
+  /* Non-grouped fallback grid (no recommended/mine/other split -- e.g. a
+     handful of decks with no JLPT levels) gets the same compartment
+     treatment as a single shelf, so it never sits bare against the wood. */
+  .shared-library-scene .desk-surface-section > .shared-deck-grid {
+    padding: 14px 16px 22px;
+    border-radius: 4px 16px 16px 16px;
+    background: var(--panel-bg);
+    box-shadow: 0 10px 22px rgba(37, 23, 10, 0.16);
+  }
+
+  /* Loading/error/empty states keep the existing AppEmptyState look but
+     get the same light compartment backing so they don't sit directly on
+     the dark wood with no surface under them. */
+  .shared-library-scene .desk-surface-section > .empty-guide,
+  .shared-library-scene .desk-surface-section > .shared-deck-loading {
+    padding: 24px 16px;
+    border-radius: 16px;
+    background: var(--panel-bg);
+  }
+
+  /* Small booklet tilt (1-2deg, alternating) on resting cards -- straightens
+     on hover/selection via the existing higher-specificity hover rules
+     below, which already set their own untilted transform. */
+  .shared-deck-grid > .shared-deck-card:not(.selected-shared-deck-card):nth-child(3n + 1) {
+    transform: rotate(-1.2deg);
+  }
+
+  .shared-deck-grid > .shared-deck-card:not(.selected-shared-deck-card):nth-child(3n + 2) {
+    transform: rotate(1deg);
+  }
+
+  .shared-deck-grid > .shared-deck-card:not(.selected-shared-deck-card):nth-child(3n + 3) {
+    transform: rotate(-0.6deg);
+  }
+
+  /* A faint ledge echoing the shelf grid's own bottom ledge, but along the
+     detail panel's top edge -- reads as "this booklet just came down off
+     the shelf above" rather than an unrelated panel appearing below. */
+  .shared-deck-detail::after {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 4%;
+    right: 4%;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--border-strong) 12%,
+      var(--border-strong) 88%,
+      transparent
+    );
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
 /* Casual Sticker Reader (Phase 59) -- position:relative so .shared-hero-tape
    (a real element, same recipe as the other tabs' hero tape -- this card
    already spends both ::before/::after on .card-stack-surface) can sit half
