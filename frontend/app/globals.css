@@ -6094,6 +6094,7 @@ input.reading-vocab-sticker-toggle:checked {
    page background. Keep this breakpoint in sync with the reader/study/
    vocab desk scenes from Phase 65/66/68. */
 .shared-library-scene {
+  position: relative;
   display: grid;
   gap: 16px;
   min-width: 0;
@@ -6111,6 +6112,49 @@ input.reading-vocab-sticker-toggle:checked {
     box-shadow:
       inset 0 2px 10px rgba(37, 23, 10, 0.35),
       inset 0 -2px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  /* Phase 75 -- a small leaf-sprig hint (top-left) and a paper shelf-label
+     tag (top-right), the same "cross-screen material" language Phase 73's
+     Home plant and Phase 74's Study leaf-sprig use, at cabinet scale. Both
+     anchored via `top` (never `bottom`) -- Phase 73's postmortem on this
+     file covers why anchoring decorative props to the bottom of a
+     variable-height scene can silently drift onto the wrong sibling's
+     edge. Neither is gated separately below 1024px; both live entirely
+     inside this media block so they simply don't exist below that tier,
+     matching every other desk-prop layer's mobile restraint. */
+  .shared-library-scene::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    z-index: 1;
+    width: 26px;
+    height: 30px;
+    background:
+      radial-gradient(ellipse 6px 11px at 35% 62%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%),
+      radial-gradient(ellipse 6px 12px at 62% 40%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%);
+    opacity: 0.75;
+    transform: rotate(-6deg);
+    pointer-events: none;
+  }
+
+  .shared-library-scene::after {
+    content: "서가";
+    position: absolute;
+    top: -8px;
+    right: 22px;
+    z-index: 1;
+    padding: 4px 10px 3px;
+    border: 1px solid var(--paper-border);
+    border-radius: 3px;
+    background: var(--panel-bg);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    box-shadow: 0 4px 8px rgba(37, 23, 10, 0.22);
+    transform: rotate(3deg);
+    pointer-events: none;
   }
 
   /* Each shelf section becomes its own light "compartment" resting inside
@@ -6327,6 +6371,31 @@ input.reading-vocab-sticker-toggle:checked {
   box-shadow: 0 16px 36px var(--paper-shadow);
 }
 
+/* Phase 75 -- a small leaf-sprig hint bleeding from the panel's left edge,
+   like the notebook was pulled off the shelf with a leaf still tucked
+   against its spine -- reinforces "this came off the shelf" without
+   touching the header row (close/import/unpublish/republish buttons) or
+   the word-list/filter/pagination content below it. Uses the free
+   ::before slot (::after is already taken above 1024px by the top-edge
+   shelf-ledge echo); gated to the same >=1024px tier as every other
+   Phase 73-75 desk prop for mobile restraint. */
+@media (min-width: 1024px) {
+  .shared-deck-detail::before {
+    content: "";
+    position: absolute;
+    top: 96px;
+    left: -12px;
+    width: 22px;
+    height: 26px;
+    background:
+      radial-gradient(ellipse 5px 9px at 35% 62%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%),
+      radial-gradient(ellipse 5px 10px at 62% 40%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%);
+    opacity: 0.8;
+    transform: rotate(-10deg);
+    pointer-events: none;
+  }
+}
+
 .shared-deck-detail-tape {
   position: absolute;
   top: -6px;
@@ -6415,6 +6484,23 @@ input.reading-vocab-sticker-toggle:checked {
      each modifier only needs to declare its own color layers. */
   background-size: 12px 12px, auto;
   background-blend-mode: overlay;
+}
+
+/* Phase 75 -- a thin light catch along the cover band's left edge, like a
+   book spine's rounded fold catching the light -- the "book-edge
+   highlight" the brief asks for, applied uniformly (not a per-card random
+   accent) so a whole shelf of these still reads as one calm row, not
+   individually decorated tiles. Contained by the cover's own
+   overflow:hidden, so it can never bleed past the band. */
+.brand-deck-cover::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 5px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.32), transparent);
+  pointer-events: none;
 }
 
 /* Folded page-corner -- a small triangle notched into the top-right of the

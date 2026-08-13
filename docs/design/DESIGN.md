@@ -306,3 +306,28 @@ Home's leaves since Study is a repeated-use screen. No `StudySection.tsx`
 change was needed. Net result: Home reads as the richest "welcome desk,"
 Reading as a moderately furnished work surface, and Study as the
 quietest of the three -- an intentional density gradient, not a gap.
+Phase 75 brought Shared Deck's shelf/cabinet scene up to that same
+gradient, entirely in `globals.css` -- `SharedDeckSection.tsx` needed no
+changes at all, since `.shared-library-scene`/`.shelf-section` turned out
+to have both pseudo-element slots completely free. `.shared-library-scene`
+picked up a leaf-sprig hint (top-left) and a small "서가" paper shelf-label
+tag (top-right), both anchored via `top` only (never `bottom` -- see the
+Phase 73 note on why); the combined padding of the scene (20px) plus
+`.desk-surface-section` (16px) gives 36px of buffer before any real shelf
+content begins, confirmed against a real (test-fixture-seeded) populated
+shelf via exact `getBoundingClientRect()` checks, not just eyeballed.
+`.brand-deck-cover` picked up a thin light-catch highlight along its left
+edge on its previously-free `::before` slot (contained by the cover's own
+`overflow: hidden`) -- applied uniformly to every deck cover rather than
+a per-card decorative accent, since a repeated grid of cards is exactly
+the kind of "don't over-decorate a repeated tile" context Study's Phase 74
+note already covers. `.shared-deck-detail` picked up a small leaf-sprig
+hint bleeding from its left edge on its own free `::before` slot (its
+`::after` is already taken above 1024px by the existing top-edge
+shelf-ledge echo), positioned below the header row so it never risks the
+close/import/unpublish/republish buttons or the word-list/filter/
+pagination content beneath it. All three pieces are gated the same
+`>=1024px` tier `.shared-library-scene`'s wood-cabinet backdrop already
+uses, so mobile/tablet render exactly as before this Phase. No owner/
+subscriber/newcomer button conditions, import/unpublish/republish logic,
+or state copy were touched.
