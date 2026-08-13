@@ -388,11 +388,56 @@ function ClassifyActionGrid({
 }
 
 // ---------------------------------------------------------------------------
+// ClassifyProgressTally -- desktop-only side-rail readout of how the tokens
+// classified so far break down (아는/헷갈리는/모르는/건너뜀). Reuses the same
+// counts ClassifyResultSummary already receives, just live-updated mid-stage
+// instead of only at completion, so the >=1024px work-aside always has real
+// content instead of empty space next to the card stack (same "sticky rail
+// beside the main surface" idea as Reading's .reader-inspector-rail).
+// ---------------------------------------------------------------------------
+function ClassifyProgressTally({
+  knownCount,
+  uncertainCount,
+  unknownCount,
+  skippedCount,
+}: {
+  knownCount: number;
+  uncertainCount: number;
+  unknownCount: number;
+  skippedCount: number;
+}) {
+  return (
+    <div className="analyze-tally" role="status" aria-live="polite">
+      <span className="analyze-tally-stat analyze-tally-stat-known">
+        <span>{statusLabels.known}</span>
+        <strong>{knownCount}</strong>
+      </span>
+      <span className="analyze-tally-stat analyze-tally-stat-uncertain">
+        <span>{statusLabels.uncertain}</span>
+        <strong>{uncertainCount}</strong>
+      </span>
+      <span className="analyze-tally-stat analyze-tally-stat-unknown">
+        <span>{statusLabels.unknown}</span>
+        <strong>{unknownCount}</strong>
+      </span>
+      <span className="analyze-tally-stat analyze-tally-stat-skip">
+        <span>건너뜀</span>
+        <strong>{skippedCount}</strong>
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // ClassifyCardStage -- the in-progress screen: one word card, front and
 // center, plus the small toolbar (읽기 탭에서 보기/지금까지 저장) that used
 // to be a "분석 결과" dashboard heading. No result list/table lives here --
 // that stays opt-in, rendered by the parent only after this stage (and
-// ClassifyResultSummary) are done.
+// ClassifyResultSummary) are done. At >=1024px the toolbar/tally move into a
+// sticky work-aside beside the card (.analyze-work-scene), so the screen
+// reads as a small work desk with the card in the middle instead of a
+// toolbar stacked above a form; below that it stays the same single column
+// as before this pass.
 // ---------------------------------------------------------------------------
 type ClassifyCardStageProps = {
   currentToken: TokenWithStatus;
@@ -401,6 +446,10 @@ type ClassifyCardStageProps = {
   savedAtText: string;
   isSaving: boolean;
   selectedDeckId: string;
+  knownCount: number;
+  uncertainCount: number;
+  unknownCount: number;
+  skippedCount: number;
   onClassifyCurrent: (status: TokenStatus) => void;
   onPreviousCard: () => void;
   onViewInReadingTab: () => void;
@@ -414,58 +463,74 @@ function ClassifyCardStage({
   savedAtText,
   isSaving,
   selectedDeckId,
+  knownCount,
+  uncertainCount,
+  unknownCount,
+  skippedCount,
   onClassifyCurrent,
   onPreviousCard,
   onViewInReadingTab,
   onSaveSelected,
 }: ClassifyCardStageProps) {
   return (
-    <div className="classify-card-stage">
-      <div className="classify-stage-toolbar">
-        <button
-          type="button"
-          className="ghost-button compact-button"
-          onClick={onViewInReadingTab}
-        >
-          읽기 탭에서 보기
-        </button>
-        <button
-          type="button"
-          className="ghost-button compact-button"
-          onClick={onSaveSelected}
-          disabled={isSaving || !selectedDeckId}
-          title={!selectedDeckId ? "저장할 덱을 선택해 주세요." : undefined}
-        >
-          {isSaving ? "저장 중..." : "지금까지 저장"}
-        </button>
-      </div>
-      {savedAtText ? (
-        <p className="draft-status">
-          분류 진행상태 자동 저장 중 · 마지막 저장: {savedAtText}
-        </p>
-      ) : null}
-
-      <div className="classify-word-card card-stack-surface">
-        <div className="classify-progress">
-          <span>
-            {currentCardIndex + 1} / {totalCount}
-          </span>
-        </div>
-        <div className="classify-word-card-content app-slide-up" key={currentCardIndex}>
-          <ClassifyWordCard token={currentToken} />
-        </div>
-        <ClassifyActionGrid onClassify={onClassifyCurrent} />
-        <div className="card-navigation">
+    <div className="classify-card-stage analyze-work-scene">
+      <div className="analyze-work-main">
+        <div className="classify-stage-toolbar">
           <button
             type="button"
-            className="secondary-button"
-            onClick={onPreviousCard}
-            disabled={currentCardIndex === 0}
+            className="ghost-button compact-button"
+            onClick={onViewInReadingTab}
           >
-            이전
+            읽기 탭에서 보기
+          </button>
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={onSaveSelected}
+            disabled={isSaving || !selectedDeckId}
+            title={!selectedDeckId ? "저장할 덱을 선택해 주세요." : undefined}
+          >
+            {isSaving ? "저장 중..." : "지금까지 저장"}
           </button>
         </div>
+        {savedAtText ? (
+          <p className="draft-status">
+            분류 진행상태 자동 저장 중 · 마지막 저장: {savedAtText}
+          </p>
+        ) : null}
+
+        <div className="classify-word-card card-stack-surface">
+          <div className="classify-progress">
+            <span>
+              {currentCardIndex + 1} / {totalCount}
+            </span>
+          </div>
+          <div className="classify-word-card-content app-slide-up" key={currentCardIndex}>
+            <ClassifyWordCard token={currentToken} />
+          </div>
+          <ClassifyActionGrid onClassify={onClassifyCurrent} />
+          <div className="card-navigation">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onPreviousCard}
+              disabled={currentCardIndex === 0}
+            >
+              이전
+            </button>
+          </div>
+        </div>
       </div>
+
+      <aside className="analyze-work-aside">
+        <p className="analyze-work-aside-label">지금까지 나눈 단어</p>
+        <ClassifyProgressTally
+          knownCount={knownCount}
+          uncertainCount={uncertainCount}
+          unknownCount={unknownCount}
+          skippedCount={skippedCount}
+        />
+      </aside>
     </div>
   );
 }
@@ -666,6 +731,10 @@ export function AnalyzeSection({
               savedAtText={savedAtText}
               isSaving={isSaving}
               selectedDeckId={selectedDeckId}
+              knownCount={knownCount}
+              uncertainCount={uncertainCount}
+              unknownCount={unknownCount}
+              skippedCount={skippedCount}
               onClassifyCurrent={onClassifyCurrent}
               onPreviousCard={onPreviousCard}
               onViewInReadingTab={onViewInReadingTab}

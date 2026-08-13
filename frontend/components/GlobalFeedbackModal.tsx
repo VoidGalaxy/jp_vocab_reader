@@ -113,7 +113,7 @@ export function GlobalFeedbackModal({
   return (
     <div className="feedback-modal-overlay" role="presentation" onClick={onClose}>
       <div
-        className="feedback-modal"
+        className="feedback-modal paper-corner"
         role="dialog"
         aria-modal="true"
         aria-label="베타 피드백 보내기"

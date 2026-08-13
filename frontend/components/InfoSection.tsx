@@ -221,72 +221,72 @@ export function StudyLogPage({
       {isEmpty ? <StudyLogEmptyState onGoToReading={onGoToReading} /> : null}
 
       {hasStats && stats ? (
-        <>
-          <TodayStudyMemo
-            dueTodayCount={stats.due_today_count}
-            recentCount={recentWords.length}
-            hardCount={hardWords.length}
-          />
-          <StudyTimeline entries={journalEntries} />
-          <DeckProgressJournal deckStats={stats.deck_stats} />
-        </>
-      ) : null}
+        <div className="study-log-scene">
+          <div className="study-log-scene-main">
+            <TodayStudyMemo
+              dueTodayCount={stats.due_today_count}
+              recentCount={recentWords.length}
+              hardCount={hardWords.length}
+            />
+            <StudyTimeline entries={journalEntries} />
+            <DeckProgressJournal deckStats={stats.deck_stats} />
+          </div>
 
-      {hasStats ? (
-        <section className="study-log-entry">
-          <h3 className="records-log-title">
-            <BrandSectionBadge icon={BookmarkIcon} />
-            최근 담은 단어
-          </h3>
-          {isWordsLoading && recentWords.length === 0 ? (
-            <p className="muted-text">불러오는 중...</p>
-          ) : recentWords.length > 0 ? (
-            <div className="records-word-log">
-              {recentWords.map((item) => (
-                <div className="records-word-row paper-corner" key={item.id}>
-                  <span className="records-word-surface">{item.surface}</span>
-                  {item.reading && item.reading !== item.surface ? (
-                    <span className="records-word-reading">{item.reading}</span>
-                  ) : null}
-                  <span className="records-word-meaning">
-                    {getDisplayMeaning(item.meaning_ko)}
-                  </span>
+          <aside className="study-log-scene-aside">
+            <section className="study-log-entry">
+              <h3 className="records-log-title">
+                <BrandSectionBadge icon={BookmarkIcon} />
+                최근 담은 단어
+              </h3>
+              {isWordsLoading && recentWords.length === 0 ? (
+                <p className="muted-text">불러오는 중...</p>
+              ) : recentWords.length > 0 ? (
+                <div className="records-word-log">
+                  {recentWords.map((item) => (
+                    <div className="records-word-row paper-corner" key={item.id}>
+                      <span className="records-word-surface">{item.surface}</span>
+                      {item.reading && item.reading !== item.surface ? (
+                        <span className="records-word-reading">{item.reading}</span>
+                      ) : null}
+                      <span className="records-word-meaning">
+                        {getDisplayMeaning(item.meaning_ko)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="muted-text">아직 담은 단어가 없어요.</p>
-          )}
-        </section>
-      ) : null}
+              ) : (
+                <p className="muted-text">아직 담은 단어가 없어요.</p>
+              )}
+            </section>
 
-      {hasStats ? (
-        <section className="study-log-entry">
-          <h3 className="records-log-title">
-            <BrandSectionBadge icon={PencilIcon} />
-            자주 틀린 단어
-          </h3>
-          {isWordsLoading && hardWords.length === 0 ? (
-            <p className="muted-text">불러오는 중...</p>
-          ) : hardWords.length > 0 ? (
-            <div className="records-word-log">
-              {hardWords.map((item) => (
-                <div className="records-word-row paper-corner" key={item.id}>
-                  <span className="records-word-surface">{item.surface}</span>
-                  {item.reading && item.reading !== item.surface ? (
-                    <span className="records-word-reading">{item.reading}</span>
-                  ) : null}
-                  <span className="records-word-meaning">
-                    {getDisplayMeaning(item.meaning_ko)}
-                  </span>
-                  <span className="records-word-wrong-badge">다시 {item.wrong_count}회</span>
+            <section className="study-log-entry">
+              <h3 className="records-log-title">
+                <BrandSectionBadge icon={PencilIcon} />
+                자주 틀린 단어
+              </h3>
+              {isWordsLoading && hardWords.length === 0 ? (
+                <p className="muted-text">불러오는 중...</p>
+              ) : hardWords.length > 0 ? (
+                <div className="records-word-log">
+                  {hardWords.map((item) => (
+                    <div className="records-word-row paper-corner" key={item.id}>
+                      <span className="records-word-surface">{item.surface}</span>
+                      {item.reading && item.reading !== item.surface ? (
+                        <span className="records-word-reading">{item.reading}</span>
+                      ) : null}
+                      <span className="records-word-meaning">
+                        {getDisplayMeaning(item.meaning_ko)}
+                      </span>
+                      <span className="records-word-wrong-badge">다시 {item.wrong_count}회</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="muted-text">아직 자주 틀린 단어가 없어요.</p>
-          )}
-        </section>
+              ) : (
+                <p className="muted-text">아직 자주 틀린 단어가 없어요.</p>
+              )}
+            </section>
+          </aside>
+        </div>
       ) : null}
 
       {hasStats ? (

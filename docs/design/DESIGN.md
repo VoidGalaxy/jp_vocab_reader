@@ -131,6 +131,29 @@ pixel specs).
   reading/vocab/study tabs' own pickers) and its textarea sits on warm note
   paper instead of the app-wide plain sheet background. Submit/cancel
   enablement, validation, and payload fields are unchanged.
+- **Analyze + Stats + Feedback deep scene (Phase 71)** — the same `>=1024px`
+  "main surface + sticky side rail" structure Phase 65/68/69 use elsewhere
+  was extended to the two remaining screens that still read as a flat single
+  column at desktop. `AnalyzeSection`'s in-progress card stage
+  (`.analyze-work-scene`) puts the flashcard in a main column and moves the
+  small toolbar (읽기 탭에서 보기/지금까지 저장) plus a new live
+  아는/헷갈리는/모르는/건너뜀 tally (`.analyze-tally`, reusing Study's
+  completion-receipt "colored stamp dot + count" recipe) into a sticky
+  `.analyze-work-aside`, so classifying reads as working at a desk with a
+  tally sheet beside the card instead of a toolbar stacked above a form; the
+  opt-in full ledger keeps its Phase 62 table structure, with a small
+  drawer-pull accent added above it. `StudyLogPage` (통계 tab,
+  `.study-log-scene`) splits into a main journal column (오늘 학습/학습
+  일지/서가별 통계) and a sticky `.study-log-scene-aside` holding the 최근
+  담은 단어/자주 틀린 단어 word logs, the same two-column notebook-spread
+  idea Vocab/Shared Deck already use. Both are pure `>=1024px` CSS
+  restructurings — DOM order, data, and all handlers are unchanged, and
+  mobile/tablet stay the exact single-column flow from before this Phase.
+  `GlobalFeedbackModal` picked up the shared `.paper-corner` fold (already
+  used on every other index-card/panel surface) so the memo reads as one
+  more note from the same material family rather than a generic dialog;
+  its tape, underline select, and warm-paper textarea from Phase 60 were
+  otherwise already on-model and are unchanged.
 
 ## Forbidden patterns
 
@@ -203,5 +226,10 @@ backdrop (reusing Phase 67's `--desk-wood` tokens) at `>=1024px`, each
 compartment card instead of sharing one flat backdrop, and deck cards get
 a subtle 1-2deg resting tilt that straightens on hover/selection.
 `BrandDeckCover` and every owner/subscriber/import condition are
-untouched. See the brief's "Implementation order recommendation" for any
-remaining polish passes (Analyze/Stats/Feedback).
+untouched. Phase 71 closed out the brief's remaining polish passes: the
+Analyze tab's card stage and the Stats (통계) tab's `StudyLogPage` each
+gained the same `>=1024px` main-surface-plus-sticky-rail structure as
+Phase 65/68/69, and `GlobalFeedbackModal` picked up the shared
+`.paper-corner` fold so it reads as part of the same note/index-card
+family instead of a standalone dialog. See "Analyze + Stats + Feedback
+deep scene (Phase 71)" above for specifics.
