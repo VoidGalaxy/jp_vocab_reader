@@ -3299,6 +3299,30 @@ select {
   pointer-events: none;
 }
 
+/* Phase 74 -- a quiet leaf-sprig hint in the board's bottom-left corner,
+   reusing Home's plant-leaf recipe (Phase 73: layered radial-gradient
+   blobs, same --sage-green token) but without the pot -- a "hint", not
+   Home's full potted plant, and dimmer (opacity vs. Home's full-strength
+   leaves) since Study is a repeated-use screen and should stay quieter
+   than Home. Uses the free ::after slot (::before above already owns the
+   felt-weave texture); tucked in a corner well clear of the centered
+   card stack / rating tray / completion receipt, and .study-board-scene's
+   own overflow:hidden keeps it from ever bleeding past the board. */
+.study-board-scene::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  bottom: 10px;
+  width: 30px;
+  height: 34px;
+  background:
+    radial-gradient(ellipse 7px 13px at 35% 65%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%),
+    radial-gradient(ellipse 7px 14px at 60% 40%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%);
+  opacity: 0.4;
+  transform: rotate(-8deg);
+  pointer-events: none;
+}
+
 .study-card-stack-stage {
   position: relative;
   z-index: 1;
@@ -8440,6 +8464,7 @@ input.reading-vocab-sticker-toggle:checked {
    sync with ReaderMode.tsx's isDesktopPinned matchMedia query and with
    .reader-inspector-rail/.bookmark-inspector-pinned below. */
 .reader-desk-scene {
+  position: relative;
   min-width: 0;
 }
 
@@ -8450,6 +8475,97 @@ input.reading-vocab-sticker-toggle:checked {
     align-items: start;
     gap: 20px;
   }
+}
+
+/* Phase 74 -- Reading's own desk prop layer, same recipe as Home's
+   (Phase 73: pure CSS shapes on plain spans, no new images), but lighter
+   and without the plant/cup -- this is a focused work surface, not a
+   welcome scene, so just a pen, a clip, and a small paper scrap. Offsets
+   stay within .page's own side padding (30px at this tier) so bleeding
+   past .reader-desk-scene's own box can never cause real horizontal
+   overflow. display:none below 1024px; .reader-paper/.reader-inspector-
+   rail already carry their own tape-corner decoration, so these sit at
+   the scene's *outer* edges rather than layering onto those corners. */
+.reader-desk-props {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@media (min-width: 1024px) {
+  .reader-desk-props {
+    display: block;
+  }
+}
+
+.reader-desk-prop {
+  position: absolute;
+  display: block;
+}
+
+.reader-desk-prop--pen {
+  bottom: 6px;
+  left: -18px;
+  width: 70px;
+  height: 10px;
+  transform: rotate(-28deg);
+}
+
+.reader-desk-prop--pen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--tone-ink-brown) 0%,
+    var(--tone-ink-brown) 78%,
+    #d9b46a 78%,
+    #d9b46a 100%
+  );
+  box-shadow: 0 3px 6px rgba(37, 43, 30, 0.18);
+}
+
+/* A small paperclip: two nested rounded-rectangle rings (border only, no
+   fill) so the "clip" reads as wire, not a solid sticker. */
+.reader-desk-prop--clip {
+  top: 10px;
+  left: -16px;
+  width: 18px;
+  height: 28px;
+}
+
+.reader-desk-prop--clip::before,
+.reader-desk-prop--clip::after {
+  content: "";
+  position: absolute;
+  border: 2.5px solid var(--tone-dusty-blue);
+  border-radius: 8px;
+}
+
+.reader-desk-prop--clip::before {
+  inset: 0;
+}
+
+.reader-desk-prop--clip::after {
+  top: 5px;
+  right: 3px;
+  bottom: 8px;
+  left: 3px;
+  border-color: var(--tone-dusty-blue);
+}
+
+.reader-desk-prop--scrap {
+  bottom: 4px;
+  right: -14px;
+  width: 24px;
+  height: 17px;
+  background: var(--panel-bg);
+  border: 1px solid var(--paper-border);
+  transform: rotate(-7deg);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
 }
 
 /* reader-inspector-rail -- hidden below 1024px (mobile/tablet keep the
@@ -8468,6 +8584,32 @@ input.reading-vocab-sticker-toggle:checked {
     top: 24px;
     align-self: start;
   }
+}
+
+/* Phase 74 -- small cascading index-tabs along the rail's outer edge,
+   echoing the mockup's tabbed-folder look on the pinned inspector. A
+   sibling span (see ReaderMode.tsx), not a pseudo-element on
+   TokenDetailSheet's own div -- that element already stacks
+   bookmark-inspector/paper-corner/card-stack-surface, all contesting the
+   same ::before/::after slots (see Phase 73's postmortem on this exact
+   failure mode), so this renders identically for the pinned card and the
+   idle guide alike instead of fighting for one of their pseudo-elements.
+   .reader-inspector-rail's own position:sticky already provides the
+   positioning context. box-shadow (not extra spans) draws the 2nd/3rd
+   tabs -- one element, three colors, no extra DOM. */
+.reader-inspector-tabs {
+  position: absolute;
+  top: 36px;
+  right: -6px;
+  z-index: 1;
+  width: 10px;
+  height: 22px;
+  background: var(--accent);
+  border-radius: 4px 0 0 4px;
+  box-shadow:
+    0 34px 0 0 var(--sage-green),
+    0 68px 0 0 var(--tone-dusty-blue);
+  pointer-events: none;
 }
 
 /* reader-inspector-idle -- a blank-note placeholder standing in for the

@@ -713,6 +713,30 @@ export function ReaderMode({
             />
           </div>
         )}
+        {/* Phase 74 -- small cascading index-tabs along the rail's outer
+            edge, echoing the mockup's tabbed-folder look on the pinned
+            inspector. A sibling of the pinned/idle content (not a child of
+            TokenDetailSheet) so it renders identically for both branches
+            without needing to touch TokenDetailSheet.tsx -- that component's
+            own outer div already stacks bookmark-inspector/paper-corner/
+            card-stack-surface, all contesting the same ::before/::after
+            slots, so adding a 4th contender there risked the exact silent
+            cascade collision Phase 73's postmortem covers. */}
+        <span className="reader-inspector-tabs" aria-hidden="true" />
+      </div>
+
+      {/* Phase 74 -- desk prop layer: a pen, a paperclip, and a small paper
+          scrap around the reader/inspector, same pure-CSS-shape recipe as
+          Home's desk-prop layer (Phase 73) but deliberately lighter and
+          without the plant/cup -- this is a focused work surface, not a
+          welcome scene. Rendered last (not first) so it paints on top of
+          .reader-paper/.reader-inspector-rail wherever it overlaps their
+          corners (see Phase 73's DESIGN.md note on why paint order matters
+          here). pointer-events:none + aria-hidden, >=1024px only. */}
+      <div className="reader-desk-props" aria-hidden="true">
+        <span className="reader-desk-prop reader-desk-prop--pen" />
+        <span className="reader-desk-prop reader-desk-prop--clip" />
+        <span className="reader-desk-prop reader-desk-prop--scrap" />
       </div>
       </div>
 

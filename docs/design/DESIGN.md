@@ -280,4 +280,29 @@ Mobile/tablet get only the cover's page-edge/tab/deboss detail (already
 safely contained inside the cover's own `overflow: hidden` box) -- the
 desk-prop layer is desktop-only by design, per the brief's "small hint
 only" instruction for mobile. `AppShell.tsx`/`page.tsx` were not touched;
-everything lives in `HomeDashboard.tsx` and `globals.css`.
+everything lives in `HomeDashboard.tsx` and `globals.css`. Phase 74
+brought Reading and Study up to the same scene density so Home didn't
+stand alone as the only "lived-in" desk: `.reader-desk-scene` (confirmed
+free of both pseudo-element slots and `overflow` before touching it)
+picked up its own lighter desk-prop layer -- a pen, a paperclip, and a
+small paper scrap, deliberately without Home's plant/cup since Reading is
+a focused work surface, not a welcome scene -- rendered last (same
+paint-order reasoning as Phase 73's Home layer) so it sits on top of
+`.reader-paper`/`.reader-inspector-rail` wherever it overlaps their
+corners. `.reader-inspector-rail` also picked up a small cascading
+index-tab accent (`.reader-inspector-tabs`, one span using `box-shadow`
+to draw its 2nd/3rd colors -- no extra DOM) as a *sibling* of the pinned
+`TokenDetailSheet`/idle guide rather than a pseudo-element on
+`TokenDetailSheet`'s own div, which already stacks `bookmark-inspector`/
+`paper-corner`/`card-stack-surface` fighting over the same `::before`/
+`::after` slots -- adding a 4th contender there would have risked the
+exact silent-cascade-collision failure mode this file's Phase 73 note
+above describes, so `TokenDetailSheet.tsx` was left untouched entirely.
+`.study-board-scene` got the quietest treatment of the three: one small
+leaf-sprig hint (reusing Home's plant-leaf gradient recipe, minus the
+pot) on its previously-unused `::after` slot, tucked in a bottom corner
+well clear of the card stack/rating tray/completion receipt, dimmer than
+Home's leaves since Study is a repeated-use screen. No `StudySection.tsx`
+change was needed. Net result: Home reads as the richest "welcome desk,"
+Reading as a moderately furnished work surface, and Study as the
+quietest of the three -- an intentional density gradient, not a gap.
