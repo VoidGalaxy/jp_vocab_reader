@@ -249,4 +249,35 @@ detail (brightened fold color, deeper warm shadow) instead of leaning on
 box-shadow weight alone. All additions are `transform`/`opacity`/
 `border-color`/`box-shadow` only, covered by the existing global
 `prefers-reduced-motion` rule, and none of them touch layout-driving
-properties, component props, handlers, or API/SRS/storage logic.
+properties, component props, handlers, or API/SRS/storage logic. Phase 73
+was a desk-prop/scene-density pass on Home/App Shell specifically: against
+the mockups, desktop Home read as a wide paper board with only the cover
+and three sticker notes on it, missing the mockups' desk-clutter (plant,
+tape, pen, cup) that makes their version feel lived-in rather than
+laid-out. `home-desk-props` (`>=1024px` only, matching `.home-desk-scene`'s
+existing 2-column tier) adds a small plant, a washi-tape-roll-plus-
+binder-clip cluster, a pen, and a cup/paper-scrap around the cover and
+sticker column -- all pure CSS shapes (gradients/clip-path/box-shadow on
+plain `<span>`s, no new images), `pointer-events: none` and `aria-hidden`,
+positioned to bleed only into `.page`'s own side padding so they can never
+cause real horizontal overflow. The layer renders as the *last* child of
+`.home-desk-scene` (not the first) specifically so it paints on top of the
+cover/sticker boxes it overlaps at the corners -- earlier in the DOM, the
+same-stacking-level cover/chips (later in DOM) would have painted over
+most of it. Separately, the cover itself picked up a page-edge line stack
+and a small bookmark-tab notch (`.home-notebook-page-edge`/
+`.home-notebook-tab`) plus a debossed text-shadow on the title -- these
+are real `<span>`s, not `::before`/`::after`, because `.home-notebook-
+cover` already spends both pseudo-element slots on `.card-stack-surface`'s
+own "pages peeking out" ghost layers; a same-specificity pseudo-element
+rule declared later in the file would otherwise silently win the cascade
+and erase them (this is exactly what happened on the first pass here, and
+is why this shows up as real spans instead). Each of the three home
+sticker chips also picked up a small washi-tape accent on whichever
+pseudo-element slot its own fold/pin/ghost-sheet detail wasn't already
+using, so the row reads as taped-down notes rather than plain cards.
+Mobile/tablet get only the cover's page-edge/tab/deboss detail (already
+safely contained inside the cover's own `overflow: hidden` box) -- the
+desk-prop layer is desktop-only by design, per the brief's "small hint
+only" instruction for mobile. `AppShell.tsx`/`page.tsx` were not touched;
+everything lives in `HomeDashboard.tsx` and `globals.css`.

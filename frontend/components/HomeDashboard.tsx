@@ -107,6 +107,14 @@ export function HomeDashboard({
         <div className="home-notebook-shiori-corner" aria-hidden="true">
           <ShioriCharacter variant="default" size="lg" />
         </div>
+        {/* Phase 73 -- cover depth details. Real spans, not
+            ::before/::after, because this element already spends both
+            pseudo-element slots on .card-stack-surface's own "pages
+            peeking out" ghost layers (see that class below in globals.css)
+            -- a same-specificity, later-declared rule on the same element
+            would otherwise silently win the cascade and erase these. */}
+        <span className="home-notebook-page-edge" aria-hidden="true" />
+        <span className="home-notebook-tab" aria-hidden="true" />
       </section>
 
       <div className="home-sticker-row" role="group" aria-label="바로가기">
@@ -143,6 +151,23 @@ export function HomeDashboard({
           <span className="home-sticker-chip-label">덱</span>
           <span className="home-sticker-chip-subtitle">{decksSubtitle}</span>
         </button>
+      </div>
+
+      {/* Phase 73 -- desk prop layer: a plant, tape roll + binder clip, a pen,
+          and a cup/paper-scrap, all pure-CSS shapes (no new images) sitting
+          around the cover/sticker notes like objects left on the desk.
+          Rendered last (not first) so it paints on top of the cover/sticker
+          boxes it overlaps at the corners -- otherwise the props would be
+          clipped to only the sliver that falls outside those boxes.
+          pointer-events:none (on the wrapper, inherited by every prop) +
+          aria-hidden means it never intercepts clicks or gets announced,
+          regardless of paint order. Only rendered at the >=1024px tier
+          .home-desk-scene already uses for its 2-column stage. */}
+      <div className="home-desk-props" aria-hidden="true">
+        <span className="home-desk-prop home-desk-prop--plant" />
+        <span className="home-desk-prop home-desk-prop--stationery" />
+        <span className="home-desk-prop home-desk-prop--pen" />
+        <span className="home-desk-prop home-desk-prop--cup" />
       </div>
       </div>
 

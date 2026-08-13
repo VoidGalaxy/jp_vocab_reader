@@ -1124,6 +1124,52 @@ button {
   overflow: hidden;
 }
 
+/* Phase 73 -- a faint stack of page-edge lines along the cover's inner
+   right edge, like the cream page block a real notebook cover wraps
+   around. A real span, not ::before -- .card-stack-surface (this element's
+   other class) already owns both pseudo-element slots for its own "pages
+   peeking out" ghost layers below, and a same-specificity rule declared
+   later in this file would otherwise silently win the cascade over a
+   pseudo-element approach here. Kept inside the cover's own
+   overflow:hidden box (not bled past its edge) so it never risks
+   page-level overflow; stops short of the bottom so it doesn't compete
+   with the Shiori corner peeking there. */
+.home-notebook-page-edge {
+  position: absolute;
+  top: 54px;
+  right: 5px;
+  bottom: 64px;
+  width: 5px;
+  background: repeating-linear-gradient(
+    180deg,
+    var(--notebook-cream) 0px,
+    var(--notebook-cream) 2px,
+    transparent 2px,
+    transparent 6px
+  );
+  opacity: 0.3;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+/* Phase 73 -- a small bookmark-tab notch flush against the cover's right
+   edge (echoes the app's own 책갈피/bookmark identity) instead of a full
+   strap, which risked colliding with the CTA/Shiori corner below it. Also
+   a real span for the same pseudo-element-slot reason as .home-notebook-
+   page-edge above. Sits flush (no negative offset) so overflow:hidden
+   never clips it. */
+.home-notebook-tab {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  width: 16px;
+  height: 30px;
+  background: var(--accent);
+  clip-path: polygon(0 0, 100% 0, 100% 68%, 55% 100%, 0 68%);
+  box-shadow: -2px 2px 5px rgba(37, 43, 30, 0.18);
+  pointer-events: none;
+}
+
 .home-notebook-pin {
   position: absolute;
   top: 15px;
@@ -1165,6 +1211,12 @@ button {
   font-size: 25px;
   font-weight: 800;
   line-height: 1.4;
+  /* Phase 73 -- a debossed "pressed into leather" read: a faint light
+     catch below the glyphs plus a soft dark sink above, instead of a flat
+     print-on-cover look. */
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.14),
+    0 -1px 1px rgba(0, 0, 0, 0.22);
 }
 
 @media (min-width: 900px) {
@@ -1252,8 +1304,179 @@ button {
    beside it on the right, so the two read as one desk arrangement instead
    of a hero card with an admin-tile row stacked underneath it. */
 .home-desk-scene {
+  position: relative;
   display: grid;
   gap: 18px;
+}
+
+/* Phase 73 -- desk prop layer (plant/tape+clip/pen/cup, see
+   .home-desk-prop--* below). A full-box overlay so each prop can be
+   placed with simple top/left/right/bottom offsets against the same box
+   .home-desk-scene's two columns already share; pointer-events:none keeps
+   it fully click-through so it can never sit over the cover CTA or the
+   sticker chips. display:none below 1024px on purpose -- this layer is
+   the one desktop-only piece of this Phase; mobile gets the lighter cover
+   treatment in .home-notebook-cover instead (see there). Offsets on the
+   individual props stay within .page's own side padding (30px at this
+   tier) so bleeding "onto the desk" never creates real horizontal
+   overflow -- verified in QA at 1280/1024. */
+.home-desk-props {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.home-desk-prop {
+  position: absolute;
+  display: block;
+}
+
+/* Plant -- pot (::before, a clipped trapezoid) + a small leaf cluster
+   (::after, three overlapping radial-gradient blobs) instead of an actual
+   illustration; flat sticker-style shapes in the app's own token colors,
+   not an attempt at a photographic plant. */
+.home-desk-prop--plant {
+  /* Clears .home-notebook-sticky-note's box (it ends ~40px from the
+     scene's top at this tier) so the pot/leaves don't sit under the
+     sticky note's own text. */
+  top: 42px;
+  left: -14px;
+  width: 46px;
+  height: 56px;
+}
+
+.home-desk-prop--plant::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  bottom: 0;
+  width: 30px;
+  height: 22px;
+  background: var(--tone-ink-brown);
+  clip-path: polygon(12% 0, 88% 0, 100% 100%, 0% 100%);
+  box-shadow: 0 4px 8px rgba(37, 43, 30, 0.18);
+}
+
+.home-desk-prop--plant::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  bottom: 17px;
+  width: 40px;
+  height: 40px;
+  background:
+    radial-gradient(ellipse 9px 16px at 30% 62%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%),
+    radial-gradient(ellipse 9px 18px at 55% 42%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%),
+    radial-gradient(ellipse 8px 15px at 76% 56%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%);
+  transform: rotate(-6deg);
+}
+
+/* Washi-tape roll (::before, a donut via a radial-gradient "hole") + a
+   small gold binder clip (::after, a clipped pentagon) clustered near the
+   cover's bottom-left corner, like the mockup's desk-edge stationery. */
+.home-desk-prop--stationery {
+  /* top, not bottom -- .home-desk-props is inset:0 against the whole
+     .home-desk-scene box, whose height follows the *taller* of its two
+     columns (the sticker column, not the cover), so a bottom offset here
+     landed below the cover's own bottom edge instead of at its corner.
+     This value approximates the cover's own bottom-left corner at the
+     >=1024px tier this prop layer is limited to. */
+  left: -10px;
+  top: 275px;
+  width: 44px;
+  height: 30px;
+}
+
+.home-desk-prop--stationery::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, var(--paper-bg) 0 34%, var(--tone-dusty-blue) 35% 100%);
+  box-shadow: 0 3px 6px rgba(37, 43, 30, 0.16);
+  transform: rotate(-8deg);
+}
+
+.home-desk-prop--stationery::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 2px;
+  width: 16px;
+  height: 20px;
+  background: linear-gradient(160deg, #e3c583 0%, var(--sand-amber) 100%);
+  clip-path: polygon(20% 0, 80% 0, 100% 55%, 50% 100%, 0 55%);
+  box-shadow: 0 3px 6px rgba(37, 43, 30, 0.2);
+  transform: rotate(6deg);
+}
+
+/* Pen -- a single rounded diagonal bar with a lighter nib segment at one
+   end, resting near the right edge of the scene. */
+.home-desk-prop--pen {
+  top: 26%;
+  right: -12px;
+  width: 72px;
+  height: 10px;
+  transform: rotate(-32deg);
+}
+
+.home-desk-prop--pen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--tone-ink-brown) 0%,
+    var(--tone-ink-brown) 78%,
+    #d9b46a 78%,
+    #d9b46a 100%
+  );
+  box-shadow: 0 3px 6px rgba(37, 43, 30, 0.18);
+}
+
+/* Cup (base shape + ::before handle) with a small taped paper scrap
+   (::after) tucked beside it, near the top-right of the scene. */
+.home-desk-prop--cup {
+  top: -2px;
+  right: -8px;
+  width: 30px;
+  height: 26px;
+  border-radius: 4px 4px 10px 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #f3ece0 100%);
+  box-shadow:
+    0 4px 8px rgba(37, 43, 30, 0.16),
+    inset 0 -3px 0 rgba(37, 43, 30, 0.06);
+}
+
+.home-desk-prop--cup::before {
+  content: "";
+  position: absolute;
+  right: -8px;
+  top: 4px;
+  width: 10px;
+  height: 12px;
+  border: 3px solid #f3ece0;
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.home-desk-prop--cup::after {
+  content: "";
+  position: absolute;
+  left: -28px;
+  bottom: -12px;
+  width: 20px;
+  height: 14px;
+  background: var(--panel-bg);
+  border: 1px solid var(--paper-border);
+  transform: rotate(8deg);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
 }
 
 /* Sticker shortcut row -- 단어장/복습/덱, styled as small pinned stickers
@@ -1360,6 +1583,23 @@ button {
   border-radius: 0 16px 0 0;
 }
 
+/* Phase 73 -- a small washi-tape strip pinning the note's other (top-left)
+   corner to the desk, so the row reads as loose paper taped down rather
+   than a row of flat buttons. Uses the free ::before slot -- ::after
+   already carries the folded-corner triangle above. */
+.home-sticker-chip--vocab::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 18px;
+  width: 26px;
+  height: 11px;
+  background: rgba(139, 108, 66, 0.28);
+  border: 1px solid rgba(139, 108, 66, 0.35);
+  transform: rotate(-5deg);
+  pointer-events: none;
+}
+
 /* review -- a sticky note: a small pin dot (same accent-dot language as
    the notebook cover's own pin) instead of just a tilt. */
 .home-sticker-chip--review {
@@ -1382,6 +1622,22 @@ button {
   background: var(--accent);
   box-shadow: 0 2px 3px rgba(0, 0, 0, 0.25);
   transform: translateX(-50%);
+}
+
+/* Phase 73 -- a small tape strip at the opposite (top-right) corner from
+   the pin dot above, same "taped to the desk" language as the vocab
+   chip's. Uses the free ::after slot. */
+.home-sticker-chip--review::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 16px;
+  width: 24px;
+  height: 11px;
+  background: rgba(217, 122, 74, 0.24);
+  border: 1px solid rgba(217, 122, 74, 0.32);
+  transform: rotate(6deg);
+  pointer-events: none;
 }
 
 /* decks -- a small booklet: a second ghost sheet peeking out from behind
@@ -1411,6 +1667,22 @@ button {
   border: 1px solid var(--paper-border);
 }
 
+/* Phase 73 -- same tape language as the other two chips, top-center this
+   time so it doesn't compete with the ghost-sheet stack peeking from the
+   corners. Uses the free ::after slot. */
+.home-sticker-chip--decks::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 24px;
+  height: 11px;
+  background: rgba(122, 145, 145, 0.28);
+  border: 1px solid rgba(122, 145, 145, 0.36);
+  transform: translateX(-50%) rotate(-4deg);
+  pointer-events: none;
+}
+
 @media (min-width: 1024px) {
   .home-desk-scene {
     grid-template-columns: minmax(0, 1.6fr) minmax(220px, 0.9fr);
@@ -1422,6 +1694,10 @@ button {
     grid-template-columns: 1fr;
     align-content: start;
     margin-top: 12px;
+  }
+
+  .home-desk-props {
+    display: block;
   }
 }
 
