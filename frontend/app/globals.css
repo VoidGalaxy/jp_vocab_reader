@@ -310,6 +310,38 @@
   }
 }
 
+/* Phase 72 -- Shiori's idle "still here, still breathing" loop. Applied
+   only to .shiori-asset-img (the inner image element, not the outer
+   .shiori-asset span that already carries the one-shot app-pop entrance)
+   so the two never fight over the transform property. Slow (6-7s) and
+   small (a few px + ~1deg) on purpose -- a companion resting nearby, not
+   an attention-getter next to the reading/study content it sits beside. */
+@keyframes shiori-idle-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-1deg);
+  }
+}
+
+/* Phase 72 -- a quick radial "ink" flash behind a study rating stamp on
+   press, so pressing "다시/어려움/보통/쉬움" reads as stamping ink onto
+   the page rather than just a scale-down. Lives on the button's own
+   ::after (see .study-rating-grid .rating-button below); this keyframe
+   only defines the motion. */
+@keyframes study-stamp-ink {
+  from {
+    opacity: 0.85;
+    transform: scale(0.55);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
 .app-fade-in {
   animation: app-fade-in var(--motion-base) var(--ease-soft) both;
 }
@@ -1158,6 +1190,10 @@ button {
 
 .home-notebook-cta:not(:disabled):hover {
   background: #ffffff;
+  /* Phase 72 -- a warmer, deeper lift than the generic button hover shadow
+     (which is tuned for the light paper background elsewhere), so the CTA
+     still reads as sitting on the dark cover instead of floating on it. */
+  box-shadow: 0 10px 20px rgba(37, 43, 30, 0.24);
 }
 
 /* Combined with .ghost-button in the selector (not just alongside it in
@@ -1183,6 +1219,14 @@ button {
   bottom: -4px;
   z-index: 1;
   opacity: 0.96;
+}
+
+/* Phase 72 -- idle bob for the corner-peeking Shiori (see
+   shiori-idle-float above). Scoped to this wrapper's own img, not the
+   shared .shiori-asset-img rule, so other Shiori spots (nav marks, save
+   stamps) stay still. */
+.home-notebook-shiori-corner .shiori-asset-img {
+  animation: shiori-idle-float 6.5s ease-in-out infinite;
 }
 
 @media (min-width: 640px) {
@@ -1238,6 +1282,21 @@ button {
   transition:
     transform var(--motion-fast) var(--ease-soft),
     box-shadow var(--motion-fast) var(--ease-soft);
+  /* Phase 72 -- each chip "lands" like a sticker being pressed on, staggered
+     below. `backwards` (not `both`/app-pop's own default) on purpose: after
+     the animation ends the fill-mode drops away and each variant's own
+     resting `transform: rotate(...)` below takes back over, instead of
+     getting stuck at app-pop's final scale(1) with no tilt -- the same
+     forwards-fill trap app-slide-up-tilt's comment (above) documents. */
+  animation: app-pop var(--motion-base) var(--ease-soft) backwards;
+}
+
+.home-sticker-row .home-sticker-chip:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.home-sticker-row .home-sticker-chip:nth-child(3) {
+  animation-delay: 120ms;
 }
 
 .home-sticker-chip:not(:disabled):hover {
@@ -1631,6 +1690,11 @@ button {
   border-width: 0 14px 14px 0;
   border-color: transparent var(--soft-bg) transparent transparent;
   border-radius: 0 12px 0 0;
+  /* Phase 72 -- color-only transition so a hover rule targeting this fold
+     (e.g. .vocabulary-index-row:hover::after below) animates smoothly in
+     both directions; harmless everywhere else since nothing else changes
+     border-color on this pseudo-element. */
+  transition: border-color var(--motion-fast) var(--ease-soft);
 }
 
 .panel-card-header {
@@ -2593,6 +2657,9 @@ select {
    floating cardboard-cutout style. */
 .shiori-empty-illustration .shiori-asset-img {
   filter: drop-shadow(0 8px 16px rgba(120, 98, 40, 0.14));
+  /* Phase 72 -- idle bob (see shiori-idle-float above); an empty state is
+     the other spot Shiori sits still for a while, waiting on the user. */
+  animation: shiori-idle-float 6s ease-in-out infinite;
 }
 
 /* Presence glow -- a soft round light behind Shiori for the small "guide"
@@ -3338,6 +3405,7 @@ select {
    as before, only the chrome around it changed. */
 .study-rating-grid .rating-button {
   position: relative;
+  overflow: hidden;
   border-radius: 18px 18px 18px 5px;
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.4),
@@ -3345,6 +3413,25 @@ select {
   transition:
     transform var(--motion-fast) var(--ease-soft),
     box-shadow var(--motion-fast) var(--ease-soft);
+}
+
+/* Phase 72 -- the stamp's "ink" moment: a radial flash that only plays
+   while the button is actually pressed (see study-stamp-ink above),
+   layered on top of the existing hover lift / active scale-down so
+   pressing a rating reads as stamping ink onto the page, not just a
+   button darkening. */
+.study-rating-grid .rating-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.65) 0%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.study-rating-grid .rating-button:not(:disabled):active::after {
+  animation: study-stamp-ink var(--motion-fast) var(--ease-soft);
 }
 
 .study-rating-grid .rating-button:nth-child(1) {
@@ -5970,6 +6057,14 @@ input.reading-vocab-sticker-toggle:checked {
   transform: translateY(-2px);
 }
 
+/* Phase 72 -- the cover band's folded page-corner (.brand-deck-cover::after,
+   above) brightens on hover, like light catching the lifted corner of a
+   book cover. Paired with the card's own lift/shadow, not a replacement
+   for it; scoped to this hover so a resting card's fold stays quiet. */
+.shared-deck-card:hover .brand-deck-cover::after {
+  border-color: transparent rgba(255, 255, 255, 0.5) transparent transparent;
+}
+
 /* Phase 41: lighter edge/lift specifically for cards repeating in the shelf
    grid (.shared-deck-detail below keeps the full-weight card treatment --
    it's the one full-width panel on screen, not a repeated tile). Same
@@ -6034,6 +6129,7 @@ input.reading-vocab-sticker-toggle:checked {
   border-style: solid;
   border-width: 0 16px 16px 0;
   border-color: transparent rgba(255, 255, 255, 0.28) transparent transparent;
+  transition: border-color var(--motion-fast) var(--ease-soft);
 }
 
 .brand-deck-cover-icon {
@@ -6820,6 +6916,18 @@ input.reading-vocab-sticker-toggle:checked {
   background: var(--panel-bg);
   box-shadow: 0 6px 14px rgba(120, 98, 40, 0.1);
   transform: translateY(-1px);
+}
+
+/* Phase 72 -- the row's own .paper-corner fold (top-right triangle)
+   brightens on hover, like light catching the lifted page corner -- a
+   material cue instead of only a heavier shadow. Color only (no size
+   change, unlike the shared-deck-cover fold, to avoid animating this
+   pseudo-element's border-width box). No rotate either (unlike the
+   shared-deck/home-sticker hovers): Phase 57 deliberately kept this list
+   untilted so a 20-50 row Operate screen stays scannable, and that holds
+   for this pass too. */
+.vocabulary-index-row:hover::after {
+  border-color: transparent var(--border) transparent transparent;
 }
 
 .vocab-row-expanded {
@@ -8101,6 +8209,14 @@ input.reading-vocab-sticker-toggle:checked {
   border-radius: 16px;
   background: var(--soft-bg);
   text-align: center;
+}
+
+/* Phase 72 -- idle bob for the idle-state guide's Shiori (see
+   shiori-idle-float above). This is the one moment on Reading where
+   Shiori sits still for a while waiting on the user, so it's a good spot
+   for the "still here" loop. */
+.reader-inspector-idle .shiori-asset-img {
+  animation: shiori-idle-float 7s ease-in-out infinite;
 }
 
 /* reader-paper -- the reader canvas itself (renamed from .reader-mode,

@@ -232,4 +232,21 @@ gained the same `>=1024px` main-surface-plus-sticky-rail structure as
 Phase 65/68/69, and `GlobalFeedbackModal` picked up the shared
 `.paper-corner` fold so it reads as part of the same note/index-card
 family instead of a standalone dialog. See "Analyze + Stats + Feedback
-deep scene (Phase 71)" above for specifics.
+deep scene (Phase 71)" above for specifics. Phase 72 was a motion/delight
+pass, not a structural one, on top of that Phase 54-71 visual truth:
+Shiori picked up a slow (6-7s), small idle float on the `.shiori-asset-img`
+element (never the outer `.shiori-asset` span, which keeps the existing
+one-shot `app-pop` entrance) at the three spots she idles rather than
+transacts -- Home's corner peek, Reading's idle inspector guide, and
+`AppEmptyState`'s empty-illustration moment; Home's shortcut row now
+stamps its three stickers in with a staggered `app-pop` (`backwards` fill,
+not `both`, so each chip's own resting tilt reasserts once the entrance
+ends); Study's rating stamps gained a quick radial "ink" flash on
+`:active` on top of their existing Phase 58 hover-lift/press-scale; and
+the shared-deck cover fold, the vocab row's own paper-corner fold, and
+the home notebook CTA each picked up a small material-specific hover
+detail (brightened fold color, deeper warm shadow) instead of leaning on
+box-shadow weight alone. All additions are `transform`/`opacity`/
+`border-color`/`box-shadow` only, covered by the existing global
+`prefers-reduced-motion` rule, and none of them touch layout-driving
+properties, component props, handlers, or API/SRS/storage logic.
