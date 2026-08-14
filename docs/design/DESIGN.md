@@ -385,4 +385,26 @@ different corner decorations) since at phone width the shared border+shadow
 card chrome had been reading as "three identical white tiles" despite the
 existing per-chip decoration. No copy, callbacks, props, or API/SRS/storage
 logic changed; `HomeDashboard.tsx` only gained the one `.home-notebook-spine`
-span.
+span. Phase 78 was a "character presence" audit, not a new pass -- a full
+grep of every `ShioriCharacter`/`ShioriMark`/`ShioriStamp`/`ShioriGuideCard`/
+`AppEmptyState` call site found that Phases 54-77 had already placed Shiori
+in essentially every empty/idle/loading/complete moment the brief's own
+candidate list named: Study's ready/empty/complete states (`AppEmptyState
+mood="review"/"empty"` plus the complete card's `ShioriStamp`), Vocab's
+desktop idle detail panel (`ShioriGuideCard` in `.vocab-notebook-detail-idle`,
+Phase 68), and Analyze's pre-analysis intro plus its result summary
+(`ShioriCharacter variant="classify"` in the hero header, `ShioriStamp` on
+completion) were all already in place, not gaps. The one genuine miss,
+found by diffing every `AppEmptyState` call against the others: Shared
+Deck's fetch-failed branch (`SharedDeckSection.tsx`, the `messageTone ===
+"error"` case) was the single spot in the whole app still passing a bare
+`icon={BookshelfIcon}` instead of `mood`, so a failed deck fetch read as a
+harder "system error" beat than its own sibling loading/empty states two
+branches away in the same slot. Fixed by switching it to `mood="empty"
+moodSize="xl"` -- reusing the same asset the true-empty sibling already
+uses (the copy, not the art, is what tells "failed to load" and "nothing to
+show" apart), matching that sibling's `xl` size instead of introducing a
+new one-off size. No other component changed; this was intentionally not
+padded out to 3-4 locations since forcing more insertions where Shiori
+already had an established, working placement would have been exactly the
+"과한 배치" the brief warned against.

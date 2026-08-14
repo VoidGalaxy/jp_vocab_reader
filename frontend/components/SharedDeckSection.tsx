@@ -563,8 +563,18 @@ export function SharedDeckSection({
         // Fetch genuinely failed -- shows a retry CTA instead of the
         // cheerful "둘러보세요" copy below, which would otherwise read as
         // if the deck shelf is just empty rather than unreachable.
+        // Phase 78 -- this used to be the one AppEmptyState in the app
+        // still falling back to a bare icon instead of `mood`; every other
+        // loading/empty moment (including its own sibling states right
+        // above/below in this same slot) already has Shiori standing in
+        // for a plain system icon, so this was reading as a harder "system
+        // error" beat than the rest of the app. Reuses the "empty" variant
+        // (the same asset the true-empty sibling state below already
+        // uses) rather than inventing a new "sorry" mood -- the copy is
+        // what tells the two states apart, not the art.
         <AppEmptyState
-          icon={BookshelfIcon}
+          mood="empty"
+          moodSize="xl"
           title="덱을 불러오지 못했어요."
           description="잠시 후 다시 시도해주세요."
         >
