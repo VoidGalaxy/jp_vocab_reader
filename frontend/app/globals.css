@@ -6915,6 +6915,7 @@ input.reading-vocab-sticker-toggle:checked {
    used between the filter and the list before this Phase -- mobile/tablet
    are unaffected by this wrapper. */
 .vocab-notebook-scene {
+  position: relative;
   display: grid;
   gap: 10px;
   min-width: 0;
@@ -7181,6 +7182,31 @@ input.reading-vocab-sticker-toggle:checked {
     gap: 18px;
   }
 
+  /* Phase 76 -- a single quiet leaf-sprig hint (same recipe as Home/Study/
+     Shared's own leaf accents) top-right of the whole spread, echoing the
+     mockup's desk-clutter without adding a second prop cluster. Anchored
+     via `top` only, never `bottom` -- Phase 73's postmortem on this file
+     covers why anchoring to the bottom of a variable-height scene drifts
+     onto the wrong sibling's edge, and this scene's own height is set by
+     the word list column, which can run to 50+ rows. Sits above the note
+     page's top-right corner, inside the 30px page padding budget Reading's
+     own desk-prop layer (Phase 74) already bleeds into. */
+  .vocab-notebook-scene::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    right: 30px;
+    z-index: 1;
+    width: 22px;
+    height: 26px;
+    background:
+      radial-gradient(ellipse 5px 9px at 35% 62%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%),
+      radial-gradient(ellipse 5px 10px at 62% 40%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%);
+    opacity: 0.7;
+    transform: rotate(8deg);
+    pointer-events: none;
+  }
+
   /* The filter index reads as a column of page-edge tabs, not a row of
      toolbar controls -- 덱/검색/정렬 and the status tabs each stack
      vertically instead of wrapping across a wide row. Scoped to this one
@@ -7200,6 +7226,49 @@ input.reading-vocab-sticker-toggle:checked {
   .vocab-notebook-index .vocab-status-filters {
     flex-direction: column;
     gap: 10px;
+  }
+
+  /* Phase 76 -- the filter box reads as a pinned index-card divider, not a
+     plain dashed toolbar box: a small washi-tape corner (::before) plus a
+     cascading 3-color page-tab accent (::after, box-shadow draws the
+     2nd/3rd tabs -- same one-element/no-extra-DOM trick as
+     .reader-inspector-tabs) echoing the mockup's 최근/모르는 단어/햇갈림
+     index tabs. Scoped to `.vocab-notebook-index .index-card-filter` (not
+     the bare class) so SharedDeckSection's reuse of .index-card-filter for
+     its subscribed-deck word filter is untouched. */
+  .vocab-notebook-index .index-card-filter {
+    position: relative;
+  }
+
+  .vocab-notebook-index .index-card-filter::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: 16px;
+    z-index: 1;
+    width: 40px;
+    height: 14px;
+    border: 1px solid rgba(79, 140, 102, 0.4);
+    background: rgba(79, 140, 102, 0.3);
+    box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
+    transform: rotate(-4deg);
+    pointer-events: none;
+  }
+
+  .vocab-notebook-index .index-card-filter::after {
+    content: "";
+    position: absolute;
+    top: 14px;
+    right: -6px;
+    z-index: 1;
+    width: 9px;
+    height: 18px;
+    background: var(--tone-indigo);
+    border-radius: 4px 0 0 4px;
+    box-shadow:
+      0 26px 0 0 var(--sage-green),
+      0 52px 0 0 var(--tone-dusty-blue);
+    pointer-events: none;
   }
 
   /* Sticky so the note page stays in view while the (potentially long)
@@ -7222,6 +7291,38 @@ input.reading-vocab-sticker-toggle:checked {
     margin-top: 0;
     padding-top: 0;
     border-top: none;
+  }
+
+  /* Phase 76 -- a small wire paperclip pinning the top of the note page
+     (nested rounded-rect rings, border only, same recipe as Reading's
+     .reader-desk-prop--clip), reinforcing "a selected word's page held
+     open" instead of the panel just floating. Centered on the box's top
+     edge (not right-aligned) so it never sits near the scene-level
+     leaf-sprig hint above (.vocab-notebook-scene::before, top-right of the
+     whole spread). .vocab-notebook-detail is already `position: sticky` (a
+     positioned element), so these anchor to it directly with no extra
+     wrapper needed. Idle guide and populated detail share the same outer
+     element, so this shows in both states. */
+  .vocab-notebook-detail::before,
+  .vocab-notebook-detail::after {
+    content: "";
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    z-index: 2;
+    width: 16px;
+    height: 24px;
+    border: 2px solid var(--tone-coral);
+    border-radius: 7px;
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+
+  .vocab-notebook-detail::after {
+    top: -4px;
+    width: 10px;
+    height: 15px;
+    border-color: var(--tone-coral);
   }
 }
 

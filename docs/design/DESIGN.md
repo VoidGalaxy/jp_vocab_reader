@@ -330,4 +330,29 @@ pagination content beneath it. All three pieces are gated the same
 `>=1024px` tier `.shared-library-scene`'s wood-cabinet backdrop already
 uses, so mobile/tablet render exactly as before this Phase. No owner/
 subscriber/newcomer button conditions, import/unpublish/republish logic,
-or state copy were touched.
+or state copy were touched. Phase 76 brought Vocab's notebook spread up to
+the same desk-prop density, entirely in `globals.css` -- `VocabSection.tsx`
+needed no changes at all, since `.vocab-notebook-scene`, `.index-card-filter`
+(scoped to `.vocab-notebook-index .index-card-filter` so SharedDeckSection's
+own reuse of that class for its subscribed-deck word filter stayed
+untouched), and `.vocab-notebook-detail` all turned out to have free
+`::before`/`::after` slots. `.vocab-notebook-scene` picked up one
+top-anchored leaf-sprig hint (top-right, above the note page) rather than a
+second full prop cluster -- this scene's own height is set by the word list
+column, which can run to 50+ rows, so per the Phase 73 postmortem on this
+file the prop had to be anchored via `top` only, never `bottom`. The index
+rail's filter box picked up a small washi-tape corner plus a cascading
+3-color page-tab accent (box-shadow draws the 2nd/3rd tabs, the same
+one-element/no-extra-DOM trick as Reading's `.reader-inspector-tabs`),
+echoing the mockup's 최근/모르는 단어/햇갈림 index tabs. The selected-word
+note page (`.vocab-notebook-detail`) picked up a small wire paperclip
+centered on its own top edge, reusing Reading's `.reader-desk-prop--clip`
+nested-ring recipe, positioned away from the scene-level leaf so the two
+never collide. All three are gated the same `>=1024px` tier the notebook
+spread itself already uses; mobile/tablet render exactly as before this
+Phase -- the word list stays a plain scannable list with no per-row
+decoration (Phase 57's original reasoning for a 20-50-row Operate screen
+still applies) and no new mobile hint was added, matching Phase 74 Study's
+"quietest treatment" precedent over risking horizontal overflow on a
+smaller viewport. Word/deck CRUD, status select, search/filter/sort, custom
+term, and share/export/import logic were all left untouched.
