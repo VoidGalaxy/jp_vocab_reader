@@ -115,6 +115,12 @@ export function HomeDashboard({
             would otherwise silently win the cascade and erase these. */}
         <span className="home-notebook-page-edge" aria-hidden="true" />
         <span className="home-notebook-tab" aria-hidden="true" />
+        {/* Phase 77 -- a small ring-binding cue down the cover's left edge
+            (mobile Home object pass), same "real span" reasoning as the two
+            above: a plain row of dots, echoing the mockup's spiral-bound
+            notebook read so the cover feels like a physical notebook held
+            in hand rather than a flat rounded card. */}
+        <span className="home-notebook-spine" aria-hidden="true" />
       </section>
 
       <div className="home-sticker-row" role="group" aria-label="바로가기">

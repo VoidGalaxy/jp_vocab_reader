@@ -355,4 +355,34 @@ decoration (Phase 57's original reasoning for a 20-50-row Operate screen
 still applies) and no new mobile hint was added, matching Phase 74 Study's
 "quietest treatment" precedent over risking horizontal overflow on a
 smaller viewport. Word/deck CRUD, status select, search/filter/sort, custom
-term, and share/export/import logic were all left untouched.
+term, and share/export/import logic were all left untouched. Phase 77 was a
+mobile-only object pass on Home, closing the gap where mobile still read as
+"app card screen" while desktop had picked up Phase 67/73's cover + desk
+props. All changes are gated `<=640px` (the app's existing mobile
+breakpoint) except one small always-on addition, so desktop's Phase 67/73
+cover + side-sticker structure is untouched pixel-for-pixel. The cover
+gained `.home-notebook-spine` -- a column of small ring-binding dots along
+its inner left edge (a real span, same reasoning as Phase 73's page-edge/
+tab spans: `.home-notebook-cover` already spends both pseudo-element slots
+on `.card-stack-surface`'s ghost-page layers) -- mirroring
+`.home-notebook-page-edge`'s dashes on the right so the cover reads as
+spiral-bound on one side, and this one addition is unguarded since it's
+just more cover-material realism, not a mobile-vs-desktop layout choice.
+Mobile-only: the CTA (`.home-notebook-cta`) becomes a full pill instead of
+the app-wide 12px button radius, reading as a label stamped on the cover
+rather than a form button; `.home-notebook-sample-link` drops its
+outlined-pill chrome for a plain underlined text link (still a 44px tap
+target via padding, just invisible) since the app-wide mobile `button {
+width: 100% }` touch-target rule had been stretching it into a second
+full-width bar under the CTA, reading as two stacked admin actions instead
+of one primary action plus a small link -- desktop keeps its existing
+auto-width outlined pill untouched. The three `.home-sticker-chip` shortcuts
+keep their Phase 54/73 tape/pin/fold/ghost-sheet accents exactly as they
+are, but mobile-only picks up a lighter paper-toned border, a flatter
+shadow, a wider tilt swing per chip, and each chip's own asymmetric corner
+radius (vocab/review/decks now have visibly different silhouettes, not just
+different corner decorations) since at phone width the shared border+shadow
+card chrome had been reading as "three identical white tiles" despite the
+existing per-chip decoration. No copy, callbacks, props, or API/SRS/storage
+logic changed; `HomeDashboard.tsx` only gained the one `.home-notebook-spine`
+span.

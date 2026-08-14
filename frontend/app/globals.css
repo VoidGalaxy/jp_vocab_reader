@@ -1170,6 +1170,28 @@ button {
   pointer-events: none;
 }
 
+/* Phase 77 -- ring-binding dots along the cover's inner left edge, the same
+   idea as .home-notebook-page-edge's dashes on the right but reading as
+   spiral-bound rings instead of page edges. Kept inside the cover's own
+   overflow:hidden box, same top/bottom bounds as .home-notebook-page-edge
+   so the two read as one consistent "bound notebook" frame. */
+.home-notebook-spine {
+  position: absolute;
+  top: 54px;
+  left: 5px;
+  bottom: 64px;
+  width: 6px;
+  background-image: radial-gradient(
+    circle,
+    rgba(247, 241, 222, 0.55) 1.6px,
+    transparent 1.6px
+  );
+  background-size: 6px 13px;
+  background-repeat: repeat-y;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .home-notebook-pin {
   position: absolute;
   top: 15px;
@@ -1260,6 +1282,37 @@ button {
 
 .ghost-button.home-notebook-sample-link:not(:disabled):hover {
   background: rgba(255, 255, 255, 0.14);
+}
+
+/* Phase 77 (mobile Home object pass) -- mobile only. The app-wide mobile
+   `button { width: 100% }` touch-target rule (see the >640px-gated rule
+   later in this file) stretched this into a second full-width outlined bar
+   right under the CTA pill, reading as two stacked admin actions instead
+   of one primary action plus a small link. Desktop's auto-width outlined
+   pill (the rule above) is left as-is -- this is a phone-only read, not a
+   base restyle. min-height keeps the tap target at the same 44px floor the
+   button rule intended, just as invisible padding instead of a visible
+   box; two selector classes still beat the bare `button` element selector
+   on specificity regardless of media-query source order. */
+@media (max-width: 640px) {
+  .ghost-button.home-notebook-sample-link {
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 4px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(247, 241, 222, 0.35);
+  }
+
+  .ghost-button.home-notebook-sample-link:not(:disabled):hover {
+    background: none;
+    color: var(--notebook-cream);
+    text-decoration-color: rgba(247, 241, 222, 0.6);
+  }
 }
 
 /* Corner-guide placement per the Shiori character rule -- a small peeking
@@ -1775,6 +1828,60 @@ button {
   .home-sticker-row {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 8px;
+  }
+
+  /* Phase 77 (mobile Home object pass) -- a full pill instead of the
+     app-wide 12px button radius, so the CTA reads as a rounded label
+     stamped on the cover rather than a rectangular form button. Mobile
+     only: desktop's existing rounded-rect CTA is left untouched. */
+  .home-notebook-cta {
+    border-radius: 999px;
+  }
+
+  /* Phase 77 (mobile Home object pass) -- the three shortcut notes already
+     carry per-variant tilt/tape/fold/ghost-sheet accents (Phase 54/73), but
+     at phone width those details read as too subtle to beat the shared
+     border+shadow card chrome, so the row still reads as "three identical
+     white tiles." Mobile-only: a lighter, paper-toned border and flatter
+     shadow (less "elevated UI card", more "flat paper resting on the
+     desk"), a bigger tilt swing per chip so the three are unmistakably at
+     different angles, and each chip's own asymmetric corner radius so
+     their silhouettes differ too, not just their corner decorations.
+     Desktop keeps the Phase 73 tilt/radius values exactly as they are. */
+  .home-sticker-chip {
+    border-color: rgba(139, 108, 66, 0.22);
+    box-shadow: 0 6px 14px rgba(120, 98, 40, 0.14);
+  }
+
+  .home-sticker-chip-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .home-sticker-chip--vocab {
+    transform: rotate(-3.5deg);
+  }
+
+  .home-sticker-chip--vocab:not(:disabled):hover {
+    transform: rotate(-3.5deg) translateY(-3px);
+  }
+
+  .home-sticker-chip--review {
+    transform: rotate(2.5deg);
+    border-radius: 16px 4px 16px 16px;
+  }
+
+  .home-sticker-chip--review:not(:disabled):hover {
+    transform: rotate(2.5deg) translateY(-3px);
+  }
+
+  .home-sticker-chip--decks {
+    transform: rotate(-2deg);
+    border-radius: 8px 18px 18px 8px;
+  }
+
+  .home-sticker-chip--decks:not(:disabled):hover {
+    transform: rotate(-2deg) translateY(-3px);
   }
 
   .card-stack-surface::before,
