@@ -407,4 +407,46 @@ show" apart), matching that sibling's `xl` size instead of introducing a
 new one-off size. No other component changed; this was intentionally not
 padded out to 3-4 locations since forcing more insertions where Shiori
 already had an established, working placement would have been exactly the
-"과한 배치" the brief warned against.
+"과한 배치" the brief warned against. Phase 80 ("de-admin utility surfaces")
+followed up on Phase 79's full QA pass, which found the big structural
+redesign stable but flagged a few remaining "management/form" surfaces.
+Three small, independently-scoped fixes, all CSS-first: (1) `.vocab-form-
+panel` (단어 직접 추가/사용자 정의 용어 추가/두 inline-edit forms -- the one
+remaining plain solid-border/uniform-radius white box in Vocab) switched to
+a dashed border and the same asymmetric index-card radius `.vocab-
+management-panel`/`.custom-term-section` already use, reading as a slip
+tucked in the notebook's back pocket instead of a settings-form card; the
+3 JSX call sites also picked up the shared `.paper-corner` fold (its
+`::after` slot was free) for the same reason Vocab's own word rows already
+use it. (2) `.shared-preview-row`/`.shared-lexeme-row` (the opened Shared
+Deck detail's word-preview and 학습 목록 rows) dropped their solid `1px
+solid var(--border)` divider -- which cut a hard spreadsheet gridline
+across `.shared-deck-detail`'s own ruled-paper background -- for a dashed
+line in the same warm ink tone the ruled-paper lines use, so rows read as
+notebook lines instead of table rows; the `<=640px` variant went further,
+since it turned every row into its own solid-bordered white card once
+columns stacked to 1fr (an even harder "admin list" read than desktop's
+single divider), and now uses the same dashed-underline treatment at every
+width instead of switching to a boxed-card look specifically on phones.
+(3) Vocab's mobile hero action row (`.vocab-hero-actions-compact`, gated
+`<=640px`) -- Phase 79's QA specifically flagged this as the most
+admin/settings-panel-looking screen on mobile, because the app-wide mobile
+`button { width: 100% }` touch-target rule stretched all 3 always-visible
+buttons ("이 덱 학습하기"/"원문 읽기"/"더보기") full-width, stacking them into
+what read as a vertical action list. Only the primary action keeps its
+full-width button now; "원문 읽기"/"더보기" become small pill tags reusing
+the same soft-bg/pill language this hero's own stat chips
+(`.vocab-hero-chip`) already establish just above them, with the 44px tap
+target kept via `min-height` (not visual padding) -- the same technique
+Phase 77 used for Home's mobile CTA/sample-link split. Desktop is
+untouched in all three cases (every rule is either scoped to a class Shared
+Deck/other tabs don't reuse, or explicitly gated to the same `<=640px`
+breakpoint). A fourth candidate from the Phase 80 brief -- restyling the
+shared `.panel-card`/`.hero-card`/button primitives in `globals.css` -- was
+deliberately deferred: those classes are reused across every tab, so
+changing them carries a blast radius well beyond the "utility surfaces"
+this Phase targeted, and the three scoped fixes above already addressed
+every concrete gap found without touching global primitives. `VocabSection.
+tsx`/`SharedDeckSection.tsx`'s props, callbacks, CRUD handlers, `StatusSelect`
+semantics, and shared-deck owner/subscriber/import conditions are all
+unchanged; `SharedDeckSection.tsx` itself needed no JSX changes at all.

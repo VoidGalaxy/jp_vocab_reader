@@ -6931,12 +6931,19 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 6px;
 }
 
+/* Phase 80 -- the solid `var(--border)` rule below used to cut a hard
+   spreadsheet gridline across .shared-deck-detail's own ruled-paper
+   background (the repeating-linear-gradient a few rules up), so opened
+   decks read as a data table rather than the "opened notebook page" the
+   panel's own background already established. A dashed line in the same
+   warm ink tone the ruled-paper lines use (see .shared-deck-detail above)
+   reads as a word underlined on notebook paper instead. */
 .shared-preview-row {
   display: grid;
   grid-template-columns: minmax(90px, 1fr) minmax(70px, 0.8fr) minmax(120px, 1.2fr);
   gap: 8px;
   align-items: start;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px dashed rgba(110, 91, 47, 0.28);
   padding: 8px 0;
   color: var(--text-secondary);
   font-size: 13px;
@@ -7904,13 +7911,23 @@ input.reading-vocab-sticker-toggle:checked {
   margin-bottom: 10px;
 }
 
+/* Phase 80 -- was a plain solid-border/uniform-radius white box, the one
+   remaining "settings form" card in Vocab (단어 직접 추가/사용자 정의 용어
+   추가/inline edit all use this). Dashed border + the same asymmetric
+   index-card radius .vocab-management-panel/.custom-term-section already
+   use reads as a slip tucked into the notebook's back pocket instead of a
+   modal-style form panel -- same "dashed = secondary/attached" language
+   .backup-tools already established just above. .paper-corner (added on
+   the 3 call sites in VocabSection.tsx) supplies the folded-corner detail
+   for free via its own free ::after slot. */
 .vocab-form-panel {
   display: grid;
   gap: 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 1.5px dashed var(--paper-border);
+  border-radius: 4px 14px 14px 14px;
   padding: 18px;
   background: var(--panel-bg);
+  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.08);
 }
 
 .inline-edit-form {
@@ -8192,12 +8209,19 @@ input.reading-vocab-sticker-toggle:checked {
     grid-template-columns: 1fr;
   }
 
+  /* Phase 80 -- this used to turn each row into its own solid-bordered
+     white card once columns stack to 1fr, which reads as a list of admin
+     table cells even more than desktop's single divider line did. A
+     dashed underline (same tone as the desktop rule above) keeps rows
+     reading as notebook lines at every width instead of switching to a
+     boxed-card look specifically on phones. */
   .shared-preview-row {
     grid-template-columns: 1fr;
     gap: 3px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px;
+    border: none;
+    border-bottom: 1px dashed rgba(110, 91, 47, 0.28);
+    border-radius: 0;
+    padding: 10px 2px;
   }
 
   .shared-lexeme-row-main {
@@ -8243,6 +8267,45 @@ input.reading-vocab-sticker-toggle:checked {
   .vocab-filter-group .inline-field,
   .vocab-filter-group input {
     width: 100%;
+  }
+
+  /* Phase 80 -- the app-wide mobile `button { width: 100% }` touch-target
+     rule (see the >640px-gated rule elsewhere in this file) was stretching
+     all 3 always-visible hero buttons ("이 덱 학습하기"/"원문 읽기"/"더보기")
+     full-width, stacking them into what Phase 79 QA flagged as the most
+     admin/settings-panel-looking screen on mobile. Only the primary stays
+     a full-width button; "원문 읽기"/"더보기" become small pill tags -- the
+     same soft-bg/pill language this hero's own stat chips
+     (.vocab-hero-chip) just above already use -- so the row reads as one
+     clear primary action plus two small labels, not three stacked action
+     bars. 44px tap target kept via min-height, not visual padding. */
+  .vocab-hero-actions-compact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .vocab-hero-actions-compact .secondary-button,
+  .vocab-hero-actions-compact .vocab-hero-more-toggle {
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--soft-bg);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: none;
+  }
+
+  .vocab-hero-actions-compact .secondary-button:not(:disabled):hover,
+  .vocab-hero-actions-compact .vocab-hero-more-toggle:not(:disabled):hover {
+    background: var(--panel-bg);
+    box-shadow: none;
+    transform: none;
   }
 
   .vocab-hero-more-menu {

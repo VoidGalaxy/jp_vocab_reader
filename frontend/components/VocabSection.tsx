@@ -992,7 +992,7 @@ export function VocabSection({
       {!isNewVocabFormOpen ? (
         null
       ) : (
-        <div className="vocab-form-panel">
+        <div className="vocab-form-panel paper-corner">
           <div className="form-heading">
             <h2>단어 직접 추가</h2>
           </div>
@@ -1036,7 +1036,7 @@ export function VocabSection({
         </div>
 
         {isCustomTermFormOpen ? (
-          <div className="vocab-form-panel">
+          <div className="vocab-form-panel paper-corner">
             <CustomTermForm
               form={newCustomTermForm}
               decks={decks}
@@ -1113,7 +1113,7 @@ export function VocabSection({
                   </div>
                 </div>
                 {editingCustomTermId === term.id ? (
-                  <div className="vocab-form-panel inline-edit-form">
+                  <div className="vocab-form-panel inline-edit-form paper-corner">
                     <CustomTermForm
                       form={editCustomTermForm}
                       decks={decks}
@@ -1302,7 +1302,7 @@ function VocabItemDetail({
       </div>
 
       {editingItemId === item.id ? (
-        <div className="vocab-form-panel inline-edit-form">
+        <div className="vocab-form-panel inline-edit-form paper-corner">
           <div className="form-heading">
             <h2>단어 수정</h2>
           </div>
