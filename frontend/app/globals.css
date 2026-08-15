@@ -6309,26 +6309,95 @@ input.reading-vocab-sticker-toggle:checked {
   /* Each shelf section becomes its own light "compartment" resting inside
      the dark cabinet, instead of all three groups sharing one flat
      backdrop -- a real depth/shadow cue per shelf, not just a heading and
-     a dividing rule. */
+     a dividing rule. Phase 88 -- a faint plank-grain hairline layer (very
+     low alpha) fills whatever part of the compartment a sparse 1-2 deck
+     shelf doesn't cover, so a lightly-stocked shelf still reads as "a shelf
+     with texture" instead of a flat white gap next to the cards. Bottom
+     padding grew from 22px to 26px to keep the new corner bookend prop
+     (below) inside its own reserved buffer, never under card content --
+     same "extra bottom padding is prop clearance" idiom the Phase 75 note
+     on this file already established for the cabinet-level leaf/tag. */
   .shared-library-scene .shelf-section {
-    padding: 14px 16px 22px;
+    position: relative;
+    padding: 14px 16px 26px;
     border-radius: 4px 16px 16px 16px;
-    background: var(--panel-bg);
+    background:
+      repeating-linear-gradient(
+        100deg,
+        transparent 0px,
+        transparent 38px,
+        rgba(110, 91, 47, 0.04) 38px,
+        rgba(110, 91, 47, 0.04) 39px
+      ),
+      var(--panel-bg);
     box-shadow: 0 10px 22px rgba(37, 23, 10, 0.16);
   }
 
+  /* Small library bookend silhouette in the compartment's reserved bottom
+     corner -- reads as "this shelf has room, someone propped the books up"
+     rather than a stray empty corner. Fixed per-compartment prop (not
+     conditioned on deck count): it sits low enough that even a full shelf
+     never grows into it, since the grid's own content stops before the
+     26px bottom padding starts. */
+  .shared-library-scene .shelf-section::after {
+    content: "";
+    position: absolute;
+    right: 14px;
+    bottom: 6px;
+    z-index: 0;
+    width: 18px;
+    height: 20px;
+    background: linear-gradient(160deg, var(--desk-wood) 0%, var(--desk-wood-deep) 100%);
+    clip-path: polygon(0% 100%, 0% 15%, 100% 15%, 100% 38%, 32% 38%, 32% 100%);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
   .shared-library-scene .shelf-section-title {
+    display: inline-flex;
+    width: fit-content;
+    margin: 0 0 10px;
+    padding: 4px 12px 3px;
+    border: 1px solid var(--paper-border);
     border-bottom-color: var(--border);
+    border-radius: 3px 10px 10px 3px;
+    background: var(--paper-bg);
+    box-shadow: 0 3px 6px rgba(37, 23, 10, 0.12);
+    transform: rotate(-0.6deg);
   }
 
   /* Non-grouped fallback grid (no recommended/mine/other split -- e.g. a
      handful of decks with no JLPT levels) gets the same compartment
-     treatment as a single shelf, so it never sits bare against the wood. */
+     treatment as a single shelf, so it never sits bare against the wood.
+     Phase 88 -- same plank-grain texture as .shelf-section above; no
+     bookend here since .shared-deck-grid already spends both its own
+     ::before/::after slots on the shelf-ledge line below. */
   .shared-library-scene .desk-surface-section > .shared-deck-grid {
     padding: 14px 16px 22px;
     border-radius: 4px 16px 16px 16px;
-    background: var(--panel-bg);
+    background:
+      repeating-linear-gradient(
+        100deg,
+        transparent 0px,
+        transparent 38px,
+        rgba(110, 91, 47, 0.04) 38px,
+        rgba(110, 91, 47, 0.04) 39px
+      ),
+      var(--panel-bg);
     box-shadow: 0 10px 22px rgba(37, 23, 10, 0.16);
+  }
+
+  /* Phase 88 -- caps how wide a shelf card can stretch to fill its row.
+     .shared-deck-grid's base rule (further below) uses minmax(280px, 1fr),
+     which lets a lone deck in a sparse shelf balloon to the compartment's
+     full width; a fixed upper bound keeps every card close to its normal
+     book-cover proportions regardless of how many decks are on the shelf,
+     so a 1-2 deck row sits at a believable size next to the new plank
+     texture/bookend filling the rest of the compartment instead of one
+     oversized tile. Matches both .shelf-section's grid and the ungrouped
+     fallback grid (same selector reaches both). */
+  .shared-library-scene .shared-deck-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 340px));
   }
 
   /* Loading/error/empty states keep the existing AppEmptyState look but
@@ -6358,23 +6427,27 @@ input.reading-vocab-sticker-toggle:checked {
 
   /* A faint ledge echoing the shelf grid's own bottom ledge, but along the
      detail panel's top edge -- reads as "this booklet just came down off
-     the shelf above" rather than an unrelated panel appearing below. */
+     the shelf above" rather than an unrelated panel appearing below. Phase
+     88 -- widened slightly and warmed toward --desk-wood-deep (was a flat
+     --border-strong) so the echo reads as the same wood-shelf material the
+     new bookend/plank-texture props above just introduced, not an unrelated
+     gray divider. */
   .shared-deck-detail::after {
     content: "";
     position: absolute;
-    top: -10px;
-    left: 4%;
-    right: 4%;
-    height: 3px;
+    top: -12px;
+    left: 3%;
+    right: 3%;
+    height: 4px;
     border-radius: 2px;
     background: linear-gradient(
       90deg,
       transparent,
-      var(--border-strong) 12%,
-      var(--border-strong) 88%,
+      var(--desk-wood-deep) 10%,
+      var(--desk-wood-deep) 90%,
       transparent
     );
-    opacity: 0.5;
+    opacity: 0.45;
     pointer-events: none;
   }
 }
