@@ -34,6 +34,22 @@ import type {
   VocabSort,
 } from "./types";
 
+// scrollIntoView's explicit `behavior: "smooth"` option bypasses the CSS
+// `scroll-behavior: auto !important` the app's global prefers-reduced-motion
+// rule sets (that CSS property only governs "auto" JS calls, not an
+// explicitly-requested smooth one) -- so a reduced-motion user still gets an
+// animated scroll unless this downgrades it first.
+function resolveScrollBehavior(preferred: ScrollBehavior): ScrollBehavior {
+  if (
+    preferred === "smooth" &&
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return "auto";
+  }
+  return preferred;
+}
+
 const statusFilterOptions: Array<{ value: "all" | TokenStatus; label: string }> = [
   { value: "all", label: "전체" },
   { value: "unknown", label: statusLabels.unknown },
@@ -239,7 +255,7 @@ export function VocabSection({
   const customTermSectionRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (isManagementOpen && isCustomTermManagerOpen) {
-      customTermSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      customTermSectionRef.current?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "start" });
     }
   }, [isManagementOpen, isCustomTermManagerOpen]);
   // Casual Sticker Reader (Phase 68) -- 관리 패널이 노트북 스프레드 아래
@@ -251,7 +267,7 @@ export function VocabSection({
   const managementSectionRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (isManagementOpen && !isCustomTermManagerOpen) {
-      managementSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      managementSectionRef.current?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "start" });
     }
   }, [isManagementOpen, isCustomTermManagerOpen]);
   const hasActiveFilter =

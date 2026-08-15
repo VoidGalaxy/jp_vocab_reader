@@ -26,6 +26,22 @@ function computeScrollProgress(container: HTMLElement | null): number {
   return scrolled / total;
 }
 
+// scrollIntoView/scrollTo's explicit `behavior: "smooth"` option bypasses
+// the CSS `scroll-behavior: auto !important` the app's global
+// prefers-reduced-motion rule sets (that CSS property only governs "auto"
+// JS calls, not an explicitly-requested smooth one) -- so a reduced-motion
+// user still gets an animated scroll unless call sites downgrade it here.
+function resolveScrollBehavior(preferred: ScrollBehavior): ScrollBehavior {
+  if (
+    preferred === "smooth" &&
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return "auto";
+  }
+  return preferred;
+}
+
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -188,7 +204,7 @@ export function ReaderMode({
         containerTopAbsolute + fraction * total,
         0,
       );
-      window.scrollTo({ top: targetScrollY, behavior });
+      window.scrollTo({ top: targetScrollY, behavior: resolveScrollBehavior(behavior) });
     },
     [],
   );
@@ -352,7 +368,7 @@ export function ReaderMode({
       ? `[data-segment-key="${activeSegmentKey}"]`
       : `[data-token-index="${activeIndex}"]`;
     const target = readerTextRef.current.querySelector(selector);
-    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "center" });
   }, [activeIndex, activeSegmentKey]);
 
   useEffect(() => {
@@ -444,7 +460,7 @@ export function ReaderMode({
   }
 
   function scrollToTop() {
-    readerTextRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    readerTextRef.current?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "start" });
   }
 
   const hasBookmarkScrollFraction =
@@ -467,7 +483,7 @@ export function ReaderMode({
         ? `[data-segment-key="${activeSegmentKey}"]`
         : `[data-token-index="${activeIndex}"]`;
       const target = readerTextRef.current?.querySelector(selector);
-      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "center" });
       return;
     }
     if (hasBookmarkScrollFraction) {

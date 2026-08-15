@@ -1634,6 +1634,7 @@ button {
   border-width: 0 14px 14px 0;
   border-color: transparent var(--soft-bg) transparent transparent;
   border-radius: 0 16px 0 0;
+  pointer-events: none;
 }
 
 /* Phase 73 -- a small washi-tape strip pinning the note's other (top-left)
@@ -1675,6 +1676,7 @@ button {
   background: var(--accent);
   box-shadow: 0 2px 3px rgba(0, 0, 0, 0.25);
   transform: translateX(-50%);
+  pointer-events: none;
 }
 
 /* Phase 73 -- a small tape strip at the opposite (top-right) corner from
@@ -1718,6 +1720,7 @@ button {
   border-radius: inherit;
   background: var(--panel-bg);
   border: 1px solid var(--paper-border);
+  pointer-events: none;
 }
 
 /* Phase 73 -- same tape language as the other two chips, top-center this
@@ -2024,14 +2027,6 @@ button {
     ),
     var(--surface-stage);
   padding: 20px;
-}
-
-/* Paper-note styling for policy/trust/context-example asides -- an accent
-   rule instead of a full border draws the eye without competing with the
-   primary content card next to it. */
-.note-card {
-  border-radius: 12px;
-  border-left: 3px solid var(--accent);
 }
 
 /* Small brand motifs, reused across screens instead of each one inventing
@@ -3762,6 +3757,7 @@ select {
   background-repeat: repeat-x;
   background-size: 10px 1px;
   opacity: 0.5;
+  pointer-events: none;
 }
 
 .rating-button {
@@ -4942,6 +4938,7 @@ input.reading-vocab-sticker-toggle:checked {
   font-size: 11px;
   font-weight: 800;
   box-shadow: 0 2px 4px rgba(37, 43, 30, 0.25);
+  pointer-events: none;
 }
 
 .reading-vocab-sticker-active {

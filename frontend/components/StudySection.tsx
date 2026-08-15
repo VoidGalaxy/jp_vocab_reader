@@ -25,6 +25,22 @@ import {
 } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 
+// scrollIntoView's explicit `behavior: "smooth"` option bypasses the CSS
+// `scroll-behavior: auto !important` the app's global prefers-reduced-motion
+// rule sets (that CSS property only governs "auto" JS calls, not an
+// explicitly-requested smooth one) -- so a reduced-motion user still gets an
+// animated scroll unless this downgrades it first.
+function resolveScrollBehavior(preferred: ScrollBehavior): ScrollBehavior {
+  if (
+    preferred === "smooth" &&
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return "auto";
+  }
+  return preferred;
+}
+
 type StudySectionProps = {
   items: StudyCardItem[];
   currentItem?: StudyCardItem;
@@ -295,7 +311,7 @@ export function StudySection({
   const ratingGridRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (isAnswerVisible) {
-      ratingGridRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      ratingGridRef.current?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "nearest" });
     }
   }, [isAnswerVisible, currentItem?.id]);
 
