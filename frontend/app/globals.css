@@ -5106,9 +5106,45 @@ input.reading-vocab-sticker-toggle:checked {
      to their natural text width. */
   .reading-vocab-filters .reading-vocab-filter-button,
   .reading-vocab-quick-select-button {
+    flex-shrink: 0;
     width: auto;
     min-width: 0;
     min-height: 34px;
+  }
+
+  /* At 320-375px these two rows still wrapped to 3-4 stacked lines each
+     (measured: 7 lines total at 320px before the word list even starts) --
+     the "모르는+헷갈리는 단어 담기" quick-select label alone is wider than
+     the tray's own content column at that width, so no amount of font/gap
+     tightening gets two per line without shortening copy. A single
+     horizontally-scrollable strip (same recipe as .records-level-strip's
+     own mobile override further down this file) keeps both rows to one
+     compact line each instead, so the candidate tray reads as a light
+     secondary panel again rather than a stack of admin filter buttons
+     pushing the actual word list down the page. */
+  .reading-vocab-filters,
+  .reading-vocab-quick-select {
+    /* Both are flex/grid items in their own parent row (.reading-vocab-controls
+       and .reading-vocab-drawer-body respectively) -- without min-width:0 a
+       flex/grid item's default min-width:auto refuses to shrink below its
+       nowrap content's full combined width, which pushed the whole drawer
+       (and document scrollWidth) wider than the viewport instead of scrolling
+       locally. This is what actually makes overflow-x:auto below contained. */
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Same min-width:0 requirement one level up: .reading-vocab-controls (the
+     search input + .reading-vocab-filters' shared wrapping row) is itself a
+     grid item of .reading-vocab-drawer-body, and its own default
+     min-width:auto was still measuring .reading-vocab-filters' pre-scroll
+     content width even after the fix above -- the same chain has to be
+     broken at every flex/grid level between the scroll container and the
+     nearest block-level ancestor, not just at the scroll container itself. */
+  .reading-vocab-controls {
+    min-width: 0;
   }
 }
 
@@ -10580,6 +10616,7 @@ input.reading-vocab-sticker-toggle:checked {
   }
 
   .reader-workspace {
+    min-width: 0;
     padding: 14px 12px 14px 22px;
     border-radius: 20px;
   }
@@ -10680,6 +10717,13 @@ input.reading-vocab-sticker-toggle:checked {
   }
 
   .reading-vocab-drawer {
+    /* Grid item of .reader-workspace -- without min-width:0 this refused to
+       shrink below the filter/quick-select rows' nowrap content width (see
+       the min-width:0 chain note on .reading-vocab-filters/.reading-vocab-
+       quick-select above), pushing document scrollWidth past the viewport
+       even though those two rows' own overflow-x:auto was correctly
+       contained by that point. */
+    min-width: 0;
     order: 4;
   }
 
