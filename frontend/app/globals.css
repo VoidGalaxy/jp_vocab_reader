@@ -713,6 +713,10 @@ button {
 
   .app-topbar {
     justify-content: flex-start;
+    /* Phase 83 -- a touch closer to the content below (was 18px, the base
+       rule) so the topbar reads as sitting just above the notebook cover
+       it belongs to, not as a separately-spaced service header strip. */
+    margin-bottom: 12px;
   }
 
   .app-topbar-end {
@@ -727,6 +731,47 @@ button {
 
   .app-topbar-end > button {
     width: auto;
+  }
+
+  /* Phase 83 -- mobile-only "paper tag" skin. Both buttons already read as
+     de-emphasized bordered pills (Phase 54/60 tokens), but a solid-border
+     shape sitting alone above the notebook cover -- the very first thing
+     painted -- still reads as a normal service-header button rather than a
+     note stuck to the page. Dashed border + a slight tilt reuse the same
+     "index card / tape tag" language the rest of the app already uses
+     (.vocab-form-panel, .home-sticker-chip) instead of a new pattern.
+     width:auto is explicit (not just relied on) because .account-menu-
+     trigger is a grandchild of .app-topbar-end, not a direct child, so it
+     doesn't pick up the ".app-topbar-end > button" rule above and would
+     otherwise fall through to the app-wide mobile `button { width: 100% }`
+     touch-target rule. Desktop/tablet (>640px) keep their existing pill /
+     Phase-67 paper-toolbar-tag looks untouched. */
+  .app-topbar-feedback-button,
+  .account-menu-trigger {
+    width: auto;
+  }
+
+  .ghost-button.app-topbar-feedback-button {
+    min-height: 44px;
+    padding: 8px 12px 8px 10px;
+    border-style: dashed;
+    font-size: 12.5px;
+    transform: rotate(-1.5deg);
+  }
+
+  .ghost-button.app-topbar-feedback-button:not(:disabled):hover {
+    transform: rotate(-1.5deg) translateY(-1px);
+  }
+
+  .account-menu-trigger {
+    min-height: 44px;
+    border: 1px dashed var(--border);
+    background: var(--soft-bg);
+    transform: rotate(1.5deg);
+  }
+
+  .account-menu-trigger:not(:disabled):hover {
+    transform: rotate(1.5deg) translateY(-1px);
   }
 
   /* Reserves space for the fixed bottom nav when the rating grid is
