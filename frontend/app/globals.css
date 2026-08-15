@@ -7082,6 +7082,57 @@ input.reading-vocab-sticker-toggle:checked {
   min-width: 0;
 }
 
+/* Phase 87 -- 덱을 아직 고르지 않은 동안 .vocab-notebook-pages는 넓은
+   가운데 칸에 점선 박스 하나만 떠 있는 것처럼 보였다 (Phase 86 QA). 그
+   배경 자체를 옅은 줄노트 질감으로 바꿔 "빈 공간"이 아니라 "아직 아무것도
+   적히지 않은 노트북 페이지"로 읽히게 하고, 세로 여백도 좀 더 확보해
+   페이지 한 장을 펼쳐둔 느낌을 준다. .shared-deck-detail이 이미 쓰는
+   것과 같은 반복 그라디언트 줄 레시피를 재사용한다. 데스크톱(>=1024px)
+   전용 -- 모바일은 이 배경 없이 기존 .desk-surface-section 톤을 그대로
+   유지한다. */
+@media (min-width: 1024px) {
+  .vocab-desk-empty {
+    display: grid;
+    align-items: center;
+    min-height: 320px;
+    background:
+      repeating-linear-gradient(
+        180deg,
+        transparent 0,
+        transparent 37px,
+        rgba(110, 91, 47, 0.05) 37px,
+        rgba(110, 91, 47, 0.05) 38px
+      ),
+      var(--surface-stage);
+  }
+}
+
+/* .vocab-page-guide -- modifier on top of the shared .empty-guide box so
+   the "덱을 아직 안 골랐어요" / "만든 단어장이 없어요" states read as a
+   small sticker note pinned to the notebook page rather than a floating
+   generic empty-state card. Scoped addition (not a rewrite of the app-wide
+   .empty-guide every other tab's empty states still use). */
+.vocab-page-guide {
+  position: relative;
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+.vocab-page-guide::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  z-index: 1;
+  width: 46px;
+  height: 16px;
+  border: 1px solid rgba(217, 122, 74, 0.4);
+  background: rgba(217, 122, 74, 0.32);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
+  transform: translateX(-50%) rotate(-3deg);
+  pointer-events: none;
+}
+
 /* Drawer-tab framing instead of a plain bordered admin filter box -- a
    dashed top edge + small "카드함 필터" label reads as pulling open a card
    drawer's filter tab, not an admin data-table toolbar. */
@@ -7384,6 +7435,48 @@ input.reading-vocab-sticker-toggle:checked {
     gap: 10px;
   }
 
+  /* Phase 87 -- the status filters were plain underline text-tabs at every
+     width, which read as form labels rather than the mockup's stack of
+     "최근/모르는 단어/헷갈림" page-edge tabs once they had a whole rail
+     column to themselves. Desktop-only: each chip becomes a left-accented,
+     right-rounded tab (flex-column's default stretch already makes each
+     one span the rail's width), using the same per-status colors the
+     active underline already carried -- only the shape changes, not the
+     filter logic or which chip is active. Mobile/tablet keep the Phase 57
+     underline-tab look untouched. */
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip {
+    padding: 6px 10px 6px 12px;
+    border-bottom: none;
+    border-radius: 0 999px 999px 0;
+    background: var(--soft-bg);
+    text-align: left;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip:hover {
+    background: var(--paper-bg);
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip-active {
+    background: var(--paper-bg);
+    box-shadow: inset 3px 0 0 0 var(--primary);
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-known.vocab-filter-chip-active {
+    box-shadow: inset 3px 0 0 0 #1b6b3a;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-uncertain.vocab-filter-chip-active {
+    box-shadow: inset 3px 0 0 0 #6f5f96;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-unknown.vocab-filter-chip-active {
+    box-shadow: inset 3px 0 0 0 #96603f;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-unclassified.vocab-filter-chip-active {
+    box-shadow: inset 3px 0 0 0 #6b5f3f;
+  }
+
   /* Phase 76 -- the filter box reads as a pinned index-card divider, not a
      plain dashed toolbar box: a small washi-tape corner (::before) plus a
      cascading 3-color page-tab accent (::after, box-shadow draws the
@@ -7439,7 +7532,19 @@ input.reading-vocab-sticker-toggle:checked {
     padding: 18px 16px;
     border: 1px solid var(--paper-border);
     border-radius: 4px 16px 16px 16px;
-    background: var(--panel-bg);
+    /* Phase 87 -- reuses .shared-deck-detail's ruled-paper recipe so this
+       reads as an actual notebook page (lined, waiting to be written on)
+       in both its idle and populated states, not a flat white panel that
+       only looks like "a page" once a word happens to be selected. */
+    background:
+      repeating-linear-gradient(
+        180deg,
+        transparent 0,
+        transparent 37px,
+        rgba(110, 91, 47, 0.05) 37px,
+        rgba(110, 91, 47, 0.05) 38px
+      ),
+      var(--panel-bg);
     box-shadow: 0 14px 32px var(--paper-shadow);
   }
 
@@ -7482,15 +7587,18 @@ input.reading-vocab-sticker-toggle:checked {
   }
 }
 
+/* Phase 87 -- this used to draw its own dashed-border/soft-bg box nested
+   inside .vocab-notebook-detail's own bordered/shadowed panel, so the idle
+   note page read as "an empty box inside another empty box" right next to
+   the equally-empty middle column (Phase 86 QA). It now just sits directly
+   on the parent's ruled-paper background -- one page, one guide message,
+   not two stacked empty containers. */
 .vocab-notebook-detail-idle {
   display: grid;
   place-items: center;
   gap: 8px;
   min-height: 220px;
   padding: 24px 18px;
-  border: 1.5px dashed var(--paper-border);
-  border-radius: 16px;
-  background: var(--soft-bg);
   text-align: center;
 }
 

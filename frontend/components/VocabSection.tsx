@@ -529,12 +529,21 @@ export function VocabSection({
       </div>
 
       <div className="vocab-notebook-pages">
-      <div className="desk-surface desk-surface-section">
+      {/* Phase 87 -- 덱을 아직 고르지 않은 상태는 페이지 배경 자체를 줄노트
+          질감으로 바꿔 "빈 박스"가 아니라 "아직 아무것도 안 쓴 노트북
+          페이지"처럼 읽히게 하고, 그 위에 놓이는 안내는 .vocab-page-guide로
+          페이지에 붙인 작은 안내 스티커처럼 만든다 (아래 globals.css). */}
+      <div
+        className={`desk-surface desk-surface-section${
+          selectedDeckId === "" ? " vocab-desk-empty" : ""
+        }`}
+      >
       {selectedDeckId === "" ? (
         decks.length === 0 ? (
           <AppEmptyState
             mood="empty"
             moodSize="md"
+            className="empty-guide vocab-page-guide"
             title="아직 만든 단어장이 없어요."
             description="읽기 탭에서 원문을 읽고 단어를 담아보면 단어장이 자동으로 만들어져요."
           >
@@ -551,6 +560,7 @@ export function VocabSection({
           <AppEmptyState
             mood="empty"
             moodSize="sm"
+            className="empty-guide vocab-page-guide"
             title="볼 단어장을 골라볼까요?"
             description="위에서 덱을 고르면 담아둔 단어를 보여드려요."
           />
@@ -584,7 +594,7 @@ export function VocabSection({
       ) : null}
 
       {items.length > 0 ? (
-        <div className="vocab-list index-card-drawer">
+        <div className="vocab-list index-card-drawer card-stack-surface">
           {items.map((item) => {
             const isExpanded =
               expandedItemIds.has(item.id) || editingItemId === item.id;
@@ -748,12 +758,29 @@ export function VocabSection({
               ? items.find((candidate) => candidate.id === selectedItemId)
               : undefined;
           if (!selectedItem) {
+            // Phase 87 -- 덱을 고르지 않았거나 그 덱에 단어가 없을 때도
+            // 가운데 영역의 안내(.vocab-page-guide)와 똑같은 문구를 그대로
+            // 반복하면 두 영역이 서로 다른 이유 없이 나란히 비어 보인다.
+            // selectedDeckId/items/hasActiveFilter는 이미 위쪽에서 쓰던
+            // 값을 그대로 재사용한 것으로, 이 페이지가 "왜 비어 있는지"를
+            // 단계별로 이어서 설명한다. items.length === 0이 검색/필터
+            // 때문인 경우(hasActiveFilter)까지 "아직 담은 단어가 없어요"로
+            // 뭉뚱그리면 실제로는 단어가 있는 덱인데도 빈 덱처럼 잘못
+            // 안내하게 된다.
+            const idleMessage =
+              selectedDeckId === ""
+                ? "왼쪽에서 덱을 고르면 이 페이지에 단어 상세가 펼쳐져요."
+                : items.length === 0 && hasActiveFilter
+                  ? "검색어나 필터에 맞는 단어가 없어요."
+                  : items.length === 0
+                    ? "이 덱에는 아직 담은 단어가 없어요."
+                    : "단어를 펼치면 이 자리에서 자세히 볼 수 있어요.";
             return (
               <div className="vocab-notebook-detail-idle">
                 <ShioriGuideCard
                   variant="reading"
                   size="md"
-                  message="단어를 펼치면 이 자리에서 자세히 볼 수 있어요."
+                  message={idleMessage}
                 />
               </div>
             );
