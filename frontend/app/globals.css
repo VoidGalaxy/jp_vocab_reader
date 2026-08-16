@@ -10001,9 +10001,17 @@ input.reading-vocab-sticker-toggle:checked {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  /* Warm near-black (was a cold navy rgba(15,23,42,...)) -- matches the
-     notebook-cover's own dark tone instead of a generic modal scrim. */
-  background: rgba(37, 43, 30, 0.4);
+  /* Phase 94 -- was a warm near-black rgba(37,43,30,0.4) scrim. At this
+     tier the sheet is a short compact peek (see .bookmark-inspector's
+     max-height below), not a full-screen dialog, so dimming the reader
+     text behind it fought the "keep reading while you glance at the
+     meaning" goal -- the reader text stayed technically visible but hard
+     to actually read through a 40% black wash. Transparent instead,
+     matching what the >=641px docked-panel tier already used (this rule
+     is that tier's fallback default, not a separate declaration). The
+     sheet's own border-top accent/shadow/slide-up motion still make it
+     read as a focused surface without needing a scrim underneath it. */
+  background: transparent;
   padding: 0;
   animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
 }
@@ -10253,6 +10261,35 @@ input.reading-vocab-sticker-toggle:checked {
 .token-sheet-basket-button-active:not(:disabled):hover {
   background: var(--screen-accent, var(--accent));
   opacity: 0.92;
+}
+
+/* Phase 94 -- hidden by default (pinned desktop / docked tablet aren't
+   height-constrained, so there's no "fold" to mark there); shown only on
+   the compact mobile sheet below, right where its max-height actually cuts
+   the card off, so it's a subtle "this scrolls" cue and not a static label
+   that appears whether or not there's anything to find below it. */
+.token-sheet-fold-divider {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .token-sheet-fold-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 2px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .token-sheet-fold-divider::before,
+  .token-sheet-fold-divider::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 0;
+    border-top: 1px dashed var(--border);
+  }
 }
 
 /* base_form/품사/JLPT now sit below the status pills as secondary,
@@ -10750,6 +10787,20 @@ input.reading-vocab-sticker-toggle:checked {
        even 16px) so the pin dot (::before, added in the base rule) has
        clearance above the header row instead of crowding it. */
     padding: 20px 16px calc(16px + env(safe-area-inset-bottom));
+    /* Phase 94 -- was the base rule's 85vh, which let a single tapped word
+       cover almost the entire reader page (measured: only ~15% of the
+       viewport stayed visible above the sheet), breaking "peek at a
+       meaning while still reading" into a full-screen interruption. Capped
+       to a compact peek instead; header/meaning/status-buttons/save fit
+       within this on typical content (verified via QA), while the example
+       sentence, word-detail tags, prev/next nav, and meaning-edit/report
+       controls sit below the fold and reach the user via the scroll this
+       card already had (overflow-y:auto, base rule) rather than being
+       removed. Pinned desktop (.bookmark-inspector-pinned, >=1024px) and
+       the docked tablet panel (641-1023px, its own max-height override
+       above) are untouched -- this only applies to the true mobile bottom
+       sheet. */
+    max-height: 42vh;
   }
 
   .token-sheet-title-group {

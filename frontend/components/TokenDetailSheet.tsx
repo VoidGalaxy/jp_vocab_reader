@@ -172,6 +172,19 @@ function TokenDetailContent({
           ) : null}
         </div>
       ) : null}
+      {/* Phase 94 -- marks where "핵심" (word/meaning/status/save, all above)
+          gives way to "더 보기" (example sentence, word-detail tags,
+          prev/next nav, meaning-edit/report, all below). Purely a visual
+          divider, not a toggle -- on the compact mobile sheet these lower
+          sections already sit below the visible fold (see .bookmark-
+          inspector's max-height in globals.css) and reach the user via the
+          scroll that card already had, so no new open/closed state is
+          needed here. CSS-hidden above 640px (see .token-sheet-fold-divider
+          in globals.css) since the pinned/docked presentations aren't
+          height-constrained the same way and have no "fold" to mark. */}
+      <div className="token-sheet-fold-divider" aria-hidden="true">
+        <span>더 보기</span>
+      </div>
       <div className="token-sheet-meta-row">
         {token.base_form && token.base_form !== label ? (
           <span className="token-sheet-meta-tag">기본형 {token.base_form}</span>

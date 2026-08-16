@@ -101,7 +101,28 @@ pixel specs).
   `.reading-summary-cta-ready`/`.save-tray-quick-save-toggle` desktop
   overrides were also re-scoped under their `.reading-action-dock`/
   `.save-tray-quick-save` ancestors so they win on specificity rather than
-  depending on source order (previously flagged as fragile).
+  depending on source order (previously flagged as fragile). Phase 94 fixed
+  the last "reader disappears" gap: tapping a word on mobile opened
+  `.bookmark-inspector` at `max-height: 85vh` over a `rgba(37,43,30,0.4)`
+  scrim, leaving only ~15% of the viewport legible -- reading stopped
+  rather than paused. Below 640px only (pinned `>=1024px` and the
+  641-1023px docked-panel tier, already scrim-free, are untouched), the
+  sheet is now capped at `max-height: 42vh` and `.token-sheet-overlay`'s
+  background is transparent (matching what the docked tier already used),
+  so roughly 58% of the viewport -- the reader text above the sheet --
+  stays visible and legible while it's open (measured: 375 -> sheet 42% of
+  viewport, 244px of reader text still visible above it). Word/reading,
+  meaning, and the 4 status buttons sit within that fold on typical
+  content; the example sentence, base-form/part-of-speech/JLPT tags,
+  prev/next/first-occurrence nav, and meaning-edit/report controls sit
+  below it, reachable through the scroll the card already had
+  (`overflow-y: auto`, unchanged) rather than being removed -- a new
+  `.token-sheet-fold-divider` ("더 보기") marks where the fold falls,
+  CSS-hidden above 640px since pinned/docked have no such cutoff. No new
+  React state: `TokenDetailContent` renders identically for all three
+  presentations, and the divider is a static, non-interactive marker, not
+  a toggle. Save/status-change, `/analyze`, candidate tray, and
+  localStorage/SRS wiring are unchanged.
 - **Reading candidate word list** (Phase 56) — `ReadingVocabPanel`'s
   full-width row list is now a flex-wrap sticker tray
   (`.reading-vocab-tray`/`.reading-vocab-sticker*`): each word is a small
