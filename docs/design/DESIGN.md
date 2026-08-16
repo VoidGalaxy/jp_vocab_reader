@@ -84,7 +84,24 @@ pixel specs).
   existing app-wide `button { width: 100% }` touch-target rule is
   untouched. `TokenDetailSheet.tsx`, the candidate tray's Phase 89/91
   horizontal-strip structure, and all save/select/status/API/SRS wiring are
-  unchanged.
+  unchanged. A same-Phase follow-up addressed two risks that pass left
+  behind: the options popover (everything the toolbar didn't keep) had
+  grown to ~900px tall as one flat list, and the color legend was no
+  longer discoverable without opening it. The legend came back as a bare
+  compact strip (`.reader-legend-strip` -- dot + 2-3 char label, no pill
+  background, unlike the old `.reader-legend`/`.legend-item` it replaces)
+  always visible between the toolbar and the text, adding only ~25px
+  (measured: first character now at 195px/68.5% text ratio on 375, still
+  far below the pre-Phase-93 274px/46%). The popover itself split into 3
+  labeled groups -- 표시 (focus/JLPT toggles), 이동 (token count + bookmark
+  actions), 원문 관리 (collapse/reset) -- via a shared
+  `.reader-mode-toggles-section` class reusing the same dashed-divider
+  language the manage row already had, cutting measured popover height to
+  437px on mobile 375. The `.reading-summary-cta-button`/
+  `.reading-summary-cta-ready`/`.save-tray-quick-save-toggle` desktop
+  overrides were also re-scoped under their `.reading-action-dock`/
+  `.save-tray-quick-save` ancestors so they win on specificity rather than
+  depending on source order (previously flagged as fragile).
 - **Reading candidate word list** (Phase 56) — `ReadingVocabPanel`'s
   full-width row list is now a flex-wrap sticker tray
   (`.reading-vocab-tray`/`.reading-vocab-sticker*`): each word is a small

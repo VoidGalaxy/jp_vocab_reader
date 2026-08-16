@@ -5224,12 +5224,11 @@ input.reading-vocab-sticker-toggle:checked {
      than a slim shelf strip. Content-width + left-aligned here only --
      mobile still gets the app-wide `button { width: 100% }` touch-target
      treatment unchanged, since this override never applies below 1024px.
-     (The .reading-summary-cta-button/.reading-summary-next-actions
-     equivalent lives further down, right after their own unconditional
-     base rule, so the cascade -- same specificity, later source wins --
-     resolves the way the media query implies instead of getting
-     overridden right back by that later same-specificity rule.) */
-  .save-tray-quick-save-toggle {
+     Scoped with the parent class (not just `.save-tray-quick-save-toggle`
+     alone) so this wins on specificity regardless of where it sits in the
+     file relative to any other same-name rule, rather than relying on
+     source order. */
+  .save-tray-quick-save .save-tray-quick-save-toggle {
     justify-self: start;
   }
 }
@@ -5425,17 +5424,23 @@ input.reading-vocab-sticker-toggle:checked {
    admin action bar rather than a shelf-strip link. Caps growth instead of
    removing it entirely -- once a second button appears (post-save) they
    still share the row side by side, same as before. Desktop-only: mobile
-   keeps the app-wide `button { width: 100% }` touch-target rule. */
+   keeps the app-wide `button { width: 100% }` touch-target rule.
+   Phase 93 follow-up -- scoped with the `.reading-action-dock` ancestor
+   (not just the bare class) so this wins on specificity alone: it no
+   longer matters whether this block sits before or after the plain
+   `.reading-summary-cta-button`/`.reading-summary-cta-ready` rules above,
+   since a same-specificity same-media-query ordering dependency was
+   flagged as fragile. */
 @media (min-width: 1024px) {
-  .reading-summary-next-actions {
+  .reading-action-dock .reading-summary-next-actions {
     justify-content: flex-start;
   }
 
-  .reading-summary-cta-button {
+  .reading-action-dock .reading-summary-cta-button {
     flex: 0 1 260px;
   }
 
-  .reading-summary-cta-ready {
+  .reading-action-dock .reading-summary-cta-ready {
     flex: 0 1 300px;
   }
 }
@@ -9480,18 +9485,30 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 10px;
 }
 
-/* "원문 입력 펼치기/접기" + "새 원문" -- previously their own toolbar row
-   above the reader card (원문 관리 disclosure), now folded into this same
-   options popover as a visually separate group (session management, not
-   display preference) instead of a second management surface. */
-.reader-mode-toggles-manage {
+/* Phase 93 follow-up -- the popover's flat item stack split into 3 labeled
+   groups (표시/이동/원문 관리) so a ~900px-tall single list reads as a
+   short scannable menu instead of one undifferentiated pile. Same dashed-
+   divider recipe "원문 입력 펼치기"/"새 원문" already used as their own
+   group (Phase 65) -- reused here for all 3 groups rather than inventing a
+   second divider style, and deliberately not a bordered/filled sub-card
+   (would read as an admin panel nested inside another admin panel). */
+.reader-mode-toggles-section {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   padding-top: 8px;
   margin-top: 2px;
   border-top: 1px dashed var(--border);
+}
+
+.reader-mode-toggles-section-label {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .reading-focus-toggle,
@@ -9940,32 +9957,33 @@ input.reading-vocab-sticker-toggle:checked {
   line-height: 1.4;
 }
 
-.reader-legend {
+/* Phase 93 follow-up -- replaces the old .reader-legend/.legend-title/
+   .legend-item pill row (48px tall, gated behind the options popover) with
+   a bare single line: no pill backgrounds, short 2-3 char labels instead
+   of full "OO 단어" phrasing, back on the always-visible surface so "what
+   do the colors mean" doesn't need a click to find, without reintroducing
+   the height the reader-first pass removed. */
+.reader-legend-strip {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin: 0 0 12px;
-  padding: 0;
-  border: none;
-  background: transparent;
+  gap: 4px 10px;
+  margin-bottom: 10px;
   color: var(--muted);
   font-size: 11px;
 }
 
-.legend-title {
-  margin-right: 2px;
-  color: var(--muted);
+.reader-legend-strip-label {
+  flex: 0 0 auto;
   font-weight: 700;
 }
 
-.legend-item {
+.reader-legend-strip-item {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: var(--soft-bg);
+  gap: 4px;
+  white-space: nowrap;
 }
 
 .legend-swatch {

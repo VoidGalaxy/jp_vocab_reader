@@ -595,61 +595,58 @@ export function ReaderMode({
           {isOptionsOpen ? (
             <div className="reader-mode-toggles">
               <p className="reader-mode-hint">모르는 단어를 눌러보세요.</p>
-              {navPosition !== -1 ? (
-                <p className="reader-progress-token-count">
-                  {navPosition + 1} / {navigableIndexes.length} 단어 확인 중
-                </p>
-              ) : null}
-              <div className="reader-legend">
-                <span className="legend-title">단어 상태 색상</span>
-                <span className="legend-item">
-                  <span className="legend-swatch token-chip-known" /> 아는 단어
-                </span>
-                <span className="legend-item">
-                  <span className="legend-swatch token-chip-uncertain" /> 헷갈리는 단어
-                </span>
-                <span className="legend-item">
-                  <span className="legend-swatch token-chip-unknown" /> 모르는 단어
-                </span>
-                <span className="legend-item">
-                  <span className="legend-swatch token-chip-unclassified" /> 미분류
-                </span>
+              {/* 3 clearly separated groups (dashed divider + small label,
+                  same recipe the manage row already used) instead of one
+                  long undifferentiated stack -- easier to scan than a
+                  single flat list once the legend moved out to its own
+                  always-visible strip below. */}
+              <div className="reader-mode-toggles-section">
+                <span className="reader-mode-toggles-section-label">표시</span>
+                <label className="checkbox-field reading-focus-toggle">
+                  <input
+                    type="checkbox"
+                    checked={focusMode}
+                    onChange={(event) => setFocusMode(event.target.checked)}
+                  />
+                  모르는/헷갈리는 단어만 강조
+                </label>
+                <label className="checkbox-field reading-jlpt-toggle">
+                  <input
+                    type="checkbox"
+                    checked={showJlptTags}
+                    onChange={(event) => setShowJlptTags(event.target.checked)}
+                  />
+                  JLPT 태그 표시
+                </label>
               </div>
-              <div className="reader-progress-actions">
-                {bookmarkButtonLabel ? (
+              <div className="reader-mode-toggles-section">
+                <span className="reader-mode-toggles-section-label">이동</span>
+                {navPosition !== -1 ? (
+                  <p className="reader-progress-token-count">
+                    {navPosition + 1} / {navigableIndexes.length} 단어 확인 중
+                  </p>
+                ) : null}
+                <div className="reader-progress-actions">
+                  {bookmarkButtonLabel ? (
+                    <button
+                      type="button"
+                      className="ghost-button compact-button"
+                      onClick={scrollToBookmark}
+                    >
+                      {bookmarkButtonLabel}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="ghost-button compact-button"
-                    onClick={scrollToBookmark}
+                    onClick={scrollToTop}
                   >
-                    {bookmarkButtonLabel}
+                    맨 위로
                   </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="ghost-button compact-button"
-                  onClick={scrollToTop}
-                >
-                  맨 위로
-                </button>
+                </div>
               </div>
-              <label className="checkbox-field reading-focus-toggle">
-                <input
-                  type="checkbox"
-                  checked={focusMode}
-                  onChange={(event) => setFocusMode(event.target.checked)}
-                />
-                모르는/헷갈리는 단어만 강조
-              </label>
-              <label className="checkbox-field reading-jlpt-toggle">
-                <input
-                  type="checkbox"
-                  checked={showJlptTags}
-                  onChange={(event) => setShowJlptTags(event.target.checked)}
-                />
-                JLPT 태그 표시
-              </label>
-              <div className="reader-mode-toggles-manage">
+              <div className="reader-mode-toggles-section">
+                <span className="reader-mode-toggles-section-label">원문 관리</span>
                 <button
                   type="button"
                   className="ghost-button compact-button"
@@ -668,6 +665,32 @@ export function ReaderMode({
             </div>
           ) : null}
         </div>
+      </div>
+      {/* Phase 93 follow-up -- the color legend moved out of the options
+          popover (it was one more thing to find behind a click) and back
+          into the always-visible surface, but as a compact single-line
+          strip (bare dot + short label, no pill background) instead of the
+          old boxy .reader-legend row -- keeps discoverability without
+          reintroducing the ~48px-tall block that pushed the first line of
+          text down before this Phase. */}
+      <div className="reader-legend-strip">
+        <span className="reader-legend-strip-label">색상</span>
+        <span className="reader-legend-strip-item">
+          <span className="legend-swatch token-chip-known" />
+          아는
+        </span>
+        <span className="reader-legend-strip-item">
+          <span className="legend-swatch token-chip-uncertain" />
+          헷갈림
+        </span>
+        <span className="reader-legend-strip-item">
+          <span className="legend-swatch token-chip-unknown" />
+          모름
+        </span>
+        <span className="reader-legend-strip-item">
+          <span className="legend-swatch token-chip-unclassified" />
+          미분류
+        </span>
       </div>
       <div className="reader-text" ref={readerTextRef}>
         {layout.lines.map((line, lineIndex) => (
