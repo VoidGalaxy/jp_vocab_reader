@@ -5217,6 +5217,21 @@ input.reading-vocab-sticker-toggle:checked {
   .save-tray-shelf-row .save-dock-idle-hint {
     flex: 1 1 auto;
   }
+
+  /* Phase 93 -- this row measured as a full 944px-wide bar on desktop (CSS
+     grid's default justify-items:stretch applying to the toggle button),
+     reading as a stacked admin action bar under the reader page rather
+     than a slim shelf strip. Content-width + left-aligned here only --
+     mobile still gets the app-wide `button { width: 100% }` touch-target
+     treatment unchanged, since this override never applies below 1024px.
+     (The .reading-summary-cta-button/.reading-summary-next-actions
+     equivalent lives further down, right after their own unconditional
+     base rule, so the cascade -- same specificity, later source wins --
+     resolves the way the media query implies instead of getting
+     overridden right back by that later same-specificity rule.) */
+  .save-tray-quick-save-toggle {
+    justify-self: start;
+  }
 }
 
 .save-dock-count {
@@ -5402,6 +5417,27 @@ input.reading-vocab-sticker-toggle:checked {
 .reading-summary-cta-ready {
   flex: 2 1 240px;
   box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.16);
+}
+
+/* Phase 93 -- before this, a single button here (the common case: nothing
+   saved yet, only "어휘 노트 보기" showing) stretched via flex-grow to the
+   full 944px reader-paper width on desktop, reading as another full-width
+   admin action bar rather than a shelf-strip link. Caps growth instead of
+   removing it entirely -- once a second button appears (post-save) they
+   still share the row side by side, same as before. Desktop-only: mobile
+   keeps the app-wide `button { width: 100% }` touch-target rule. */
+@media (min-width: 1024px) {
+  .reading-summary-next-actions {
+    justify-content: flex-start;
+  }
+
+  .reading-summary-cta-button {
+    flex: 0 1 260px;
+  }
+
+  .reading-summary-cta-ready {
+    flex: 0 1 300px;
+  }
 }
 
 .reading-summary-message {
@@ -9363,19 +9399,42 @@ input.reading-vocab-sticker-toggle:checked {
   transform: rotate(3deg);
 }
 
-.reader-mode-header-row {
+/* Phase 93 -- single-line toolbar replacing the old title+hint row /
+   progress+bookmark row / legend row stack (measured 274px tall on mobile
+   375 before the first line of Japanese text, well over half the visible
+   reader page). Title, thin progress bar, and the existing "옵션" toggle
+   now share one row; everything else that used to be always-visible moved
+   into that same options popover below (.reader-mode-toggles). */
+.reader-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 10px;
   margin-bottom: 12px;
 }
 
-.reader-mode-title {
-  margin: 0 0 4px;
+.reader-toolbar-title {
+  flex: 0 0 auto;
+  margin: 0;
   color: var(--text);
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reader-toolbar-progress {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.reader-toolbar-percent {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .reader-mode-hint {
@@ -9401,6 +9460,12 @@ input.reading-vocab-sticker-toggle:checked {
   flex-direction: column;
   flex-wrap: nowrap;
   min-width: 220px;
+  /* Phase 93 -- this popover picked up the hint/token-count/legend/bookmark
+     rows that used to be their own always-visible strip, so it needs a cap:
+     without one, a right:0-anchored absolute box can grow past the left
+     edge of narrow viewports (its content isn't otherwise width-limited)
+     and create page-level horizontal overflow. */
+  max-width: min(300px, calc(100vw - 48px));
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -9439,40 +9504,14 @@ input.reading-vocab-sticker-toggle:checked {
   white-space: nowrap;
 }
 
-/* Flattened from a filled --soft-bg box to a plain inline row -- this is a
-   live status readout, not a settings panel, and the boxed treatment made
-   it read like the row above a form instead of the reader's own
-   "how far in am I" glance. */
-.reader-progress-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(120px, 220px) auto;
-  align-items: center;
-  gap: 8px 14px;
-  margin-bottom: 10px;
-  padding: 0 2px;
-  border: none;
-  background: transparent;
-}
-
-.reader-progress-info {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  min-width: 0;
-}
-
-.reader-progress-percent {
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
+/* Phase 93 -- token-count/bookmark-actions now live inside the options
+   popover (.reader-mode-toggles) alongside the legend/hint instead of a
+   dedicated always-visible row; see .reader-toolbar above for what stayed
+   on the always-visible line. */
 .reader-progress-token-count {
+  margin: 0;
   color: var(--muted);
   font-size: 12px;
-  white-space: nowrap;
 }
 
 .reader-progress-bar {
@@ -9516,7 +9555,10 @@ input.reading-vocab-sticker-toggle:checked {
 .reader-progress-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  /* Right-aligned made sense on the old dedicated progress row; inside the
+     options popover's column stack (see .reader-mode-toggles) content
+     reads left-to-right like everything else in that panel. */
+  justify-content: flex-start;
   gap: 6px;
 }
 
@@ -10661,20 +10703,6 @@ input.reading-vocab-sticker-toggle:checked {
 
   .reader-paper::after {
     right: 18px;
-  }
-
-  .reader-mode-header-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .reader-progress-row {
-    grid-template-columns: 1fr;
-    justify-items: stretch;
-  }
-
-  .reader-progress-actions {
-    justify-content: flex-start;
   }
 
   .reader-progress-actions .compact-button {

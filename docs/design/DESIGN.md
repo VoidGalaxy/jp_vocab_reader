@@ -66,7 +66,25 @@ pixel specs).
   sticky-note word inspector (`.bookmark-inspector`, tilted on desktop,
   straight bottom sheet on mobile), a thinner progress bar with a
   bookmark-charm bead, and a dashed-strip save tray instead of a bordered
-  admin box. Candidate/word list redesigned in Phase 56 (see below).
+  admin box. Candidate/word list redesigned in Phase 56 (see below). Phase 93
+  restored "원문이 주인공" hierarchy inside `.reader-paper`: the old
+  always-on title+hint row, progress+bookmark-actions row, and legend row
+  measured a combined 274px on mobile 375 before the first line of Japanese
+  text (46% of the reader page was text). Those three rows collapsed into
+  one slim `.reader-toolbar` line (title + thin progress bar + the existing
+  "옵션" toggle); hint/token-count/legend/bookmark-actions moved into the
+  same options popover the focus/JLPT toggles already used (no new
+  disclosure mechanism, `isOptionsOpen` is unchanged). Result: first
+  Japanese character now at 170px/73.7% text ratio on 375 (320/390
+  confirmed at the same numbers). On desktop, `ReaderSaveDock`'s "빠르게
+  전체 저장" toggle and the post-analyze "어휘 노트 보기" link no longer
+  stretch to the full 944px reader-paper width (a CSS grid
+  justify-items:stretch default and an unopposed flex-grow, respectively) --
+  both are now content-width and left-aligned, `>=1024px` only, so mobile's
+  existing app-wide `button { width: 100% }` touch-target rule is
+  untouched. `TokenDetailSheet.tsx`, the candidate tray's Phase 89/91
+  horizontal-strip structure, and all save/select/status/API/SRS wiring are
+  unchanged.
 - **Reading candidate word list** (Phase 56) — `ReadingVocabPanel`'s
   full-width row list is now a flex-wrap sticker tray
   (`.reading-vocab-tray`/`.reading-vocab-sticker*`): each word is a small

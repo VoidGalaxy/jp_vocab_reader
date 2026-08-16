@@ -555,10 +555,33 @@ export function ReaderMode({
           stacks exactly as it did before this Phase. */}
       <div className="reader-desk-scene">
       <div className="reader-paper hero-card card-stack-surface">
-      <div className="reader-mode-header-row">
-        <div>
-          <h3 className="reader-mode-title">읽기 모드</h3>
-          <p className="reader-mode-hint">모르는 단어를 눌러보세요.</p>
+      {/* Phase 93 -- "원문 우선" reader toolbar. Previously three always-on
+          rows (title+hint, progress+bookmark actions, legend) stood between
+          the reader-paper's top edge and the first line of Japanese text --
+          measured at 274px on mobile 375, well over half the visible page.
+          Collapsed here into one slim line (title + progress bar + percent
+          + the existing "옵션" toggle); the hint/token-count/legend/
+          bookmark actions all move into the same options popover the
+          focus/JLPT toggles already used, rather than gaining a second
+          disclosure mechanism. isOptionsOpen is the same existing state --
+          nothing new is being introduced, just regrouped. */}
+      <div className="reader-toolbar">
+        <h3 className="reader-toolbar-title">읽기 모드</h3>
+        <div className="reader-toolbar-progress">
+          <div
+            className="reader-progress-bar"
+            role="progressbar"
+            aria-label="읽기 진행률"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progressPercent}
+          >
+            <div
+              className="reader-progress-bar-fill"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <span className="reader-toolbar-percent">{progressPercent}%</span>
         </div>
         <div className="reader-mode-options-wrap">
           <button
@@ -571,6 +594,45 @@ export function ReaderMode({
           </button>
           {isOptionsOpen ? (
             <div className="reader-mode-toggles">
+              <p className="reader-mode-hint">모르는 단어를 눌러보세요.</p>
+              {navPosition !== -1 ? (
+                <p className="reader-progress-token-count">
+                  {navPosition + 1} / {navigableIndexes.length} 단어 확인 중
+                </p>
+              ) : null}
+              <div className="reader-legend">
+                <span className="legend-title">단어 상태 색상</span>
+                <span className="legend-item">
+                  <span className="legend-swatch token-chip-known" /> 아는 단어
+                </span>
+                <span className="legend-item">
+                  <span className="legend-swatch token-chip-uncertain" /> 헷갈리는 단어
+                </span>
+                <span className="legend-item">
+                  <span className="legend-swatch token-chip-unknown" /> 모르는 단어
+                </span>
+                <span className="legend-item">
+                  <span className="legend-swatch token-chip-unclassified" /> 미분류
+                </span>
+              </div>
+              <div className="reader-progress-actions">
+                {bookmarkButtonLabel ? (
+                  <button
+                    type="button"
+                    className="ghost-button compact-button"
+                    onClick={scrollToBookmark}
+                  >
+                    {bookmarkButtonLabel}
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="ghost-button compact-button"
+                  onClick={scrollToTop}
+                >
+                  맨 위로
+                </button>
+              </div>
               <label className="checkbox-field reading-focus-toggle">
                 <input
                   type="checkbox"
@@ -606,64 +668,6 @@ export function ReaderMode({
             </div>
           ) : null}
         </div>
-      </div>
-      <div className="reader-progress-row">
-        <div className="reader-progress-info">
-          <span className="reader-progress-percent">
-            읽기 진행률 {progressPercent}%
-          </span>
-          {navPosition !== -1 ? (
-            <span className="reader-progress-token-count">
-              {navPosition + 1} / {navigableIndexes.length} 단어 확인 중
-            </span>
-          ) : null}
-        </div>
-        <div
-          className="reader-progress-bar"
-          role="progressbar"
-          aria-label="읽기 진행률"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={progressPercent}
-        >
-          <div
-            className="reader-progress-bar-fill"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-        <div className="reader-progress-actions">
-          {bookmarkButtonLabel ? (
-            <button
-              type="button"
-              className="ghost-button compact-button"
-              onClick={scrollToBookmark}
-            >
-              {bookmarkButtonLabel}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={scrollToTop}
-          >
-            맨 위로
-          </button>
-        </div>
-      </div>
-      <div className="reader-legend">
-        <span className="legend-title">단어 상태 색상</span>
-        <span className="legend-item">
-          <span className="legend-swatch token-chip-known" /> 아는 단어
-        </span>
-        <span className="legend-item">
-          <span className="legend-swatch token-chip-uncertain" /> 헷갈리는 단어
-        </span>
-        <span className="legend-item">
-          <span className="legend-swatch token-chip-unknown" /> 모르는 단어
-        </span>
-        <span className="legend-item">
-          <span className="legend-swatch token-chip-unclassified" /> 미분류
-        </span>
       </div>
       <div className="reader-text" ref={readerTextRef}>
         {layout.lines.map((line, lineIndex) => (
