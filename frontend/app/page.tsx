@@ -9,6 +9,7 @@ import {
   classifyMessageTone,
   getTokenGroupKey,
   getTokenStatus,
+  isTokenSavedInDeck,
   resolveSelectedReadingSaveTargets,
 } from "../components/coverageUtils";
 import type { ReadingSaveTarget } from "../components/coverageUtils";
@@ -1678,18 +1679,40 @@ export default function HomePage() {
     }
   }
 
-  // Reading tab persists status changes immediately (no separate save step).
+  // Reading tab persists status changes immediately (no separate save step)
+  // -- except a never-saved word marked known/unclassified, which only
+  // updates local reader state (Phase 98): those two statuses aren't a
+  // deliberate "save this word" action the way unknown/uncertain are, so a
+  // brand-new word shouldn't be written to vocab_items just for being
+  // skimmed past. A word that's already saved still gets its status PATCHed
+  // regardless of target status -- only the create path is gated.
   async function handleReadingStatusChange(index: number, status: TokenStatus) {
     const token = readingTokens[index];
     if (!token || !readingSelectedDeckId) {
       return;
     }
+    if (token.status === status) {
+      return;
+    }
+
+    const previousToken = token;
 
     setReadingTokens((current) =>
       current.map((item, itemIndex) =>
         itemIndex === index ? { ...item, status, isClassified: true } : item,
       ),
     );
+
+    const alreadySavedInDeck = isTokenSavedInDeck(
+      token,
+      readingDeckVocabItems,
+      readingSelectedDeckId,
+    );
+    if (!alreadySavedInDeck && (status === "known" || status === "unclassified")) {
+      return;
+    }
+
+    const previousDeckVocabItems = readingDeckVocabItems;
 
     try {
       const saved = await persistReadingToken(
@@ -1705,6 +1728,12 @@ export default function HomePage() {
           : [...current, saved];
       });
     } catch (error) {
+      setReadingTokens((current) =>
+        current.map((item, itemIndex) =>
+          itemIndex === index ? previousToken : item,
+        ),
+      );
+      setReadingDeckVocabItems(previousDeckVocabItems);
       setReadingMessage(
         getErrorMessage(
           error,
