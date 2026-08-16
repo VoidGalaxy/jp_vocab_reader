@@ -5134,6 +5134,24 @@ input.reading-vocab-sticker-toggle:checked {
     flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    /* Phase 91: the filter row's own trailing label usually gets cut off
+       mid-word at these widths, which reads as "more to scroll" on its
+       own -- but the quick-select row's boundary lands right at a word
+       edge often enough ("모르는 단어 담기" renders whole) that it looks
+       like a complete, four-item row instead of a scrollable strip with
+       two more entries past it. A quiet edge fade (not a hard clip) makes
+       both rows read as continuing regardless of where a label happens to
+       break, without touching the shared underline/pill styling itself. */
+    mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 20px),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 20px),
+      transparent 100%
+    );
   }
 
   /* Same min-width:0 requirement one level up: .reading-vocab-controls (the

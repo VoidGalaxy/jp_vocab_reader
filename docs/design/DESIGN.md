@@ -81,7 +81,13 @@ pixel specs).
   stacking into a 6-7-line control block before the word stickers appear.
   Labels, handlers, and desktop layout stay unchanged; the container chain
   keeps `min-width: 0` so these strips do not create page-level horizontal
-  overflow.
+  overflow. Phase 91 checked whether those strips read as scrollable on
+  their own: the filter row's trailing label usually gets cut off mid-word
+  at 320-390px, but the quick-select row's boundary lands on a word edge
+  often enough to look like a complete four-item row. Both strips now carry
+  a quiet `mask-image` fade on their right edge (desktop-inert, since it
+  only applies inside the same `<=640px` block) so "there's more to
+  scroll" reads the same regardless of where a label happens to break.
 - **Vocab** (Phase 57) — hero/filter toolbar match the reader's underline
   text-tabs and washi-tape corner (`.vocab-hero-tape`); the word-list row's
   old left-edge status stripe is gone (the bookmark-flag status select
