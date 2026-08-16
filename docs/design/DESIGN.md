@@ -121,8 +121,14 @@ pixel specs).
   CSS-hidden above 640px since pinned/docked have no such cutoff. No new
   React state: `TokenDetailContent` renders identically for all three
   presentations, and the divider is a static, non-interactive marker, not
-  a toggle. Save/status-change, `/analyze`, candidate tray, and
-  localStorage/SRS wiring are unchanged.
+  a toggle. Phase 95 refined the action hierarchy inside that same compact
+  sheet after comparing it to the mockup's "tap a word, lift it into the
+  notebook" flow: the save-basket action moved directly under the meaning,
+  while the 4-way status classification grid moved below the fold with the
+  rest of the detail tools. Classification is still available and unchanged;
+  it simply stops being the first decision the reader sees when they only
+  meant to peek at a meaning and save the word. Save/status-change,
+  `/analyze`, candidate tray, and localStorage/SRS wiring are unchanged.
 - **Reading candidate word list** (Phase 56) — `ReadingVocabPanel`'s
   full-width row list is now a flex-wrap sticker tray
   (`.reading-vocab-tray`/`.reading-vocab-sticker*`): each word is a small

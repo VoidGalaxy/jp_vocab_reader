@@ -111,6 +111,35 @@ function TokenDetailContent({
           {getDisplayMeaning(displayedMeaning)}
         </p>
       </div>
+      {canAddToBasket ? (
+        <div className="token-sheet-basket-row">
+          <button
+            type="button"
+            className={`token-sheet-basket-button${isInBasket ? " token-sheet-basket-button-active" : ""}`}
+            onClick={onToggleBasket}
+            aria-pressed={isInBasket}
+          >
+            <BookmarkIcon className="button-icon" />
+            {isInBasket ? "저장 바구니에서 빼기" : "저장 바구니에 담기"}
+          </button>
+          {isInBasket ? (
+            <ShioriStamp
+              variant="save"
+              label="노트에 담았어요"
+              className="token-sheet-basket-stamp"
+            />
+          ) : null}
+        </div>
+      ) : null}
+      {/* Phase 95 -- the compact reader peek now treats "save this word" as
+          the immediate action after checking the meaning. Status grading
+          remains available below the fold with the rest of the detail tools,
+          matching the mockup's "lift it into the notebook first" flow without
+          removing any classification functionality. Purely a visual divider,
+          not a toggle; CSS-hidden above 640px. */}
+      <div className="token-sheet-fold-divider" aria-hidden="true">
+        <span>분류 / 자세히</span>
+      </div>
       <p className="token-sheet-status">
         현재 상태: <strong>{statusLabels[token.status]}</strong>
       </p>
@@ -151,39 +180,6 @@ function TokenDetailContent({
         >
           미분류 / 건너뛰기
         </button>
-      </div>
-      {canAddToBasket ? (
-        <div className="token-sheet-basket-row">
-          <button
-            type="button"
-            className={`token-sheet-basket-button${isInBasket ? " token-sheet-basket-button-active" : ""}`}
-            onClick={onToggleBasket}
-            aria-pressed={isInBasket}
-          >
-            <BookmarkIcon className="button-icon" />
-            {isInBasket ? "저장 바구니에서 빼기" : "저장 바구니에 담기"}
-          </button>
-          {isInBasket ? (
-            <ShioriStamp
-              variant="save"
-              label="노트에 담았어요"
-              className="token-sheet-basket-stamp"
-            />
-          ) : null}
-        </div>
-      ) : null}
-      {/* Phase 94 -- marks where "핵심" (word/meaning/status/save, all above)
-          gives way to "더 보기" (example sentence, word-detail tags,
-          prev/next nav, meaning-edit/report, all below). Purely a visual
-          divider, not a toggle -- on the compact mobile sheet these lower
-          sections already sit below the visible fold (see .bookmark-
-          inspector's max-height in globals.css) and reach the user via the
-          scroll that card already had, so no new open/closed state is
-          needed here. CSS-hidden above 640px (see .token-sheet-fold-divider
-          in globals.css) since the pinned/docked presentations aren't
-          height-constrained the same way and have no "fold" to mark. */}
-      <div className="token-sheet-fold-divider" aria-hidden="true">
-        <span>더 보기</span>
       </div>
       <div className="token-sheet-meta-row">
         {token.base_form && token.base_form !== label ? (

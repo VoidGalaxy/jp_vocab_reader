@@ -10791,12 +10791,13 @@ input.reading-vocab-sticker-toggle:checked {
        cover almost the entire reader page (measured: only ~15% of the
        viewport stayed visible above the sheet), breaking "peek at a
        meaning while still reading" into a full-screen interruption. Capped
-       to a compact peek instead; header/meaning/status-buttons/save fit
-       within this on typical content (verified via QA), while the example
-       sentence, word-detail tags, prev/next nav, and meaning-edit/report
-       controls sit below the fold and reach the user via the scroll this
-       card already had (overflow-y:auto, base rule) rather than being
-       removed. Pinned desktop (.bookmark-inspector-pinned, >=1024px) and
+       to a compact peek instead. Phase 95 then moved the save-basket action
+       above the fold and pushed status classification below it, matching the
+       mockup's "tap word -> lift it into the notebook" rhythm; classification,
+       examples, word-detail tags, prev/next nav, and meaning-edit/report stay
+       reachable via the scroll this card already had (overflow-y:auto, base
+       rule) rather than being removed. Pinned desktop
+       (.bookmark-inspector-pinned, >=1024px) and
        the docked tablet panel (641-1023px, its own max-height override
        above) are untouched -- this only applies to the true mobile bottom
        sheet. */
