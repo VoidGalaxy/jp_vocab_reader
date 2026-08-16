@@ -75,7 +75,13 @@ pixel specs).
   inset accent bar, and a muted check-circle placeholder (not a blank
   spacer) on already-known words so "why can't I add this" stays visible.
   Search/filter/quick-select are now underline text-tabs, not bordered pill
-  buttons, to read as labels on the tray rather than a toolbar.
+  buttons, to read as labels on the tray rather than a toolbar. Phase 89
+  tightened the mobile version only: under `<=640px`, filter chips and
+  quick-select buttons stay as one-line horizontal strips instead of
+  stacking into a 6-7-line control block before the word stickers appear.
+  Labels, handlers, and desktop layout stay unchanged; the container chain
+  keeps `min-width: 0` so these strips do not create page-level horizontal
+  overflow.
 - **Vocab** (Phase 57) — hero/filter toolbar match the reader's underline
   text-tabs and washi-tape corner (`.vocab-hero-tape`); the word-list row's
   old left-edge status stripe is gone (the bookmark-flag status select
@@ -87,7 +93,13 @@ pixel specs).
   plain caption text. List stays a vertical, non-tilted list (not a
   flex-wrap tray like the reading candidate list) -- an Operate screen with
   20-50 interactive rows needs to stay scannable, and per-row decoration is
-  deliberately minimal for the same reason.
+  deliberately minimal for the same reason. Phase 87 kept that scannable
+  list rule but made the desktop notebook spread feel more complete:
+  no-deck/empty states now sit on ruled paper with a pinned Shiori guide
+  (`.vocab-desk-empty`, `.vocab-page-guide`), the list drawer picked up a
+  subtle `card-stack-surface`, the desktop status filters became page-edge
+  tabs scoped to `.vocab-notebook-index`, and the right detail page's idle
+  copy became contextual instead of another nested empty box.
 - **Study** (Phase 58) — hero card gets the washi-tape corner and the
   deck/mode selects go underline (matching Reading/Vocab). The 4-way rating
   grid is stamp-shaped (asymmetric per-corner radius, alternating tilt,
@@ -113,7 +125,12 @@ pixel specs).
   Owner/subscriber/newcomer button conditions, published/unpublished/
   imported/subscribed logic, and the subscribed-mode word-list filter (which
   already reuses Phase 57's Vocab-tab underline-tab styling) were left
-  untouched.
+  untouched. Phase 88 densified the desktop shelf scene without touching JSX:
+  shelf compartments gained a faint plank texture, a CSS bookend prop, and
+  paper/card-catalog labels; sparse shelves cap deck cards at a book-like
+  width (`minmax(280px, 340px)`) instead of stretching one or two decks across
+  the whole compartment. The opened detail panel's shelf ridge is slightly
+  stronger, while mobile remains visually unchanged.
 - **Stats/Info + StatsPanel + Feedback** (Phase 60) — the 통계 tab's hero
   pairs its title with a small `ShioriStamp` ("학습 기록" postmark), matching
   the "오늘의 스탬프 로그" framing; the 저장 정책 card dropped the app-wide
@@ -450,3 +467,22 @@ every concrete gap found without touching global primitives. `VocabSection.
 tsx`/`SharedDeckSection.tsx`'s props, callbacks, CRUD handlers, `StatusSelect`
 semantics, and shared-deck owner/subscriber/import conditions are all
 unchanged; `SharedDeckSection.tsx` itself needed no JSX changes at all.
+Phase 87 returned to Vocab after the main notebook spread existed and focused
+on the remaining empty/idle states rather than changing CRUD behavior: the
+deck-not-selected state became a ruled-paper desk page with a pinned guide,
+the list drawer gained a light stacked-paper base, desktop status filters
+became page-edge tabs, and the right detail page now explains "no deck",
+"no words", or "filtered out" in context instead of showing a generic nested
+empty box. Phase 88 was the corresponding Shared Deck shelf-density pass:
+one- or two-deck shelves no longer stretch covers to fill the whole
+compartment, sparse space gains a faint plank texture and a CSS bookend, and
+section headings read as paper catalog labels. All of it is desktop-only CSS
+on the existing shelf/detail classes; owner/subscriber/newcomer policy and
+buttons were verified as unchanged. Phase 89 addressed the mobile Reading
+candidate tray after real `/analyze` QA showed that filter chips plus quick
+select buttons could take seven stacked lines on a 320px viewport. The fix
+keeps the same labels and handlers but turns those two control rows into
+horizontal scroll strips under `<=640px`, with `min-width: 0` added through
+the relevant container chain so the strips improve vertical density without
+creating page-level horizontal overflow. Desktop Reading and the actual save/
+analyze/SRS/storage contracts are untouched.
