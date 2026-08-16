@@ -129,6 +129,29 @@ pixel specs).
   it simply stops being the first decision the reader sees when they only
   meant to peek at a meaning and save the word. Save/status-change,
   `/analyze`, candidate tray, and localStorage/SRS wiring are unchanged.
+  Phase 97 removed a duplicate status-bucket save mechanism from
+  `ReaderSaveDock`: a "빠르게 전체 저장" toggle that expanded into 5
+  new/unknown/uncertain/unclassified/known count pills and 3 immediate-save
+  buttons (모르는 단어 저장/모르는+헷갈리는 단어 저장/미분류까지 저장) --
+  functionally a second copy of `ReadingVocabPanel`'s quick-select row
+  (전체 담기/바구니 비우기/모르는 단어 담기/모르는+헷갈리는 단어 담기/
+  미분류까지 담기), except this one saved immediately while the tray's only
+  changed the selection, waiting on the dock's own "담은 단어 저장" button.
+  Two visibly different flows for the same status buckets. The tray's
+  quick-select is now the only place to act on a whole bucket at once; the
+  dock only ever saves the current selection (`onSaveSelected`, unchanged --
+  same pipeline `saveSelectedReadingTokens`/`persistReadingSaveTargets` in
+  `page.tsx` already used). The dock's other immediate-save path
+  (`saveReadingTokensBatch`, wired through a now-removed `onSaveBatch` prop)
+  and its dead CSS (`.save-tray-quick-save*`, `.save-tray-stat-*`,
+  `.reading-summary-actions`/`.reading-summary-save-button`) were deleted
+  outright rather than left unreachable. `coverageUtils.ts`'s
+  `resolveReadingSaveTargets` helper (that path's target-resolution
+  function) is now unused but was left in place -- a shared-utils file
+  outside this phase's stated scope, and an unused export doesn't fail the
+  build. Selection state, per-word "저장 바구니에 담기", "바로 복습", and
+  "어휘 노트 보기" are all unchanged; `ReadingVocabPanel.tsx` needed no
+  edits at all.
 - **Reading candidate word list** (Phase 56) — `ReadingVocabPanel`'s
   full-width row list is now a flex-wrap sticker tray
   (`.reading-vocab-tray`/`.reading-vocab-sticker*`): each word is a small

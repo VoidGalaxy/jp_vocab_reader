@@ -9,10 +9,9 @@ import {
   classifyMessageTone,
   getTokenGroupKey,
   getTokenStatus,
-  resolveReadingSaveTargets,
   resolveSelectedReadingSaveTargets,
 } from "../components/coverageUtils";
-import type { ReadingSaveMode, ReadingSaveTarget } from "../components/coverageUtils";
+import type { ReadingSaveTarget } from "../components/coverageUtils";
 import { HomeDashboard } from "../components/HomeDashboard";
 import {
   BookIcon,
@@ -1715,16 +1714,16 @@ export default function HomePage() {
     }
   }
 
-  // "이 텍스트 학습 요약" 패널의 일괄 저장 버튼들. 대상 단어 목록/저장할
-  // status는 resolveReadingSaveTargets가 결정하고, 여기서는 병렬로 저장한
-  // 뒤 성공/실패 개수를 메시지로 보여준다.
-  // Shared by the status-bucket bulk-save buttons and the word-list panel's
-  // selective save: persists a resolved target list via persistReadingToken,
-  // merges results back into readingTokens/readingDeckVocabItems, and builds
-  // the success/skip/failure summary message. Returns which tokenIndexes
-  // actually ended up saved (fresh or already-saved) so a caller like the
-  // selective-save flow can react to exactly those (e.g. clear just those
-  // from a selection) without guessing from the message string.
+  // The one save pipeline every reading save path shares (currently just
+  // saveSelectedReadingTokens, driven by the word-list panel's checkbox
+  // selection -- Phase 97 removed the other caller, a parallel "save this
+  // status bucket immediately" path). Persists a resolved target list via
+  // persistReadingToken, merges results back into readingTokens/
+  // readingDeckVocabItems, and builds the success/skip/failure summary
+  // message. Returns which tokenIndexes actually ended up saved (fresh or
+  // already-saved) so a caller like the selective-save flow can react to
+  // exactly those (e.g. clear just those from a selection) without guessing
+  // from the message string.
   async function persistReadingSaveTargets(
     targets: ReadingSaveTarget[],
     savedCountLabel: string,
@@ -1832,33 +1831,14 @@ export default function HomePage() {
     ];
   }
 
-  async function saveReadingTokensBatch(mode: ReadingSaveMode) {
-    if (!readingSelectedDeckId || isSavingReadingBatch) {
-      return;
-    }
-
-    const targets = resolveReadingSaveTargets(
-      readingTokens,
-      readingDeckVocabItems,
-      readingSelectedDeckId,
-      mode,
-    );
-
-    if (targets.length === 0) {
-      setReadingMessage(
-        "저장 가능한 단어가 없습니다. 이미 저장한 단어는 어휘 노트에서 볼 수 있어요.",
-      );
-      return;
-    }
-
-    await persistReadingSaveTargets(targets, "단어");
-  }
-
-  // "선택한 단어 저장" -- same persist pipeline as the status-bucket
-  // buttons, just resolved from an explicit set of tokenIndexes the
-  // word-list panel's checkboxes picked instead of a status mode. Returns
-  // the saved tokenIndexes so the panel can drop exactly those from its
-  // selection.
+  // "선택한 단어 저장" -- resolves an explicit set of tokenIndexes the
+  // word-list panel's checkboxes (including its quick-select-by-status
+  // shortcuts) picked, through the same persist pipeline every reading save
+  // path uses. Returns the saved tokenIndexes so the panel can drop exactly
+  // those from its selection. Phase 97 removed the only other caller of
+  // this pipeline (a parallel "save this status bucket immediately" path,
+  // see the ReaderSaveDock note in ReadingTab.tsx), so this is now the sole
+  // way reading tokens get saved.
   async function saveSelectedReadingTokens(
     selectedTokenIndexes: number[],
   ): Promise<number[]> {
@@ -3491,7 +3471,6 @@ export default function HomePage() {
               void handleReadingStatusChange(index, status)
             }
             onToggleTextCollapsed={toggleReadingTextCollapsed}
-            onSaveBatch={(mode) => void saveReadingTokensBatch(mode)}
             onSaveSelected={saveSelectedReadingTokens}
             onStartStudyFromSaved={startStudyFromRecentlySaved}
             onGoToVocab={goToVocabFromReading}

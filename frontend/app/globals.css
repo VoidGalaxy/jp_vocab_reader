@@ -5217,20 +5217,6 @@ input.reading-vocab-sticker-toggle:checked {
   .save-tray-shelf-row .save-dock-idle-hint {
     flex: 1 1 auto;
   }
-
-  /* Phase 93 -- this row measured as a full 944px-wide bar on desktop (CSS
-     grid's default justify-items:stretch applying to the toggle button),
-     reading as a stacked admin action bar under the reader page rather
-     than a slim shelf strip. Content-width + left-aligned here only --
-     mobile still gets the app-wide `button { width: 100% }` touch-target
-     treatment unchanged, since this override never applies below 1024px.
-     Scoped with the parent class (not just `.save-tray-quick-save-toggle`
-     alone) so this wins on specificity regardless of where it sits in the
-     file relative to any other same-name rule, rather than relying on
-     source order. */
-  .save-tray-quick-save .save-tray-quick-save-toggle {
-    justify-self: start;
-  }
 }
 
 .save-dock-count {
@@ -5310,83 +5296,8 @@ input.reading-vocab-sticker-toggle:checked {
   white-space: nowrap;
 }
 
-.save-tray-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.save-tray-stat-pill {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--soft-bg);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.save-tray-stat-new {
-  border-color: #dbe2ec;
-  background: #f4f7fb;
-}
-
-.save-tray-stat-unknown {
-  border-color: #e8c7ae;
-  background: #fbf1e9;
-}
-
-.save-tray-stat-uncertain {
-  border-color: #d7cce9;
-  background: #f4f1fa;
-}
-
-.save-tray-stat-unclassified {
-  border-color: #ded2b0;
-  background: #f6f0e2;
-}
-
-.save-tray-stat-known {
-  border-color: #bfe3cc;
-  background: #f1faf4;
-  color: var(--muted);
-}
-
 .save-tray-primary-button {
   width: 100%;
-}
-
-.save-tray-quick-save {
-  display: grid;
-  gap: 6px;
-  padding-top: 4px;
-}
-
-.save-tray-quick-save-toggle {
-  align-self: flex-start;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.save-tray-quick-save .reading-summary-actions {
-  gap: 6px;
-}
-
-.save-tray-quick-save .reading-summary-save-button {
-  flex: 1 1 160px;
-  min-height: 38px;
-  padding: 8px 10px;
-  font-size: 12.5px;
-}
-
-.reading-summary-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.reading-summary-save-button {
-  flex: 1 1 200px;
 }
 
 .reading-summary-hint {
@@ -7514,10 +7425,10 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 /* Uncertain/unknown reuse the same lavender/coral-beige tones as the
-   reading tab's token highlights (.token-chip-uncertain/-unknown,
-   .save-tray-stat-uncertain/-unknown) instead of the amber/rose this used
-   to carry -- one status color language app-wide, and "모르는 단어" no
-   longer reads as an error/warning chip here either. */
+   reading tab's token highlights (.token-chip-uncertain/-unknown) instead
+   of the amber/rose this used to carry -- one status color language
+   app-wide, and "모르는 단어" no longer reads as an error/warning chip
+   here either. */
 .vocab-filter-uncertain.vocab-filter-chip-active {
   border-bottom-color: #6f5f96;
   background: transparent;
@@ -8817,14 +8728,12 @@ input.reading-vocab-sticker-toggle:checked {
     align-items: stretch;
   }
 
-  .reading-summary-actions,
   .reading-summary-next-actions {
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
   }
 
-  .reading-summary-save-button,
   .reading-summary-cta-button {
     flex: 0 0 auto;
     width: 100%;

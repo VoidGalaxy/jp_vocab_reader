@@ -11,11 +11,10 @@ import {
   computeReadingVocabEntries,
   getTokenGroupKey,
 } from "./coverageUtils";
-import type { ReadingSaveMode, ReadingSaveSummary, ReadingVocabEntry } from "./coverageUtils";
+import type { ReadingSaveSummary, ReadingVocabEntry } from "./coverageUtils";
 import {
   CardFileIcon,
   CardsIcon,
-  ChevronDownIcon,
   FolderIcon,
   ShieldIcon,
   SparkleIcon,
@@ -58,7 +57,6 @@ type ReadingTabProps = {
   onAnalyze: (event: FormEvent<HTMLFormElement>) => void;
   onStatusChange: (index: number, status: TokenStatus) => void;
   onToggleTextCollapsed: () => void;
-  onSaveBatch: (mode: ReadingSaveMode) => void;
   onSaveSelected: (tokenIndexes: number[]) => Promise<number[]>;
   onStartStudyFromSaved: () => void;
   onGoToVocab: () => void;
@@ -76,43 +74,28 @@ type ReadingTabProps = {
   onReportMeaning: (token: TokenWithStatus) => void;
 };
 
-const saveButtons: Array<{
-  mode: ReadingSaveMode;
-  label: string;
-  hint: string;
-  variant: "secondary" | "ghost";
-}> = [
-  {
-    mode: "unknown_only",
-    label: "모르는 단어 저장",
-    hint: "모르는 단어로 표시한 후보만 저장해요",
-    variant: "secondary",
-  },
-  {
-    mode: "unknown_uncertain",
-    label: "모르는+헷갈리는 단어 저장",
-    hint: "모르는 단어와 헷갈리는 단어를 함께 저장해요",
-    variant: "secondary",
-  },
-  {
-    mode: "all_unclassified",
-    label: "미분류까지 저장",
-    hint: "모르는 단어, 헷갈리는 단어, 아직 분류하지 않은 단어까지 모두 저장해요",
-    variant: "ghost",
-  },
-];
-
 // ---------------------------------------------------------------------------
 // ReaderSaveDock -- deliberately not a titled panel-card, a slim shelf-like
-// strip sitting right under ReaderPaper. Owns its own "빠르게 전체 저장"
-// disclosure state -- nothing outside this component needs it.
+// strip sitting right under ReaderPaper.
+//
+// Phase 97 -- previously also owned a "빠르게 전체 저장" disclosure (a
+// toggle + 5 status-count pills + 3 immediate-save-by-status buttons) that
+// duplicated ReadingVocabPanel's quick-select row one screen section down:
+// both dealt in the same status buckets (모르는/모르는+헷갈리는/미분류까지),
+// but this one saved immediately while the tray's only changed the
+// selection, waiting for the button below to actually save it. Two visibly
+// different flows for the same underlying action. Removed here -- the tray's
+// quick-select is now the only place to act on a whole status bucket at
+// once; this dock only ever saves whatever is currently selected (via
+// onSaveSelected, unchanged), same as its plain per-word "저장 바구니에
+// 담기" path always did. See DESIGN.md Phase 97 note for the fuller
+// rationale.
 // ---------------------------------------------------------------------------
 type ReaderSaveDockProps = {
   summary: ReadingSaveSummary;
   selectedCount: number;
   isSavingBatch: boolean;
   onSaveSelected: () => void;
-  onSaveBatch: (mode: ReadingSaveMode) => void;
   recentlySavedCount: number;
   onStartStudyFromSaved: () => void;
   onGoToVocab: () => void;
@@ -125,14 +108,12 @@ function ReaderSaveDock({
   selectedCount,
   isSavingBatch,
   onSaveSelected,
-  onSaveBatch,
   recentlySavedCount,
   onStartStudyFromSaved,
   onGoToVocab,
   message,
   messageTone,
 }: ReaderSaveDockProps) {
-  const [isQuickSaveOpen, setIsQuickSaveOpen] = useState(false);
   const hasRecentlySaved = recentlySavedCount > 0;
 
   return (
@@ -169,57 +150,6 @@ function ReaderSaveDock({
             className="save-dock-idle-hint"
           />
         )}
-      </div>
-
-      <div className="save-tray-quick-save">
-        <button
-          type="button"
-          className="ghost-button compact-button save-tray-quick-save-toggle"
-          onClick={() => setIsQuickSaveOpen((value) => !value)}
-          aria-expanded={isQuickSaveOpen}
-        >
-          <ChevronDownIcon
-            className={`reading-vocab-collapse-icon${
-              isQuickSaveOpen ? "" : " reading-vocab-collapse-icon-collapsed"
-            }`}
-          />
-          빠르게 전체 저장
-        </button>
-        {isQuickSaveOpen ? (
-          <>
-            <div className="save-tray-stats" role="group" aria-label="상태별 단어 수">
-              <span className="save-tray-stat-pill save-tray-stat-new">
-                새 단어 {summary.newCount}개
-              </span>
-              <span className="save-tray-stat-pill save-tray-stat-unknown">
-                모르는 단어 {summary.unknownCount}개
-              </span>
-              <span className="save-tray-stat-pill save-tray-stat-uncertain">
-                헷갈리는 단어 {summary.uncertainCount}개
-              </span>
-              <span className="save-tray-stat-pill save-tray-stat-unclassified">
-                미분류 {summary.unclassifiedCount}개
-              </span>
-              <span className="save-tray-stat-pill save-tray-stat-known">
-                아는 단어 {summary.knownCount}개
-              </span>
-            </div>
-            <div className="reading-summary-actions">
-              {saveButtons.map(({ mode, label, hint, variant }) => (
-                <button
-                  key={mode}
-                  type="button"
-                  className={`${variant === "ghost" ? "ghost-button" : "secondary-button"} reading-summary-save-button`}
-                  onClick={() => onSaveBatch(mode)}
-                  disabled={isSavingBatch || summary.saveableCount === 0}
-                  title={hint}
-                >
-                  {isSavingBatch ? "저장 중..." : label}
-                </button>
-              ))}
-            </div>
-          </>
-        ) : null}
       </div>
 
       {summary.saveableCount === 0 ? (
@@ -326,7 +256,6 @@ export function ReadingTab({
   onAnalyze,
   onStatusChange,
   onToggleTextCollapsed,
-  onSaveBatch,
   onSaveSelected,
   onStartStudyFromSaved,
   onGoToVocab,
@@ -684,7 +613,6 @@ export function ReadingTab({
             selectedCount={selectedCount}
             isSavingBatch={isSavingBatch}
             onSaveSelected={() => void handleSaveSelected()}
-            onSaveBatch={onSaveBatch}
             recentlySavedCount={recentlySavedCount}
             onStartStudyFromSaved={onStartStudyFromSaved}
             onGoToVocab={onGoToVocab}
