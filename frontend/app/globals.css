@@ -10735,6 +10735,86 @@ input.reading-vocab-sticker-toggle:checked {
     gap: 8px;
   }
 
+  /* Phase 100 -- below the fold divider, the basket-select toggle, word-nav
+     row, and meaning-edit/report row still read as a small button toolbar
+     even though Phase 99 already moved them under the classify grid's fold
+     line -- a reader who scrolls the compact sheet even slightly lands on
+     a wall of bordered boxes that reads like a feature panel, not the
+     mockup's quiet sticky note. None of these lose function, position, or
+     copy; only their mobile-only chrome drops to a plain text-style
+     action so the classify grid stays the only "boxed button" weight this
+     card carries at this width. Desktop docked (>=641px) and pinned
+     (>=1024px) panels have real vertical room and keep the original
+     bordered buttons -- this whole block is gated to the compact sheet
+     only. */
+  .bookmark-inspector .token-sheet-basket-button {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 0;
+    border: none;
+    padding: 6px 2px;
+    color: var(--screen-accent, var(--accent));
+    background: transparent;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .bookmark-inspector .token-sheet-basket-button:not(:disabled):hover {
+    background: transparent;
+  }
+
+  .bookmark-inspector .token-sheet-basket-button-active {
+    color: var(--screen-accent, var(--accent));
+    background: transparent;
+  }
+
+  .bookmark-inspector .token-sheet-basket-button-active:not(:disabled):hover {
+    background: transparent;
+  }
+
+  .bookmark-inspector .token-sheet-nav-button,
+  .bookmark-inspector .meaning-quick-edit-trigger,
+  .bookmark-inspector .token-sheet-report-meaning {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    color: var(--muted);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+  }
+
+  .bookmark-inspector .token-sheet-nav-button {
+    min-height: 44px;
+    padding: 8px 6px;
+  }
+
+  .bookmark-inspector .token-sheet-nav-button:not(:disabled):hover,
+  .bookmark-inspector .meaning-quick-edit-trigger:not(:disabled):hover,
+  .bookmark-inspector .token-sheet-report-meaning:not(:disabled):hover {
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    text-decoration-color: currentColor;
+  }
+
+  .bookmark-inspector .token-sheet-nav-button:disabled {
+    color: #b7c0cc;
+  }
+
+  /* 문맥 예문 loses its bordered/tape-strip card look at this width --
+     it's still the same labeled block, just quieter than a second boxed
+     card sitting under the meaning block above the fold. */
+  .bookmark-inspector .context-example-block {
+    border: none;
+    border-radius: 0;
+    padding: 6px 0 0;
+    background: transparent;
+  }
+
+  .bookmark-inspector .context-example-block::before {
+    display: none;
+  }
+
   /* Mobile-only reflow of the reading tab: the reading card moves ahead of
      the "이 텍스트 학습 요약" card so the core reading experience isn't
      pushed down the page by a status summary, while the summary card still

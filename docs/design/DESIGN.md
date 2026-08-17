@@ -612,3 +612,39 @@ resolver left over from the Phase 97 removal of its only caller (the old
 the `ReadingSaveMode` type) were left in place and their comments updated
 to stop pointing at the removed function. Backend, `/analyze`, SRS,
 storage, and the actual save/PATCH/dedup decision logic are all unchanged.
+
+Phase 100 picked up where Phase 99 left off on the mobile compact sheet:
+classification was already above the fold and the basket-select toggle
+already below it, but everything below that fold divider (basket-select,
+word-nav, meaning-edit trigger, report-meaning) was still full bordered
+buttons, so scrolling even slightly landed on a wall of boxes that read
+as a feature panel rather than the mockup's quiet sticky note. All changes
+are mobile-only CSS (`@media (max-width: 640px)`, scoped under
+`.bookmark-inspector` so the desktop docked panel and pinned desk-scene
+inspector, which have real vertical room, keep their original bordered
+buttons) plus one JSX change: the "뜻 오류 신고" button in
+`TokenDetailSheet.tsx` gained a dedicated `token-sheet-report-meaning`
+class so it could be targeted without also catching the active meaning-
+edit form's real Save/Cancel buttons, which share its parent
+`.meaning-actions-row` and must keep looking like actual buttons. The
+basket-select toggle (`.token-sheet-basket-button`) dropped its dashed-
+border pill and solid active fill for a plain underlined accent-color
+text link (auto width, not full-row) -- the already-visible `ShioriStamp`
+"선택했어요" next to it still carries the "selected" signal, so the fill
+was redundant. Word-nav buttons (이전/다음/모르는 단어로/첫 등장으로) and
+the meaning-edit-trigger/report-meaning pair lost their border/background/
+hover-lift and read as muted underlined text now, with nav buttons keeping
+their 44px min-height touch target via padding alone. `.context-example-
+block` (문맥 예문) lost its bordered/tape-strip card treatment at this
+width, becoming a plain labeled paragraph instead of a second boxed card
+sitting under the meaning block. Browser QA (scratch SQLite, 390/375/320px,
+headless Chrome via CDP) confirmed the default fold view now shows exactly
+5 buttons (close + the 4 classify pills) with word/meaning as plain text
+above them, all quieted secondary actions remain reachable and functional
+by scroll, the meaning-edit Save/Cancel buttons in an active edit are
+untouched (still filled/bordered), auto-save-on-unknown/uncertain and no-
+save-on-known/unclassified both still hold, and `scrollWidth === clientWidth`
+at all three widths with zero console errors. No button, panel, or feature
+was removed; no new box was added. Desktop/tablet (>=641px) and pinned
+desktop (>=1024px) presentations, the Phase 89/91 candidate tray, and all
+backend/API/SRS/save logic are unchanged.

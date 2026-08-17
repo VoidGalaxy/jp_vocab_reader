@@ -303,7 +303,7 @@ function TokenDetailContent({
           {!isEditingMeaning ? (
             <button
               type="button"
-              className="ghost-button compact-button"
+              className="ghost-button compact-button token-sheet-report-meaning"
               onClick={() => onReportMeaning(token)}
             >
               뜻 오류 신고
