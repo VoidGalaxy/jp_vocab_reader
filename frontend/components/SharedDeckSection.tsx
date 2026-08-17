@@ -645,7 +645,7 @@ export function SharedDeckSection({
             <div className="heading-actions">
               <button
                 type="button"
-                className="secondary-button"
+                className="shared-deck-detail-dismiss"
                 onClick={onCloseDetail}
               >
                 닫기

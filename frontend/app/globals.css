@@ -7135,6 +7135,44 @@ input.reading-vocab-sticker-toggle:checked {
   background: #f8dade;
 }
 
+/* Phase 106 -- the detail panel's top "닫기" sits in .heading-actions right
+   next to the deck's real primary action (가져오기/학습 목록에 추가/공유
+   취소/다시 공유하기), so two same-weight secondary-styled buttons made it
+   unclear which one is the deck's actual next step. Demoted to a quiet
+   text dismiss, same visual language Reading/Study/Analyze already use for
+   pure-navigation actions (.reading-summary-link-button, .study-actions-
+   link-button) -- no border/background/shadow, intrinsic width so it
+   doesn't inherit the mobile .heading-actions{align-items:stretch} full-
+   width stretch. The bottom "닫기" in .form-actions is deliberately left
+   alone: it sits by itself (no competing primary action) after a
+   potentially long subscribed word list, so it stays a real full-weight
+   button as a genuine long-list convenience, not a duplicate CTA. Scoped
+   to this component; .heading-actions itself (shared with
+   VocabSection.tsx) is untouched. */
+.shared-deck-section .shared-deck-detail-dismiss {
+  flex: 0 0 auto;
+  align-self: flex-end;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  padding: 6px 2px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  box-shadow: none;
+}
+
+.shared-deck-section .shared-deck-detail-dismiss:not(:disabled):hover {
+  color: var(--screen-accent, var(--accent));
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
 .shared-detail-columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

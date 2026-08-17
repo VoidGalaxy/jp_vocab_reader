@@ -810,3 +810,57 @@ deck and omits it for "전체" ("all"), both zero-error; Reading's save-then-
 still sends `deck_id=1&sort=created_desc` correctly, confirming it was never
 affected and stays that way. No Analyze classification/save logic, SRS,
 storage, shared-deck, auth, or design/CSS was touched.
+
+Phase 106 picked up one of Phase 103's two Shared Deck P2s: the detail
+panel's top/bottom "닫기" pair. Round 0 re-read `SharedDeckSection.tsx`
+closely first, since the brief called for judgment, not an assumed fix. The
+card `.row-actions` P2 turned out to be smaller than Phase 103 estimated --
+`showActionButton`'s `!deck.is_owner` guard and `canManageDeck`'s `deck.
+is_owner` guard are mutually exclusive, so a card renders at most 2 buttons
+(상세 보기 + exactly one of 가져오기/열기/공유 취소/다시 공유하기), never
+3; left untouched since there's no real box-stacking problem to fix (noted
+as a Phase 103 audit correction, not a new finding). One adjacent, genuine
+duplicate turned up instead while reading the subscribed-card branch: for
+an already-subscribed deck, both "상세 보기" and "열기" call the exact same
+`onSelectDeck(deck.id)` handler -- two differently-labeled buttons doing
+the identical thing. Fixing that changes a button's conditional behavior/
+count, which this phase's Round 1 bar and forbidden-line list both rule
+out; recorded as a Phase 107 candidate rather than touched.
+
+The top/bottom 닫기 pair itself: read as duplicate-feeling only in the top
+instance, where it sits in `.heading-actions` next to the deck's real
+per-state primary (가져오기/학습 목록에 추가/공유 취소/다시 공유하기) at
+equal visual weight, competing for attention with the actual next step. The
+bottom instance in `.form-actions` is alone -- no sibling to compete with --
+and after a subscribed deck's word list (up to hundreds of words with its
+own search/filter/80-item-page "더 보기") a bottom close is a genuine long-
+list convenience a prior QA round already flagged as worth keeping. So the
+fix only touches the top instance: one className swap in `SharedDeckSection.
+tsx` (`secondary-button` -> a new `shared-deck-detail-dismiss`) plus one new
+scoped CSS block in `globals.css`, styled like the underlined text-link
+treatment Reading/Study/Analyze already established (no border/background/
+shadow, intrinsic width via `align-self: flex-end` so it doesn't inherit
+the mobile `.heading-actions{align-items:stretch}` full-width stretch). The
+shared `.heading-actions` class itself (also used by `VocabSection.tsx`)
+was never touched -- only this one button's own class changed. The bottom
+닫기 keeps its full `secondary-button` weight, unedited. No condition,
+button count, or callback changed anywhere; `onCloseDetail` fires exactly
+as before from either button. Verified with `npm run build`, `git diff
+--check`, and CDP-driven headless Chrome QA against a scratch SQLite
+backend, driving two real registered accounts (owner + subscriber, via
+`/auth/register` + localStorage token swap) through actual click flows --
+not asserted state -- at 1280/390/320px: owner published/unpublished/
+republished detail all show the demoted top 닫기 next to a full-weight
+공유 취소/다시 공유하기, and toggling unpublish/republish still updates
+`UnpublishedBadge` and button labels correctly (condition logic intact);
+newcomer detail shows a clearly prominent "학습 목록에 추가" next to the
+quiet 닫기; the demoted link still closes the detail panel on click
+(function preserved); post-import detail correctly drops the import button
+from the header per its existing condition, leaving only the quiet 닫기
+there while the bottom 닫기 keeps full weight beside the word list;
+`document.documentElement.scrollWidth === clientWidth` held at every width;
+zero console errors (one unrelated `404 /favicon.ico`, present on every page
+load regardless of this change). No backend/API/schema/SRS/shared-deck-
+policy/auth/localStorage code, owner/subscriber/newcomer button conditions,
+or global primitives were touched; Reading/Study/Vocab/Analyze were not
+modified.
