@@ -3766,6 +3766,42 @@ select {
   gap: 10px;
 }
 
+/* Phase 104 -- pure-navigation actions living inside .study-actions (Study's
+   empty-state/completion CTA rows, Analyze's ClassifyResultSummary) drop
+   their button chrome for a plain underlined text action, the same
+   treatment Phase 102 gave Reading's "어휘 노트 보기". Each .study-actions
+   row keeps exactly one real primary button (원문 읽기 시작 / 한 번 더
+   복습 / the save button sitting above this row in Analyze); everything
+   else that's a same-tier navigation jump gets this class instead. Doesn't
+   touch the single "정답 보기" .study-actions row, which never gains this
+   class since it has nothing to demote. align-self opts out of the mobile
+   `.study-actions { align-items: stretch }` column layout below, so the
+   link keeps its intrinsic width instead of stretching full-bleed like the
+   buttons it sits next to/under. */
+.study-actions-link-button {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  padding: 6px 2px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  box-shadow: none;
+}
+
+.study-actions-link-button:not(:disabled):hover {
+  color: var(--screen-accent, var(--accent));
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
 .study-rating-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

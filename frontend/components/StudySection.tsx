@@ -516,7 +516,7 @@ export function StudySection({
                 <BookIcon className="button-icon" />
                 원문 읽기 시작
               </button>
-              <button type="button" className="secondary-button" onClick={onGoToVocab}>
+              <button type="button" className="study-actions-link-button" onClick={onGoToVocab}>
                 어휘 노트 보기
               </button>
             </div>
@@ -742,17 +742,25 @@ export function StudySection({
             <button type="button" onClick={onRestart}>
               한 번 더 복습
             </button>
-            <button type="button" className="secondary-button" onClick={onGoToReading}>
+            <button
+              type="button"
+              className="study-actions-link-button"
+              onClick={onGoToReading}
+            >
               <BookIcon className="button-icon" />
               원문 읽기 시작
             </button>
-            <button type="button" className="ghost-button" onClick={onGoToVocab}>
+            <button
+              type="button"
+              className="study-actions-link-button"
+              onClick={onGoToVocab}
+            >
               어휘 노트 보기
             </button>
             {studyMode === "recent" ? (
               <button
                 type="button"
-                className="ghost-button"
+                className="study-actions-link-button"
                 onClick={() => onQuickStart("today")}
               >
                 오늘 복습 보기

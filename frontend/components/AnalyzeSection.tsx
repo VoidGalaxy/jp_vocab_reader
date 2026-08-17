@@ -586,11 +586,19 @@ function ClassifyResultSummary({
       </button>
       <p className="muted-text">저장하면 임시 저장은 삭제돼요.</p>
       <div className="study-actions">
-        <button type="button" className="secondary-button" onClick={onViewInReadingTab}>
+        <button
+          type="button"
+          className="study-actions-link-button"
+          onClick={onViewInReadingTab}
+        >
           <BookIcon className="button-icon" />
           원문 읽기로 이동
         </button>
-        <button type="button" className="ghost-button" onClick={onGoToVocab}>
+        <button
+          type="button"
+          className="study-actions-link-button"
+          onClick={onGoToVocab}
+        >
           <CardFileIcon className="button-icon" />
           어휘 노트 보기
         </button>

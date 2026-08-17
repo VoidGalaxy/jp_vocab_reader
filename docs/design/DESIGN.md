@@ -728,3 +728,45 @@ network failures. No backend/API/schema/SRS/shared-deck/auth/localStorage
 code was touched, quick-save-all and "담기" language stayed removed, and no
 button/card/panel was added -- only the existing "어휘 노트 보기" button's
 chrome went away.
+
+Phase 104 took the two most severe P2s Phase 103's audit found (both worse
+than Reading's pre-Phase-102 save dock: 3-4 real buttons stacking full-width
+on mobile) and applied the exact same fix shape Phase 102 proved out --
+one kept primary button, everything else in the row demoted to a plain
+underlined text action. `.study-actions` is shared by four call sites across
+two files (Study's empty-state CTA, its single-button "정답 보기" row, its
+completion CTA, and Analyze's `ClassifyResultSummary`), so instead of editing
+that shared class, one new scoped class was added -- `.study-actions-link-
+button` (`app/globals.css`), styled identically to Reading's `.reading-
+summary-link-button` (no border/background/shadow/min-width, intrinsic
+width, underlined `var(--muted)` text turning accent-colored on hover) plus
+`align-self: flex-start` so it doesn't inherit the mobile `.study-actions
+{ align-items: stretch }` column layout's full-width stretch the way a real
+button does. Three JSX call sites changed classNames only, same handlers,
+same conditions: Study's empty-state row keeps "원문 읽기 시작" as the one
+real button (already the row's only unstyled/primary-looking button) and
+demotes "어휘 노트 보기"; Study's completion row keeps "한 번 더 복습" (same
+reasoning -- already the row's established primary) and demotes "원문 읽기
+시작", "어휘 노트 보기", and the conditional "오늘 복습 보기"; Analyze's
+`ClassifyResultSummary` already had its real primary ("모르는 단어 노트에
+담기") sitting on its own line above `.study-actions`, so both buttons in
+that row ("원문 읽기로 이동", "어휘 노트 보기") -- pure navigation, neither
+more important than the other -- became links. The single-button "정답
+보기" `.study-actions` row never gained the new class since it had nothing
+to demote. Verified with `npm run build`, `git diff --check`, and CDP-driven
+headless Chrome QA against a scratch SQLite backend at 1280/390/320px:
+empty-state and completion states reached via real quick-start/rating-button
+flows (not manual DOM state injection), `.study-actions-link-button` click
+correctly switched `activeTab` to vocab (functionality preserved), completion
+CTA went from up to 4 stacked full-width boxes to 1 button + up to 3 quiet
+links, Analyze's summary went from 3 buttons to 1 button + 2 links, and
+`document.documentElement.scrollWidth === clientWidth` held at every width
+with zero console/network errors caused by these changes. One pre-existing,
+out-of-scope issue was surfaced during QA and left untouched per the phase's
+backend/logic-change ban: saving classified words from Analyze triggers a
+422 from `GET /vocab-items?deck_id=&sort=created_desc` (an internal post-save
+list refresh sending an empty `deck_id`) -- reproducible before this phase's
+changes too, unrelated to the CTA buttons themselves, and out of scope here.
+No backend/API/schema/SRS/study-queue/review-submission/classification-save
+logic, button conditions, or global primitives were touched; Reading, Vocab,
+and Shared Deck were not modified.
