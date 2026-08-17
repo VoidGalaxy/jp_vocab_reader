@@ -648,3 +648,43 @@ at all three widths with zero console errors. No button, panel, or feature
 was removed; no new box was added. Desktop/tablet (>=641px) and pinned
 desktop (>=1024px) presentations, the Phase 89/91 candidate tray, and all
 backend/API/SRS/save logic are unchanged.
+
+Phase 101 returned to the Phase 89/91 candidate tray itself (`ReadingVocabPanel`),
+which real `/analyze` QA at 1280/390/375/320px showed had become the reading
+tab's second-largest panel once opened -- a dashed hairline "pull" handle that,
+when expanded, revealed a hint line, search, filter tabs, quick-select tabs,
+and a grid of sticker cards padded/shadowed/rotated enough to read as full
+note cards rather than list entries; at 1280px the 13-word sample needed the
+tray's own internal scroll to see past the first two rows. All changes are CSS
+only, scoped to classes `ReadingVocabPanel.tsx` already owns (no JSX, copy, or
+handler changes, and no touch to `TokenDetailSheet.tsx` per the phase brief).
+The closed pull (`.reading-vocab-drawer-pull`) dropped from a 700-weight/12px
+label with a 2px dashed top rule to a 600-weight/11.5px label with a 1px rule
+and smaller icon/chevron (15px/14px -> 12px/12px), so it reads even more
+clearly as a quiet list handle than "어휘 노트 보기" above it -- the chevron
+shrink was scoped to `.reading-vocab-drawer-pull .reading-vocab-collapse-icon`
+rather than the shared base class, since `VocabSection.tsx`'s own "더보기"
+toggle reuses that class and was out of scope. Each sticker
+(`.reading-vocab-sticker`) shrank from `padding: 14px 24px 10px 14px` /
+`box-shadow: 0 6px 14px` / a 224px max-width to `9px 18px 7px 10px` / `0 2px
+6px` / 208px, with the alternating tilt halved (+-1.5/1/0.6deg -> +-0.7/0.5/
+0.3deg) so the tray reads as a light paper-grain list instead of a scattered
+pile of note cards; the tray's own row gap tightened to match (14px -> 9px
+vertical). Net effect confirmed in browser QA: the same 13-word sample now
+fits without internal tray scrolling at 1280px, and 390px goes from one
+sticker per row to two. The checkbox pin, saved/status/occurrence badges,
+goto-text-position icon, and every click handler are unchanged, and mobile's
+existing touch-target overrides (24px pin, 34-40px min-height buttons) are
+untouched, so nothing shrank below a tappable size. `ReaderSaveDock`
+(save-dock strip, "선택한 단어"/"어휘 노트 보기") was left alone --
+already visibly heavier than the pull below it, so the hierarchy candidate D
+in the phase brief needed no CSS. Verified: `npm run build`, `git diff
+--check`, and CDP-driven headless Chrome QA against a scratch SQLite backend
+at 1280/390/375/320px -- collapsed/expanded tray, Phase 89/91 filter and
+quick-select horizontal strips (`scrollWidth > clientWidth` on the strip
+itself, `document.documentElement.scrollWidth === clientWidth` on the page at
+every width), quick-select selecting all saveable words, selected-save
+landing 13 saved badges in the tray, token-click opening the compact
+inspector, and classifying a word unknown auto-saving it, all still hold with
+zero console errors/warnings. No backend/API/schema/SRS/shared-deck/auth/
+localStorage code was touched.
