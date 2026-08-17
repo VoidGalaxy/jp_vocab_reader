@@ -977,3 +977,116 @@ prior phase's baseline. No backend/API/schema/SRS/storage/shared-deck/auth
 code, Study queue/review logic, Vocab CRUD/status/deck/share/custom-term
 logic, or destructive-action strength was touched; Reading's Phase 93-102
 results and `TokenDetailSheet.tsx` are unmodified.
+
+Phase 109 was a no-code round: Round 0 investigation into Vocab's
+management/share/custom-term/backup panels and Shared Deck's remaining
+detail/list/pagination controls found no candidate that cleared this
+phase's bar (CSS-only, no condition/logic change, no destructive-action
+weakening, 1-3 files). Reading the actual code first (not guessing from
+class names) showed both areas were already resolved by earlier phases,
+not newly discovered box-clutter:
+
+Vocab management: the `.vocab-management-panel`/`.custom-term-section`
+CSS carries an explicit Phase 68/80 comment trail confirming 덱 관리/고급/
+덱 공유 (and separately 사용자 정의 용어) were already merged from three
+bordered `.management-card` boxes into one shared soft "note" surface with
+dashed section rules, years before this phase -- there was no "admin
+settings screen" left to fix. Every remaining button in that surface falls
+into a category this phase's own instructions protect from demotion:
+덱 만들기 / 공유 등록 / 사용자 정의 용어 추가 are real submit actions;
+현재 덱 삭제 / 용어 삭제 are destructive (danger-button-subtle, already the
+established "outline chip, not solid red" treatment); 현재 덱 공유 파일로
+내보내기 / 덱 가져오기 / CSV 다운로드 are genuine file-utility actions the
+brief explicitly says not to make "overly casual," and they're already
+opt-in behind a "고급 백업/파일 내보내기" disclosure toggle, not shown by
+default. The only two pure-navigation-style toggles found (사용자 정의
+용어 관리, 고급 백업/파일 내보내기) each sit alone in their own section
+with no sibling button to stack against, so demoting either to a text link
+would not reduce any real box-clutter -- it would just make an otherwise-
+normal section header control look understyled. Browser QA (CDP-driven
+headless Chrome, scratch SQLite, 390px, real clicks through 더보기 -> 덱/
+공유 관리 -> 고급 백업 toggle -> 사용자 정의 용어 관리) confirmed this
+visually: the management panel, backup tools, and custom-term panel all
+render as one continuous dashed-divided note, not stacked admin cards, at
+zero console errors and zero horizontal overflow.
+
+Shared Deck: the word-list search/filter (`.shared-lexeme-word-filter`,
+reusing the same "카드함 필터" drawer-tab language as Vocab's own filter),
+pagination (`.shared-lexeme-load-more`, a single `secondary-button
+compact-button` with only a margin-top rule -- no extra chrome to strip),
+and per-word `StatusSelect` dropdowns were already minimal-weight going
+into this phase and are explicitly named in the brief as controls whose
+functionality matters more than further stylistic thinning ("StatusSelect
+같은 form control은... 건드리지 않는 것을 기본값으로 한다"). Combined with
+Phase 106/107 already having resolved the detail panel's duplicate close
+and the subscribed-card duplicate action, there was nothing left in Shared
+Deck within this phase's safe-change bar; not independently re-tested this
+round beyond a zero-error tab-load spot check, since nothing in its code
+path changed since Phase 107's thorough owner/subscriber QA.
+
+Full mobile loop re-QA (390px, real clicks: Home -> Reading sample/
+analyze/token-inspect/select/save -> Study -> Vocab list/management/
+backup/custom-term panels -> Shared Deck) also checked the brief's other
+stated risk -- "has recent de-boxing gone so far that a primary action
+reads as weak" -- and found no such spot: every screen still shows exactly
+one clearly-buttoned primary action per state (덱 만들기 / 공유 등록 /
+학습하기 / etc.), with only genuinely-secondary/duplicate actions carrying
+the lighter text-link treatment from Phases 102/104/106/108. Phase 108's
+Vocab expanded-detail fix reconfirmed unchanged (내 단어장 뜻 수정 ~106px,
+뜻 오류 신고 ~93px vs. 수정/삭제 at a full 288px). Zero console errors,
+zero failed requests (excluding the known unrelated favicon 404), and
+`document.documentElement.scrollWidth === clientWidth` held at 390px
+throughout. `git status --short` is empty -- no files were changed this
+phase.
+
+Phase 110 was a no-code design-review pass: with the Phase 93-109 de-boxing
+series apparently at its natural end (Phase 109 found no further
+candidates), this phase re-read the original brief
+(`casual-sticker-reader-redesign-brief.md`), both mockup boards
+(`docs/design/mockups/casual-sticker-reader-{mobile,desktop}.png`), and
+this file's own "Principles"/"Per-screen direction" sections, then checked
+the live app against them with real browser QA (scratch SQLite, CDP
+headless Chrome, 33 screenshots across Home/Reading/Study/Vocab/Shared
+Deck/Analyze/Stats/Feedback at 1280/390, plus 375/320 spot-checks on
+Reading's inspector and Study's active card) rather than reading code.
+Overall verdict: the redesign has substantively reached the brief's
+direction. Home, Reading (both the reader page and the compact/pinned
+inspector), and Study's card-stack-on-board scene are close, functional
+matches to their mockup panels -- notebook-cover hero, one primary CTA,
+Shiori as a small corner/idle-hint presence never competing with content,
+word-detail-as-sticky-note, 4-way rating stamps. Shared Deck's shelf frame
+and Vocab's notebook-spread container (tape corner, ruled-paper card-stack
+surface, pinned right-hand detail page) also read the part.
+
+One deliberate, correctly-justified divergence: Vocab's word list renders
+as a dense vertical list, not the mockup's tilted sticker grid. This isn't
+an oversight -- Phase 57's own DESIGN.md entry already reasoned through it
+("an Operate screen with 20-50 interactive rows needs to stay scannable")
+and this phase's own brief independently warns against "무리하게 장식화"
+of a functionally-important operate UI just because it differs from the
+mockup. Confirmed still the right call; not touched.
+
+No P1s. Two P2/P3-tier gaps recorded for a future phase, neither meeting
+this phase's no-code-unless-obvious-bug bar: (1) Study's active card, on a
+320-390px phone, pushes the 4-way rating grid (the screen's one real
+decision) below the fold under word/reading/POS/meaning/tags/edit-links/
+example-sentence content -- pre-existing, not a Phase 108 regression (that
+phase's link-demotion reduced height, if anything), but worth a content-
+priority pass in a dedicated phase rather than a reactive CSS patch here.
+(2) Analyze/Stats/Feedback have no mockup panel of their own (the original
+6-panel board only covers Home/Reading/Inspector/Vocab/Study/Shared-Deck)
+and were extrapolated from the same visual language after the fact --
+consistent in execution, but worth a deliberate check against product
+intent rather than assumed-fine-by-similarity. A third item was
+investigated and ruled a non-issue rather than a gap: the black "N" circle
+visible bottom-left in every mobile screenshot is Next.js's own dev-mode
+indicator (the same element that showed "1 Issue" during Phase 104's QA),
+not app UI -- absent from production builds, not a z-index/overlap bug to
+fix.
+
+Nothing should be touched further in Reading/Study/Analyze CTA hierarchy,
+Shared Deck close/action de-duplication, or Vocab's list density -- each
+already reflects a deliberate, documented decision from Phases 93-109, and
+re-opening any of them without new evidence would just re-litigate settled
+calls. `git status --short` shows only this file -- no functional code was
+touched.
