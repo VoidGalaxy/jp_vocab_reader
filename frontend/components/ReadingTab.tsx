@@ -192,11 +192,7 @@ function ReaderSaveDock({
             저장한 단어 {recentlySavedCount}개 바로 복습
           </button>
         ) : null}
-        <button
-          type="button"
-          className={`${hasRecentlySaved ? "secondary-button" : "ghost-button"} reading-summary-cta-button`}
-          onClick={onGoToVocab}
-        >
+        <button type="button" className="reading-summary-link-button" onClick={onGoToVocab}>
           <CardFileIcon className="button-icon" />
           어휘 노트 보기
         </button>

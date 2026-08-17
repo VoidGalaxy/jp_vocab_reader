@@ -5354,6 +5354,39 @@ input.reading-vocab-sticker-toggle:checked {
   box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.16);
 }
 
+/* Phase 102 -- "어휘 노트 보기" leaves the reading tab entirely (it's a jump
+   to another tab, not a step in the reading -> save -> review loop), so it
+   shouldn't compete with the actual save/study buttons for button-shaped
+   attention at any viewport, not just on the compact mobile sheet the way
+   Phase 100's inspector actions were. Demoted from a bordered
+   ghost/secondary button to a plain underlined text action -- same
+   callback, same position, no chrome. Width stays intrinsic (not the
+   stretched full-width every plain <button> gets at 640px) so it reads as
+   a link sitting next to (or under) the real CTA, never as a second
+   stacked action bar. */
+.reading-summary-link-button {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  padding: 6px 2px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  box-shadow: none;
+}
+
+.reading-summary-link-button:not(:disabled):hover {
+  color: var(--screen-accent, var(--accent));
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
 /* Phase 93 -- before this, a single button here (the common case: nothing
    saved yet, only "어휘 노트 보기" showing) stretched via flex-grow to the
    full 944px reader-paper width on desktop, reading as another full-width

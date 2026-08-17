@@ -688,3 +688,43 @@ landing 13 saved badges in the tray, token-click opening the compact
 inspector, and classifying a word unknown auto-saving it, all still hold with
 zero console errors/warnings. No backend/API/schema/SRS/shared-deck/auth/
 localStorage code was touched.
+
+Phase 102 finished the save dock / post-save CTA weight that Phase 101 had
+left alone. `ReaderSaveDock`'s shelf row, idle hint (`ShioriGuideCard`), and
+primary save button were already about as light as they could get without
+losing the save action's discoverability, so the one real change is to
+"어휘 노트 보기": it leaves the reading tab entirely (a jump to the vocab
+tab, not a step in the reading -> save -> review loop), yet it was rendered
+as a full bordered `ghost-button`/`secondary-button` at every viewport,
+including a full-width mobile row and, after a save, a second button sitting
+next to "바로 복습" that made the post-save CTA read as a two-button work
+panel. One JSX change in `ReadingTab.tsx`'s `ReaderSaveDock`: that button
+drops the conditional `ghost-button`/`secondary-button` + `reading-summary-
+cta-button` classes for a single new `reading-summary-link-button` class,
+same `onGoToVocab` handler, same icon+label, same position. The new CSS
+class (`app/globals.css`) strips all button chrome -- no border, no
+background, no shadow, no forced min-width/min-height, intrinsic width
+instead of the app-wide mobile `button { width: 100% }` touch-target rule --
+leaving a `var(--muted)` underlined text action that turns accent-colored on
+hover, matching the text-link treatment Phase 100 already used for the
+compact inspector's secondary actions. Because the link no longer carries
+`.reading-summary-cta-button`, it's unaffected by that class's desktop/mobile
+flex-basis rules, so "바로 복습" (still a real button, still gets the accent
+box-shadow ring) is now the only boxed element in `.reading-summary-next-
+actions` at every width -- idle state shows just the quiet link under the
+divider, post-save state shows one primary button with the link beside it on
+desktop (>=1024px, same flex row) or under it on mobile (its own line, not
+stretched to match the button's width). Verified with `npm run build`,
+`git diff --check`, and CDP-driven headless Chrome QA against a scratch
+SQLite backend at 1280/390/375/320px: idle state (0 selected) shows the count
+badge, saveable chip, idle hint, and link with no primary save button;
+selecting all 13 saveable words via the candidate tray's "전체 선택" surfaces
+the full-width/capped-width primary save button with the live count; saving
+shows the success message, "바로 복습" CTA with its accent ring, and the link
+now sitting beside/under it instead of stacked as a second full-width button;
+token click still opens the compact inspector; `document.documentElement.
+scrollWidth === clientWidth` at all four widths; zero console errors or
+network failures. No backend/API/schema/SRS/shared-deck/auth/localStorage
+code was touched, quick-save-all and "담기" language stayed removed, and no
+button/card/panel was added -- only the existing "어휘 노트 보기" button's
+chrome went away.
