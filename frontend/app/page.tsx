@@ -1388,7 +1388,7 @@ export default function HomePage() {
     try {
       const safeDeckId = isSharedDeckStudyId(deckId) ? "all" : deckId;
       const params = new URLSearchParams();
-      if (safeDeckId !== "all") {
+      if (safeDeckId !== "all" && safeDeckId !== "") {
         params.set("deck_id", safeDeckId);
       }
       if (vocabStatusFilter !== "all") {
@@ -1951,7 +1951,8 @@ export default function HomePage() {
   async function loadCustomTerms(deckId: string = selectedVocabDeckId) {
     try {
       const safeDeckId = isSharedDeckStudyId(deckId) ? "all" : deckId;
-      const query = safeDeckId !== "all" ? `?deck_id=${safeDeckId}` : "";
+      const query =
+        safeDeckId !== "all" && safeDeckId !== "" ? `?deck_id=${safeDeckId}` : "";
       const data = await requestJson<CustomTermsResponse>(
         `/custom-terms${query}`,
       );
@@ -1969,7 +1970,8 @@ export default function HomePage() {
 
     try {
       const safeDeckId = isSharedDeckStudyId(deckId) ? "all" : deckId;
-      const query = safeDeckId !== "all" ? `?deck_id=${safeDeckId}` : "";
+      const query =
+        safeDeckId !== "all" && safeDeckId !== "" ? `?deck_id=${safeDeckId}` : "";
       const data = await requestJson<StatsResponse>(`/stats${query}`);
       setStudyStats(data);
     } catch (error) {

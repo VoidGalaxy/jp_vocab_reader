@@ -770,3 +770,43 @@ changes too, unrelated to the CTA buttons themselves, and out of scope here.
 No backend/API/schema/SRS/study-queue/review-submission/classification-save
 logic, button conditions, or global primitives were touched; Reading, Vocab,
 and Shared Deck were not modified.
+
+Phase 105 fixed the 422 Phase 104 surfaced. Root cause traced to `app/
+page.tsx`'s `saveSelectedTokens` (Analyze's save handler): after saving, it
+calls `loadVocabItems()` with no argument, which defaults to the
+`selectedVocabDeckId` component state -- deliberately left as `""` until
+the user actually opens the Vocab tab (see the Phase-labeled comment at its
+declaration: "단어 탭이 아직 열리지 않았으므로"), so any save flow reached
+without visiting Vocab first hits this default. Inside `loadVocabItems`,
+the "omit deck_id for the all-decks case" guard only excluded the `"all"`
+sentinel (`if (safeDeckId !== "all")`), not the empty-string unset state, so
+`""` fell through to `params.set("deck_id", "")`, producing `/vocab-items?
+deck_id=&sort=created_desc`. The backend's `deck_id: int | None = Query
+(default=None)` (`backend/app/main.py`) can't parse an empty string as an
+int and isn't given the chance to fall back to its `None` default since the
+param is present, just empty -- hence the 422. Save itself was never the
+problem; only this post-save refresh call was malformed. The same exact
+guard shape existed in two sibling helpers -- `loadCustomTerms` and
+`loadStudyStats` -- both reachable via their own no-arg default (`deckId:
+string = selectedVocabDeckId` / `= selectedStudyDeckId`); `loadStudyStats`
+wasn't actually exploitable today since nothing ever sets `selectedStudyDeckId`
+to `""` (default `"all"`), but the identical bug shape made it worth closing
+alongside the other two rather than leaving a second latent copy. Fix, in
+all three, one line each: `!== "all"` became `!== "all" && !== ""`. No
+backend/schema change -- the frontend was sending a request the backend
+never should have received, so the fix is entirely "don't build that query
+param when there's no id," matching the phase's own preferred direction.
+Verified with `npm run build`, `git diff --check`, and CDP-driven headless
+Chrome QA against a scratch SQLite backend: reproduced the exact Phase 104
+repro (Analyze tab reached directly, without ever visiting Vocab, sample
+text classified as all-unknown, save clicked) and confirmed the post-save
+refresh now fires as `/vocab-items?sort=created_desc` (deck_id omitted
+entirely) with zero failed requests and zero console errors, save success
+message unchanged. Also checked for regressions in the two paths sharing
+this state: Vocab tab's own deck-picker still sends `deck_id=1` for a real
+deck and omits it for "전체" ("all"), both zero-error; Reading's save-then-
+"어휘 노트 보기" path (`goToVocabFromReading`, which already passed
+`readingSelectedDeckId` explicitly rather than relying on the buggy default)
+still sends `deck_id=1&sort=created_desc` correctly, confirming it was never
+affected and stays that way. No Analyze classification/save logic, SRS,
+storage, shared-deck, auth, or design/CSS was touched.
