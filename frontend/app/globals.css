@@ -8143,6 +8143,53 @@ input.reading-vocab-sticker-toggle:checked {
   border-top: 1px solid var(--border);
 }
 
+/* Phase 108 -- "내 단어장 뜻 수정" (MeaningQuickEdit's own trigger) and
+   "뜻 오류 신고" are the two purely-informational/secondary actions in this
+   row (edit-a-form and report-a-problem, not "do the core thing"), while
+   수정 and 삭제 stay real buttons. Both rows also go
+   flex-direction:column on mobile (.vocab-item-actions here,
+   .meaning-actions-row for Study below), so before this all 4 buttons
+   stacked full-width -- same shape Reading/Study/Analyze/Shared-Deck
+   already fixed elsewhere (Phase 102/104/106). Scoped by ancestor
+   (.vocab-item-actions, .study-answer-reveal) rather than touching
+   .meaning-quick-edit-trigger's own base rule or MeaningQuickEdit.tsx,
+   since that trigger is also used by TokenDetailSheet.tsx's word-detail
+   sheet -- deliberately a real button there on desktop/tablet, already
+   demoted only inside the mobile compact sheet by Phase 100. Reuses the
+   same underlined text-link language as .reading-summary-link-button /
+   .study-actions-link-button / .shared-deck-detail-dismiss.
+   .report-meaning-link-button is a new, single-purpose class (not reused
+   by TokenDetailSheet's own "뜻 오류 신고", which keeps its existing
+   token-sheet-report-meaning treatment), applied directly in
+   VocabSection.tsx and StudySection.tsx's own report-meaning buttons. */
+.vocab-item-actions .meaning-quick-edit-trigger,
+.study-answer-reveal .meaning-quick-edit-trigger,
+.report-meaning-link-button {
+  flex: 0 0 auto;
+  align-self: center;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  padding: 6px 2px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  box-shadow: none;
+}
+
+.vocab-item-actions .meaning-quick-edit-trigger:not(:disabled):hover,
+.study-answer-reveal .meaning-quick-edit-trigger:not(:disabled):hover,
+.report-meaning-link-button:not(:disabled):hover {
+  color: var(--screen-accent, var(--accent));
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
 /* Delete stays clearly a danger action but reads as an outline chip
    rather than a solid red button competing with 수정/뜻 오류 신고 for
    attention -- this is a library card action row, not an admin table. */

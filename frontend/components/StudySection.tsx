@@ -624,7 +624,7 @@ export function StudySection({
                   {meaningEditItemId !== currentItem.id ? (
                     <button
                       type="button"
-                      className="ghost-button compact-button"
+                      className="report-meaning-link-button"
                       onClick={() => onReportMeaning(currentItem)}
                     >
                       뜻 오류 신고

@@ -911,3 +911,69 @@ errors. No backend/API/schema/SRS/shared-deck-policy/auth/localStorage
 code, import/unpublish/republish/word-status logic, or owner/newcomer
 button conditions were touched; Reading/Study/Vocab/Analyze were not
 modified.
+
+Phase 108 ran the full mobile loop (Home -> Reading sample/analyze -> token
+inspect/select/save -> Study empty/active/complete -> Vocab expanded detail
+-> Shared Deck) end to end at 390px via real clicks, to check whether
+Phase 93-107's per-screen de-boxing work actually reads as one coherent
+"simple casual tool" feel rather than Reading being the only light screen.
+Reading/Study-CTA/Analyze-CTA/Shared-Deck results from prior phases all
+held unchanged. The one real remaining spot: `VocabSection.tsx`'s expanded
+`VocabItemDetail` row (`.vocab-item-actions`) still showed 4 full bordered
+buttons -- "내 단어장 뜻 수정" (MeaningQuickEdit's trigger), "뜻 오류 신고",
+수정, 삭제 -- all stacking full-width on mobile (`.vocab-item-actions`
+goes `flex-direction:column` under 640px, same shape every prior phase's
+fix addressed). `StudySection.tsx`'s active-card `.meaning-actions-row`
+(same trigger + its own "뜻 오류 신고") had the identical problem, one tier
+lighter (2 buttons, still both full-width on mobile via `.meaning-actions-
+row`'s own column rule) -- explicitly named as candidate B in the phase
+brief.
+
+Both share the wrinkle that `MeaningQuickEdit`'s trigger button is also
+used by `TokenDetailSheet.tsx` (Reading's word-detail sheet), where Phase
+100 deliberately kept it a real button on desktop/tablet and only demoted
+it inside the mobile compact sheet -- editing the component's own base
+`.meaning-quick-edit-trigger` rule, or the component itself, would have
+cascaded into Reading and broken that distinction. Fix instead scopes
+entirely through CSS ancestor selectors (`.vocab-item-actions .meaning-
+quick-edit-trigger`, `.study-answer-reveal .meaning-quick-edit-trigger`)
+so `MeaningQuickEdit.tsx` and `TokenDetailSheet.tsx` are untouched --
+Reading's own already-established mobile-only demotion for this exact
+button keeps working exactly as before. The two inline "뜻 오류 신고"
+buttons (VocabSection.tsx, StudySection.tsx -- not a shared component, just
+duplicated JSX in each file) got a single new class, `.report-meaning-
+link-button` (`globals.css`), applied directly in each file; TokenDetail
+Sheet's own `.token-sheet-report-meaning` version is a separate class and
+untouched. All three demoted buttons reuse the same underlined-text-link
+visual language Reading/Study/Analyze/Shared-Deck already established in
+Phases 102/104/106 (no border/background/shadow, intrinsic width via
+`align-self`, muted color turning accent on hover). 수정 and 삭제 keep full
+button weight -- 삭제 (`danger-button danger-button-subtle`) is completely
+unchanged, per the phase's explicit "don't weaken destructive actions"
+instruction. Total: 3 code files (`globals.css`, `VocabSection.tsx`,
+`StudySection.tsx`), 0 condition/logic/callback changes.
+
+Also audited and deliberately left alone: Vocab's 덱 관리/고급/덱 공유
+management panels (create/delete-deck, custom-term manager, publish-deck
+form, backup/CSV export) -- already progressive-disclosure-gated behind
+"더보기 -> 관리" plus two more nested toggles (Phase 68's merged "soft note"
+treatment), matching the phase brief's own instruction to record this as a
+Phase 109 candidate rather than touch it given its condition/risk surface.
+Study's quick-start tile grid and 4-way rating buttons, and Vocab's dense
+scan-first item list, were confirmed untouched (both explicitly protected).
+
+Verified with `npm run build`, `git diff --check`, and CDP-driven headless
+Chrome QA against a scratch SQLite backend, driving the real click flow
+(no injected state) at 390px primary with 375/320/1280 spot-checks: full
+loop completed with zero console errors and zero failed requests (one
+unrelated `favicon.ico` 404); `document.documentElement.scrollWidth ===
+clientWidth` at every width; Study's active-card row now measures ~93-106px
+(intrinsic) for the two demoted links vs 288px (full mobile width) for the
+rating grid siblings' equivalents; Vocab's expanded row shows the same
+~93-106px links next to two still-288px real buttons (수정/삭제).
+`reachedComplete: true` with `rounds: 13` confirmed the same 13-word sample
+flowing correctly through save -> review -> completion, matching every
+prior phase's baseline. No backend/API/schema/SRS/storage/shared-deck/auth
+code, Study queue/review logic, Vocab CRUD/status/deck/share/custom-term
+logic, or destructive-action strength was touched; Reading's Phase 93-102
+results and `TokenDetailSheet.tsx` are unmodified.
