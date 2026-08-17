@@ -280,6 +280,25 @@ async function persistReadingToken(
   });
 }
 
+// A just-persisted vocab item's id/meaning/example didn't used to make it
+// back onto the in-memory reading token that triggered the save -- only
+// readingDeckVocabItems got updated, so TokenDetailSheet (which reads
+// token.savedVocabItemId directly) kept treating a freshly auto-saved word
+// as unsaved until the reading session was reloaded/re-analyzed (Phase 99).
+function applySavedVocabItemToToken(
+  token: TokenWithStatus,
+  saved: VocabItem,
+): TokenWithStatus {
+  return {
+    ...token,
+    status: saved.status,
+    isClassified: true,
+    savedVocabItemId: saved.id,
+    savedMeaningKo: saved.meaning_ko || null,
+    savedExampleSentence: saved.example_sentence || null,
+  };
+}
+
 function createBlankVocabForm(deckId = ""): VocabFormData {
   return {
     surface: "",
@@ -1727,6 +1746,11 @@ export default function HomePage() {
           ? current.map((item) => (item.id === saved.id ? saved : item))
           : [...current, saved];
       });
+      setReadingTokens((current) =>
+        current.map((item, itemIndex) =>
+          itemIndex === index ? applySavedVocabItemToToken(item, saved) : item,
+        ),
+      );
     } catch (error) {
       setReadingTokens((current) =>
         current.map((item, itemIndex) =>
@@ -1789,19 +1813,27 @@ export default function HomePage() {
     });
 
     if (succeeded.length > 0 || skipped.length > 0) {
-      const skippedIndexes = new Set(skipped.map((target) => target.index));
-      const statusByIndex = new Map(
-        succeeded.map(({ index, item }) => [index, item.status] as const),
+      const savedItemByIndex = new Map(
+        succeeded.map(({ index, item }) => [index, item] as const),
+      );
+      const skippedItemIdByIndex = new Map(
+        skipped.map((target) => [target.index, target.existingItemId] as const),
       );
       setReadingTokens((current) =>
         current.map((item, itemIndex) => {
-          const newStatus = statusByIndex.get(itemIndex);
-          if (newStatus) {
-            return { ...item, status: newStatus, isClassified: true };
+          const savedItem = savedItemByIndex.get(itemIndex);
+          if (savedItem) {
+            return applySavedVocabItemToToken(item, savedItem);
           }
-          return skippedIndexes.has(itemIndex)
-            ? { ...item, isClassified: true }
-            : item;
+          const existingItemId = skippedItemIdByIndex.get(itemIndex);
+          if (existingItemId != null) {
+            return {
+              ...item,
+              isClassified: true,
+              savedVocabItemId: existingItemId,
+            };
+          }
+          return item;
         }),
       );
       if (succeeded.length > 0) {
