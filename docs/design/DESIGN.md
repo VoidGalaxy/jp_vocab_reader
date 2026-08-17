@@ -864,3 +864,50 @@ load regardless of this change). No backend/API/schema/SRS/shared-deck-
 policy/auth/localStorage code, owner/subscriber/newcomer button conditions,
 or global primitives were touched; Reading/Study/Vocab/Analyze were not
 modified.
+
+Phase 107 closed the duplicate-action finding Phase 106 surfaced instead of
+just recording it. Round 0 built the full per-state card table first:
+`showActionButton` (`!deck.is_owner && (published || (isSubscribedMode &&
+alreadyImported))`) and `canManageDeck` (`canManageSharedDecks && deck.
+is_owner`) are mutually exclusive, so every card renders 상세 보기/상세
+닫기 plus at most one of 공유 취소 / 다시 공유하기 (owner) or 학습 목록에
+추가 / 다시 가져오기 / 열기 (non-owner) -- except the one cell where
+`!deck.is_owner && isSubscribedMode && alreadyImported`: there, the second
+button's onClick branches to `onSelectDeck(deck.id)` (label "열기"), the
+exact same call the "상세 보기" button next to it already makes. Tracing
+`onSelectDeck` into `page.tsx`'s `loadSharedDeckDetail` confirmed it's not
+just visually duplicate -- calling it with an already-selected id runs its
+own `if (selectedSharedDeckId === sharedDeckId && selectedSharedDeck) {
+closeSharedDeckDetail(); return; }` toggle, so "열기" already opens **and**
+closes the same panel "상세 보기"/"상세 닫기" does; the two labels just
+disagreed about which state they were in. Went with recommendation A (열기
+only): a subscribed-mode deck's detail panel IS its 학습 목록 (search/
+filter/status-select, confirmed in Phase 106 QA) once imported, so there's
+no separate "preview vs manage" distinction left to justify two buttons --
+unlike the newcomer state (상세 보기 = preview, 학습 목록에 추가 = commit,
+genuinely different actions) or the non-subscribed-mode "다시 가져오기"
+case (calls `handleImportClick`, a real re-copy, not `onSelectDeck` at all).
+One `SharedDeckSection.tsx` change: a new `hasDuplicateOpenAction` flag
+(`!deck.is_owner && isSubscribedMode && alreadyImported`) gates the "상세
+보기"/"상세 닫기" button's rendering -- `null` in that one cell, unchanged
+everywhere else (owner, newcomer, non-subscribed-mode all keep both their
+existing buttons exactly as before). No condition on `showActionButton`,
+`onImportDeck`, `onUnpublishDeck`, `onRepublishSharedDeck`, or any handler
+body changed -- only whether one already-redundant button renders. The
+remaining "열기" keeps its own toggle behavior (same onClick as before), so
+closing is still one click away, on top of the detail panel's own top/
+bottom 닫기 controls from Phase 106. Verified with `npm run build`, `git
+diff --check`, and CDP-driven headless Chrome QA (two real registered
+accounts, scratch SQLite, actual click flows) at 1280/390/320px: owner
+published/unpublished/republished card actions are byte-identical to
+before (상세 보기 + 공유 취소/다시 공유하기, toggle-open/close via the
+card button all still work); newcomer card still shows both 상세 보기 and
+학습 목록에 추가; after importing via the card, the card shows exactly one
+button ("열기"); clicking it opens the detail panel with the 학습 목록
+word list, clicking it again closes it (toggle preserved), and reopening
+then closing via the Phase 106 dismiss link also works; `document.
+documentElement.scrollWidth === clientWidth` at every width; zero console
+errors. No backend/API/schema/SRS/shared-deck-policy/auth/localStorage
+code, import/unpublish/republish/word-status logic, or owner/newcomer
+button conditions were touched; Reading/Study/Vocab/Analyze were not
+modified.

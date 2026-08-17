@@ -286,6 +286,20 @@ export function SharedDeckSection({
     // "Owner unpublish policy" Round 2 update).
     const showActionButton =
       !deck.is_owner && (published || (isSubscribedMode && alreadyImported));
+    // Phase 107 -- once a subscribed-mode deck is already in the user's
+    // 학습 목록, "상세 보기" and the action button below both end up
+    // calling the exact same onSelectDeck(deck.id) (see the 열기 branch
+    // below), which itself already toggles open/closed via
+    // loadSharedDeckDetail's "select the same id again -> close" logic (see
+    // docs/design/DESIGN.md Phase 107). Two differently-labeled buttons
+    // doing the identical thing read as a real duplicate, not just visual
+    // clutter, so "상세 보기" is suppressed in this one state only -- "열기"
+    // alone still opens/closes the same detail panel. Every other state
+    // (owner, newcomer, non-subscribed-mode) keeps "상세 보기"/"상세 닫기"
+    // unchanged, since there it's the only detail-opening action on the
+    // card.
+    const hasDuplicateOpenAction =
+      !deck.is_owner && isSubscribedMode && alreadyImported;
     return (
       <article
         key={deck.id}
@@ -330,18 +344,20 @@ export function SharedDeckSection({
             "상세 보기"를 열었을 때만 보이도록 옮겼다 (아래 selectedDeck
             상세 영역의 shared-deck-byline). */}
         <div className="row-actions">
-          <button
-            type="button"
-            className="secondary-button compact-button"
-            onClick={() => onSelectDeck(deck.id)}
-            disabled={isLoadingDetail && isSelected}
-          >
-            {isLoadingDetail && isSelected
-              ? "불러오는 중..."
-              : isSelected
-                ? "상세 닫기"
-                : "상세 보기"}
-          </button>
+          {!hasDuplicateOpenAction ? (
+            <button
+              type="button"
+              className="secondary-button compact-button"
+              onClick={() => onSelectDeck(deck.id)}
+              disabled={isLoadingDetail && isSelected}
+            >
+              {isLoadingDetail && isSelected
+                ? "불러오는 중..."
+                : isSelected
+                  ? "상세 닫기"
+                  : "상세 보기"}
+            </button>
+          ) : null}
           {showActionButton ? (
             <button
               type="button"
