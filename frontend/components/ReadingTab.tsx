@@ -87,9 +87,16 @@ type ReadingTabProps = {
 // different flows for the same underlying action. Removed here -- the tray's
 // quick-select is now the only place to act on a whole status bucket at
 // once; this dock only ever saves whatever is currently selected (via
-// onSaveSelected, unchanged), same as its plain per-word "저장 바구니에
-// 담기" path always did. See DESIGN.md Phase 97 note for the fuller
+// onSaveSelected, unchanged), same as its plain per-word "저장 대상으로
+// 선택" path always did. See DESIGN.md Phase 97 note for the fuller
 // rationale.
+//
+// Phase 99 -- unknown/uncertain classification now auto-saves a word the
+// moment it's chosen in the Word Inspector (see handleReadingStatusChange
+// in page.tsx), so this dock is no longer "the" save action -- it's an
+// auxiliary tool for saving several words at once. Copy below says
+// "선택한 단어" (selected words) rather than "담은 단어" (words placed in
+// the basket) so it doesn't read as a separate, competing save flow.
 // ---------------------------------------------------------------------------
 type ReaderSaveDockProps = {
   summary: ReadingSaveSummary;
@@ -128,7 +135,7 @@ function ReaderSaveDock({
         <div className="save-dock-count">
           <FolderIcon className="save-dock-icon" />
           <span>
-            담은 단어 <strong className="save-dock-count-badge">{selectedCount}</strong>개
+            선택한 단어 <strong className="save-dock-count-badge">{selectedCount}</strong>개
           </span>
           <span className="save-dock-saveable-chip">저장 가능 {summary.saveableCount}개</span>
         </div>
@@ -141,12 +148,12 @@ function ReaderSaveDock({
             disabled={isSavingBatch}
           >
             <FolderIcon className="button-icon" />
-            {isSavingBatch ? "저장 중..." : `담은 단어 저장 (${selectedCount})`}
+            {isSavingBatch ? "저장 중..." : `선택한 단어 저장 (${selectedCount})`}
           </button>
         ) : (
           <ShioriGuideCard
             variant="reading"
-            message="원문에서 단어를 눌러 바구니에 담아보세요."
+            message="여러 단어를 한번에 저장하려면 아래 목록에서 선택하세요."
             className="save-dock-idle-hint"
           />
         )}
@@ -297,8 +304,8 @@ export function ReadingTab({
     : null;
 
   // Save Tray / Word Basket -- lifted up from ReadingVocabPanel so both the
-  // word-list panel's checkboxes and the Word Inspector's "저장 바구니에
-  // 담기" toggle read/write the exact same selection instead of each owning
+  // word-list panel's checkboxes and the Word Inspector's "저장 대상으로
+  // 선택" toggle read/write the exact same selection instead of each owning
   // a separate one. Keyed by getTokenGroupKey (same grouping every other
   // save path already uses), not tokenIndex, so a repeated word selected via
   // one occurrence is recognized when clicked via another.

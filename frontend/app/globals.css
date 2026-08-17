@@ -10241,6 +10241,14 @@ input.reading-vocab-sticker-toggle:checked {
   border-top: 1px solid var(--border);
 }
 
+/* Phase 99 -- the basket-select row moved in here (was previously its own
+   block above the classify grid, with its own margin-top for that
+   position); the grid's own `gap` already spaces it from its siblings, so
+   drop the now-redundant margin only when it's nested in this footer. */
+.token-sheet-secondary-actions .token-sheet-basket-row {
+  margin-top: 0;
+}
+
 /* Up to 4 nav buttons (이전/다음/모르는 단어로/첫 등장으로) now share one
    wrapping row instead of two fixed rows -- wide enough screens fit all 4
    on one line, narrow ones wrap 2x2, but the card never reserves two full

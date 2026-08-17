@@ -159,10 +159,11 @@ export type ReadingSaveTarget = {
   existingItemId: number | null;
 };
 
-// Single-token resolution shared by resolveReadingSaveTargets (status-bucket
-// bulk-save buttons) and resolveSelectedReadingSaveTargets (word-list panel
-// checkbox selection) -- both need the exact same "what would saving this
-// token actually do" answer, just decided over a different set of tokens.
+// Single-token resolution shared by resolveSelectedReadingSaveTargets
+// (word-list panel checkbox selection) and computeReadingVocabEntries
+// (every entry's save-eligibility/bucket) -- both need the exact same
+// "what would saving this token actually do" answer, just decided over a
+// different set of tokens.
 type SaveTargetResolution = {
   token: TokenWithStatus;
   index: number;
@@ -218,49 +219,13 @@ function toSaveTarget(resolved: SaveTargetResolution): ReadingSaveTarget {
   };
 }
 
-// Resolves which tokens each bulk-save button should act on, and what
-// status to save them as. A never-saved ("new") word defaults to "unknown"
-// since there's no earlier classification to preserve; an already-saved
-// word keeps whatever status it already has. "known" words are never
-// touched by these buttons.
-export function resolveReadingSaveTargets(
-  tokens: TokenWithStatus[],
-  vocabItems: VocabItem[],
-  deckId: string,
-  mode: ReadingSaveMode,
-): ReadingSaveTarget[] {
-  const targets: ReadingSaveTarget[] = [];
-
-  tokens.forEach((token, index) => {
-    const resolved = resolveSaveTarget(token, index, vocabItems, deckId);
-
-    if (resolved.bucket === "known") {
-      return;
-    }
-
-    const included =
-      mode === "unknown_only"
-        ? resolved.bucket === "new" || resolved.bucket === "unknown"
-        : mode === "unknown_uncertain"
-          ? resolved.bucket === "new" ||
-            resolved.bucket === "unknown" ||
-            resolved.bucket === "uncertain"
-          : true;
-
-    if (!included) {
-      return;
-    }
-
-    targets.push(toSaveTarget(resolved));
-  });
-
-  return targets;
-}
-
-// Word-list panel counterpart to resolveReadingSaveTargets above: instead of
-// a status-bucket mode applied to every token, the caller hands in exactly
-// which tokenIndexes the user checked. "known" words are still excluded
-// defensively even though the panel never renders a checkbox for one.
+// Word-list panel's resolver: the caller hands in exactly which
+// tokenIndexes the user checked (as opposed to a whole status-bucket mode --
+// see selectReadingVocabEntriesByMode below, which pre-selects a bucket's
+// worth of tokenIndexes for the caller instead of resolving them itself;
+// Phase 97 removed the sibling that used to apply a bucket mode directly
+// here). "known" words are still excluded defensively even though the panel
+// never renders a checkbox for one.
 export function resolveSelectedReadingSaveTargets(
   tokens: TokenWithStatus[],
   vocabItems: VocabItem[],
@@ -416,15 +381,14 @@ export type ReadingVocabEntry = {
   tokenIndex: number;
   token: TokenWithStatus;
   status: TokenStatus;
-  // Same bucket resolveReadingSaveTargets/resolveSelectedReadingSaveTargets
-  // use to decide save eligibility -- the word-list panel's quick-select
-  // buttons filter on this (not `status`) so "모르는 단어 선택" picks up
-  // never-saved/unclassified words the same way "모르는 단어 저장" already
-  // treats them as save-as-unknown candidates.
+  // Same bucket resolveSelectedReadingSaveTargets uses to decide save
+  // eligibility -- the word-list panel's quick-select buttons filter on
+  // this (not `status`) so "모르는 단어 선택" picks up never-saved/
+  // unclassified words the same way a checked "모르는 단어" row would.
   bucket: TokenStatus | "new";
   isSaved: boolean;
-  // Mirrors resolveReadingSaveTargets' bucket logic: everything except
-  // "known" is a save candidate (a never-saved word defaults to "unknown").
+  // Everything except "known" is a save candidate (a never-saved word
+  // defaults to "unknown"), mirroring resolveSaveTarget's bucket logic.
   isSaveable: boolean;
 };
 
@@ -468,10 +432,10 @@ export function filterReadingVocabEntries(
   return entries.filter((entry) => entry.status === filter);
 }
 
-// Quick-select buttons in the word-list panel reuse the exact same
-// unknown_only/unknown_uncertain/all_unclassified modes the bucket-save
-// buttons already use, so "모르는 단어 선택" always picks exactly the set
-// "모르는 단어 저장" would act on.
+// Backs the word-list panel's quick-select buttons (unknown_only/
+// unknown_uncertain/all_unclassified) -- "모르는 단어 선택" always resolves
+// to exactly the tokenIndexes resolveSelectedReadingSaveTargets would then
+// treat as save-as-unknown candidates once the caller saves the selection.
 export function selectReadingVocabEntriesByMode(
   entries: ReadingVocabEntry[],
   mode: ReadingSaveMode,

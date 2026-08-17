@@ -29,9 +29,13 @@ type ReadingVocabPanelProps = {
   selectedTokenKey: string | null;
   onSelectToken: (tokenIndex: number) => void;
   // Word Basket (Save Tray) selection -- lifted up to ReadingTab so the
-  // Word Inspector's "저장 바구니에 담기" toggle and this panel's checkboxes
+  // Word Inspector's "저장 대상으로 선택" toggle and this panel's checkboxes
   // both read/write the same Set. This panel no longer owns saving itself;
-  // the Save Tray's "담은 단어 저장" button is the one save action.
+  // the Save Tray's "선택한 단어 저장" button is the one save action. Phase
+  // 99 -- classifying a word as unknown/uncertain already auto-saves it, so
+  // this whole panel is now framed as an auxiliary "select several words to
+  // save together" tool rather than a primary save flow: labels below say
+  // "선택" (select), never "담기"/"저장", to avoid reading as a second save.
   selectedWordKeys: Set<string>;
   onToggleSelect: (key: string) => void;
   onReplaceSelection: (entries: ReadingVocabEntry[]) => void;
@@ -61,18 +65,18 @@ const filterColorClass: Partial<Record<ReadingVocabFilter, string>> = {
 const quickSelectModes: Array<{ mode: ReadingSaveMode; label: string; hint: string }> = [
   {
     mode: "unknown_only",
-    label: "모르는 단어 담기",
-    hint: "모르는 단어를 바구니에 담아요",
+    label: "모르는 단어 선택",
+    hint: "모르는 단어를 모두 선택해요",
   },
   {
     mode: "unknown_uncertain",
-    label: "모르는+헷갈리는 단어 담기",
-    hint: "모르는 단어와 헷갈리는 단어를 바구니에 담아요",
+    label: "모르는+헷갈리는 단어 선택",
+    hint: "모르는 단어와 헷갈리는 단어를 모두 선택해요",
   },
   {
     mode: "all_unclassified",
-    label: "미분류까지 담기",
-    hint: "모르는 단어, 헷갈리는 단어, 미분류 단어를 바구니에 담아요",
+    label: "미분류까지 선택",
+    hint: "모르는 단어, 헷갈리는 단어, 미분류 단어를 모두 선택해요",
   },
 ];
 
@@ -128,7 +132,8 @@ export function ReadingVocabPanel({
       {isCollapsed ? null : (
         <div className="reading-vocab-drawer-body">
       <p className="reading-vocab-drawer-hint">
-        단어를 누르면 원문 위치로 이동하고, 체크박스로 바구니에 담을 수 있어요.
+        단어를 누르면 원문 위치로 이동해요. 여러 단어를 한번에 저장하려면
+        체크박스로 선택하세요.
       </p>
       <div className="reading-vocab-controls">
         <div className="reading-vocab-search-wrap">
@@ -175,17 +180,17 @@ export function ReadingVocabPanel({
         <button
           type="button"
           className="ghost-button compact-button reading-vocab-quick-select-button"
-          title="전체 텍스트에서 저장 가능한 단어를 모두 바구니에 담아요"
+          title="전체 텍스트에서 저장 가능한 단어를 모두 선택해요"
           onClick={() => onReplaceSelection(entries.filter((e) => e.isSaveable))}
         >
-          전체 담기
+          전체 선택
         </button>
         <button
           type="button"
           className="ghost-button compact-button reading-vocab-quick-select-button"
           onClick={onClearSelection}
         >
-          바구니 비우기
+          선택 해제
         </button>
         {quickSelectModes.map(({ mode, label, hint }) => (
           <button
@@ -212,7 +217,7 @@ export function ReadingVocabPanel({
           {search.trim()
             ? "찾는 단어가 없어요. 다른 단어나 읽기로 검색해보세요."
             : filter === "saveable"
-              ? "담을 수 있는 새 단어가 없어요. 저장한 단어는 위 저장 바구니의 '바로 복습'으로 이어서 볼 수 있어요."
+              ? "선택할 수 있는 새 단어가 없어요. 저장한 단어는 위 저장 바구니의 '바로 복습'으로 이어서 볼 수 있어요."
               : "표시할 단어가 없어요."}
         </p>
       ) : (
@@ -252,7 +257,7 @@ export function ReadingVocabPanel({
                   <span
                     className="reading-vocab-sticker-toggle-placeholder"
                     aria-hidden="true"
-                    title="이미 아는 단어라 담을 수 없어요"
+                    title="이미 아는 단어라 선택할 수 없어요"
                   >
                     <CheckCircleIcon />
                   </span>

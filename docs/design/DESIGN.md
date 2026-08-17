@@ -577,3 +577,38 @@ horizontal scroll strips under `<=640px`, with `min-width: 0` added through
 the relevant container chain so the strips improve vertical density without
 creating page-level horizontal overflow. Desktop Reading and the actual save/
 analyze/SRS/storage contracts are untouched.
+
+Phase 99 was a wording/hierarchy pass on the Reading tab's save UX, prompted
+by the auto-save policy two phases earlier (classifying a word unknown/
+uncertain now saves it immediately -- see `handleReadingStatusChange` in
+`page.tsx`) leaving the surrounding copy still describing a manual "add to
+basket, then save" flow as if it were the primary path. In
+`TokenDetailSheet.tsx`, the classify grid (with a one-line, auto-hiding
+`· 모르는·헷갈리는 단어는 자동 저장돼요` hint shown only while a word is
+still unclassified) moved above the mobile fold divider, swapping places
+with the basket-select toggle, which moved down into the secondary-actions
+footer alongside word-nav and meaning-edit/report -- classifying is what a
+reader actually does first now, so it's what they see first; the
+multi-select tool is secondary, so it reads that way. That toggle's own
+copy changed from "저장 바구니에 담기" (reads as an immediate save) to
+"저장 대상으로 선택" (reads as queuing for a later batch save), matching
+the "선택" language `ReadingVocabPanel`'s checkbox already used; its
+success stamp changed from "노트에 담았어요" (implies persisted) to
+"선택했어요". `ReadingVocabPanel`'s quick-select buttons ("모르는 단어
+담기" etc.) picked up the same swap to "선택", and its two guidance lines
+were corrected to describe what tapping a word vs. checking a box actually
+does now, rather than the pre-Phase-98 assumption that tapping a word adds
+it to the basket. `ReadingTab.tsx`'s `ReaderSaveDock` got the matching
+"선택한 단어"/"선택한 단어 저장" relabeling and a corrected idle-state
+hint. No component gained a new button, panel, or toggle -- every change is
+copy, one CSS override for the relocated basket-row's margin, and a JSX
+reorder within `TokenDetailSheet.tsx`; the Phase 89/91 mobile horizontal-
+strip tray and Phase 94 compact-sheet sizing are untouched. Also removed:
+`resolveReadingSaveTargets` in `coverageUtils.ts`, an orphaned bucket-mode
+resolver left over from the Phase 97 removal of its only caller (the old
+"빠르게 전체 저장" dock disclosure) -- confirmed dead by grepping every
+`.ts`/`.tsx` file for callers before deleting; its still-used siblings
+(`resolveSaveTarget`, `toSaveTarget`, `resolveSelectedReadingSaveTargets`,
+the `ReadingSaveMode` type) were left in place and their comments updated
+to stop pointing at the removed function. Backend, `/analyze`, SRS,
+storage, and the actual save/PATCH/dedup decision logic are all unchanged.

@@ -111,37 +111,24 @@ function TokenDetailContent({
           {getDisplayMeaning(displayedMeaning)}
         </p>
       </div>
-      {canAddToBasket ? (
-        <div className="token-sheet-basket-row">
-          <button
-            type="button"
-            className={`token-sheet-basket-button${isInBasket ? " token-sheet-basket-button-active" : ""}`}
-            onClick={onToggleBasket}
-            aria-pressed={isInBasket}
-          >
-            <BookmarkIcon className="button-icon" />
-            {isInBasket ? "저장 바구니에서 빼기" : "저장 바구니에 담기"}
-          </button>
-          {isInBasket ? (
-            <ShioriStamp
-              variant="save"
-              label="노트에 담았어요"
-              className="token-sheet-basket-stamp"
-            />
-          ) : null}
-        </div>
-      ) : null}
-      {/* Phase 95 -- the compact reader peek now treats "save this word" as
-          the immediate action after checking the meaning. Status grading
-          remains available below the fold with the rest of the detail tools,
-          matching the mockup's "lift it into the notebook first" flow without
-          removing any classification functionality. Purely a visual divider,
-          not a toggle; CSS-hidden above 640px. */}
-      <div className="token-sheet-fold-divider" aria-hidden="true">
-        <span>분류 / 자세히</span>
-      </div>
+      {/* Phase 99 -- classification is the primary action now that
+          unknown/uncertain auto-save on click (see handleReadingStatusChange
+          in page.tsx), so the status grid moved above the fold instead of
+          sitting below a separate save button -- a reader can look up the
+          meaning and classify in one glance without scrolling. The basket
+          toggle (further down, in the secondary-actions block) only queues
+          a word to save alongside others later; it never persists anything
+          by itself, so its copy says "선택" (select) rather than
+          "담기"/"저장" so it doesn't read as a second, competing save
+          action. */}
       <p className="token-sheet-status">
         현재 상태: <strong>{statusLabels[token.status]}</strong>
+        {token.status === "unclassified" ? (
+          <span className="muted-text">
+            {" "}
+            · 모르는·헷갈리는 단어는 자동 저장돼요
+          </span>
+        ) : null}
       </p>
       <div className="classify-actions" role="group" aria-label="단어 상태 변경">
         <button
@@ -180,6 +167,14 @@ function TokenDetailContent({
         >
           미분류 / 건너뛰기
         </button>
+      </div>
+      {/* Phase 94 -- hidden by default (pinned desktop / docked tablet aren't
+          height-constrained); shown only on the compact mobile sheet, right
+          where its max-height actually cuts the card off, so it's a subtle
+          "this scrolls" cue rather than a static label. Purely a visual
+          divider, not a toggle. */}
+      <div className="token-sheet-fold-divider" aria-hidden="true">
+        <span>자세히</span>
       </div>
       <div className="token-sheet-meta-row">
         {token.base_form && token.base_form !== label ? (
@@ -234,6 +229,26 @@ function TokenDetailContent({
         )}
       </div>
       <div className="token-sheet-secondary-actions">
+        {canAddToBasket ? (
+          <div className="token-sheet-basket-row">
+            <button
+              type="button"
+              className={`token-sheet-basket-button${isInBasket ? " token-sheet-basket-button-active" : ""}`}
+              onClick={onToggleBasket}
+              aria-pressed={isInBasket}
+            >
+              <BookmarkIcon className="button-icon" />
+              {isInBasket ? "저장 대상에서 제외" : "저장 대상으로 선택"}
+            </button>
+            {isInBasket ? (
+              <ShioriStamp
+                variant="save"
+                label="선택했어요"
+                className="token-sheet-basket-stamp"
+              />
+            ) : null}
+          </div>
+        ) : null}
         <div className="token-sheet-nav" role="group" aria-label="단어 이동">
           <button
             type="button"
