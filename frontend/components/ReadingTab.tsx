@@ -566,12 +566,17 @@ export function ReadingTab({
         />
       ) : null}
 
-      {/* ReaderWorkspace -- ReaderPaper (reader-paper, hero tier) +
-          ReaderSaveDock (slim strip) + CandidateDrawer (ReadingVocabPanel,
-          collapsed by default) share one "bound notebook" frame (a dashed
-          spine down the left edge) instead of reading as three unrelated
-          floating boxes. */}
-      <div className="reader-workspace library-card-stage">
+      {/* Phase 114 -- ReaderWorkspace used to be its own bordered/shadowed
+          "stage" box (.library-card-stage) wrapping ReaderPaper + a dashed
+          ring-spine down the left edge, so the open reading page sat inside
+          a second card rather than being the scene's own artifact -- against
+          the mockup, where the book/page IS the desk scene, not a panel on
+          top of it. Now a plain layout container: ReaderPaper (the one real
+          "page" surface, with its own tape-corner/ruled-paper treatment),
+          ReaderSaveDock (slim dashed shelf strip), and CandidateDrawer
+          (ReadingVocabPanel's sticker tray) sit directly on the board
+          background as three distinct desk objects, spaced by gap alone. */}
+      <div className="reader-workspace">
         {hasResult ? (
           <ReaderMode
             originalText={analyzedText}

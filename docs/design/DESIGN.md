@@ -61,6 +61,15 @@ pixel specs).
   now a small paper tag (`.app-topbar-feedback-button`) instead of a plain
   ghost button. Tab routing, `activeTab` semantics, and the account
   menu/login flow are untouched.
+
+  **Superseded by Phase 113** (see the "Phase 113" entry in Status below):
+  the `.library-rail` sidebar and `.app-bottom-nav` fixed bar described
+  above were deleted, not restyled further — replaced by one `.app-toolbar`
+  nav surface (full text-tab row at >=1024px, hamburger + slide-in
+  `.app-nav-drawer` below that). The material details above (tape, pin
+  dots, bookmark-tab active state, paper-tag feedback button) carried
+  forward onto the new surface; only the structural rail/bottom-nav/topbar
+  split they were describing is gone.
 - **Reading + Inspector** (Phase 55) — notebook-page reader (`.reader-paper`,
   `.reader-start-card`) with washi-tape corner accents, a pin-dotted
   sticky-note word inspector (`.bookmark-inspector`, tilted on desktop,
@@ -1319,3 +1328,394 @@ confirming Stats/Feedback and Analyze's other three states (intro/result/
 ledger) as non-issues, the Phase 54-112 casual-sticker-reader redesign
 series can now be considered closed -- no further candidates are on record
 across any screen.
+
+Phase 113 reopened that "closed" conclusion specifically for the App
+Shell: Phases 54-73 had progressively re-skinned the *existing* app
+structure (a persistent `.library-rail` icon sidebar, a separate slim
+`.app-topbar` strip, and a fixed 7-icon `.app-bottom-nav` on mobile) with
+casual-sticker-reader materials -- tape, pin dots, a bookmark-tab active
+state, a wood-desk `.page` board -- without ever replacing the structure
+those materials sat on. Compared directly against the mockup boards
+(`docs/design/mockups/casual-sticker-reader-{mobile,desktop}.png`), that
+structure was the mismatch: the desktop board shows one rounded toolbar
+(brand + every tab as a text link + search/settings/account) sitting
+directly on the desk scene, not a sidebar beside it; every mobile board
+shows only a two-icon top strip (☰ menu, a right-side icon) and *no*
+persistent bottom tab bar at all -- Home's three shortcuts are page
+content, not chrome. `.library-rail`, the old `.app-topbar`, and
+`.app-bottom-nav` were deleted outright (not restyled) and replaced with
+one navigation surface, `.app-toolbar` (`AppShell.tsx`, `globals.css`):
+>=1024px renders brand + all 7 tabs as text links + feedback/account in a
+single sticky pill row (the same "paper toolbar tag on the wood-desk
+board" treatment the old `.app-topbar` had at this tier, just widened to
+carry the tabs themselves); below that, seven full-label tabs no longer
+fit one row, so they move into a new slide-in `.app-nav-drawer` opened by
+a hamburger button, and the fixed bottom bar is simply gone -- reclaiming
+the full viewport height for the reader/notebook content the mockup's
+mobile boards show. This is a deliberate breakpoint change from the old
+rail's 641px cutoff (icon-only, so it fit that width) to 1024px (full text
+tabs need real room); noted directly in the CSS rather than left
+implicit. `NavAction` gained an optional `shortLabel` so the toolbar can
+prefer each tab's existing short `mobileLabel` (fits 7 in one row) while
+the drawer, which has vertical space to spare, shows the full `label` --
+one `navItems` array still drives both, so there is exactly one nav data
+source, per the brief's explicit requirement to keep `activeTab`/
+`handleTabChange` and the tab data flow unchanged. The redundant
+"피드백" `NavAction` (previously rendered a second time inside the rail/
+bottom-nav on top of its own dedicated topbar button) was dropped --
+feedback is an action, not a screen, and now renders exactly once, in
+whichever of `.app-toolbar-end`/`.app-nav-drawer-footer` fits the current
+viewport. `HomeDashboard.tsx` was not touched -- its notebook-cover +
+sticker-shortcut scene (Phase 54/67/73) was already reading as "the desk
+scene itself," not old-shell card content, so once the rail/topbar/
+bottom-nav chrome around it was replaced, Home needed no changes of its
+own to match the mockup's board 1. Reading/Vocab/Study/Shared Deck
+internals (`.panel-card`/`.hero-card`/`.desk-surface` conventions) were
+explicitly out of scope for this phase and are unchanged -- spot-checked
+only for "does the new shell break them," not redesigned.
+
+Remaining old-shell traces, by design (deferred, not missed): the tab
+*content* inside each screen still uses the pre-113 `.panel-card`/
+`.hero-card`/`.desk-surface` card language the brief flagged as a
+possible future target ("이번 phase에서 필요한 최소 영향만 확인") --
+this phase only replaced the chrome around that content. A future phase
+would need to judge whether those per-screen surfaces still read as
+"old app card" now that the shell itself no longer does.
+
+Verified with `npm run build` (clean) and `git diff --check` (clean, one
+pre-existing unrelated CRLF warning on a `.claude/skills` file). Browser
+QA via the project's raw-CDP-over-websocket harness (see
+[[project_cdp_browser_qa_without_playwright]]) against a scratch-SQLite
+backend, headless Chrome driven by Windows `node.exe`, at 1280/390/375/320:
+1280px shows the unified toolbar with `.library-rail`/`.app-bottom-nav`
+both absent, all 7 short tab labels present, clicking a tab switches
+`activeTab` correctly (`단어` -> `.vocab-panel` present), and the
+Phase 67 wood-desk board (`body` background `rgb(201,160,110)` =
+`--desk-wood`, `.page` at `max-width:1228.8px`/`margin:20px 25.6px`/
+`border-radius:28px`) measured intact via `getComputedStyle`/
+`getBoundingClientRect`. 390/375/320px show the hamburger + account-only
+top strip (no nav text, no bottom nav), the drawer opening with all 7 full
+labels plus a footer feedback button, a drawer nav click both switching
+tabs (`.reading-panel` present) and auto-closing the drawer, and 320px's
+`<400px` brand-name-hiding safety valve engaging (toolbar measured
+296px wide, comfortably inside the 320px viewport). Spot-checked Vocab,
+Shared Deck, and a drawer-driven navigation sweep across 단어장/복습/덱 at
+375px for "not broken after the shell swap" per the phase brief --
+all rendered normally. `document.documentElement.scrollWidth ===
+clientWidth` held at every width in every check, and zero console errors
+or warnings were recorded across the full run. No backend/API/schema/SRS/
+storage/auth/shared-deck code, and no `localStorage` payload, was
+touched; `activeTab`/`handleTabChange` and every tab's own props/handlers
+are unchanged -- this was a chrome/DOM-structure replacement only.
+
+Phase 114 moved one level in from the shell Phase 113 replaced, into the
+old card/panel primitives (`.panel-card`, `.hero-card`, `.desk-surface`,
+`.desk-surface-section`, `.library-card-stage`, `.card-stack-surface`)
+still used inside individual tabs. Round 0 surveyed every call site of
+those six classes across Reading/Vocab/Shared Deck/Analyze/Study/Home/
+Info and judged each Replace/Keep/Defer:
+
+- **Replace, implemented this phase:**
+  - `ReadingTab.tsx`'s `.reader-workspace.library-card-stage` (wrapped
+    ReaderPaper + ReaderSaveDock + the candidate tray in a second bordered/
+    shadowed "stage" box with its own dashed ring-spine, on top of the
+    `.page` board's own paper texture underneath -- a card sitting on the
+    board rather than the board's own content).
+  - `ReaderMode.tsx`'s `.reader-paper.hero-card.card-stack-surface` --
+    investigated first, since removing a hero-tier class from the screen's
+    actual reading surface needed real justification, not just a name
+    match. Found that `.reader-paper`'s own rule (declared later in
+    `globals.css`, same specificity) already redeclares `border-radius`,
+    `box-shadow`, and both `::before`/`::after` (tape corners) that
+    `.hero-card`/`.card-stack-surface` set on the same element -- both
+    classes were fully shadowed, contributing nothing visible at any
+    breakpoint (confirmed via `Emulation`-driven `getComputedStyle` checks
+    at 1280/390/375/320 before touching anything). Removed as dead-code
+    cleanup with zero visual delta, not a redesign.
+  - `VocabSection.tsx`'s `.panel-card.hero-card.vocab-hero-card
+    .vocab-hero-compact.card-stack-surface` header (title, live stat
+    chips, "이 덱 학습하기"/"원문 읽기"/"더보기") -- unlike the reader
+    case, this one's `panel-card`/`hero-card`/`card-stack-surface` were
+    fully live (border, radius, shadow, and a real 2-layer ghost card
+    stack behind it), a genuine bordered box sitting above the Phase 68
+    notebook spread. No mockup board shows a separate header card above
+    the notebook scene, so it was flattened to a plain heading strip
+    (`.vocab-hero-card` now just `display:grid; gap; border-bottom: 1px
+    dashed` -- the same "unboxed section" recipe `.reading-input-open`
+    already used post-analyze) sitting directly on the page. The stat
+    chips/buttons/labels stayed exactly as they were -- 단어장 is one of
+    the screens DESIGN.md's own "minimize numbers" principle exempts
+    ("Exact counts still belong on the screens whose job is counting").
+    `.vocab-hero-tape` (a washi-tape strip whose whole job was "hold this
+    card down") was deleted outright rather than kept floating with
+    nothing left to tape down -- an orphaned decoration is exactly what
+    the phase brief's "장식보다 composition을 먼저 바꾼다" rules out.
+- **Keep:** `.desk-surface`/`.desk-surface-section` wrapping Vocab's word
+  list, and `.vocab-list.index-card-drawer.card-stack-surface` (the list
+  itself) -- `.desk-surface` has no border/drop-shadow, only an inset
+  radial-highlight tint (a page-surface material, not a boxed panel), and
+  the brief explicitly preserves Phase 57's vertical scan list. Home's
+  `.card-stack-surface` on `.home-notebook-cover`, and TokenDetailSheet's
+  `.bookmark-inspector...card-stack-surface` -- both already mockup-
+  aligned (Phase 54/65/67/73) and explicitly flagged in earlier phases as
+  already juggling multiple pseudo-element consumers; out of scope here.
+  Shared Deck's `.shared-deck-card.card-stack-surface` grid cards -- Phase
+  41 already suppresses the ghost-stack layers there
+  (`.shared-deck-grid .card-stack-surface::before,::after{content:none}`)
+  in favor of one shelf-ledge line for the whole grid, so this was never
+  a naive old-card instance to begin with.
+- **Defer (same fix shape as Vocab's hero, not implemented this phase --
+  scope discipline; the brief asks for 1-2 screens done well, not six
+  done shallowly):** `SharedDeckSection.tsx`'s `.panel-card.hero-card
+  .shared-hero-card.card-stack-surface` header -- checked, and it's the
+  live/non-dead case like Vocab's was (`.shared-hero-card` only overrides
+  padding/border-top-color, leaving `panel-card`'s border+`hero-card`'s
+  shadow+`card-stack-surface`'s ghost layers all live), so it's a strong
+  next candidate. `AnalyzeSection.tsx`'s `.classify-stage.hero-card
+  .library-card-stage` and `.classify-word-card.card-stack-surface` --
+  Analyze has no dedicated mockup board, so the brief calls for caution;
+  not investigated deeply enough this phase to judge confidently.
+  `InfoSection.tsx`'s `.panel-card.info-panel-card.study-log-policy-card`
+  -- Stats/Info wasn't named in this phase's priority list either.
+  Study's four `hero-card` call sites were left untouched per the brief's
+  explicit instruction to protect the rating-stamp/board scene, which
+  already reads close to the mockup.
+
+Verified with `npm run build` (clean) and `git diff --check` (clean).
+Browser QA via the same raw-CDP harness as Phase 113
+(see [[project_cdp_browser_qa_without_playwright]]), scratch-SQLite
+backend seeded with 3 real vocab items (via a small Node script issuing
+raw UTF-8 HTTP POSTs to `/vocab-items` -- Windows PowerShell 5.1's default
+encoding was mangling the Japanese/Korean JSON body, so `node.exe` was
+used instead) so Reading/Vocab rendered real content, not just empty
+states. At 1280/390/375/320: a DOM query for
+`.reader-workspace.library-card-stage`, `.reader-paper.hero-card`,
+`.vocab-hero-card.panel-card`, and `.vocab-hero-tape` returned none of
+them anywhere, while `.desk-surface` remained present on Vocab as
+expected (confirming the Keep judgment actually held in the running app,
+not just in the diff). Screenshots confirmed the reader page now sits
+directly on the wood-desk board with the pinned word inspector beside it
+(no visible second "workspace" box around either), and Vocab's header
+reads as page content above the notebook spread rather than a floating
+white card. Loaded the reader via the real sample-text-load ->
+analyze-submit flow (not injected state) and opened the desktop pinned
+inspector by clicking a token, both working normally. `document.
+documentElement.scrollWidth === clientWidth` held at every width, and
+Home/Study/Shared Deck were spot-checked via real toolbar/drawer tab
+clicks with zero console errors or warnings across the full run. No
+backend/API/schema/SRS/storage/auth/shared-deck code or `localStorage`
+payload was touched; the Phase 89/91 candidate-tray horizontal strips,
+the Phase 94/100 mobile compact-inspector treatment, and the Phase 113
+App Shell were all left exactly as they were (confirmed by the toolbar/
+drawer still rendering and functioning identically in this same QA run).
+
+Phase 115 picked up the two candidates Phase 114 left on the table:
+`SharedDeckSection.tsx`'s hero header and `AnalyzeSection.tsx`'s
+`.classify-stage`.
+
+- **Shared Deck hero -- Replace, implemented.** Investigation confirmed
+  this was the exact live pattern Phase 114 already suspected (flagged as
+  a Defer candidate that phase, "confirmed same live pattern as Vocab's"):
+  `.shared-hero-card` only overrode `padding`/`border-top-color`, leaving
+  `panel-card`'s border, `hero-card`'s shadow, and `card-stack-surface`'s
+  2-layer ghost stack all live and visible above the Phase 69 shelf scene.
+  No mockup board shows a separate boxed header above a shelf, so it was
+  flattened using the identical recipe Phase 114 used for Vocab: dropped
+  `panel-card`/`hero-card`/`card-stack-surface`, kept `shared-hero-card` as
+  a plain `display:grid` strip with `border-bottom: 1px dashed
+  var(--paper-border)` (the same "unboxed section" language
+  `.reading-input-open` established). `.shared-hero-tape` (a washi-tape
+  strip whose only job was holding a now-gone card down) was deleted
+  outright rather than left as orphaned decoration, same reasoning as
+  Vocab's tape removal. Title, description, the "어휘 노트 보기"/
+  "새로고침" actions, and the copyright info-strip are all unchanged
+  content -- only the box around them is gone. `.shared-library-scene`,
+  `.desk-surface-section` (the shelf's own inset-tint background, no
+  border/shadow -- same Keep judgment Phase 114 gave Vocab's identical
+  class), the shelf-section grouping, `.shared-deck-card`/
+  `.selected-shared-deck-card` grid cards, and the opened-notebook detail
+  panel (`.shared-deck-detail`) were not touched at all -- confirmed via
+  `git diff` showing the change scoped to exactly one JSX line (the outer
+  `<section>` className) plus deleting the tape `<span>`.
+- **Analyze `.classify-stage` -- investigated, judged Keep (not Replace),
+  with one safe cleanup.** Unlike the reader-paper and Vocab/Shared-Deck
+  hero cases, this one doesn't reduce to a naive leftover: `.classify-stage`
+  redeclares its own `background: panel-bg`/`border`/`border-top-accent`
+  (added specifically, per its own existing comment, to replace
+  `library-card-stage`'s duller striped fill with an opaque one matching
+  `.study-hero-card`'s recipe "so every tab's top card reads as the same
+  card system") but does *not* redeclare `border-radius` or `box-shadow`,
+  so `.hero-card`'s contribution there is live and was put there on
+  purpose for cross-tab consistency with Study's hero card (which Phase
+  114 already left untouched as "already reads close to the mockup").
+  Analyze has no dedicated mockup board to justify breaking that
+  established consistency, so the box itself was judged Keep. What *was*
+  dead: `.library-card-stage`'s own striped background, fully overridden
+  by `.classify-stage`'s later, same-specificity `background` rule --
+  confirmed via the same `getComputedStyle` method Phase 114 used on
+  reader-paper. Dropped the classname as pure cleanup, zero visual change.
+  The actual card-flip flow (`.classify-word-card.card-stack-surface`,
+  reached once analysis completes) was investigated too and judged Keep
+  outright: its border/radius/shadow are declared directly on the class
+  itself (not inherited from `.hero-card`), so `card-stack-surface`'s
+  ghost-stack layers are live and, unlike the reader page, thematically
+  fit here -- a stack of cards behind the current one reinforces "more
+  cards to flip through" in a flashcard flow. This element is also where
+  Phase 112's mobile decision-grid ordering lives, so it was left
+  completely alone per the phase brief's explicit regression ban; `git
+  diff` confirms nothing below `ClassifyStageIntro`'s own opening tag
+  changed.
+
+Verified with `npm run build` (clean) and `git diff --check` (clean).
+Browser QA via the same raw-CDP harness as Phase 113/114 (see
+[[project_cdp_browser_qa_without_playwright]]), scratch-SQLite backend
+seeded with one vocab item and one owner-published shared deck (via
+`POST /decks/1/publish`, reached through raw Node HTTP calls for UTF-8
+safety -- Windows PowerShell 5.1 mangled the Japanese/Korean JSON body in
+Phase 114 too) so Shared Deck's owner-only "내가 공유함" state and a real
+word count rendered, not just the empty/newcomer state. At 1280/390/375/
+320: `.shared-hero-card.panel-card` and `.shared-hero-tape` were confirmed
+absent from the DOM at every checked width while `.desk-surface` remained
+present on the shelf as expected; `.classify-stage.library-card-stage`
+was confirmed absent while `.classify-stage.hero-card` remained present
+during the intro state and correctly gave way to a live
+`.classify-word-card` once analysis completed (verified through the real
+text-input -> "분류 카드 만들기" submit flow, not injected state; the
+first 1280px attempt caught the request still in flight at the original
+2.5s poll and needed a longer wait to confirm the same transition already
+seen at 390px -- a QA-timing artifact, not a product issue, resolved by
+re-polling at 6s). `document.documentElement.scrollWidth ===
+clientWidth` held at every width, and zero console errors or warnings
+were recorded across the full run. `git diff` on both changed components
+confirms owner/subscriber/newcomer conditions, import/unpublish/
+republish/`updateWordStatus` callbacks, and Analyze's classify/save/status
+handlers were not touched by a single line -- both edits were scoped
+entirely to one wrapper `<section>` className plus one deleted decorative
+`<span>` each. Phase 112's mobile classify-grid ordering, Phase 113's App
+Shell, and Phase 114's Reading/Vocab structure were all confirmed
+unchanged in this same QA run (toolbar/drawer navigation, reader page,
+and Vocab's flattened header all still rendering and functioning as
+Phase 114 left them).
+
+Remaining old-surface candidates for a future phase: none of the
+originally-surveyed six classes have a confirmed-live Replace case left
+outstanding. `InfoSection.tsx`'s `.panel-card.info-panel-card
+.study-log-policy-card` (Stats/Info) was never investigated in Phase
+114/115 and has no dedicated mockup board either -- lowest-priority
+remaining candidate if a future phase wants to close out the full survey.
+
+Phase 116 was a pure audit -- no code changed (`git status` before and
+after is identical to Phase 115's end state) -- comparing every screen
+against the two mockup boards side by side in a real browser, not just
+re-reading the Phase 113-115 diffs. Judged each screen Match / Minor
+residue / Structural residue / Protected divergence:
+
+- **App Shell -- Match.** `.library-rail`/`.app-topbar`/`.app-bottom-nav`
+  confirmed absent from the DOM at every checked width (1280/390/375/320,
+  via direct `document.querySelector` checks, not just a visual read).
+  Desktop toolbar reads as one rounded pill bar with brand+tabs+account,
+  matching mockup board 1's toolbar; mobile shows only the hamburger +
+  account-icon strip mockup boards 1-6 all share, no generic bottom tab
+  bar anywhere. `getBoundingClientRect()` on the sticky toolbar confirmed
+  no overlap with page content at any width (e.g. 1280px: toolbar
+  `top:46/bottom:102`, page content starts clear of it).
+- **Home -- Match.** Notebook cover + 3 sticker shortcuts render as one
+  continuous desk scene directly under the toolbar (no visible seam
+  between shell and content); shortcuts keep their Phase 77 per-chip
+  asymmetric tilt/corner treatment, reading as loose notes rather than a
+  uniform 3-up card grid.
+- **Reading -- Match.** Screenshotted with a real analyzed result and the
+  desktop pinned inspector open (clicked a token, not injected state): the
+  reader page now sits directly on the board with no visible second
+  "workspace" box around it (Phase 114), closely matching mockup board 2's
+  open two-page-plus-note layout. Mobile compact inspector still shows
+  ~55% of the reader text above the sheet per Phase 94/100 (screenshot
+  confirms word/meaning/status visible above the fold, unchanged this
+  phase). `ReadingVocabPanel.tsx` (the Phase 89/91/101 candidate-tray
+  strips) was not touched by any of Phase 113-116's diffs -- confirmed by
+  `git log`/`git diff` scope, not just visual inspection.
+- **Vocab -- Match.** Flattened header (Phase 114) reads as page content
+  leading straight into the filter-index/list/detail notebook spread
+  (Phase 68/87), closely matching mockup board 3's open notebook. Detail
+  panel screenshotted with a real selected word (품사/복습 레벨/문맥 예문/
+  수정/삭제 all present and functioning) -- the dense vertical list itself
+  (Phase 57's deliberate choice for a 20-50-row Operate screen) is
+  unchanged and was not pushed toward a sticker grid.
+- **Shared Deck -- Match.** Flattened header (Phase 115) leads into the
+  Phase 69 wood-cabinet shelf scene; screenshotted with a real
+  owner-published deck ("내가 공유함" badge, 단어 5개, "상세 보기") showing
+  the shelf card reads as one shelf item, not a second admin list.
+- **Study -- Match, and the closest of any screen to its mockup board.**
+  Screenshotted with a real revealed answer + the 4-way rating grid (아는
+  단어 학습 quick-start -> "정답 보기", not injected state): dark felt
+  board, card stack, and the 다시/어려움/보통/쉬움 stamp colors line up
+  almost exactly with mockup board 4's Review panel, both in desktop's
+  2x1 row and mobile's 2x2 grid. Untouched this phase per the brief's
+  explicit protection, and confirmed still untouched by inspection.
+- **Analyze -- Protected divergence, confirmed still reads coherently.**
+  No dedicated mockup board exists for this screen. Phase 115's Keep
+  judgment (the intro card's border-radius/shadow are a deliberate,
+  documented match to `.study-hero-card`'s "same card system," not a
+  leftover) was re-checked against the running app rather than just the
+  diff: the intro card, the card-flip flow, and the coral tally sidebar
+  all read as part of the same warm-paper visual world as every other
+  screen, not as a dropped-in admin form. No change made.
+- **Stats/Info -- Match (with one small, deliberately out-of-scope
+  residue).** The brief asked specifically whether "Stats/Info hero" was
+  the last old-card trace; investigation found the actual page-top hero
+  (`StudyLogHero`, rendered via `.reading-hero`) was *never* part of the
+  `panel-card`/`hero-card` family to begin with -- `.reading-hero` is
+  `display:grid; gap:4px; padding:2px 2px 4px` with no border/background/
+  shadow of its own, already a flush, unboxed heading (same "just text on
+  the page" shape every other screen's header was flattened *toward* this
+  phase). The only surviving `panel-card` instance on this screen is a
+  small "저장 정책" disclosure note at the very bottom of the page, below
+  the main journal/log content -- and DESIGN.md's own Phase 60 record
+  shows this was already deliberately reduced to the *lightest* card
+  treatment in the app (dropped an admin-callout colored-left-border for
+  a plain card + one corner fold) rather than being an untouched
+  leftover. Judged **Minor residue**: a real `panel-card` instance exists,
+  but it is low-visual-weight, secondary, already-minimized, and outside
+  this phase's investigated priority list -- left as a candidate for
+  whichever future phase finally closes out the six-class survey
+  (grouped with `.classify-word-card`'s sibling `.classify-result-summary`
+  if that phase also revisits Analyze), not fixed here since fixing it
+  would mean investigating and redesigning a screen this phase didn't
+  scope to touch, not a "small CSS/DOM defect."
+
+**How much the "mixed old/new" problem has shrunk:** every screen the
+user can reach through the primary navigation (Home, Reading, Vocab,
+Study, Shared Deck) now renders zero instances of the six flagged
+old-surface classes in their *primary* content -- the only surviving
+instances anywhere in the app are Analyze's intentionally-kept hero/card
+(a deliberate cross-tab consistency choice, not residue) and one small
+secondary policy note on the Stats tab. Going by screen count: 5 of 7
+tabs are a clean Match, 1 (Analyze) is a reasoned Protected divergence,
+and 1 (Stats) is a Match with a single Minor residue element. No screen
+came back Structural residue.
+
+No build was needed (no code changed), but `npm run build` was re-run
+anyway to confirm the cumulative Phase 113-115 state still compiles clean
+-- it does. Browser QA via the same raw-CDP harness (see
+[[project_cdp_browser_qa_without_playwright]]), scratch-SQLite backend
+seeded with 5 vocab items across 4 statuses and one owner-published
+shared deck, at 1280/390/375/320: `document.documentElement.scrollWidth
+=== clientWidth` held at all 15 checked screen/state combinations, zero
+console errors or warnings across the entire run, and zero instances of
+`.library-rail`/`.app-bottom-nav` found at any width. All six required
+screenshot states were captured through real interaction (sample-text
+analyze, token click for the inspector, deck-select for Vocab, quick-start
++ "정답 보기" for Study's revealed/rating state, text-submit for Analyze's
+card) rather than injected component state.
+
+**Commit-readiness:** yes -- this phase made no code changes, so there is
+nothing new to review beyond what Phase 113-115 already left staged; this
+entry is a verification record, not a diff.
+
+**Next phase candidates, in priority order:** (1) none required to reach
+mockup parity on the primary nav -- the redesign's stated goal is met;
+(2) optional polish-only candidate: Stats/Info's bottom "저장 정책" card,
+if a future phase wants zero remaining `panel-card` instances anywhere in
+the app; (3) optional: revisit Analyze's card system only if/when a
+dedicated mockup for that screen is ever produced, since without one
+there's no direction to redesign toward.

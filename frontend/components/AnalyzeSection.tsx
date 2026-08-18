@@ -245,7 +245,18 @@ function ClassifyStageIntro({
   onDiscardDraft,
 }: ClassifyStageIntroProps) {
   return (
-    <section className="classify-stage hero-card library-card-stage">
+    // Phase 115 investigated this card against the phase brief's Replace/
+    // Keep/Defer test and judged Keep, not Replace: .hero-card's
+    // border-radius/box-shadow are live and deliberate here (matching
+    // .study-hero-card's card system on purpose, per the comment on
+    // .classify-stage in globals.css), and Analyze has no dedicated mockup
+    // board to justify overriding that established cross-tab consistency.
+    // .library-card-stage was dropped as dead-code cleanup only -- its
+    // striped background is already fully overridden by .classify-stage's
+    // own later, opaque `background: panel-bg` (same class of no-op the
+    // Phase 114 reader-paper cleanup found), so removing the name changes
+    // nothing visible.
+    <section className="classify-stage hero-card">
       <div className="classify-hero-header">
         <span className="shiori-glow shiori-companion--section classify-hero-companion">
           <ShioriCharacter variant="classify" size="lg" />

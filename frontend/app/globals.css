@@ -296,6 +296,19 @@
   }
 }
 
+/* Phase 113 -- .app-nav-drawer's entrance: slides in from the edge it's
+   anchored to, same easing/duration family as app-slide-up. */
+@keyframes app-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 /* Small rotated "stamped down" settle for .brand-stamp -- starts at its
    resting -3deg tilt but scaled down and faded, so it reads as a stamp
    being pressed onto the page rather than a plain fade. */
@@ -487,282 +500,141 @@ button {
   width: min(1360px, 100%);
 }
 
-/* App shell: desktop = sticky left sidebar + main content column, sharing
-   one flex row so the sidebar never needs manual margin math against
-   .page's own padding. Mobile hides the sidebar and shows the bottom nav
-   instead (both driven by the same NavAction data from page.tsx). */
+/* Phase 113 -- App Shell structural replacement. The old shell paired a
+   persistent left "library rail" sidebar with a separate slim topbar and
+   (on mobile) a fixed 7-icon bottom tab bar -- three independent chrome
+   pieces that together read as admin-dashboard scaffolding rather than
+   the mockup's single toolbar sitting on top of one desk/notebook scene.
+   All three are gone; .app-toolbar below is the only nav surface now, so
+   .app-shell is just a plain vertical stack of [toolbar, content]. */
 .app-shell {
-  display: flex;
-  align-items: flex-start;
-  gap: 24px;
+  display: block;
 }
 
 .app-shell-content {
-  flex: 1 1 auto;
   min-width: 0;
 }
 
-/* V3 library rail -- replaces the old 216px sidebar (full text labels, its
-   own repeated app-name block). Book-spine width, icon + tiny label per
-   item, no section header text -- reads as a shelf edge, not an admin nav
-   panel. All 8 nav items render here as one flat list (no "더보기" flyout
-   layer) -- link min-height/gap/font-size are intentionally tight so the
-   full list still reads as one compact rail rather than a long menu.
-
-   Deliberately NOT a rounded/bordered/shadowed floating card -- that read
-   as "a small second panel" rather than a rail attached to the page edge.
-   Just a flat strip with a hairline right-edge separator, closer to an
-   actual book spine sitting next to the page. */
-/* Was transparent -- with the page background now a busier warm paper
-   texture, a transparent rail just let that texture run straight through
-   it, so the nav read as loose icons floating on the page rather than a
-   rail. Reuses --panel-bg (the same "card" tier every other surface uses)
-   plus a soft directional shadow, so it reads as its own attached surface
-   without becoming a heavy, fully-rounded floating sidebar. */
-.library-rail {
+/* Phase 113 -- single unified navigation surface, replacing the old
+   .library-rail sidebar + .app-topbar strip + .app-bottom-nav trio (see
+   .app-shell above). Base rules here are the compact "mobile/tablet"
+   presentation -- a slim sticky bar with a hamburger button, since seven
+   full-label tabs plus brand/feedback/account genuinely don't fit one row
+   before ~1024px (unlike the old icon-only rail, which fit that width
+   down to 641px -- this is a deliberate, width-driven change from that
+   breakpoint, not just following the old convention). The
+   >=1024px override further down expands this into the mockup's full
+   text-tab toolbar. */
+.app-toolbar {
   position: sticky;
-  top: 24px;
-  flex: 0 0 68px;
+  top: 0;
+  z-index: 20;
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 14px 6px;
-  border-right: 1px solid var(--border);
-  border-radius: 0 14px 14px 0;
+  margin: 0 0 14px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
   background: var(--panel-bg);
-  box-shadow: 3px 0 12px rgba(120, 98, 40, 0.08);
+  box-shadow: 0 4px 12px rgba(120, 98, 40, 0.08);
 }
 
-.library-rail-brand {
-  position: relative;
-  display: flex;
-  flex: 0 0 auto;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  margin-bottom: 4px;
-}
-
-/* Casual Sticker Reader (Phase 60) -- a small strip of washi tape holding
-   the brand mark to the rail, so the rail's one fixed "which app is this"
-   anchor reads as a taped-down label rather than a plain settings-panel
-   logo slot. Same tape material (rgba(217,122,74,...), soft shadow, slight
-   rotation) as every other phase's tape accents. */
-.library-rail-brand-tape {
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  z-index: 1;
-  width: 30px;
-  height: 12px;
-  border: 1px solid rgba(217, 122, 74, 0.4);
-  background: rgba(217, 122, 74, 0.32);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-  transform: translateX(-50%) rotate(-3deg);
-  pointer-events: none;
-}
-
-.library-rail-brand-icon {
+.app-toolbar-menu-button {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  background: var(--primary);
-  color: #ffffff;
-}
-
-.library-rail-brand-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* --text-secondary (not --muted) and a touch larger -- at 9.5px, hint-level
-   contrast made the brand mark nearly illegible against the rail's own
-   panel-bg surface. Nav wayfinding text reads better a notch stronger than
-   generic muted hint text. */
-.library-rail-brand-name {
+  width: 40px;
+  height: 40px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: 10px;
   color: var(--text-secondary);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.library-rail-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-}
-
-.library-rail-link {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  width: 100%;
-  min-height: 46px;
-  padding: 5px 2px;
-  /* Was a uniform 12px pill -- flatter on the inner (spine) edge, rounder
-     on the outer edge, so an inactive item already reads a little like a
-     tab hanging off the rail rather than a generic rounded menu button. */
-  border-radius: 6px 12px 12px 6px;
-  /* --text-secondary (not --muted) -- inactive nav labels are wayfinding
-     text, not a de-emphasized hint, so they get a stronger base color than
-     the generic muted tier. */
-  color: var(--text-secondary);
-  background: transparent;
-  font-weight: 700;
-  font-size: 10px;
-  box-shadow: none;
-  text-align: center;
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    background var(--motion-fast) var(--ease-soft);
-}
-
-.library-rail-link span {
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.library-rail-link:not(:disabled):hover {
   background: var(--soft-bg);
+  box-shadow: none;
+}
+
+.app-toolbar-menu-button:not(:disabled):hover {
+  background: var(--border);
   box-shadow: none;
   transform: none;
 }
 
-/* Reads as a bookmark tab actually stuck onto the rail rather than a flat
-   filled menu row: same strong solid-primary fill (contrast/legibility
-   unchanged), plus a slight stuck-on tilt and a pin dot (.library-rail-pin)
-   so the active state visually matches the "selected bookmark/sticker"
-   language used across the rest of the app. */
-.library-rail-link-active {
-  color: #ffffff;
-  background: var(--primary);
-  box-shadow: 0 3px 8px rgba(var(--primary-rgb), 0.32);
-  transform: rotate(-2deg);
+.app-toolbar-menu-button svg {
+  width: 20px;
+  height: 20px;
 }
 
-.library-rail-link-active:not(:disabled):hover {
-  background: var(--primary);
-}
-
-.library-rail-pin {
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  z-index: 1;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  transform: translateX(-50%);
-}
-
-.library-rail-icon {
+.app-toolbar-brand {
+  position: relative;
+  display: inline-flex;
   flex: 0 0 auto;
-  width: 18px;
-  height: 18px;
+  align-items: center;
+  gap: 6px;
 }
 
-.app-bottom-nav {
+.app-toolbar-brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.app-toolbar-brand-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.app-toolbar-brand-name {
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* Text tabs only render inline at the >=1024px tier -- see below. */
+.app-toolbar-nav {
   display: none;
 }
 
-@media (max-width: 640px) {
-  .library-rail {
+.app-toolbar-end {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  min-width: 0;
+}
+
+/* Feedback moves into the drawer's own footer below 1024px -- see
+   .app-nav-drawer-footer -- so it doesn't compete with the account
+   trigger for space on a slim mobile/tablet bar. */
+.app-toolbar-end .app-topbar-feedback-button {
+  display: none;
+}
+
+@media (max-width: 400px) {
+  /* Safety valve at the very narrowest supported width (320px): drop the
+     brand wordmark first, keeping the menu button, brand icon, and
+     account trigger (which already truncates via
+     .account-menu-trigger-label) comfortably clear of each other. */
+  .app-toolbar-brand-name {
     display: none;
   }
+}
 
-  .app-shell {
-    display: block;
-  }
-
-  /* Fixed pill-less tab bar pinned to the bottom of the viewport --
-     env(safe-area-inset-bottom) keeps it clear of the home-indicator area
-     on notched phones instead of sitting flush against it. */
-  .app-bottom-nav {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 500;
-    display: flex;
-    align-items: stretch;
-    justify-content: space-around;
-    gap: 2px;
-    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--border);
-    background: var(--panel-bg);
-    box-shadow: 0 -8px 20px rgba(120, 98, 40, 0.08);
-  }
-
-  /* Clears the fixed bottom nav so the last card in any tab never renders
-     underneath it. */
-  .app-shell-content {
-    padding-bottom: calc(64px + env(safe-area-inset-bottom));
-  }
-
-  .app-topbar {
-    justify-content: flex-start;
-    /* Phase 83 -- a touch closer to the content below (was 18px, the base
-       rule) so the topbar reads as sitting just above the notebook cover
-       it belongs to, not as a separately-spaced service header strip. */
-    margin-bottom: 12px;
-  }
-
-  .app-topbar-end {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    width: 100%;
-  }
-
-  .app-topbar-end > * {
-    flex: 0 1 auto;
-  }
-
-  .app-topbar-end > button {
-    width: auto;
-  }
-
-  /* Phase 83 -- mobile-only "paper tag" skin. Both buttons already read as
-     de-emphasized bordered pills (Phase 54/60 tokens), but a solid-border
-     shape sitting alone above the notebook cover -- the very first thing
-     painted -- still reads as a normal service-header button rather than a
-     note stuck to the page. Dashed border + a slight tilt reuse the same
-     "index card / tape tag" language the rest of the app already uses
-     (.vocab-form-panel, .home-sticker-chip) instead of a new pattern.
-     width:auto is explicit (not just relied on) because .account-menu-
-     trigger is a grandchild of .app-topbar-end, not a direct child, so it
-     doesn't pick up the ".app-topbar-end > button" rule above and would
-     otherwise fall through to the app-wide mobile `button { width: 100% }`
-     touch-target rule. Desktop/tablet (>640px) keep their existing pill /
-     Phase-67 paper-toolbar-tag looks untouched. */
-  .app-topbar-feedback-button,
-  .account-menu-trigger {
-    width: auto;
-  }
-
-  .ghost-button.app-topbar-feedback-button {
-    min-height: 44px;
-    padding: 8px 12px 8px 10px;
-    border-style: dashed;
-    font-size: 12.5px;
-    transform: rotate(-1.5deg);
-  }
-
-  .ghost-button.app-topbar-feedback-button:not(:disabled):hover {
-    transform: rotate(-1.5deg) translateY(-1px);
-  }
-
+@media (max-width: 1023px) {
+  /* Phase 83's mobile-only "paper tag" skin for the account trigger,
+     ported from the old .app-topbar breakpoint (640px) to this shell's
+     own compact-mode breakpoint (1024px) -- both buttons live on the same
+     slim toolbar in that whole range now, so they should read the same
+     regardless of phone vs. tablet width. */
   .account-menu-trigger {
     min-height: 44px;
     border: 1px dashed var(--border);
@@ -773,79 +645,164 @@ button {
   .account-menu-trigger:not(:disabled):hover {
     transform: rotate(1.5deg) translateY(-1px);
   }
+}
 
-  /* Reserves space for the fixed bottom nav when the rating grid is
-     auto-scrolled into view on answer reveal (see StudySection.tsx) --
-     without this, scrollIntoView treats the nav's screen space as
-     available viewport and stops short, leaving 다시/어려움 tucked behind
-     the nav bar on common phone heights. Bumped from +12px (Phase 45) to
-     +40px in Phase 66 -- the card-stack redesign's board padding/backing
-     sheets measurably shifted the settled scroll position closer to the
-     nav than the old flatter layout did, so the smaller buffer was no
-     longer leaving reliable clearance. */
+@media (max-width: 640px) {
+  /* Was tuned to clear the old fixed bottom nav (64px + safe-area inset +
+     40px buffer) when the rating grid auto-scrolled into view on answer
+     reveal (see StudySection.tsx). That bar no longer exists at any width,
+     so this is just a small resting margin now. */
   .study-rating-grid {
-    scroll-margin-bottom: calc(64px + env(safe-area-inset-bottom) + 40px);
+    scroll-margin-bottom: 20px;
   }
+}
 
-  .app-bottom-nav-item {
-    position: relative;
-    display: flex;
-    flex: 1 1 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    min-width: 0;
-    /* Touch target height is untouched by the sticker-tab restyle below --
-       48px min stays regardless of active/inactive state. */
-    min-height: 48px;
-    padding: 6px 1px;
-    border-radius: 10px;
-    color: var(--muted);
-    background: transparent;
-    font-size: 10px;
-    font-weight: 600;
-    box-shadow: none;
-  }
+/* Slide-in nav drawer -- the seven tabs' home below 1024px, opened by
+   .app-toolbar-menu-button. Same overlay + panel recipe as
+   .feedback-modal-overlay/.feedback-modal (dimmed backdrop, a real card,
+   app-fade-in/app-slide-in-left) so this reads as part of the same
+   "sheet of paper slides in" family instead of a new interaction pattern.
+   Hidden outright at >=1024px (see below) as a safety net in case a
+   drawer opened on a narrow viewport is still mounted after a resize. */
+.app-nav-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  background: rgba(15, 23, 42, 0.4);
+  animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
+}
 
-  .app-bottom-nav-item:not(:disabled):hover {
-    box-shadow: none;
-    transform: none;
-  }
+.app-nav-drawer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(280px, 82vw);
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: 16px 12px calc(16px + env(safe-area-inset-bottom));
+  background: var(--panel-bg);
+  border-radius: 0 20px 20px 0;
+  box-shadow: 8px 0 30px rgba(37, 43, 30, 0.25);
+  animation: app-slide-in-left var(--motion-base) var(--ease-soft) both;
+}
 
-  .app-bottom-nav-item span {
-    overflow: hidden;
-    max-width: 100%;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
+.app-nav-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border-strong);
+}
 
-  /* Rounder on top only -- the active tab reads as a small bookmark tab
-     peeking up out of the bottom bar rather than a plain highlighted
-     rectangle. Same footprint/padding as an inactive item, so this never
-     shrinks the touch target. */
-  .app-bottom-nav-item-active {
-    color: var(--primary);
-    background: var(--soft-bg);
-    border-radius: 12px 12px 6px 6px;
-  }
+.app-nav-drawer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+}
 
-  .app-bottom-nav-pin {
-    position: absolute;
-    top: 2px;
-    left: 50%;
-    z-index: 1;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--accent);
-    transform: translateX(-50%);
-  }
+.app-nav-drawer-brand-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--primary);
+}
 
-  .app-bottom-nav-icon {
-    width: 18px;
-    height: 18px;
-  }
+.app-nav-drawer-close {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--soft-bg);
+  box-shadow: none;
+}
+
+.app-nav-drawer-close:not(:disabled):hover {
+  background: var(--border);
+  color: var(--text);
+  box-shadow: none;
+  transform: none;
+}
+
+.app-nav-drawer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-nav-drawer-link {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px 10px 16px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: transparent;
+  font-weight: 700;
+  font-size: 14.5px;
+  text-align: left;
+  box-shadow: none;
+}
+
+.app-nav-drawer-link:not(:disabled):hover {
+  background: var(--soft-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.app-nav-drawer-link-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+}
+
+/* Same "stuck-on bookmark tab" language as the old rail's active state --
+   a pin dot plus a filled marker bar -- just laid out for a horizontal
+   list row instead of a narrow vertical rail item. */
+.app-nav-drawer-link-active {
+  color: var(--primary-dark);
+  background: var(--soft-bg);
+  font-weight: 800;
+}
+
+.app-nav-drawer-link-active::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 4px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  transform: translateY(-50%);
+}
+
+.app-nav-drawer-footer {
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.app-nav-drawer-footer .app-topbar-feedback-button {
+  display: inline-flex;
+  width: 100%;
+  min-width: 0;
 }
 
 .feedback-screen-label {
@@ -853,35 +810,19 @@ button {
   font-size: 13px;
 }
 
-/* App Shell V3 top bar -- V2 kept a small repeated "일본어 단어장" text
-   mark here; V3 drops it entirely (the rail's brand badge already answers
-   "which app is this" once, not on every screen) so this is now just a
-   slim utility strip for feedback + account, right-aligned. */
-.app-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.app-topbar-end {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-/* Casual Sticker Reader (Phase 60) -- reads as a small paper tag clipped to
-   the topbar rather than a plain ghost-button, so "leave feedback" feels
-   like "stick a note on the desk" instead of "open the bug report form".
-   Kept as a real bordered button (not a dashed/rotated decoration) since
-   this is a frequently-used, functionally important action -- only the
-   surface material changed, not the affordance. Selector is doubled up
-   (`.ghost-button.app-topbar-feedback-button`) so it wins over the plain
-   `.ghost-button` rule declared later in this file -- a single-class
-   `.app-topbar-feedback-button` would otherwise lose the border/background/
-   color tie to source order. */
+/* Casual Sticker Reader (Phase 60) -- reads as a small paper tag rather
+   than a plain ghost-button, so "leave feedback" feels like "stick a note
+   on the desk" instead of "open the bug report form". Kept as a real
+   bordered button (not a dashed/rotated decoration) since this is a
+   frequently-used, functionally important action -- only the surface
+   material changed, not the affordance. Phase 113: this now lives inside
+   .app-toolbar-end (>=1024px) or .app-nav-drawer-footer (<1024px) instead
+   of the old standalone .app-topbar strip, which is gone along with
+   .library-rail/.app-bottom-nav -- see .app-toolbar above. Selector is
+   doubled up (`.ghost-button.app-topbar-feedback-button`) so it wins over
+   the plain `.ghost-button` rule declared later in this file -- a
+   single-class `.app-topbar-feedback-button` would otherwise lose the
+   border/background/color tie to source order. */
 .app-topbar-feedback-button {
   min-width: 0;
 }
@@ -959,25 +900,101 @@ button {
       0 2px 0 rgba(255, 255, 255, 0.5) inset;
   }
 
-  /* Topbar reads as a small paper toolbar tag clipped to the board's top
-     edge, not a borderless row of buttons floating on bare background. */
-  .app-topbar {
-    padding: 8px 14px;
+  /* Phase 113 -- the mockup's single rounded toolbar sitting on the
+     board's top edge: brand + every tab as a text link + feedback/account,
+     one row, no separate sidebar. Reuses the exact "paper toolbar tag"
+     pill treatment the old .app-topbar had at this same tier. */
+  .app-toolbar {
+    position: sticky;
+    top: 20px;
+    margin: 0 0 20px;
+    padding: 8px 10px 8px 14px;
     border-radius: 999px;
     border: 1px solid var(--paper-border);
     background: var(--panel-bg);
     box-shadow: 0 6px 16px rgba(120, 98, 40, 0.1);
   }
 
-  /* Strengthens the active rail link from "highlighted row" to "bookmark
-     tab actually stuck to the board's edge" -- an asymmetric torn-tab
-     corner plus a few px of bleed past the rail's own right edge into the
-     gutter before the content column. */
-  .library-rail-link-active {
-    border-radius: 4px 16px 16px 4px;
-    margin-right: -9px;
-    padding-right: 11px;
-    box-shadow: 0 4px 10px rgba(var(--primary-rgb), 0.38);
+  .app-toolbar-menu-button {
+    display: none;
+  }
+
+  .app-toolbar-nav {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    margin-left: 6px;
+    overflow-x: auto;
+  }
+
+  .app-toolbar-end .app-topbar-feedback-button {
+    display: inline-flex;
+  }
+
+  .app-toolbar-link {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 8px 12px;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    background: transparent;
+    font-weight: 700;
+    font-size: 12.5px;
+    box-shadow: none;
+    white-space: nowrap;
+    transition:
+      background var(--motion-fast) var(--ease-soft),
+      color var(--motion-fast) var(--ease-soft);
+  }
+
+  .app-toolbar-link:not(:disabled):hover {
+    background: var(--soft-bg);
+    box-shadow: none;
+    transform: none;
+  }
+
+  .app-toolbar-link-icon {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+  }
+
+  /* Same "stuck-on bookmark tab" language the old rail's active link used
+     -- strong solid-primary fill plus a pin dot -- carried over to a
+     horizontal pill instead of a vertical rail row. */
+  .app-toolbar-link-active {
+    color: #ffffff;
+    background: var(--primary);
+    box-shadow: 0 3px 8px rgba(var(--primary-rgb), 0.32);
+  }
+
+  .app-toolbar-link-active:not(:disabled):hover {
+    background: var(--primary);
+  }
+
+  .app-toolbar-pin {
+    position: absolute;
+    top: 1px;
+    left: 50%;
+    z-index: 1;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    transform: translateX(-50%);
+  }
+
+  /* Drawer/hamburger are mobile/tablet-only -- guards against a drawer
+     left open before a resize past 1024px ever staying visible. */
+  .app-nav-drawer-overlay {
+    display: none;
   }
 }
 
@@ -2601,8 +2618,10 @@ button:focus-visible {
    / .classification-complete) -- flashcard-tier card (hero-card scale)
    instead of a plain 10px-radius box, since this is the one card the
    Analyze tab wants seen as immersive, not a form. The screen-accent top
-   edge ties it to the tab's coral accent, same language
-   .shared-hero-card/.reader-paper already use. */
+   edge ties it to the tab's coral accent, same language .reader-paper
+   already uses (Phase 115 -- .shared-hero-card dropped this same
+   border-top-accent recipe when it was flattened out of a boxed card into
+   an unboxed heading strip; see that class below). */
 .classify-word-card,
 .classify-result-summary {
   width: min(720px, 100%);
@@ -4372,9 +4391,10 @@ select {
   box-shadow: 0 22px 46px rgba(100, 80, 34, 0.16);
 }
 
-/* Notebook-ring binding down the left edge -- same dashed-spine language
-   .reader-workspace uses below it, so the intro card and the workspace it
-   leads into read as pages of one notebook. */
+/* Notebook-ring binding down the left edge -- this intro card's own spine,
+   independent of .reader-workspace (which dropped its own copy in Phase
+   114; the two never show at once, since this card is the pre-analyze
+   state and .reader-workspace only renders once a result exists). */
 .reader-start-card::before {
   content: "";
   position: absolute;
@@ -5243,17 +5263,14 @@ input.reading-vocab-sticker-toggle:checked {
 
 
 /* Save Dock -- a slim shelf-like strip (count + one primary CTA on the same
-   line) sitting right under the reader. Previously just a dashed top rule
-   with no fill of its own, so it read as a divider, not a place to act --
-   against the library-card-stage's near-transparent striped backdrop that
-   made "다음 행동이 어디인지" genuinely hard to find. Now a real opaque
-   paper card (still visually lighter than the reader-paper hero above it:
-   smaller radius, thinner shadow), distinct in weight from the drawer-pull
-   below it, so the reading tab isn't four stacked look-alike boxes. */
-/* Casual Sticker Reader -- a dashed-top strip (echoes the notebook-ring
-   spine's own dash rhythm) instead of a fully bordered box, so the save
-   tray reads as a shelf attached under the reader page, not a fourth
-   admin panel stacked below it. */
+   line) sitting right under the reader page. A dashed top rule, no fill of
+   its own -- echoes the notebook-ring spine's dash rhythm so it reads as a
+   shelf attached under the reader page, not a fourth admin panel stacked
+   below it. Phase 114 removed .reader-workspace's own backdrop tint behind
+   it (see globals.css Phase 114 note above .reader-workspace); since that
+   tint was already a near-imperceptible step off .page's own board color,
+   this strip's contrast was always carried by the dashed rule and spacing,
+   not the backdrop, so nothing here needed to change. */
 .reading-action-dock {
   display: grid;
   gap: 10px;
@@ -6566,28 +6583,18 @@ input.reading-vocab-sticker-toggle:checked {
   }
 }
 
-/* Casual Sticker Reader (Phase 59) -- position:relative so .shared-hero-tape
-   (a real element, same recipe as the other tabs' hero tape -- this card
-   already spends both ::before/::after on .card-stack-surface) can sit half
-   outside the card's top edge. */
+/* Phase 115 -- demoted from a bordered/shadowed hero-card box (with a
+   corner washi-tape strip holding it down) to a flat heading strip sitting
+   directly on the page, matching Phase 114's identical fix on Vocab's
+   header. The tape was an "an index card is taped to the desk" cue for a
+   boxed element -- with no card left to tape down, it was dropped rather
+   than kept as orphaned decoration. */
 .shared-hero-card {
   position: relative;
-  padding: 20px 18px 14px;
-  border-top: 2px solid var(--screen-accent, var(--accent));
-}
-
-.shared-hero-tape {
-  position: absolute;
-  top: -6px;
-  left: 26px;
-  z-index: 1;
-  width: 46px;
-  height: 16px;
-  border: 1px solid rgba(217, 122, 74, 0.4);
-  background: rgba(217, 122, 74, 0.32);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-  transform: rotate(-4deg);
-  pointer-events: none;
+  display: grid;
+  gap: 10px;
+  padding: 4px 2px 16px;
+  border-bottom: 1px dashed var(--paper-border);
 }
 
 /* One "shelf" of cards under a small heading -- a display-only grouping of
@@ -7408,36 +7415,22 @@ input.reading-vocab-sticker-toggle:checked {
   outline: none;
 }
 
-/* Casual Sticker Reader (Phase 57) -- "내 단어 스티커 노트" framing. Kept
-   light/cream (not the dark notebook-cover green Home's hero uses -- this
-   screen carries a lot of live stats/controls, and white text on the dark
-   cover would fight them for contrast), but a corner washi-tape strip
-   (.vocab-hero-tape, a real element -- this card already spends both
-   ::before/::after on .card-stack-surface's "stack of pages" ghost layers)
-   ties it to the same material language as the reader page / start card. */
+/* Phase 114 -- demoted from a bordered/shadowed hero-card box (with a
+   corner washi-tape strip holding it down) to a flat heading strip that
+   sits directly on the notebook scene's page background, no card boundary
+   of its own. The tape was specifically an "an index card is taped to the
+   desk" cue for a boxed element -- with no card left to tape down, it was
+   dropped rather than kept as orphaned decoration (see the phase brief's
+   ban on decoration standing in for a real composition change). Same
+   border-bottom-dashed "unboxed section" recipe .reading-input-open
+   already uses post-analyze, so Reading and Vocab's headers now read as
+   the same material. */
 .vocab-hero-card {
   position: relative;
+  display: grid;
   gap: 10px;
-  padding: 16px 16px 12px;
-  border-color: var(--paper-border);
-  border-top: 2px solid var(--screen-accent, var(--accent));
-  background: var(--paper-bg);
-  box-shadow: 0 14px 32px var(--paper-shadow);
-  overflow: hidden;
-}
-
-.vocab-hero-tape {
-  position: absolute;
-  top: -6px;
-  left: 28px;
-  z-index: 1;
-  width: 46px;
-  height: 16px;
-  border: 1px solid rgba(217, 122, 74, 0.4);
-  background: rgba(217, 122, 74, 0.32);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-  transform: rotate(-4deg);
-  pointer-events: none;
+  padding: 4px 2px 16px;
+  border-bottom: 1px dashed var(--paper-border);
 }
 
 .vocab-hero-deck-label {
@@ -9320,44 +9313,21 @@ input.reading-vocab-sticker-toggle:checked {
 
 /* Reader mode */
 
-/* Binds the reader / save tray / candidate list into one "notebook" unit --
-   a dashed spine down the left edge in the screen's accent color, echoing a
-   spiral/ring binding, so the three cards read as bound pages of one
-   workspace instead of unrelated floating boxes. Each section keeps its
-   own card-tier styling (reader stays the "hero", tray/list stay
-   "section") -- this only adds a connecting thread behind them. */
-/* Casual Sticker Reader (Phase 55) -- flattened from the earlier radial
-   teal-glow + heavy shadow treatment (read as a UI panel highlight, not
-   paper) to a plain desk-surface tone. The dashed spine (still the
-   notebook-ring binding) and the reader page's own tape corners now carry
-   the "bound notebook" read instead of a glow + an abstract floating tab. */
+/* Phase 114 -- demoted from a bordered/shadowed "stage" box (with a dashed
+   ring-spine down the left edge binding its contents into one card) to a
+   plain layout container. Against the mockup, the reader page is the desk
+   scene's own artifact, not a panel sitting on top of it -- wrapping it
+   (plus the save dock and candidate tray) in a second card read as "a card
+   inside the board" and duplicated the paper texture .page already
+   provides underneath. ReaderPaper/ReaderSaveDock/CandidateDrawer each
+   already carry their own distinct material (page, dashed shelf strip,
+   sticker-tray drawer), so gap alone is enough to read them as three
+   related desk objects without an enclosing box or a connecting spine
+   line. See DESIGN.md Phase 114. */
 .reader-workspace {
   position: relative;
   display: grid;
-  gap: 14px;
-  padding: 22px 22px 22px 36px;
-  border: 1px solid rgba(110, 91, 47, 0.12);
-  border-radius: 28px;
-  background: var(--surface-stage);
-  box-shadow: 0 10px 26px rgba(100, 80, 34, 0.07);
-}
-
-.reader-workspace::before {
-  content: "";
-  position: absolute;
-  top: 18px;
-  bottom: 18px;
-  left: 18px;
-  width: 2px;
-  border-radius: 2px;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--screen-accent, var(--accent)) 0,
-    var(--screen-accent, var(--accent)) 6px,
-    transparent 6px,
-    transparent 13px
-  );
-  opacity: 0.45;
+  gap: 20px;
 }
 
 /* Casual Sticker Reader (Phase 65) -- reader-desk-scene: the reader page
@@ -10930,14 +10900,7 @@ input.reading-vocab-sticker-toggle:checked {
 
   .reader-workspace {
     min-width: 0;
-    padding: 14px 12px 14px 22px;
-    border-radius: 20px;
-  }
-
-  .reader-workspace::before {
-    top: 14px;
-    bottom: 14px;
-    left: 10px;
+    gap: 16px;
   }
 
   .reader-paper {

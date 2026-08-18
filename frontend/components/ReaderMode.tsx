@@ -554,7 +554,12 @@ export function ReaderMode({
           that breakpoint this is just a plain block, so .reader-paper
           stacks exactly as it did before this Phase. */}
       <div className="reader-desk-scene">
-      <div className="reader-paper hero-card card-stack-surface">
+      {/* Phase 114 -- .hero-card/.card-stack-surface dropped: .reader-paper
+          already redeclares its own border/radius/shadow/tape-corner
+          pseudo-elements later in globals.css, so both classes were fully
+          shadowed (dead weight, not a visible effect) -- this is cleanup,
+          not a visual change. See DESIGN.md Phase 114. */}
+      <div className="reader-paper">
       {/* Phase 93 -- "원문 우선" reader toolbar. Previously three always-on
           rows (title+hint, progress+bookmark actions, legend) stood between
           the reader-paper's top edge and the first line of Japanese text --

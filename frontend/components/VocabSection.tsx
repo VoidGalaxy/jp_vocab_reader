@@ -341,8 +341,17 @@ export function VocabSection({
 
   return (
     <section className="tab-panel vocab-panel" aria-live="polite">
-      <section className="panel-card hero-card vocab-hero-card vocab-hero-compact card-stack-surface">
-        <span className="vocab-hero-tape" aria-hidden="true" />
+      {/* Phase 114 -- was a bordered/shadowed .panel-card.hero-card box (plus
+          a card-stack ghost-layer ::before/::after ) sitting above the
+          notebook spread below, reading as "a card on top of the board." The
+          mockup's Vocab boards show no separate header card at all -- the
+          notebook scene starts immediately under the toolbar. This keeps the
+          same real content (title, live stat chips, primary actions -- 단어
+          장 is one of the screens DESIGN.md's own "minimize numbers" rule
+          exempts) but as a flat heading strip on the page itself, matching
+          Reading's own unboxed post-analyze input area
+          (.reading-input-open's border-bottom-dashed recipe). */}
+      <section className="vocab-hero-card vocab-hero-compact">
         <div className="panel-card-header">
           <h2 className="panel-card-title">내 단어장</h2>
           <p className="panel-card-description">

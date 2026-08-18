@@ -446,8 +446,17 @@ export function SharedDeckSection({
 
   return (
     <section className="tab-panel shared-deck-section" aria-live="polite">
-      <section className="panel-card hero-card shared-hero-card card-stack-surface">
-        <span className="shared-hero-tape" aria-hidden="true" />
+      {/* Phase 115 -- was a bordered/shadowed .panel-card.hero-card box (plus
+          a card-stack ghost-layer and a washi-tape strip holding it down)
+          floating above the shelf scene below. No mockup board shows a
+          separate header card above the shelf -- flattened to the same
+          unboxed heading-strip recipe Phase 114 used for Vocab's header
+          (.reading-input-open's border-bottom-dashed language), so title/
+          description/actions now read as page content leading into the
+          shelf rather than an admin panel on top of it. Shelf/grid cards
+          below (.shared-library-scene, .desk-surface-section,
+          .shared-deck-card) are untouched -- see DESIGN.md Phase 115. */}
+      <section className="shared-hero-card">
         <div className="panel-card-header">
           <h2 className="panel-card-title">
             <ShioriMark className="shared-deck-title-mark" />

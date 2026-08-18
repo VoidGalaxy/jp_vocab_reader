@@ -3379,43 +3379,38 @@ export default function HomePage() {
     quickStartStudy("today");
   }
 
-  // Builds one NavAction from the existing `tabs` entry for `key` --
-  // sidebar/bottom-nav both resolve through handleTabChange, so there is
-  // exactly one place tab switches actually happen. `mobile: true` swaps in
-  // the tab's shorter mobileLabel (falling back to the full label when none
-  // is set) -- both the rail and the bottom tab bar are width-constrained,
-  // so every nav item uses the short label now.
-  function navFor(key: TabKey, options?: { mobile?: boolean }): NavAction {
+  // Builds one NavAction from the existing `tabs` entry for `key` -- the
+  // desktop toolbar and the mobile/tablet drawer both resolve through
+  // handleTabChange, so there is exactly one place tab switches actually
+  // happen. Carries both label lengths since the two presentations have
+  // very different room: the drawer is a vertical list with space for the
+  // full label, while the desktop toolbar has to fit all 7 tabs plus the
+  // brand/account/feedback on one row, so it prefers shortLabel (falls
+  // back to label when a tab has no shorter form).
+  function navFor(key: TabKey): NavAction {
     const tab = tabs.find((item) => item.key === key)!;
     return {
       key: tab.key,
-      label: options?.mobile ? tab.mobileLabel ?? tab.label : tab.label,
+      label: tab.label,
+      shortLabel: tab.mobileLabel,
       icon: tab.icon,
       onClick: () => void handleTabChange(key),
       isActive: activeTab === key,
     };
   }
 
-  const feedbackNav: NavAction = {
-    key: "feedback",
-    label: "피드백",
-    icon: ChatIcon,
-    onClick: openAppFeedback,
-  };
-
-  // Flat nav: all 8 items (학습 루프 5개 + 빠른 분류/통계/피드백) render as
-  // one ordered list on both the sidebar rail and the mobile bottom bar --
-  // no "더보기" flyout/toggle layer anymore, so there is exactly one place
-  // to look for any screen.
+  // Feedback is an action (opens a modal), not a screen to navigate to, so
+  // it isn't one of these -- it's passed to AppShell separately as
+  // feedbackSlot and rendered once, in whichever of the toolbar/drawer fits
+  // the current viewport.
   const navItems: NavAction[] = [
-    navFor("home", { mobile: true }),
-    navFor("reading", { mobile: true }),
-    navFor("study", { mobile: true }),
-    navFor("vocab", { mobile: true }),
-    navFor("shared", { mobile: true }),
-    navFor("analyze", { mobile: true }),
-    navFor("info", { mobile: true }),
-    feedbackNav,
+    navFor("home"),
+    navFor("reading"),
+    navFor("study"),
+    navFor("vocab"),
+    navFor("shared"),
+    navFor("analyze"),
+    navFor("info"),
   ];
 
   return (
