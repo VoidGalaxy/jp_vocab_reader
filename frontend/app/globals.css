@@ -2628,14 +2628,28 @@ button:focus-visible {
   text-align: right;
 }
 
-/* Wraps ClassifyWordCard's own content (word/reading/meaning/example) so it
-   can re-play .app-slide-up per card via a key on this div, the same
-   "card advances" pattern .study-front already uses in the review flow.
-   Kept as its own grid+gap (matching .classify-word-card's own gap) rather
-   than putting the class directly on .classify-word-card, since that outer
-   card also holds the action grid and nav button, which should stay put
-   while only the word content re-enters. */
-.classify-word-card-content {
+/* Wraps ClassifyWordPrimary (word/reading/meaning) so it can re-play
+   .app-slide-up per card via a key on this div, the same "card advances"
+   pattern .study-front already uses in the review flow. Kept as its own
+   grid+gap (matching .classify-word-card's own gap) rather than putting the
+   class directly on .classify-word-card, since that outer card also holds
+   the action grid and nav button, which should stay put while only the
+   word content re-enters.
+
+   .classify-word-card-secondary (Phase 112) is ClassifyWordSecondary's own
+   matching wrapper -- same grid+gap+re-entrance treatment, but as a
+   separate sibling of .classify-actions instead of bundled into the block
+   above. Phase 111 found that bundling (base_form/POS tags + example
+   sentence together with word/meaning in one wrapper) pushed the 4-way
+   decision grid partially behind the fixed bottom nav on 320-390px phones,
+   on every card. Splitting them lets the mobile-only `order` rule below
+   move .classify-actions ahead of this block -- the meaning stays directly
+   above the decision either way, only the reference-only tags/example drop
+   below it on narrow screens. Desktop keeps default order (DOM order,
+   unchanged from before this split), so the card's visual rhythm there is
+   untouched. */
+.classify-word-card-content,
+.classify-word-card-secondary {
   display: grid;
   gap: 16px;
 }
@@ -8754,8 +8768,55 @@ input.reading-vocab-sticker-toggle:checked {
     padding: 16px;
   }
 
+  /* Phase 112 -- tighter than the shared 14px/16px above, specifically for
+     the classify-card stage (.classify-result-summary keeps the shared
+     values; only this in-progress card needs the extra room). Every px
+     trimmed here shifts .classify-actions further clear of the fixed
+     bottom nav on 320-390px phones -- card-level gap/padding only, no
+     content removed, no button/icon/hint sizing touched. */
+  .classify-word-card {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  /* Scoped to .classify-word-card (Analyze's own classify-card stage) so
+     Reading's TokenDetailSheet, which shares .token-sheet-meaning-block,
+     is unaffected -- same reasoning as the .classify-word-card .classify-
+     actions scoping above. */
+  .classify-word-card .token-sheet-meaning-block {
+    margin: 2px 0 2px;
+    padding: 10px 12px 8px;
+  }
+
+  /* Phase 112 (content-priority pass, Analyze) -- same order-only technique
+     Phase 110 used for Study's .study-answer-reveal: .classify-word-card is
+     `display: grid`, so a mobile-only `order` moves .classify-actions (the
+     4-way 아는/헷갈리는/모르는/건너뛰기 decision, this card's one real
+     choice) directly after the meaning above it, pushing the reference-only
+     .classify-word-card-secondary (base_form/POS tags + example sentence)
+     below the grid instead of above it. .classify-progress and
+     .classify-word-card-content (word/reading/meaning) keep the default
+     order (0) they already had, so they still render first, in DOM order.
+     No DOM/JSX/classify-save-status logic changed here -- only where these
+     already-existing pieces sit visually; desktop (>640px, outside this
+     media query) keeps the original order untouched. Scoped to
+     .classify-word-card so this doesn't touch .bookmark-inspector's own
+     reuse of .classify-actions (TokenDetailSheet's status grid has no
+     equivalent secondary block to reorder against). */
+  .classify-word-card .classify-actions {
+    order: 1;
+  }
+
+  .classify-word-card-secondary {
+    order: 2;
+  }
+
+  .classify-word-card .card-navigation {
+    order: 3;
+  }
+
   .classify-word {
-    font-size: 38px;
+    font-size: 28px;
     line-break: anywhere;
     overflow-wrap: anywhere;
   }

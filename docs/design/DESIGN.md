@@ -1229,3 +1229,93 @@ fully closed yet -- but with Analyze/Stats/Feedback otherwise confirmed
 in-world and every other screen already settled across Phases 93-110, a
 single dedicated follow-up phase for the Analyze card-stage restructuring
 (the item recorded above) should be enough to close it out.
+
+Phase 112 fixed that P1: on 320-390px phones, `ClassifyWordCard` bundled
+word/reading/quality-badge/meaning_ko *and* base_form/POS tags/example
+sentence into one fragment rendered inside a single
+`.classify-word-card-content` grid item, a sibling of `.classify-actions`
+(the 4-way 아는/헷갈리는/모르는/건너뛰기 grid) rather than a parent of it --
+so, unlike Study's already-flat `.study-answer-reveal` siblings, there was
+no flat sibling set for a Phase-110-style mobile `order` rule to reshuffle
+without either JSX restructuring or the banned `display: contents`.
+`AnalyzeSection.tsx` now splits that one component into
+`ClassifyWordPrimary` (word/reading/quality-badge/meaning_ko -- the minimum
+needed to decide) and `ClassifyWordSecondary` (base_form/POS tags + example
+sentence -- reference, not required for the decision), each wrapped in its
+own `.app-slide-up`-animated div keyed independently
+(`` `primary-${currentCardIndex}` ``/`` `secondary-${currentCardIndex}` ``
+-- an early pass reused the same bare `key={currentCardIndex}` on both
+sibling divs, which is invalid: React logged "two children with the same
+key" and the resulting reconciliation confusion was masking real card
+advancement in this session's own QA polling, caught and fixed before
+anything shipped). Source/desktop order is unchanged --
+`.classify-word-card`'s children are still progress, primary, secondary,
+actions, nav, byte-for-byte the same sequence the old single-fragment
+version produced -- so desktop (`>640px`, outside the mobile media query)
+renders identically to before this phase. Only inside the existing
+`@media (max-width: 640px)` block does `.classify-word-card .classify-actions
+{ order: 1 }` and `.classify-word-card-secondary { order: 2 }` move the
+decision grid ahead of the now-separate secondary block, the same order-only
+technique Phase 110 validated for Study, plus a modest further tightening
+this phase added on top (`.classify-word-card` gap 14px->8px and padding
+16px->10px on this stage only, not `.classify-result-summary`; `.classify-
+word` 38px->28px; `.classify-word-card .token-sheet-meaning-block` margin/
+padding trimmed -- scoped to that ancestor so Reading's `TokenDetailSheet`,
+which shares the same `.token-sheet-meaning-block` class, is untouched)
+since the first order-only pass alone still left the grid's bottom edge
+partially behind the fixed `.app-bottom-nav`.
+
+Measured via `getBoundingClientRect()` against a scratch-SQLite backend
+(same populated-account setup as Phase 111) at 1280/390/375/320, before and
+after: at 390px the grid went from `top: 786.6` (already inside the nav's
+own `783-844` span) to `top: 585` / `bottom: 765` -- fully clear, 18px above
+the nav; at 320px, the narrowest and hardest case (more text wrapping at
+that width pushes content lower than at 390px, so it needed the extra
+tightening pass beyond the first order-only cut, which still left ~18px of
+the grid's bottom edge behind the nav there), the final grid measured
+`bottom: 782.1` against `nav top: 783` -- essentially flush, effectively
+zero overlap. `overlap: false` / `gridFullyAboveNav: true` held at all three
+mobile widths on both the first and second card in a session (re-measured
+after one real classify click, not just the initial render).
+`document.documentElement.scrollWidth === clientWidth` held at every width;
+zero console errors/warnings after the key fix. Functional verification
+(all via real clicks, no injected state): a full 7-token classify session
+(아는/헷갈리는/모르는/건너뛰기 cycled across cards) correctly advanced the
+displayed word every time and produced the exact expected tally; "모르는
+단어 노트에 담기" correctly saved and returned "완벽히 아는 단어 2개,
+헷갈리는 단어 1개, 모르는 단어 1개를 저장했습니다."; `ClassifyResultSummary`
+and the ledger toggle were unaffected (neither component was touched).
+Secondary content (POS tag, example sentence) still renders in full below
+the grid on mobile, and the desktop card's screenshot-compared visual
+rhythm (word/meaning -> tags/example -> grid -> 이전) is unchanged from
+before this phase.
+
+classify/save/status handlers, `currentCardIndex`/progress/result-summary
+logic, and every backend/API/schema/SRS/storage/auth path are untouched --
+this was a presentational split (one component into two, one CSS class
+added, `order`/spacing rules added inside the existing mobile media query)
+with no condition, callback, or data-flow change anywhere. `.rating-button`
+itself was not touched; the only button-adjacent change was the pre-existing
+Analyze-scoped `.classify-word-card` gap/padding tightening, which affects
+spacing around buttons, not the buttons' own global rule.
+Reading/Study/Vocab/Shared Deck were not touched (`.token-sheet-meaning-
+block`'s override is scoped to `.classify-word-card`, and a Reading-tab
+screenshot spot-check after the change confirmed no visible or console-level
+regression there). Verified with `npm run build` (clean, twice -- once after
+the JSX split, once after the final spacing pass) and `git diff --check`
+(clean); `git status --short` shows only `frontend/app/globals.css` and
+`frontend/components/AnalyzeSection.tsx`.
+
+Remaining risk: the 320px clearance is a ~1px margin, not a generous buffer
+-- a future token with an unusually long reading/meaning/POS combination
+could theoretically push the grid a few px back into the nav's zone at that
+exact width, though the same would have been true (far worse) before this
+phase, and 375/390px carry a comfortable double-digit-px margin. No further
+action recommended unless a real regression surfaces; chasing a larger
+guaranteed-safe margin at 320px would mean shrinking `.classify-word`
+further or touching `.rating-button` sizing, both of higher cost than this
+phase's actual bug warranted. With this P1 resolved and Phase 111 already
+confirming Stats/Feedback and Analyze's other three states (intro/result/
+ledger) as non-issues, the Phase 54-112 casual-sticker-reader redesign
+series can now be considered closed -- no further candidates are on record
+across any screen.

@@ -305,13 +305,15 @@ function ClassifyStageIntro({
 }
 
 // ---------------------------------------------------------------------------
-// ClassifyWordCard -- one word, shown large: surface first, reading/pos/
-// base_form as small supporting chips, meaning_ko as the one emphasized
-// block, context example as a small memo card. No status controls here --
-// ClassifyActionGrid owns those, so this component is purely "what word is
-// this".
+// ClassifyWordPrimary -- surface first, reading/quality-badge as small
+// supporting chips, meaning_ko as the one emphasized block. This is the
+// minimum a learner needs before making the 아는/헷갈리는/모르는/건너뛰기
+// call, so it's the half of the old single ClassifyWordCard that stays
+// directly above ClassifyActionGrid at every width (see
+// ClassifyWordSecondary below for why the rest moved out). No status
+// controls here -- ClassifyActionGrid owns those.
 // ---------------------------------------------------------------------------
-function ClassifyWordCard({ token }: { token: TokenWithStatus }) {
+function ClassifyWordPrimary({ token }: { token: TokenWithStatus }) {
   return (
     <>
       <div className="classify-word">{token.surface || token.base_form}</div>
@@ -330,7 +332,27 @@ function ClassifyWordCard({ token }: { token: TokenWithStatus }) {
           {getDisplayMeaning(token.meaning_ko)}
         </p>
       </div>
+    </>
+  );
+}
 
+// ---------------------------------------------------------------------------
+// ClassifyWordSecondary -- base_form/POS tags + context example: useful
+// reference, not required to make the classify decision (the meaning above
+// already covers that). Phase 111 found this content, when bundled with
+// ClassifyWordPrimary inside one shared wrapper, pushed
+// ClassifyActionGrid's 4-way grid partially behind the fixed bottom nav on
+// 320-390px phones on every single card. Phase 112 splits it into its own
+// sibling of ClassifyActionGrid (still rendered right after it in source/
+// desktop order, so the desktop card's visual rhythm is unchanged) purely
+// so a mobile-only `order` rule (see .classify-word-card-secondary in
+// globals.css) can move ClassifyActionGrid ahead of it -- the same
+// order-only technique Phase 110 used for Study's .study-answer-reveal.
+// Content, copy, and the example-sentence fallback are unchanged.
+// ---------------------------------------------------------------------------
+function ClassifyWordSecondary({ token }: { token: TokenWithStatus }) {
+  return (
+    <>
       <div className="token-sheet-meta-row">
         {token.base_form && token.base_form !== token.surface ? (
           <span className="token-sheet-meta-tag">기본형 {token.base_form}</span>
@@ -505,8 +527,11 @@ function ClassifyCardStage({
               {currentCardIndex + 1} / {totalCount}
             </span>
           </div>
-          <div className="classify-word-card-content app-slide-up" key={currentCardIndex}>
-            <ClassifyWordCard token={currentToken} />
+          <div className="classify-word-card-content app-slide-up" key={`primary-${currentCardIndex}`}>
+            <ClassifyWordPrimary token={currentToken} />
+          </div>
+          <div className="classify-word-card-secondary app-slide-up" key={`secondary-${currentCardIndex}`}>
+            <ClassifyWordSecondary token={currentToken} />
           </div>
           <ClassifyActionGrid onClassify={onClassifyCurrent} />
           <div className="card-navigation">
