@@ -1129,3 +1129,103 @@ colors/labels/4-way structure, SRS/review-submission logic, study queue/
 new/recent/shared-deck-mode logic, and MeaningQuickEdit/report-meaning
 functionality are all unchanged; Reading/Vocab/Shared Deck/Analyze were not
 touched.
+
+Phase 111 was the intent check Phase 110 itself asked for: Analyze,
+Stats/Info, and the Feedback modal have no dedicated mockup panel (the
+6-panel board only covers Home/Reading/Inspector/Vocab/Study/Shared-Deck)
+and were extrapolated from the same visual language after the fact, so this
+phase re-read `AnalyzeSection.tsx`, `InfoSection.tsx`,
+`GlobalFeedbackModal.tsx`, and their scoped `globals.css` rules, then
+verified against a real scratch backend rather than trusting the code's own
+extensive comment trail. Setup: copied `vocab_claude_scratch_round4.db`
+(10 vocab items across 4 decks under a second QA-only user) to a phase-local
+scratch db, then reassigned every row's `user_id`/deck ownership to the
+dev-fallback user (id 1) so the no-auth-header dev session used by
+`get_or_create_dev_user()` would see populated Stats/Analyze-ledger data
+instead of an empty account -- a QA-data reshuffle only, not a schema or
+product change, and confined to a throwaway sqlite copy. Verified with
+CDP-driven headless Chrome (fresh profile) against this scratch backend at
+1280/390/375/320: intro -> classify-card -> result-summary -> ledger-toggle
+for Analyze, empty and populated Stats, and Feedback modal open/validate
+(too-short message correctly keeps 제출 disabled)/cancel (no real submit
+sent). Zero console errors across the whole run, zero failed requests, and
+`document.documentElement.scrollWidth === clientWidth` held at every width
+tested.
+
+Verdict on two of the three screens: non-issues, confirming the code
+comments' own account of prior phases' work rather than contradicting it.
+Stats/Info renders as the "학습 기록장" journal Phase 71's DESIGN.md entry
+already described -- `TodayStudyMemo`'s three chips, `StudyTimeline`'s
+diary-style lines, and `DeckProgressJournal`'s paper-corner index-card deck
+rows (progress bar + 오늘 복습/모르는 단어 visible, 전체/아는/헷갈리는 behind
+a `<details>` disclosure) read as a study log, not a stats dashboard, at
+every width; the >=1024px two-column split (main journal + sticky "최근 담은
+단어/자주 틀린 단어" aside) matches Reading/Vocab/Shared Deck's own
+"surface + side rail" pattern. The Feedback modal is fully in-world since
+Phase 60/71 -- paper-note textarea on warm `--paper-bg`, taped-note corner,
+underline-style category `<select>`, bottom-sheet-with-stacked-buttons on
+mobile -- and Phase 103 already ruled the standard cancel/submit footer a
+non-issue; this phase found nothing to add. Analyze's intro stage
+(Shiori + hero copy + dashed-paper textarea + one solid primary CTA) and its
+post-classification result summary (coverage chips, one solid "모르는 단어
+노트에 담기" button, two de-boxed `study-actions-link-button` links per
+Phase 104) both hold up the same way, at every width tested, with no
+bottom-nav overlap.
+
+One real P1 gap found in Analyze's card stage, the one screen state this
+phase actually needed browser QA (not just code-reading) to catch: on every
+single card during classification -- not just once per session -- the 4-way
+`.classify-action-grid` decision (아는/헷갈리는/모르는/건너뛰기, the whole
+screen's one real decision) renders partially *behind* the fixed
+`.app-bottom-nav` at 320-390px, not merely below an ordinary fold.
+Measured directly via `getBoundingClientRect()` on both the seeded-empty
+dev account and the reassigned populated account (10 real words): at 390px
+the grid's top edge (`y: 786.6`) sits inside the nav's own vertical span
+(`top: 783` to `bottom: 844`), and the grid extends to `y: 966.6` -- around
+120-150px of its 180px height is unreachable without scrolling past a
+sticky-looking but actually just tall header stack (읽기 탭에서 보기/지금까지
+저장 toolbar + word/reading/quality-badge/meaning/meta-tags/context-example,
+all rendered above it). This is the same *shape* of bug Phase 110's second
+pass fixed for Study's `.study-answer-reveal`, but this phase did not apply
+that fix here: Study's fix worked because `.study-answer-reveal`'s meaning/
+tags/example/rating-grid are already flat CSS-grid siblings, so a mobile-only
+`order` change alone could promote the rating grid ahead of the merely-
+secondary tags/example. Analyze's `ClassifyWordCard` instead returns word/
+reading/quality-badge/meaning/meta-tags/example as one bundled fragment
+inside a single `.classify-word-card-content` grid item (a sibling of
+`.classify-actions`, not a parent of it) -- so there is no flat sibling set
+for `order` to reshuffle without either (a) restructuring
+`AnalyzeSection.tsx` to split that fragment into separate primary
+(word/meaning) and secondary (meta-tags/example) top-level children the way
+Study already has, or (b) a `display: contents` promotion on
+`.classify-word-card-content` to flatten its children into the outer grid
+without touching JSX. (b) was seriously considered -- it would have been a
+pure-CSS, zero-JSX fix -- but rejected: that same wrapper carries
+`.app-slide-up`, a CSS `animation` that needs a real box to animate,
+`display: contents` removes exactly that box, and this specific
+animation-on-a-`display:contents`-element combination has a known history of
+breaking (element/children flashing or failing to animate) in WebKit/Safari,
+which this project must support. (a) is a real component restructuring, not
+a "CSS-only or 1-2 classNames" change, so it clears this phase's bug bar but
+not its implementation bar (1-3 files, no DOM restructuring, low QA burden).
+Recorded here rather than patched: a future phase scoped like Phase 110's
+two-pass structure (find in Round 0, fix in a dedicated follow-up round with
+its own JSX-touching budget) should split `ClassifyWordCard` into flat
+primary/secondary siblings of `.classify-actions` and reuse the exact
+`order`-based mobile reorder Study already validated.
+
+No other P2/P3s were found worth recording -- the ledger table
+(`.classify-ledger`) remains appropriately plain (opt-in via a checkbox,
+converts to labeled cards under 640px via existing `.classify-ledger
+td::before` rules, matches the brief's explicit "don't over-decorate a
+functional data table" instruction) and Shiori's presence (small corner
+companion on the classify intro, a success stamp on both the result summary
+and the Stats hero) is neither missing nor overused anywhere in these three
+screens. `git status --short` is empty -- no functional code was touched
+this phase; only this DESIGN.md entry and a throwaway, gitignored
+(`*.db`) scratch sqlite copy (deleted after QA) were created. Given one real
+P1 remains open, the Phase 54-110 redesign series should not be declared
+fully closed yet -- but with Analyze/Stats/Feedback otherwise confirmed
+in-world and every other screen already settled across Phases 93-110, a
+single dedicated follow-up phase for the Analyze card-stage restructuring
+(the item recorded above) should be enough to close it out.
