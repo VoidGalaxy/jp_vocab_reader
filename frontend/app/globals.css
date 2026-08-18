@@ -8840,9 +8840,50 @@ input.reading-vocab-sticker-toggle:checked {
     align-items: stretch;
   }
 
+  /* Phase 110 (content-priority pass) -- 정답 공개 직후 학습자가 실제로
+     해야 하는 일은 뜻을 확인하고 다시/어려움/보통/쉬움을 고르는 것뿐인데,
+     .study-answer-reveal은 DOM 순서상 뜻 -> 읽기/품사/기본형 태그 ->
+     (개인 단어장 항목이면) 뜻 수정/오류 신고 링크 -> 예문 -> rating grid
+     순으로 쌓여 있었다. 읽기/품사는 이미 reveal 전 .study-front에 항상
+     보이고, 태그/보조 링크/예문은 판단에 꼭 필요하지 않은 참고 정보라서
+     rating grid보다 아래에 있어도 무방하다 -- 실제로 막혔던 건 320-390px
+     좁은 화면에서 이 참고 정보들이 rating grid를 접히는 선 아래로 밀어낸
+     것. `order`만으로 시각적 순서를 바꾼다 (.study-answer-reveal is
+     `display: grid`, 다른 flex/grid 컨테이너와 동일하게 order를 지원);
+     DOM 순서, JSX, 뜻 수정/신고 기능, SRS/리뷰 로직은 전혀 바뀌지 않는다.
+     데스크톱(>640px)은 이 미디어쿼리 밖이라 기존 순서/카드 감성 그대로.
+     .study-answer-tags/.meaning-actions-row/.study-example-callout/
+     .study-example-empty는 이 파일에서 Study 전용 클래스 (meaning-actions-
+     row만 TokenDetailSheet.tsx와 공유하므로 .study-answer-reveal 조상으로
+     스코프). */
   .study-rating-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+    order: 1;
+  }
+
+  .study-reviewing-hint {
+    order: 2;
+  }
+
+  .study-answer-tags {
+    order: 3;
+  }
+
+  .study-answer-reveal .meaning-actions-row {
+    order: 4;
+  }
+
+  .study-example-callout,
+  .study-example-empty {
+    order: 5;
+  }
+
+  /* Tighter vertical rhythm than the 20px desktop gap so the meaning hero
+     and the now-adjacent rating grid sit closer together -- less distance
+     to the one decision this screen exists for. */
+  .study-answer-reveal {
+    gap: 14px;
   }
 
   .rating-button {

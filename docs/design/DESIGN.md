@@ -1090,3 +1090,42 @@ already reflects a deliberate, documented decision from Phases 93-109, and
 re-opening any of them without new evidence would just re-litigate settled
 calls. `git status --short` shows only this file -- no functional code was
 touched.
+
+Phase 110's second pass (content-priority) fixed the one real gap the
+review found: on 320-390px phones, revealing a Study card's answer stacked
+뜻 -> 읽기/품사/기본형 tags -> (personal vocab items only) 뜻 수정/오류
+신고 links -> 예문 callout -> the 4-way rating grid in that DOM order
+inside `.study-answer-reveal`, and a pre-existing comment in
+`StudySection.tsx` (the `ratingGridRef`/`scrollIntoView` effect, "answer
+reveal pushes the rating grid below the fold on common phone heights") had
+already documented the symptom without fixing the cause. 읽기/품사 are
+already shown pre-reveal in `.study-front` regardless, so the tags row
+mostly repeats what's already visible; 기본형, the edit/report links, and
+the example sentence are all genuinely secondary to the one decision this
+screen exists for (다시/어려움/보통/쉬움). Fix is CSS-only, one file
+(`app/globals.css`, inside the existing `@media (max-width: 640px)`
+block): `.study-answer-reveal` is already `display: grid`, so `order` was
+enough to move `.study-rating-grid` (and `.study-reviewing-hint` right
+behind it, so the "저장하는 중" message still appears next to the buttons
+it's about) directly after the meaning hero, pushing `.study-answer-tags`,
+`.study-example-callout`/`.study-example-empty`, and (ancestor-scoped
+`.study-answer-reveal .meaning-actions-row`, since that class is shared
+with `TokenDetailSheet.tsx`) below -- no JSX/DOM reorder, no new state, no
+condition changes; `.study-answer-reveal`'s gap also tightened from 20px to
+14px on mobile only. Desktop (`>640px`, outside this media query) keeps
+the exact original order and card-stack feel untouched. Verified with
+`npm run build`, `git diff --check`, and CDP-driven headless Chrome QA
+(scratch SQLite, real click flow: sample text -> analyze -> save -> Study
+new-word session -> reveal) at 320/375/390 plus a 1280 desktop regression
+check: the rating grid measured fully within the viewport
+(`top`/`bottom` both inside `[0, innerHeight]`) at all three phone widths
+with only 18px between the meaning box and the grid (vs. 246px still
+separating them on unchanged desktop), no scroll needed to reach it in the
+common case; clicking a rating button still correctly advanced to the next
+card (word changed, answer state reset); 내 단어장 뜻 수정/뜻 오류 신고
+remained present and reachable below the fold; zero console errors, zero
+failed requests, `scrollWidth === clientWidth` at 320px. Rating button
+colors/labels/4-way structure, SRS/review-submission logic, study queue/
+new/recent/shared-deck-mode logic, and MeaningQuickEdit/report-meaning
+functionality are all unchanged; Reading/Vocab/Shared Deck/Analyze were not
+touched.
