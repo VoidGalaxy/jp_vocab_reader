@@ -21,6 +21,12 @@ type AppShellProps = {
   accountSlot: React.ReactNode;
   feedbackSlot: React.ReactNode;
   children: React.ReactNode;
+  // Phase 118 -- Home only (page.tsx passes true when activeTab === "home").
+  // Swaps the toolbar's solid pill chrome for a translucent, borderless
+  // strip so it reads as a light strip over the Home desk scene instead of
+  // an app-admin nav bar competing with the notebook cover. Every other
+  // tab renders the toolbar exactly as Phase 113 built it.
+  minimalChrome?: boolean;
 };
 
 // Phase 113 -- replaces the old two-piece chrome (a persistent left
@@ -44,6 +50,7 @@ export function AppShell({
   accountSlot,
   feedbackSlot,
   children,
+  minimalChrome = false,
 }: AppShellProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -67,7 +74,11 @@ export function AppShell({
 
   return (
     <div className="app-shell">
-      <header className="app-toolbar">
+      <header
+        className={
+          minimalChrome ? "app-toolbar app-toolbar--minimal" : "app-toolbar"
+        }
+      >
         <button
           type="button"
           className="app-toolbar-menu-button"

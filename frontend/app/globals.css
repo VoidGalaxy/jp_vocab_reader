@@ -619,6 +619,35 @@ button {
   display: none;
 }
 
+/* Phase 118 -- Home only (AppShell.tsx's minimalChrome prop, set from
+   page.tsx when activeTab === "home"). The mockup's mobile Home top strip
+   is just a hamburger and one icon on bare background -- no bar, no brand
+   wordmark/mark, no boxed login pill -- so the notebook cover reads as the
+   first thing on the screen, not a nav bar with a notebook under it. Every
+   other tab keeps the solid Phase 113 bar untouched; this only fires while
+   Home is the active tab. */
+.app-toolbar--minimal {
+  background: none;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+.app-toolbar--minimal .app-toolbar-brand {
+  display: none;
+}
+
+.app-toolbar--minimal .account-menu-trigger {
+  border: none;
+  background: none;
+  box-shadow: none;
+  transform: none;
+}
+
+.app-toolbar--minimal .account-menu-trigger:not(:disabled):hover {
+  background: var(--soft-bg);
+  transform: none;
+}
+
 @media (max-width: 400px) {
   /* Safety valve at the very narrowest supported width (320px): drop the
      brand wordmark first, keeping the menu button, brand icon, and
@@ -1161,116 +1190,44 @@ button {
   min-width: 0;
 }
 
-
-/* Casual Sticker Reader (Phase 54) -- Home's notebook-cover hero. Replaces
-   the earlier "study desk" hero card: the day's one primary action now
-   lives on the cover itself (like a title embossed on a notebook), with a
-   small pinned sticky note and a corner-peeking Shiori, rather than a
-   cream card with a badge/illustration column. See
-   docs/design/DESIGN.md and docs/design/mockups/casual-sticker-reader-*.png.
-   .card-stack-surface (added alongside, in the component) supplies the
-   "pages peeking out from under the cover" read for free -- its ghost
-   layers already default to the app's cream --panel-bg. */
-.home-notebook-cover {
-  position: relative;
+/* ==========================================================================
+   Phase 118 (Hard Mockup Reconstruction) -- Home, rebuilt against
+   docs/design/mockups/casual-sticker-reader-mobile.png's "Home" board and
+   the desktop mockup's "HOME DESK" panel. Base rules here are the mobile
+   composition: one dominant notebook cover (title+CTA printed on it, a
+   sticky note, Shiori peeking from the corner, a closure strap, and
+   pagination dots -- the physical object the mockup shows), then a bare
+   icon+label shortcut row directly on the page background with NO card
+   chrome (no border/fill/shadow) -- unlike Phase 54-117's bordered,
+   shadowed sticker chips, which read as three admin tiles no matter how
+   much tape/tilt was layered on. The >=1024px override further down (see
+   the desk-scene block near .page--home) turns this into a two-column
+   desk scene and only THERE do the shortcuts pick up sticky-note chrome,
+   matching the desktop mockup's taller side notes. */
+.home-stage {
   display: grid;
-  gap: 14px;
-  padding: 30px 24px 26px;
-  border-radius: 26px;
+  gap: 18px;
+}
+
+.home-cover {
+  position: relative;
+  min-height: min(66vh, 540px);
+  padding: 30px 24px 88px;
+  border-radius: 30px;
   background: linear-gradient(
     165deg,
     var(--notebook-cover) 0%,
     var(--notebook-cover-deep) 100%
   );
-  box-shadow: 0 20px 40px rgba(37, 43, 30, 0.28);
+  box-shadow: 0 24px 48px rgba(37, 43, 30, 0.32);
   overflow: hidden;
 }
 
-/* Phase 73 -- a faint stack of page-edge lines along the cover's inner
-   right edge, like the cream page block a real notebook cover wraps
-   around. A real span, not ::before -- .card-stack-surface (this element's
-   other class) already owns both pseudo-element slots for its own "pages
-   peeking out" ghost layers below, and a same-specificity rule declared
-   later in this file would otherwise silently win the cascade over a
-   pseudo-element approach here. Kept inside the cover's own
-   overflow:hidden box (not bled past its edge) so it never risks
-   page-level overflow; stops short of the bottom so it doesn't compete
-   with the Shiori corner peeking there. */
-.home-notebook-page-edge {
+.home-cover-sticky {
   position: absolute;
-  top: 54px;
-  right: 5px;
-  bottom: 64px;
-  width: 5px;
-  background: repeating-linear-gradient(
-    180deg,
-    var(--notebook-cream) 0px,
-    var(--notebook-cream) 2px,
-    transparent 2px,
-    transparent 6px
-  );
-  opacity: 0.3;
-  border-radius: 3px;
-  pointer-events: none;
-}
-
-/* Phase 73 -- a small bookmark-tab notch flush against the cover's right
-   edge (echoes the app's own 책갈피/bookmark identity) instead of a full
-   strap, which risked colliding with the CTA/Shiori corner below it. Also
-   a real span for the same pseudo-element-slot reason as .home-notebook-
-   page-edge above. Sits flush (no negative offset) so overflow:hidden
-   never clips it. */
-.home-notebook-tab {
-  position: absolute;
-  top: 60px;
-  right: 0;
-  width: 16px;
-  height: 30px;
-  background: var(--accent);
-  clip-path: polygon(0 0, 100% 0, 100% 68%, 55% 100%, 0 68%);
-  box-shadow: -2px 2px 5px rgba(37, 43, 30, 0.18);
-  pointer-events: none;
-}
-
-/* Phase 77 -- ring-binding dots along the cover's inner left edge, the same
-   idea as .home-notebook-page-edge's dashes on the right but reading as
-   spiral-bound rings instead of page edges. Kept inside the cover's own
-   overflow:hidden box, same top/bottom bounds as .home-notebook-page-edge
-   so the two read as one consistent "bound notebook" frame. */
-.home-notebook-spine {
-  position: absolute;
-  top: 54px;
-  left: 5px;
-  bottom: 64px;
-  width: 6px;
-  background-image: radial-gradient(
-    circle,
-    rgba(247, 241, 222, 0.55) 1.6px,
-    transparent 1.6px
-  );
-  background-size: 6px 13px;
-  background-repeat: repeat-y;
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.home-notebook-pin {
-  position: absolute;
-  top: 15px;
-  left: 35px;
+  top: 22px;
+  left: 22px;
   z-index: 2;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
-}
-
-.home-notebook-sticky-note {
-  position: absolute;
-  top: 0;
-  left: 20px;
-  z-index: 1;
   padding: 9px 14px 7px;
   border: 1px solid var(--paper-border);
   border-radius: 3px;
@@ -1282,541 +1239,539 @@ button {
   transform: rotate(-4deg);
 }
 
-.home-notebook-body {
-  display: grid;
-  gap: 10px;
-  max-width: 420px;
-  margin-top: 22px;
+.home-cover-pin {
+  position: absolute;
+  top: 12px;
+  left: 44px;
+  z-index: 3;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
 }
 
-.home-notebook-title {
+/* Closure strap -- the diagonal band + snap button both mockups draw
+   crossing the cover's lower edge, read as a real notebook's elastic
+   closure rather than a flat rectangle. */
+.home-cover-strap {
+  position: absolute;
+  right: 46px;
+  top: -8%;
+  width: 15px;
+  height: 58%;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #8a6338 0%, #5c3f22 100%);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+  transform: rotate(5deg);
+  z-index: 1;
+}
+
+.home-cover-strap::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #e8c98a 0%, #b9862f 70%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transform: translateX(-50%);
+}
+
+.home-cover-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  z-index: 1;
+  display: flex;
+  gap: 6px;
+  transform: translateX(-50%);
+}
+
+.home-cover-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(247, 241, 222, 0.4);
+}
+
+.home-cover-dots i:first-child {
+  background: rgba(247, 241, 222, 0.85);
+}
+
+.home-cover-charm {
+  position: absolute;
+  right: 8px;
+  bottom: 30px;
+  z-index: 1;
+  opacity: 0.97;
+}
+
+.home-cover-charm .shiori-asset-img {
+  animation: shiori-idle-float 6.5s ease-in-out infinite;
+}
+
+.home-cover-face {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 12px;
+  max-width: 78%;
+  margin-top: 46px;
+}
+
+.home-cover-title {
   margin: 0;
   color: var(--notebook-cream);
-  font-size: 25px;
+  font-size: 26px;
   font-weight: 800;
   line-height: 1.4;
-  /* Phase 73 -- a debossed "pressed into leather" read: a faint light
-     catch below the glyphs plus a soft dark sink above, instead of a flat
-     print-on-cover look. */
   text-shadow:
     0 1px 0 rgba(255, 255, 255, 0.14),
     0 -1px 1px rgba(0, 0, 0, 0.22);
 }
 
-@media (min-width: 900px) {
-  .home-notebook-title {
-    font-size: 32px;
-  }
-}
-
-.home-notebook-subtitle {
+.home-cover-subtitle {
   margin: 0;
-  max-width: 36ch;
+  max-width: 34ch;
   color: rgba(247, 241, 222, 0.78);
   font-size: 14px;
   line-height: 1.7;
 }
 
-.home-notebook-cta {
-  justify-self: start;
-  margin-top: 4px;
+.home-cover-cta {
+  width: 100%;
+  justify-content: center;
+  margin-top: 6px;
+  padding: 15px 20px;
+  border-radius: 999px;
   color: var(--notebook-cover-deep);
   background: var(--notebook-cream);
+  font-size: 15.5px;
 }
 
-.home-notebook-cta:not(:disabled):hover {
+.home-cover-cta:not(:disabled):hover {
   background: #ffffff;
-  /* Phase 72 -- a warmer, deeper lift than the generic button hover shadow
-     (which is tuned for the light paper background elsewhere), so the CTA
-     still reads as sitting on the dark cover instead of floating on it. */
   box-shadow: 0 10px 20px rgba(37, 43, 30, 0.24);
 }
 
-/* Combined with .ghost-button in the selector (not just alongside it in
-   the className list) so this wins on specificity regardless of the two
-   rules' order in the file -- .ghost-button's own --muted text/--border
-   outline both disappear against the dark cover fill otherwise. */
-.ghost-button.home-notebook-sample-link {
+.home-cover-sample {
   justify-self: start;
-  color: rgba(247, 241, 222, 0.85);
-  border-color: rgba(247, 241, 222, 0.35);
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  color: rgba(247, 241, 222, 0.75);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(247, 241, 222, 0.35);
+  box-shadow: none;
 }
 
-.ghost-button.home-notebook-sample-link:not(:disabled):hover {
-  background: rgba(255, 255, 255, 0.14);
+.home-cover-sample:not(:disabled):hover {
+  color: var(--notebook-cream);
+  text-decoration-color: rgba(247, 241, 222, 0.6);
+  box-shadow: none;
+  transform: none;
 }
 
-/* Phase 77 (mobile Home object pass) -- mobile only. The app-wide mobile
-   `button { width: 100% }` touch-target rule (see the >640px-gated rule
-   later in this file) stretched this into a second full-width outlined bar
-   right under the CTA pill, reading as two stacked admin actions instead
-   of one primary action plus a small link. Desktop's auto-width outlined
-   pill (the rule above) is left as-is -- this is a phone-only read, not a
-   base restyle. min-height keeps the tap target at the same 44px floor the
-   button rule intended, just as invisible padding instead of a visible
-   box; two selector classes still beat the bare `button` element selector
-   on specificity regardless of media-query source order. */
-@media (max-width: 640px) {
-  .ghost-button.home-notebook-sample-link {
-    width: auto;
-    min-width: 0;
-    min-height: 44px;
-    padding: 0 4px;
-    border: none;
-    background: none;
-    font-size: 13px;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    text-decoration-color: rgba(247, 241, 222, 0.35);
-  }
-
-  .ghost-button.home-notebook-sample-link:not(:disabled):hover {
-    background: none;
-    color: var(--notebook-cream);
-    text-decoration-color: rgba(247, 241, 222, 0.6);
-  }
-}
-
-/* Corner-guide placement per the Shiori character rule -- a small peeking
-   figure, not a second hero illustration competing with the cover's own
-   title/CTA. */
-.home-notebook-shiori-corner {
-  position: absolute;
-  right: 2px;
-  bottom: -4px;
-  z-index: 1;
-  opacity: 0.96;
-}
-
-/* Phase 72 -- idle bob for the corner-peeking Shiori (see
-   shiori-idle-float above). Scoped to this wrapper's own img, not the
-   shared .shiori-asset-img rule, so other Shiori spots (nav marks, save
-   stamps) stay still. */
-.home-notebook-shiori-corner .shiori-asset-img {
-  animation: shiori-idle-float 6.5s ease-in-out infinite;
-}
-
-@media (min-width: 640px) {
-  .home-notebook-cover {
-    padding: 36px 40px 32px;
-  }
-
-  .home-notebook-body {
-    margin-top: 8px;
-  }
-
-  .home-notebook-shiori-corner {
-    right: 22px;
-    bottom: 0;
-  }
-}
-
-/* Casual Sticker Reader (Phase 67) -- home-desk-scene: plain single-column
-   wrapper by default (mobile/tablet -- cover, then the shortcut row below
-   it, exactly as before this Phase). At the >=1024px desktop tier (see
-   the media query near the end of this block) it becomes a 2-column
-   stage: the cover on the left, the shortcut notes stacked vertically
-   beside it on the right, so the two read as one desk arrangement instead
-   of a hero card with an admin-tile row stacked underneath it. */
-.home-desk-scene {
-  position: relative;
-  display: grid;
-  gap: 18px;
-}
-
-/* Phase 73 -- desk prop layer (plant/tape+clip/pen/cup, see
-   .home-desk-prop--* below). A full-box overlay so each prop can be
-   placed with simple top/left/right/bottom offsets against the same box
-   .home-desk-scene's two columns already share; pointer-events:none keeps
-   it fully click-through so it can never sit over the cover CTA or the
-   sticker chips. display:none below 1024px on purpose -- this layer is
-   the one desktop-only piece of this Phase; mobile gets the lighter cover
-   treatment in .home-notebook-cover instead (see there). Offsets on the
-   individual props stay within .page's own side padding (30px at this
-   tier) so bleeding "onto the desk" never creates real horizontal
-   overflow -- verified in QA at 1280/1024. */
-.home-desk-props {
-  display: none;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.home-desk-prop {
-  position: absolute;
-  display: block;
-}
-
-/* Plant -- pot (::before, a clipped trapezoid) + a small leaf cluster
-   (::after, three overlapping radial-gradient blobs) instead of an actual
-   illustration; flat sticker-style shapes in the app's own token colors,
-   not an attempt at a photographic plant. */
-.home-desk-prop--plant {
-  /* Clears .home-notebook-sticky-note's box (it ends ~40px from the
-     scene's top at this tier) so the pot/leaves don't sit under the
-     sticky note's own text. */
-  top: 42px;
-  left: -14px;
-  width: 46px;
-  height: 56px;
-}
-
-.home-desk-prop--plant::before {
-  content: "";
-  position: absolute;
-  left: 8px;
-  bottom: 0;
-  width: 30px;
-  height: 22px;
-  background: var(--tone-ink-brown);
-  clip-path: polygon(12% 0, 88% 0, 100% 100%, 0% 100%);
-  box-shadow: 0 4px 8px rgba(37, 43, 30, 0.18);
-}
-
-.home-desk-prop--plant::after {
-  content: "";
-  position: absolute;
-  left: 3px;
-  bottom: 17px;
-  width: 40px;
-  height: 40px;
-  background:
-    radial-gradient(ellipse 9px 16px at 30% 62%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%),
-    radial-gradient(ellipse 9px 18px at 55% 42%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%),
-    radial-gradient(ellipse 8px 15px at 76% 56%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%);
-  transform: rotate(-6deg);
-}
-
-/* Washi-tape roll (::before, a donut via a radial-gradient "hole") + a
-   small gold binder clip (::after, a clipped pentagon) clustered near the
-   cover's bottom-left corner, like the mockup's desk-edge stationery. */
-.home-desk-prop--stationery {
-  /* top, not bottom -- .home-desk-props is inset:0 against the whole
-     .home-desk-scene box, whose height follows the *taller* of its two
-     columns (the sticker column, not the cover), so a bottom offset here
-     landed below the cover's own bottom edge instead of at its corner.
-     This value approximates the cover's own bottom-left corner at the
-     >=1024px tier this prop layer is limited to. */
-  left: -10px;
-  top: 275px;
-  width: 44px;
-  height: 30px;
-}
-
-.home-desk-prop--stationery::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: radial-gradient(circle at center, var(--paper-bg) 0 34%, var(--tone-dusty-blue) 35% 100%);
-  box-shadow: 0 3px 6px rgba(37, 43, 30, 0.16);
-  transform: rotate(-8deg);
-}
-
-.home-desk-prop--stationery::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 2px;
-  width: 16px;
-  height: 20px;
-  background: linear-gradient(160deg, #e3c583 0%, var(--sand-amber) 100%);
-  clip-path: polygon(20% 0, 80% 0, 100% 55%, 50% 100%, 0 55%);
-  box-shadow: 0 3px 6px rgba(37, 43, 30, 0.2);
-  transform: rotate(6deg);
-}
-
-/* Pen -- a single rounded diagonal bar with a lighter nib segment at one
-   end, resting near the right edge of the scene. */
-.home-desk-prop--pen {
-  top: 26%;
-  right: -12px;
-  width: 72px;
-  height: 10px;
-  transform: rotate(-32deg);
-}
-
-.home-desk-prop--pen::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    var(--tone-ink-brown) 0%,
-    var(--tone-ink-brown) 78%,
-    #d9b46a 78%,
-    #d9b46a 100%
-  );
-  box-shadow: 0 3px 6px rgba(37, 43, 30, 0.18);
-}
-
-/* Cup (base shape + ::before handle) with a small taped paper scrap
-   (::after) tucked beside it, near the top-right of the scene. */
-.home-desk-prop--cup {
-  top: -2px;
-  right: -8px;
-  width: 30px;
-  height: 26px;
-  border-radius: 4px 4px 10px 10px;
-  background: linear-gradient(180deg, #ffffff 0%, #f3ece0 100%);
-  box-shadow:
-    0 4px 8px rgba(37, 43, 30, 0.16),
-    inset 0 -3px 0 rgba(37, 43, 30, 0.06);
-}
-
-.home-desk-prop--cup::before {
-  content: "";
-  position: absolute;
-  right: -8px;
-  top: 4px;
-  width: 10px;
-  height: 12px;
-  border: 3px solid #f3ece0;
-  border-left: 0;
-  border-radius: 0 8px 8px 0;
-}
-
-.home-desk-prop--cup::after {
-  content: "";
-  position: absolute;
-  left: -28px;
-  bottom: -12px;
-  width: 20px;
-  height: 14px;
-  background: var(--panel-bg);
-  border: 1px solid var(--paper-border);
-  transform: rotate(8deg);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-}
-
-/* Sticker shortcut row -- 단어장/복습/덱, styled as small pinned stickers
-   next to the notebook rather than a second row of uniform admin tiles.
-   Each modifier below carries its own tilt, icon-badge tone, and paper
-   treatment (folded corner / pin / stacked ghost sheet) so the row reads
-   as three different kinds of notes, not three identical boxes. */
-.home-sticker-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-}
-
-.home-sticker-chip {
-  position: relative;
-  display: grid;
-  justify-items: center;
+/* Bare icon+label shortcut row -- no card, no border, no fill. This is the
+   single biggest silhouette change from the old sticker-chip cards: three
+   flat marks resting on the page, exactly like the mockup's Home board. */
+.home-stickers {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 6px;
-  padding: 16px 12px;
-  border: 1px solid var(--paper-border);
-  border-radius: 16px;
-  background: var(--panel-bg);
+  padding: 2px 8px;
+}
+
+.home-sticker {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 4px;
+  border: none;
+  background: none;
+  box-shadow: none;
   color: var(--text);
   text-align: center;
-  box-shadow: 0 10px 20px rgba(120, 98, 40, 0.1);
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft);
-  /* Phase 72 -- each chip "lands" like a sticker being pressed on, staggered
-     below. `backwards` (not `both`/app-pop's own default) on purpose: after
-     the animation ends the fill-mode drops away and each variant's own
-     resting `transform: rotate(...)` below takes back over, instead of
-     getting stuck at app-pop's final scale(1) with no tilt -- the same
-     forwards-fill trap app-slide-up-tilt's comment (above) documents. */
-  animation: app-pop var(--motion-base) var(--ease-soft) backwards;
 }
 
-.home-sticker-row .home-sticker-chip:nth-child(2) {
-  animation-delay: 60ms;
+.home-sticker:not(:disabled):hover {
+  box-shadow: none;
+  transform: translateY(-2px);
 }
 
-.home-sticker-row .home-sticker-chip:nth-child(3) {
-  animation-delay: 120ms;
-}
-
-.home-sticker-chip:not(:disabled):hover {
-  box-shadow: 0 14px 26px rgba(120, 98, 40, 0.16);
-}
-
-.home-sticker-chip-icon {
+.home-sticker-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   color: #ffffff;
 }
 
-.home-sticker-chip-icon svg {
-  width: 20px;
-  height: 20px;
+.home-sticker-icon svg {
+  width: 21px;
+  height: 21px;
 }
 
-.home-sticker-chip-label {
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.home-sticker-chip-subtitle {
-  color: var(--muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-/* vocab -- an index-card note: a small folded top-right corner (the same
-   triangle language .paper-corner uses elsewhere) suggests a stack of
-   index cards rather than a flat tile. */
-.home-sticker-chip--vocab {
-  transform: rotate(-2deg);
-  border-radius: 4px 16px 16px 16px;
-}
-
-.home-sticker-chip--vocab:not(:disabled):hover {
-  transform: rotate(-2deg) translateY(-3px);
-}
-
-.home-sticker-chip--vocab .home-sticker-chip-icon {
+.home-sticker--vocab .home-sticker-icon {
   background: var(--tone-ink-brown);
 }
 
-.home-sticker-chip--vocab::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 0 14px 14px 0;
-  border-color: transparent var(--soft-bg) transparent transparent;
-  border-radius: 0 16px 0 0;
-  pointer-events: none;
-}
-
-/* Phase 73 -- a small washi-tape strip pinning the note's other (top-left)
-   corner to the desk, so the row reads as loose paper taped down rather
-   than a row of flat buttons. Uses the free ::before slot -- ::after
-   already carries the folded-corner triangle above. */
-.home-sticker-chip--vocab::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: 18px;
-  width: 26px;
-  height: 11px;
-  background: rgba(139, 108, 66, 0.28);
-  border: 1px solid rgba(139, 108, 66, 0.35);
-  transform: rotate(-5deg);
-  pointer-events: none;
-}
-
-/* review -- a sticky note: a small pin dot (same accent-dot language as
-   the notebook cover's own pin) instead of just a tilt. */
-.home-sticker-chip--review {
-  transform: rotate(1.5deg);
-}
-
-.home-sticker-chip--review:not(:disabled):hover {
-  transform: rotate(1.5deg) translateY(-3px);
-}
-
-.home-sticker-chip--review::before {
-  content: "";
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  z-index: 1;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.25);
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-/* Phase 73 -- a small tape strip at the opposite (top-right) corner from
-   the pin dot above, same "taped to the desk" language as the vocab
-   chip's. Uses the free ::after slot. */
-.home-sticker-chip--review::after {
-  content: "";
-  position: absolute;
-  top: -6px;
-  right: 16px;
-  width: 24px;
-  height: 11px;
-  background: rgba(217, 122, 74, 0.24);
-  border: 1px solid rgba(217, 122, 74, 0.32);
-  transform: rotate(6deg);
-  pointer-events: none;
-}
-
-/* decks -- a small booklet: a second ghost sheet peeking out from behind
-   (not a colored side border -- that reads as a generic admin-tile accent
-   rather than a stack of booklets), so this one reads as a short stack
-   rather than a single flat tile like the other two. */
-.home-sticker-chip--decks {
-  transform: rotate(-1deg);
-}
-
-.home-sticker-chip--decks:not(:disabled):hover {
-  transform: rotate(-1deg) translateY(-3px);
-}
-
-.home-sticker-chip--decks .home-sticker-chip-icon {
+.home-sticker--decks .home-sticker-icon {
   background: var(--tone-dusty-blue);
 }
 
-.home-sticker-chip--decks::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  transform: translate(4px, 4px) rotate(3deg);
-  border-radius: inherit;
-  background: var(--panel-bg);
-  border: 1px solid var(--paper-border);
-  pointer-events: none;
+.home-sticker-icon--character {
+  background: var(--soft-bg);
 }
 
-/* Phase 73 -- same tape language as the other two chips, top-center this
-   time so it doesn't compete with the ghost-sheet stack peeking from the
-   corners. Uses the free ::after slot. */
-.home-sticker-chip--decks::after {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  width: 24px;
-  height: 11px;
-  background: rgba(122, 145, 145, 0.28);
-  border: 1px solid rgba(122, 145, 145, 0.36);
-  transform: translateX(-50%) rotate(-4deg);
-  pointer-events: none;
+.home-sticker-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
 }
 
+.home-sticker-label {
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+/* Desktop-only hint line (see .home-sticker-hint's >=1024px override
+   further down) -- the mobile mockup's shortcut row is label-only, so this
+   stays hidden until the desktop sticky-note treatment has room for it. */
+.home-sticker-hint {
+  display: none;
+}
+
+.home-footnote {
+  justify-self: center;
+  text-align: center;
+}
+
+/* Desktop-only desk props (see HomeDashboard.tsx) -- hidden until the
+   >=1024px desk-scene override gives them a canvas to sit on. */
+.home-desk-props {
+  display: none;
+}
+
+
+/* Phase 118 -- desktop (>=1024px) Home overrides, moved to after the
+   mobile-first Home rules above so this block's declarations win the
+   cascade at desktop widths regardless of media-query nesting -- two
+   same-specificity .home-* rules cascade by source order, and a
+   media-gated rule declared BEFORE its unconditional base rule loses
+   to it even while the media query matches. */
 @media (min-width: 1024px) {
-  .home-desk-scene {
-    grid-template-columns: minmax(0, 1.6fr) minmax(220px, 0.9fr);
+  /* Phase 118 -- Home only: the mockup's "HOME DESK" panel has no inner
+     white board at all -- the notebook, stickies and props sit straight on
+     the wood. Keeping .page's own padding/margin/max-width (so the toolbar
+     and content still line up with every other tab) but stripping the
+     background/shadow/radius that turned it into a second nested card
+     under the notebook card. Applied via page.tsx adding this class
+     alongside .page only while activeTab === "home". */
+  .page--home {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+    border-radius: 0;
+    min-height: auto;
+  }
+
+  /* Phase 118 -- Home only (see AppShell.tsx's minimalChrome prop, set from
+     page.tsx when activeTab === "home"): the same toolbar, but translucent
+     and borderless so it reads as a light strip floating over the desk
+     scene rather than an app-admin nav bar competing with the notebook for
+     "main subject of the screen" -- the desktop mockup's HOME DESK toolbar
+     is a thin, quiet strip, not a bordered pill. Every other tab keeps the
+     Phase 113 solid toolbar untouched. */
+  .app-toolbar--minimal {
+    background: rgba(253, 249, 238, 0.7);
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  /* Phase 118 -- desktop desk-scene composition for Home (see
+     HomeDashboard.tsx's .home-stage/.home-cover/.home-stickers). Mirrors
+     the desktop mockup's HOME DESK panel: notebook cover large and
+     left-anchored, three sticky-note shortcuts stacked beside it (not
+     below it), desk props scattered around both -- one scene, not a card
+     with a tile row under it. */
+  .home-stage {
+    position: relative;
+    z-index: 0;
+    grid-template-columns: minmax(0, 1.55fr) minmax(240px, 0.9fr);
     align-items: start;
-    gap: 28px;
+    gap: 36px;
+    padding: 14px 10px 44px;
   }
 
-  .home-sticker-row {
-    grid-template-columns: 1fr;
-    align-content: start;
-    margin-top: 12px;
+  .home-cover {
+    min-height: 460px;
+    padding: 42px 46px 46px;
   }
 
+  .home-cover-face {
+    max-width: 430px;
+    margin-top: 6px;
+  }
+
+  .home-cover-title {
+    font-size: 35px;
+  }
+
+  .home-cover-cta {
+    width: auto;
+    justify-self: start;
+    padding: 14px 28px;
+  }
+
+  .home-cover-charm {
+    right: 34px;
+    bottom: 30px;
+  }
+
+  .home-stickers {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 18px;
+    padding: 8px 0;
+  }
+
+  .home-sticker {
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 16px 20px;
+    border-radius: 4px 18px 18px 18px;
+    border: 1px solid var(--paper-border);
+    background: var(--panel-bg);
+    box-shadow: 0 12px 22px rgba(120, 98, 40, 0.14);
+    text-align: left;
+    transition:
+      transform var(--motion-fast) var(--ease-soft),
+      box-shadow var(--motion-fast) var(--ease-soft);
+  }
+
+  .home-sticker::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 22px;
+    width: 26px;
+    height: 11px;
+    background: rgba(139, 108, 66, 0.28);
+    border: 1px solid rgba(139, 108, 66, 0.35);
+    transform: rotate(-5deg);
+    pointer-events: none;
+  }
+
+  .home-sticker:nth-child(1) {
+    transform: rotate(-1.5deg);
+  }
+
+  .home-sticker:nth-child(2) {
+    transform: rotate(1deg);
+  }
+
+  .home-sticker:nth-child(3) {
+    transform: rotate(-1.2deg);
+  }
+
+  .home-sticker:not(:disabled):hover {
+    transform: translateY(-3px) rotate(0deg);
+    box-shadow: 0 16px 28px rgba(120, 98, 40, 0.2);
+  }
+
+  .home-sticker-icon {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+  }
+
+  .home-sticker-text {
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  .home-sticker-label {
+    font-size: 14.5px;
+  }
+
+  .home-sticker-hint {
+    display: block;
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .home-footnote {
+    justify-self: start;
+    text-align: left;
+    padding-left: 4px;
+  }
+
+  /* Desk props -- plant/tape+clip/pen/cup, pure-CSS shapes clustered around
+     the cover and sticky-note column. pointer-events:none keeps the whole
+     layer click-through. */
   .home-desk-props {
     display: block;
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
   }
+
+  .home-desk-prop {
+    position: absolute;
+    display: block;
+  }
+
+  .home-desk-prop--plant {
+    top: -34px;
+    left: -30px;
+    width: 46px;
+    height: 56px;
+  }
+
+  .home-desk-prop--plant::before {
+    content: "";
+    position: absolute;
+    left: 8px;
+    bottom: 0;
+    width: 30px;
+    height: 22px;
+    background: var(--tone-ink-brown);
+    clip-path: polygon(12% 0, 88% 0, 100% 100%, 0% 100%);
+    box-shadow: 0 4px 8px rgba(37, 43, 30, 0.18);
+  }
+
+  .home-desk-prop--plant::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    bottom: 17px;
+    width: 40px;
+    height: 40px;
+    background:
+      radial-gradient(ellipse 9px 16px at 30% 62%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%),
+      radial-gradient(ellipse 9px 18px at 55% 42%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%),
+      radial-gradient(ellipse 8px 15px at 76% 56%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%);
+    transform: rotate(-6deg);
+  }
+
+  .home-desk-prop--stationery {
+    left: -34px;
+    top: 340px;
+    width: 44px;
+    height: 30px;
+  }
+
+  .home-desk-prop--stationery::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: radial-gradient(circle at center, var(--paper-bg) 0 34%, var(--tone-dusty-blue) 35% 100%);
+    box-shadow: 0 3px 6px rgba(37, 43, 30, 0.16);
+    transform: rotate(-8deg);
+  }
+
+  .home-desk-prop--stationery::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 2px;
+    width: 16px;
+    height: 20px;
+    background: linear-gradient(160deg, #e3c583 0%, var(--sand-amber) 100%);
+    clip-path: polygon(20% 0, 80% 0, 100% 55%, 50% 100%, 0 55%);
+    box-shadow: 0 3px 6px rgba(37, 43, 30, 0.2);
+    transform: rotate(6deg);
+  }
+
+  .home-desk-prop--pen {
+    /* Right of the sticky-note column (not between it and the cover --
+       that gap is only the grid's 36px column gap, too narrow to hold a
+       diagonal 78px bar without it hiding behind one card or the other).
+       Bleeds into the open wood to the right, which otherwise stayed bare. */
+    top: 60%;
+    right: -34px;
+    width: 78px;
+    height: 10px;
+    transform: rotate(-30deg);
+  }
+
+  .home-desk-prop--pen::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      var(--tone-ink-brown) 0%,
+      var(--tone-ink-brown) 78%,
+      #d9b46a 78%,
+      #d9b46a 100%
+    );
+    box-shadow: 0 3px 6px rgba(37, 43, 30, 0.18);
+  }
+
+  .home-desk-prop--cup {
+    top: -30px;
+    right: 30px;
+    width: 32px;
+    height: 28px;
+    border-radius: 4px 4px 10px 10px;
+    background: linear-gradient(180deg, #ffffff 0%, #f3ece0 100%);
+    box-shadow:
+      0 4px 8px rgba(37, 43, 30, 0.16),
+      inset 0 -3px 0 rgba(37, 43, 30, 0.06);
+  }
+
+  .home-desk-prop--cup::before {
+    content: "";
+    position: absolute;
+    right: -8px;
+    top: 4px;
+    width: 10px;
+    height: 12px;
+    border: 3px solid #f3ece0;
+    border-left: 0;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .home-desk-prop--cup::after {
+    content: "";
+    position: absolute;
+    left: -30px;
+    bottom: -14px;
+    width: 20px;
+    height: 14px;
+    background: var(--panel-bg);
+    border: 1px solid var(--paper-border);
+    transform: rotate(8deg);
+    box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
+  }
+
 }
 
 .info-strip-icon {
@@ -1888,65 +1843,6 @@ button {
   .library-card-stage {
     padding: 14px;
     border-radius: 14px;
-  }
-
-  .home-sticker-row {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 8px;
-  }
-
-  /* Phase 77 (mobile Home object pass) -- a full pill instead of the
-     app-wide 12px button radius, so the CTA reads as a rounded label
-     stamped on the cover rather than a rectangular form button. Mobile
-     only: desktop's existing rounded-rect CTA is left untouched. */
-  .home-notebook-cta {
-    border-radius: 999px;
-  }
-
-  /* Phase 77 (mobile Home object pass) -- the three shortcut notes already
-     carry per-variant tilt/tape/fold/ghost-sheet accents (Phase 54/73), but
-     at phone width those details read as too subtle to beat the shared
-     border+shadow card chrome, so the row still reads as "three identical
-     white tiles." Mobile-only: a lighter, paper-toned border and flatter
-     shadow (less "elevated UI card", more "flat paper resting on the
-     desk"), a bigger tilt swing per chip so the three are unmistakably at
-     different angles, and each chip's own asymmetric corner radius so
-     their silhouettes differ too, not just their corner decorations.
-     Desktop keeps the Phase 73 tilt/radius values exactly as they are. */
-  .home-sticker-chip {
-    border-color: rgba(139, 108, 66, 0.22);
-    box-shadow: 0 6px 14px rgba(120, 98, 40, 0.14);
-  }
-
-  .home-sticker-chip-icon {
-    width: 44px;
-    height: 44px;
-  }
-
-  .home-sticker-chip--vocab {
-    transform: rotate(-3.5deg);
-  }
-
-  .home-sticker-chip--vocab:not(:disabled):hover {
-    transform: rotate(-3.5deg) translateY(-3px);
-  }
-
-  .home-sticker-chip--review {
-    transform: rotate(2.5deg);
-    border-radius: 16px 4px 16px 16px;
-  }
-
-  .home-sticker-chip--review:not(:disabled):hover {
-    transform: rotate(2.5deg) translateY(-3px);
-  }
-
-  .home-sticker-chip--decks {
-    transform: rotate(-2deg);
-    border-radius: 8px 18px 18px 8px;
-  }
-
-  .home-sticker-chip--decks:not(:disabled):hover {
-    transform: rotate(-2deg) translateY(-3px);
   }
 
   .card-stack-surface::before,

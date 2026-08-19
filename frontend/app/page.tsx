@@ -3414,9 +3414,10 @@ export default function HomePage() {
   ];
 
   return (
-    <main className="page">
+    <main className={activeTab === "home" ? "page page--home" : "page"}>
       <AppShell
         navItems={navItems}
+        minimalChrome={activeTab === "home"}
         feedbackSlot={
           <button
             type="button"
