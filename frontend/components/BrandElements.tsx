@@ -58,16 +58,18 @@ export function BrandReadingFlowIllustration() {
 }
 
 // Shared "nothing here yet" body -- every empty/no-result state in the app
-// (읽기 첫 진입, 오늘 복습 없음, 어휘 노트 비어 있음/검색 없음, 덱 책장 없음,
-// 홈 최근 활동 없음, ...) already followed this exact shape by convention
-// (companion or icon -> title -> optional 1-line description -> action
-// button(s)); this just gives that convention one implementation instead of
-// nine hand-rolled copies, so new empty states can't drift from it by
-// accident. Deliberately does NOT own the action buttons' markup/wrapper --
-// each screen's surrounding CSS (.empty-guide, .reading-empty-guide,
-// .study-ready-card, ...) already targets its own direct-child <button>s
-// differently, and passing them as children keeps that untouched instead of
-// forcing one wrapper div that would fight several existing layouts.
+// (오늘 복습 없음, 어휘 노트 비어 있음/검색 없음, 덱 책장 없음, 홈 최근 활동
+// 없음, ...) already followed this exact shape by convention (companion or
+// icon -> title -> optional 1-line description -> action button(s)); this
+// just gives that convention one implementation instead of nine hand-rolled
+// copies, so new empty states can't drift from it by accident. Deliberately
+// does NOT own the action buttons' markup/wrapper -- each screen's
+// surrounding CSS (.empty-guide, .study-ready-card, ...) already targets
+// its own direct-child <button>s differently, and passing them as children
+// keeps that untouched instead of forcing one wrapper div that would fight
+// several existing layouts. (Reading's own pre-analyze empty state dropped
+// this shared shape in Phase 121 for a lighter one-line sample link -- see
+// ReadingTab.tsx's ReaderStartScene.)
 export function AppEmptyState({
   mood,
   moodSize = "sm",

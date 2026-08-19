@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { AppEmptyState } from "./BrandElements";
 import { ShioriGuideCard, ShioriMark, ShioriStamp } from "./Shiori";
 import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
@@ -231,6 +230,206 @@ function DeckLoadRecovery({
   );
 }
 
+// ---------------------------------------------------------------------------
+// ReaderStartScene -- Phase 121. Previously the pre-analyze view was
+// .reader-start-card: a bordered/shadowed form card (header, a whole
+// AppEmptyState illustration+guide block, a taped textarea, a footer row)
+// -- structurally still "form card", just skinned warmer. This replaces it
+// with the same open-book language Phase 119 built for the analyzed
+// result (.reader-desk-scene's border/shadow/paper background, ruled-line
+// texture) so arriving at Reading and finishing an analysis feel like the
+// same notebook, not two different card systems. The sample-CTA guide
+// shrinks from a whole illustrated card to one quiet link (matching
+// Home's .home-cover-sample), and the idle "덱을 선택하고 원문을 입력한
+//뒤..." fallback paragraph that used to live below this in
+// .reader-workspace is dropped entirely -- the scene's own title/
+// placeholder/button already say the same thing. Behavior (onAnalyze
+// submit, onLoadSampleText, deck select, cancel) is unchanged from before;
+// only composition and copy length changed.
+// ---------------------------------------------------------------------------
+type ReaderStartSceneProps = {
+  text: string;
+  onTextChange: (text: string) => void;
+  onLoadSampleText: () => void;
+  decks: Deck[];
+  isLoadingDecks: boolean;
+  hasNoDecks: boolean;
+  needsDeckRecovery: boolean;
+  deckLoadError: string;
+  onRetryLoadDecks: () => void;
+  selectedDeckId: string;
+  onSelectedDeckChange: (deckId: string) => void;
+  isAnalyzing: boolean;
+  analyzeProgress: ChunkAnalyzeProgress | null;
+  onCancelAnalyze: () => void;
+  analyzeHint: string | null;
+  onAnalyze: (event: FormEvent<HTMLFormElement>) => void;
+  storageWarning: string;
+};
+
+function ReaderStartScene({
+  text,
+  onTextChange,
+  onLoadSampleText,
+  decks,
+  isLoadingDecks,
+  hasNoDecks,
+  needsDeckRecovery,
+  deckLoadError,
+  onRetryLoadDecks,
+  selectedDeckId,
+  onSelectedDeckChange,
+  isAnalyzing,
+  analyzeProgress,
+  onCancelAnalyze,
+  analyzeHint,
+  onAnalyze,
+  storageWarning,
+}: ReaderStartSceneProps) {
+  const hasChunkProgress = isAnalyzing && !!analyzeProgress && analyzeProgress.total > 1;
+
+  return (
+    <section className="reader-start-scene">
+      <div className="reader-start-heading">
+        <span className="reading-input-eyebrow">
+          <ShioriMark variant="reading" />
+          원문 읽기
+        </span>
+        <h2 className="reader-start-title">원문으로 읽고 바로 노트에 담기</h2>
+        <p className="reader-start-subtitle">
+          원문을 붙여넣고 모르는 단어를 바로 담아보세요.
+        </p>
+      </div>
+
+      <form className="reader-start-form" onSubmit={onAnalyze}>
+        <label htmlFor="reading-source-text" className="sr-only-label">
+          원문
+        </label>
+        <div className="reader-start-page">
+          <textarea
+            id="reading-source-text"
+            value={text}
+            onChange={(event) => onTextChange(event.target.value)}
+            placeholder="彼は闇の中で声を聞いた。少女は約束を思い出した。"
+            rows={6}
+          />
+          {!text.trim() ? (
+            <button
+              type="button"
+              className="reader-start-sample-link"
+              onClick={onLoadSampleText}
+            >
+              <SparkleIcon className="button-icon" />
+              샘플 문장으로 체험
+            </button>
+          ) : null}
+        </div>
+
+        {/* Loading feedback lives on the scene itself now, not as a
+            separate line below the whole card. Chunked analysis keeps its
+            real progress bar + cancel escape hatch; a quick single-chunk
+            analyze (the common case) already says "펼치는 중..." right on
+            the submit button below, so it only needs an aria-live
+            announcement, not a second visible line saying the same thing. */}
+        {hasChunkProgress ? (
+          <div className="reading-analyze-progress" role="status" aria-live="polite">
+            <p className="reading-analyze-progress-label">
+              긴 원문을 문단·문장 단위로 나눠 분석하고 있습니다.
+            </p>
+            <p className="reading-analyze-progress-count">
+              {analyzeProgress!.current} / {analyzeProgress!.total} 조각 분석 중
+            </p>
+            <div
+              className="reading-analyze-progress-bar"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={analyzeProgress!.total}
+              aria-valuenow={analyzeProgress!.current}
+            >
+              <div
+                className="reading-analyze-progress-bar-fill"
+                style={{
+                  width: `${Math.round(
+                    (analyzeProgress!.current / analyzeProgress!.total) * 100,
+                  )}%`,
+                }}
+              />
+            </div>
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onCancelAnalyze}
+            >
+              분석 취소
+            </button>
+          </div>
+        ) : isAnalyzing ? (
+          <p className="sr-only-label" role="status">
+            원문을 읽는 중이에요. 잠시만 기다려주세요...
+          </p>
+        ) : null}
+
+        <div className="reader-start-footer">
+          {needsDeckRecovery ? (
+            <DeckLoadRecovery
+              message={deckLoadError}
+              isRetrying={isLoadingDecks}
+              onRetry={onRetryLoadDecks}
+            />
+          ) : (
+            <label className="reading-deck-picker">
+              <FolderIcon className="reading-deck-picker-icon" />
+              <select
+                value={selectedDeckId}
+                onChange={(event) => onSelectedDeckChange(event.target.value)}
+                aria-label="읽기 덱"
+                disabled={hasNoDecks}
+              >
+                {hasNoDecks ? (
+                  <option value="">
+                    {isLoadingDecks
+                      ? "덱을 불러오는 중..."
+                      : "사용할 수 있는 덱이 없어요"}
+                  </option>
+                ) : (
+                  decks.map((deck) => (
+                    <option key={deck.id} value={String(deck.id)}>
+                      {deck.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </label>
+          )}
+          <button
+            type="submit"
+            className="reader-start-cta"
+            disabled={isAnalyzing || !selectedDeckId || !text.trim()}
+          >
+            {isAnalyzing ? (
+              "펼치는 중..."
+            ) : (
+              <>
+                <SparkleIcon className="button-icon" />
+                원문 펼치기
+              </>
+            )}
+          </button>
+        </div>
+        {analyzeHint ? <p className="action-hint">{analyzeHint}</p> : null}
+      </form>
+
+      <p className="muted-text copyright-note reader-start-copyright">
+        <ShieldIcon className="copyright-note-icon" />
+        <span>원문 전체는 서버에 저장하지 않아요.</span>
+      </p>
+      {storageWarning ? (
+        <p className="muted-text reading-storage-warning">{storageWarning}</p>
+      ) : null}
+    </section>
+  );
+}
+
 export function ReadingTab({
   text,
   analyzedText,
@@ -403,155 +602,142 @@ export function ReadingTab({
       }`}
       aria-live="polite"
     >
-      <section
-        className={`reading-input-open${hasResult ? "" : " reader-start-card"}`}
-      >
-        {!hasResult ? (
-          <div className="reading-input-open-header">
-            <span className="reading-input-eyebrow">
-              <ShioriMark variant="reading" />
-              원문 읽기
-            </span>
-            <h2 className="reading-input-open-title">
-              원문으로 읽고 바로 노트에 담기
-            </h2>
-            <p className="reading-input-open-hint">
-              원문을 붙여넣고 모르는 단어를 바로 담아보세요.
-            </p>
-          </div>
-        ) : null}
-        <form className="analyze-form" onSubmit={onAnalyze}>
-          <label htmlFor="reading-source-text" className="sr-only-label">
-            원문
-          </label>
-
-          {showForm ? (
-            <>
-              {!hasResult && !text.trim() ? (
-                <AppEmptyState
-                  mood="reading"
-                  moodSize="md"
-                  className="reading-empty-guide"
-                  title="직접 붙여넣거나 샘플로 먼저 체험해보세요"
-                >
+      {hasResult ? (
+        // Post-analysis "manuscript tray" -- a quiet, un-boxed re-edit form
+        // collapsed by default (see ReaderMode's "원문 입력 펼치기"
+        // toggle). Unchanged from before Phase 121: this phase's target is
+        // the pre-analyze scene below, not this recovery/re-edit path.
+        <section className="reading-input-open">
+          <form className="analyze-form" onSubmit={onAnalyze}>
+            <label htmlFor="reading-source-text" className="sr-only-label">
+              원문
+            </label>
+            {showForm ? (
+              <>
+                <div className="reading-note-sheet">
+                  <textarea
+                    id="reading-source-text"
+                    value={text}
+                    onChange={(event) => onTextChange(event.target.value)}
+                    placeholder="彼は闇の中で声を聞いた。少女は約束を思い出した。"
+                    rows={4}
+                  />
+                </div>
+                <div className="reading-input-footer">
+                  {needsDeckRecovery ? (
+                    <DeckLoadRecovery
+                      message={deckLoadError}
+                      isRetrying={isLoadingDecks}
+                      onRetry={onRetryLoadDecks}
+                    />
+                  ) : (
+                    <label className="reading-deck-picker">
+                      <FolderIcon className="reading-deck-picker-icon" />
+                      <select
+                        value={selectedDeckId}
+                        onChange={(event) => onSelectedDeckChange(event.target.value)}
+                        aria-label="읽기 덱"
+                        disabled={hasNoDecks}
+                      >
+                        {hasNoDecks ? (
+                          <option value="">
+                            {isLoadingDecks
+                              ? "덱을 불러오는 중..."
+                              : "사용할 수 있는 덱이 없어요"}
+                          </option>
+                        ) : (
+                          decks.map((deck) => (
+                            <option key={deck.id} value={String(deck.id)}>
+                              {deck.name}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </label>
+                  )}
                   <button
-                    type="button"
-                    className="ghost-button compact-button"
-                    onClick={onLoadSampleText}
+                    type="submit"
+                    className="reading-open-button"
+                    disabled={isAnalyzing || !selectedDeckId || !text.trim()}
                   >
-                    <SparkleIcon className="button-icon" />
-                    샘플 문장으로 체험
+                    {isAnalyzing ? (
+                      "펼치는 중..."
+                    ) : (
+                      <>
+                        <SparkleIcon className="button-icon" />
+                        원문 펼치기
+                      </>
+                    )}
                   </button>
-                </AppEmptyState>
-              ) : null}
-              {/* .reading-note-sheet -- purely a decoration hook (washi-tape
-                  corners via ::before/::after, .reader-start-card only) so the
-                  textarea reads as a note taped onto the notebook page
-                  instead of a bare form field. No behavior change: the
-                  textarea itself keeps its existing id/value/handlers. */}
-              <div className="reading-note-sheet">
-                <textarea
-                  id="reading-source-text"
-                  value={text}
-                  onChange={(event) => onTextChange(event.target.value)}
-                  placeholder="彼は闇の中で声を聞いた。少女は約束を思い出した。"
-                  rows={4}
+                </div>
+                {analyzeHint ? <p className="action-hint">{analyzeHint}</p> : null}
+              </>
+            ) : null}
+          </form>
+
+          {isAnalyzing && analyzeProgress && analyzeProgress.total > 1 ? (
+            <div className="reading-analyze-progress" role="status" aria-live="polite">
+              <p className="reading-analyze-progress-label">
+                긴 원문을 문단·문장 단위로 나눠 분석하고 있습니다.
+              </p>
+              <p className="reading-analyze-progress-count">
+                {analyzeProgress.current} / {analyzeProgress.total} 조각 분석 중
+              </p>
+              <div
+                className="reading-analyze-progress-bar"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={analyzeProgress.total}
+                aria-valuenow={analyzeProgress.current}
+              >
+                <div
+                  className="reading-analyze-progress-bar-fill"
+                  style={{
+                    width: `${Math.round(
+                      (analyzeProgress.current / analyzeProgress.total) * 100,
+                    )}%`,
+                  }}
                 />
               </div>
-              <div className="reading-input-footer">
-                {needsDeckRecovery ? (
-                  <DeckLoadRecovery
-                    message={deckLoadError}
-                    isRetrying={isLoadingDecks}
-                    onRetry={onRetryLoadDecks}
-                  />
-                ) : (
-                  <label className="reading-deck-picker">
-                    <FolderIcon className="reading-deck-picker-icon" />
-                    <select
-                      value={selectedDeckId}
-                      onChange={(event) => onSelectedDeckChange(event.target.value)}
-                      aria-label="읽기 덱"
-                      disabled={hasNoDecks}
-                    >
-                      {hasNoDecks ? (
-                        <option value="">
-                          {isLoadingDecks
-                            ? "덱을 불러오는 중..."
-                            : "사용할 수 있는 덱이 없어요"}
-                        </option>
-                      ) : (
-                        decks.map((deck) => (
-                          <option key={deck.id} value={String(deck.id)}>
-                            {deck.name}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </label>
-                )}
-                <button
-                  type="submit"
-                  className="reading-open-button"
-                  disabled={isAnalyzing || !selectedDeckId || !text.trim()}
-                >
-                  {isAnalyzing ? (
-                    "펼치는 중..."
-                  ) : (
-                    <>
-                      <SparkleIcon className="button-icon" />
-                      원문 펼치기
-                    </>
-                  )}
-                </button>
-              </div>
-              {analyzeHint ? <p className="action-hint">{analyzeHint}</p> : null}
-            </>
-          ) : null}
-        </form>
-
-        {isAnalyzing && analyzeProgress && analyzeProgress.total > 1 ? (
-          <div className="reading-analyze-progress" role="status" aria-live="polite">
-            <p className="reading-analyze-progress-label">
-              긴 원문을 문단·문장 단위로 나눠 분석하고 있습니다.
-            </p>
-            <p className="reading-analyze-progress-count">
-              {analyzeProgress.current} / {analyzeProgress.total} 조각 분석 중
-            </p>
-            <div
-              className="reading-analyze-progress-bar"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={analyzeProgress.total}
-              aria-valuenow={analyzeProgress.current}
-            >
-              <div
-                className="reading-analyze-progress-bar-fill"
-                style={{
-                  width: `${Math.round(
-                    (analyzeProgress.current / analyzeProgress.total) * 100,
-                  )}%`,
-                }}
-              />
+              <button
+                type="button"
+                className="ghost-button compact-button"
+                onClick={onCancelAnalyze}
+              >
+                분석 취소
+              </button>
             </div>
-            <button
-              type="button"
-              className="ghost-button compact-button"
-              onClick={onCancelAnalyze}
-            >
-              분석 취소
-            </button>
-          </div>
-        ) : null}
+          ) : null}
 
-        <p className="muted-text copyright-note">
-          <ShieldIcon className="copyright-note-icon" />
-          <span>원문 전체는 서버에 저장하지 않아요.</span>
-        </p>
-        {storageWarning ? (
-          <p className="muted-text reading-storage-warning">{storageWarning}</p>
-        ) : null}
-      </section>
+          <p className="muted-text copyright-note">
+            <ShieldIcon className="copyright-note-icon" />
+            <span>원문 전체는 서버에 저장하지 않아요.</span>
+          </p>
+          {storageWarning ? (
+            <p className="muted-text reading-storage-warning">{storageWarning}</p>
+          ) : null}
+        </section>
+      ) : (
+        <ReaderStartScene
+          text={text}
+          onTextChange={onTextChange}
+          onLoadSampleText={onLoadSampleText}
+          decks={decks}
+          isLoadingDecks={isLoadingDecks}
+          hasNoDecks={hasNoDecks}
+          needsDeckRecovery={needsDeckRecovery}
+          deckLoadError={deckLoadError}
+          onRetryLoadDecks={onRetryLoadDecks}
+          selectedDeckId={selectedDeckId}
+          onSelectedDeckChange={onSelectedDeckChange}
+          isAnalyzing={isAnalyzing}
+          analyzeProgress={analyzeProgress}
+          onCancelAnalyze={onCancelAnalyze}
+          analyzeHint={analyzeHint}
+          onAnalyze={onAnalyze}
+          storageWarning={storageWarning}
+        />
+      )}
 
       {!summary && message ? (
         !hasResult && !isAnalyzing && messageTone === "info" ? (
@@ -608,15 +794,7 @@ export function ReadingTab({
             onToggleTextCollapsed={onToggleTextCollapsed}
             onResetSession={onResetSession}
           />
-        ) : isAnalyzing ? (
-          !analyzeProgress || analyzeProgress.total <= 1 ? (
-            <p className="empty reading-loading-hint" role="status">
-              원문을 읽는 중이에요. 잠시만 기다려주세요...
-            </p>
-          ) : null
-        ) : message ? null : (
-          <p className="empty">덱을 선택하고 원문을 입력한 뒤 읽기 분석을 눌러주세요.</p>
-        )}
+        ) : null}
 
         {summary ? (
           <ReaderSaveDock

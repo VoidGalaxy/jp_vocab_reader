@@ -2898,12 +2898,12 @@ select {
 }
 
 /* Brand badge tier 2 -- standalone icon illustration (BrandEmptyIllustration)
-   used at the top of every empty-state card (.empty-guide,
-   .reading-empty-guide, .study-ready-card, and similar) so "nothing here
-   yet" reads as one consistent family across the app instead of each
-   screen inventing its own. (::before/::after don't reliably paint over
-   <svg> replaced content across browsers, so this is a plain
-   background/shadow on the icon itself, not a layered pseudo-element.) */
+   used at the top of every empty-state card (.empty-guide, .study-ready-
+   card, and similar) so "nothing here yet" reads as one consistent family
+   across the app instead of each screen inventing its own. (::before/
+   ::after don't reliably paint over <svg> replaced content across
+   browsers, so this is a plain background/shadow on the icon itself, not a
+   layered pseudo-element.) */
 .brand-empty-illustration {
   /* The app sets `* { box-sizing: border-box }` globally -- opt back out
      here so `padding` adds to the box instead of eating into the 22px
@@ -3086,9 +3086,10 @@ select {
   text-align: left;
 }
 
-/* Same "floating helper" sizing as .reading-empty-guide -- a visible guide,
-   not a small mark, since this is the one companion moment on the reading
-   screen's word-inspector idle state. Sized to the helper/header tier
+/* Same "floating helper" sizing pattern as the app's other empty-state
+   guides -- a visible guide, not a small mark, since this is the one
+   companion moment on the reading screen's word-inspector idle state.
+   Sized to the helper/header tier
    (32-48px), not the smaller inline-mark tier, so it actually reads as a
    companion instead of an ambiguous little icon, without dominating the
    one-line hint text next to it. */
@@ -4134,36 +4135,6 @@ select {
   color: var(--success);
 }
 
-/* First-time / empty guidance shown above the textarea before any text is
-   entered -- points at the next action instead of leaving blank space. */
-.reading-empty-guide {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 4px;
-  padding: 14px;
-  border: 1px dashed var(--border-strong);
-  border-radius: 10px;
-  background: var(--soft-bg);
-  animation: app-slide-up var(--motion-base) var(--ease-soft) both;
-}
-
-.reading-empty-guide p {
-  margin: 0;
-}
-
-/* This guide's companion is a "floating helper" moment, not a generic
-   small mark -- sized to the helper/header tier (32-48px) so Shiori is a
-   visible guide here, not a disappearing icon. */
-.reading-empty-guide .shiori-asset--md {
-  width: 48px;
-  height: 48px;
-}
-
-.reading-empty-guide button {
-  justify-self: start;
-  margin-top: 4px;
-}
-
 .actions-with-hint {
   display: flex;
   flex-wrap: wrap;
@@ -4187,10 +4158,6 @@ select {
    card above it. */
 .reading-status-hint {
   margin-top: 2px;
-}
-
-.reading-loading-hint {
-  color: var(--muted);
 }
 
 /* Small pill (not a full-width banner) for the "restored" notice -- same
@@ -4238,8 +4205,11 @@ select {
    compact "원문 수정" editor under the reader, and stays deliberately
    un-boxed there (reader/action-dock/candidate-drawer below already read as
    three distinct card weights; a 4th bordered rectangle here would be one
-   too many). Before any result exists, though, this is the *entire*
-   first-visit screen, which gets its own card via .reader-start-card. */
+   too many). Before any result exists, ReaderStartScene (its own
+   .reader-start-scene rules further below) owns the whole first-visit
+   screen instead -- this class is Reading's collapsed post-analysis
+   re-edit tray only now (plus Analyze's own unrelated "원문" card, which
+   also reuses .reading-input-open/-header/-title). */
 .reading-input-open {
   display: grid;
   gap: 12px;
@@ -4270,112 +4240,169 @@ select {
   line-height: 1.65;
 }
 
-/* Casual Sticker Reader (Phase 55) -- first-visit variant: a notebook page
-   with the input textarea taped down like a note (see .reading-note-sheet
-   below), not the earlier "manuscript" card (diagonal ink wash + an
-   abstract torn-paper rectangle floating off the corner). Same opaque-panel
-   tone as the other tabs' top hero card; .analyze-form/textarea keep the
-   stripped-down "open page" styling from above -- they don't need their own
-   border now that this outer card already provides one. */
-.reader-start-card {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--border-strong);
-  border-radius: 26px;
-  padding: 28px;
-  background: var(--panel-bg);
-  box-shadow: 0 22px 46px rgba(100, 80, 34, 0.16);
-}
-
-/* Notebook-ring binding down the left edge -- this intro card's own spine,
-   independent of .reader-workspace (which dropped its own copy in Phase
-   114; the two never show at once, since this card is the pre-analyze
-   state and .reader-workspace only renders once a result exists). */
-.reader-start-card::before {
-  content: "";
-  position: absolute;
-  inset: 16px auto 16px 18px;
-  width: 8px;
-  border-radius: 999px;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--screen-accent, var(--accent)) 0,
-    var(--screen-accent, var(--accent)) 8px,
-    transparent 8px,
-    transparent 18px
-  );
-  opacity: 0.5;
-}
-
-.reader-start-card > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* .reading-note-sheet -- wraps the textarea so a "taped-down note" accent
-   can be added via ::before/::after without the pseudo-element rendering
-   issues of styling a <textarea> directly. Undecorated everywhere else;
-   only .reader-start-card's first-visit variant below adds the tape, so
-   the collapsed manuscript-tray textarea (once a result exists) stays
-   plain. */
+/* .reading-note-sheet -- wraps the collapsed post-analysis tray's textarea.
+   Undecorated (no tape/accent) -- only the old .reader-start-card variant
+   (removed in Phase 121) ever added washi-tape corners here; this plain
+   version is now the only one. */
 .reading-note-sheet {
   position: relative;
 }
 
-.reader-start-card .reading-note-sheet::before,
-.reader-start-card .reading-note-sheet::after {
-  content: "";
-  position: absolute;
-  top: -7px;
-  z-index: 2;
-  width: 46px;
-  height: 18px;
-  border: 1px solid rgba(217, 122, 74, 0.4);
-  background: rgba(217, 122, 74, 0.32);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-  pointer-events: none;
+/* Phase 121 -- reader-start-scene: the pre-analyze screen. Previously
+   .reader-start-card was its own bordered/shadowed form card (26px
+   radius, ring-spine binding, a whole AppEmptyState guide block) -- warmer
+   than a bare form, but still structurally "card with a header, a field,
+   and a footer". This reuses the exact open-book language Phase 119 built
+   for the analyzed result (.reader-desk-scene's border/shadow/paper
+   background) instead: bare on mobile (title/textarea sit straight on the
+   page, like .reader-text does once a result exists), the same bordered
+   paper surface at >=1024px. Arriving at Reading and finishing an
+   analysis now read as the same notebook throughout, not two unrelated
+   card systems. */
+.reader-start-scene {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 4px 2px 18px;
 }
 
-.reader-start-card .reading-note-sheet::before {
-  left: 22px;
-  transform: rotate(-5deg);
+@media (min-width: 1024px) {
+  .reader-start-scene {
+    gap: 20px;
+    padding: 30px;
+    border: 1px solid var(--paper-border);
+    border-top: 2px solid var(--screen-accent, var(--accent));
+    border-radius: 20px;
+    background: var(--paper-bg);
+    box-shadow: 0 16px 36px var(--paper-shadow);
+  }
 }
 
-.reader-start-card .reading-note-sheet::after {
-  right: 26px;
-  transform: rotate(4deg);
+.reader-start-heading {
+  display: grid;
+  gap: 4px;
 }
 
-/* The empty-text sample guide sits inside the intro card now, not as its
-   own dashed box floating above the textarea -- flattened to a plain
-   row (small Shiori beside the one-line hint + button) so the guide reads
-   as connected to the card's own title, not a second stacked block above
-   the textarea. */
-.reader-start-card .reading-empty-guide {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
+.reader-start-title {
+  margin: 0;
+  color: var(--text);
+  max-width: 560px;
+  font-size: clamp(22px, 3.4vw, 30px);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.reader-start-subtitle {
+  margin: 0;
+  max-width: 480px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.reader-start-form {
+  display: grid;
+  gap: 14px;
+}
+
+/* The textarea itself IS the page -- ruled-line texture matching
+   .reader-text's notebook paper, no boxed field border, generous reading-
+   sized type -- "원문을 붙인 종이", not a form control. */
+.reader-start-page {
+  position: relative;
+}
+
+.reader-start-page textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 220px;
   border: none;
-  background: transparent;
-  padding: 0;
-  margin-bottom: 4px;
-  text-align: left;
+  border-radius: 12px;
+  padding: 20px;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 37px,
+    rgba(110, 91, 47, 0.09) 37px,
+    rgba(110, 91, 47, 0.09) 38px
+  );
+  color: var(--text);
+  font-size: 17px;
+  line-height: 2;
 }
 
-.reader-start-card .reading-empty-guide p {
-  flex: 1 1 auto;
-  min-width: 160px;
+.reader-start-page textarea:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--screen-accent, var(--primary));
 }
 
-.reader-start-card .reading-empty-guide .shiori-asset--md {
-  width: 36px;
-  height: 36px;
+@media (min-width: 1024px) {
+  .reader-start-page textarea {
+    min-height: 260px;
+    font-size: 18px;
+  }
 }
 
-.reader-start-card .reading-empty-guide button {
+/* Sample CTA -- a small taped sticker pinned to the page's corner (same
+   quiet-link language as Home's .home-cover-sample), not a boxed guide
+   card with its own illustration/headline. Only rendered before any text
+   exists (see ReadingTab.tsx), so it never competes with the user's own
+   pasted text once there is any. width/min-height explicit -- otherwise
+   the app-wide mobile button{width:100%} touch-target rule stretches this
+   into a full-width bar instead of a small corner sticker (same fix
+   .token-note-action-chip needed in Phase 120). */
+.reader-start-sample-link {
+  position: absolute;
+  /* Negative top -- sits just above the textarea's own top edge (like a
+     tape flag clipped to the page), not inset inside its text content
+     area. Placeholder text reflows at different widths per viewport, so
+     an inset position (the first cut, top:10px) could collide with the
+     placeholder's wrapped first line at some widths (seen at 390px) even
+     though it never collides with the user's own real typed text (the
+     sticker is unmounted once text.trim() is truthy). This is
+     width-independent. */
+  top: -14px;
+  right: 14px;
   flex: 0 0 auto;
-  margin-top: 0;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 5px 12px;
+  border: 1px dashed rgba(217, 122, 74, 0.45);
+  border-radius: 999px;
+  color: var(--screen-accent, var(--accent));
+  background: rgba(217, 122, 74, 0.16);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: none;
+  transform: rotate(-2deg);
+}
+
+.reader-start-sample-link:not(:disabled):hover {
+  background: rgba(217, 122, 74, 0.24);
+  box-shadow: none;
+  transform: rotate(-2deg) translateY(-1px);
+}
+
+/* Footer: deck picker stays the same quiet underline-only control
+   (.reading-deck-picker, unchanged/reused) it always was; the analyze
+   button is the one full-width decisive action, matching Home's cover CTA
+   weight -- "붙여넣기 -> 분석 시작" reads as one clear flow, not a button
+   cluster, at every width. */
+.reader-start-footer {
+  display: grid;
+  gap: 10px;
+  justify-items: stretch;
+}
+
+.reader-start-cta {
+  width: 100%;
+  padding: 15px 20px;
+  border-radius: 999px;
+  font-size: 15.5px;
+}
+
+.reader-start-copyright {
+  margin-top: -2px;
 }
 
 .reading-input-open-header {
@@ -4407,23 +4434,6 @@ select {
   line-height: 1.35;
 }
 
-.reader-start-card .reading-input-open-title {
-  font-size: clamp(26px, 4vw, 40px);
-  letter-spacing: -0.02em;
-}
-
-.reading-input-open-hint {
-  margin: 0;
-  max-width: 520px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.reader-start-card .reading-input-open-hint {
-  color: #6f654e;
-  font-size: 15px;
-}
-
 .sr-only-label {
   position: absolute;
   width: 1px;
@@ -4453,30 +4463,9 @@ select {
   line-height: 1.9;
 }
 
-.reader-start-card .reading-input-open textarea {
-  min-height: 178px;
-  padding: 18px 18px 22px;
-  border: 1px solid rgba(110, 91, 47, 0.18);
-  border-radius: 16px;
-  background:
-    repeating-linear-gradient(
-      180deg,
-      transparent 0,
-      transparent 31px,
-      rgba(110, 91, 47, 0.12) 31px,
-      rgba(110, 91, 47, 0.12) 32px
-    ),
-    rgba(255, 252, 242, 0.86);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-}
-
 .reading-input-open textarea:focus {
   border-bottom-color: var(--screen-accent, var(--primary));
   outline: none;
-}
-
-.reader-start-card .reading-input-open textarea:focus {
-  border-color: var(--screen-accent, var(--primary));
 }
 
 .reading-input-footer {
@@ -4536,28 +4525,6 @@ select {
 
 .reading-open-button {
   flex: 0 0 auto;
-}
-
-/* Phase 119 -- on the first-visit empty state this is the one decisive
-   "start reading" action (the form's equivalent of Home's cover CTA), so
-   it gets the same full-width pill treatment instead of sharing visual
-   weight with the slim deck-picker beside it. Once text/decks make the
-   footer a real two-item row (reading-input-footer's flex row, unchanged)
-   this rule still only affects the button's own shape, not the layout. */
-.reader-start-card .reading-input-footer {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.reader-start-card .reading-deck-picker {
-  justify-content: center;
-}
-
-.reader-start-card .reading-open-button {
-  width: 100%;
-  padding: 15px 20px;
-  border-radius: 999px;
-  font-size: 15.5px;
 }
 
 .reading-input-open .copyright-note {
@@ -10972,71 +10939,6 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 @media (max-width: 640px) {
-  /* Phase 82 -- mobile-only softening. The base spine sat only ~1-3px from
-     the card's own content padding (18px inset vs. 28px/16px content
-     start), which read as a ruled correction-sheet margin rather than a
-     notebook binding at phone width. Pulled thinner/lighter/further into
-     the card's own edge, and the card's left padding grew to open real
-     breathing room between the spine and the title/textarea/guide it sits
-     beside -- desktop's .reader-start-card::before above is untouched. */
-  .reader-start-card {
-    padding: 20px 16px 20px 26px;
-    border-radius: 20px;
-  }
-
-  .reader-start-card::before {
-    left: 6px;
-    width: 4px;
-    opacity: 0.32;
-  }
-
-  .reader-start-card .reading-input-open-title {
-    font-size: 27px;
-  }
-
-  .reader-start-card .reading-input-open textarea {
-    min-height: 150px;
-    padding: 14px;
-  }
-
-  .reader-start-card .reading-note-sheet::before,
-  .reader-start-card .reading-note-sheet::after {
-    width: 36px;
-    height: 15px;
-  }
-
-  .reader-start-card .reading-note-sheet::before {
-    left: 12px;
-  }
-
-  .reader-start-card .reading-note-sheet::after {
-    right: 14px;
-  }
-
-  /* The sample CTA inherits the app-wide mobile `button { width: 100% }`
-     touch-target rule, stretching it into a second full-width bordered bar
-     right under the title/hint -- reading as a form action rather than an
-     optional "try a sample" tag. Softened into a small taped label/sticker
-     instead: pill shape, warm tape-tone fill, no hard border, slight tilt.
-     min-height keeps the 44px touch target via padding, not a fixed box. */
-  .reader-start-card .reading-empty-guide button {
-    width: auto;
-    min-width: 0;
-    min-height: 44px;
-    padding: 9px 16px;
-    border: 1px dashed rgba(217, 122, 74, 0.45);
-    border-radius: 999px;
-    color: var(--screen-accent, var(--accent));
-    background: rgba(217, 122, 74, 0.14);
-    box-shadow: none;
-    transform: rotate(-1.5deg);
-  }
-
-  .reader-start-card .reading-empty-guide button:not(:disabled):hover {
-    background: rgba(217, 122, 74, 0.22);
-    transform: rotate(-1.5deg) translateY(-1px);
-  }
-
   .reading-panel--has-result .reading-input-open {
     padding: 12px;
   }
