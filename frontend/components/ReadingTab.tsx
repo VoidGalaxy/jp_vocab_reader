@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { AppEmptyState } from "./BrandElements";
-import { ShioriGuideCard, ShioriStamp } from "./Shiori";
+import { ShioriGuideCard, ShioriMark, ShioriStamp } from "./Shiori";
 import { ReaderMode } from "./ReaderMode";
 import { ReadingVocabPanel } from "./ReadingVocabPanel";
 import {
@@ -408,7 +408,10 @@ export function ReadingTab({
       >
         {!hasResult ? (
           <div className="reading-input-open-header">
-            <span className="reading-input-eyebrow">원문 읽기</span>
+            <span className="reading-input-eyebrow">
+              <ShioriMark variant="reading" />
+              원문 읽기
+            </span>
             <h2 className="reading-input-open-title">
               원문으로 읽고 바로 노트에 담기
             </h2>

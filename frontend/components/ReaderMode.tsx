@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet } from "./TokenDetailSheet";
-import { ShioriGuideCard } from "./Shiori";
+import { ShioriGuideCard, ShioriMark } from "./Shiori";
 import { buildReaderLayout, getNavigableTokenIndexes } from "./readerLayout";
 import { getTokenGroupKey } from "./coverageUtils";
 
@@ -571,7 +571,10 @@ export function ReaderMode({
           disclosure mechanism. isOptionsOpen is the same existing state --
           nothing new is being introduced, just regrouped. */}
       <div className="reader-toolbar">
-        <h3 className="reader-toolbar-title">읽기 모드</h3>
+        <span className="reader-toolbar-mark" aria-hidden="true">
+          <ShioriMark variant="reading" />
+        </span>
+        <span className="sr-only-label">읽기 모드</span>
         <div className="reader-toolbar-progress">
           <div
             className="reader-progress-bar"
@@ -623,6 +626,25 @@ export function ReaderMode({
                   />
                   JLPT 태그 표시
                 </label>
+                <div className="reader-legend-strip">
+                  <span className="reader-legend-strip-label">색상</span>
+                  <span className="reader-legend-strip-item">
+                    <span className="legend-swatch token-chip-known" />
+                    아는
+                  </span>
+                  <span className="reader-legend-strip-item">
+                    <span className="legend-swatch token-chip-uncertain" />
+                    헷갈림
+                  </span>
+                  <span className="reader-legend-strip-item">
+                    <span className="legend-swatch token-chip-unknown" />
+                    모름
+                  </span>
+                  <span className="reader-legend-strip-item">
+                    <span className="legend-swatch token-chip-unclassified" />
+                    미분류
+                  </span>
+                </div>
               </div>
               <div className="reader-mode-toggles-section">
                 <span className="reader-mode-toggles-section-label">이동</span>
@@ -671,32 +693,12 @@ export function ReaderMode({
           ) : null}
         </div>
       </div>
-      {/* Phase 93 follow-up -- the color legend moved out of the options
-          popover (it was one more thing to find behind a click) and back
-          into the always-visible surface, but as a compact single-line
-          strip (bare dot + short label, no pill background) instead of the
-          old boxy .reader-legend row -- keeps discoverability without
-          reintroducing the ~48px-tall block that pushed the first line of
-          text down before this Phase. */}
-      <div className="reader-legend-strip">
-        <span className="reader-legend-strip-label">색상</span>
-        <span className="reader-legend-strip-item">
-          <span className="legend-swatch token-chip-known" />
-          아는
-        </span>
-        <span className="reader-legend-strip-item">
-          <span className="legend-swatch token-chip-uncertain" />
-          헷갈림
-        </span>
-        <span className="reader-legend-strip-item">
-          <span className="legend-swatch token-chip-unknown" />
-          모름
-        </span>
-        <span className="reader-legend-strip-item">
-          <span className="legend-swatch token-chip-unclassified" />
-          미분류
-        </span>
-      </div>
+      {/* Phase 119 -- the color legend moved into the options popover's
+          "표시" group (see reader-mode-toggles-section above), alongside
+          the toggles it explains. Reading's own success metric this phase
+          is "원문이 화면의 주인공" -- an always-visible legend row was one
+          more chip-strip between the reader toolbar and the first line of
+          text, which the mockup's focus reader never shows at all. */}
       <div className="reader-text" ref={readerTextRef}>
         {layout.lines.map((line, lineIndex) => (
           <p className="reader-line" key={`line-${lineIndex}`}>

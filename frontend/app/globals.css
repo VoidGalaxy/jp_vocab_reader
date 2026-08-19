@@ -4384,10 +4384,18 @@ select {
 }
 
 .reading-input-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--screen-accent, var(--muted));
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.03em;
+}
+
+.reading-input-eyebrow .shiori-mark {
+  width: 18px;
+  height: 18px;
 }
 
 .reading-input-open-title {
@@ -4528,6 +4536,28 @@ select {
 
 .reading-open-button {
   flex: 0 0 auto;
+}
+
+/* Phase 119 -- on the first-visit empty state this is the one decisive
+   "start reading" action (the form's equivalent of Home's cover CTA), so
+   it gets the same full-width pill treatment instead of sharing visual
+   weight with the slim deck-picker beside it. Once text/decks make the
+   footer a real two-item row (reading-input-footer's flex row, unchanged)
+   this rule still only affects the button's own shape, not the layout. */
+.reader-start-card .reading-input-footer {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.reader-start-card .reading-deck-picker {
+  justify-content: center;
+}
+
+.reader-start-card .reading-open-button {
+  width: 100%;
+  padding: 15px 20px;
+  border-radius: 999px;
+  font-size: 15.5px;
 }
 
 .reading-input-open .copyright-note {
@@ -9226,6 +9256,15 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 20px;
 }
 
+@media (min-width: 1024px) {
+  /* Phase 119 -- tighter than the 20px mobile gap so the save dock/
+     candidate tray read as a shelf attached under the open book rather
+     than a separate block floating a full section-gap below it. */
+  .reader-workspace {
+    gap: 12px;
+  }
+}
+
 /* Casual Sticker Reader (Phase 65) -- reader-desk-scene: the reader page
    (.reader-paper) and the pinned word inspector (.reader-inspector-rail)
    share one desk surface. Below 1024px this is a plain block (single
@@ -9239,12 +9278,27 @@ input.reading-vocab-sticker-toggle:checked {
   min-width: 0;
 }
 
+/* Phase 119 -- at 1024px+ this is now the one shared "open book" card: the
+   reader page and the pinned inspector used to be two separate bordered/
+   shadowed cards sitting side by side with a visible gap between them,
+   which read as "two panels" rather than the mockup's single open-book
+   spread. The border/shadow/radius/paper background that used to live on
+   .reader-paper moves up to this shared wrapper instead (gap dropped to 0
+   so nothing shows through the seam); .reader-paper keeps only its own
+   rounded left corners (so its ruled-line background still clips cleanly)
+   and .reader-inspector-rail grows a left border standing in for the
+   book's center fold -- see both below. */
 @media (min-width: 1024px) {
   .reader-desk-scene {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
-    align-items: start;
-    gap: 20px;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid var(--paper-border);
+    border-top: 2px solid var(--screen-accent, var(--accent));
+    border-radius: 20px;
+    background: var(--paper-bg);
+    box-shadow: 0 16px 36px var(--paper-shadow);
   }
 }
 
@@ -9353,7 +9407,17 @@ input.reading-vocab-sticker-toggle:checked {
     display: block;
     position: sticky;
     top: 24px;
-    align-self: start;
+    /* Phase 119 -- was align-self: start (the column's own box only as
+       tall as its content). Stretched to the shared row height instead so
+       the left-border "spine" below runs the merged book's full height
+       even when the pinned card itself is short -- CSS Grid resolves a
+       sticky item's scroll-containing-block from its *grid area*
+       regardless of align-self, so this is a background/visual change
+       only and doesn't touch how far the card travels while sticking. */
+    align-self: stretch;
+    border-left: 1px dashed var(--paper-border);
+    box-shadow: inset 10px 0 18px -16px rgba(58, 38, 16, 0.4);
+    padding-left: 2px;
   }
 }
 
@@ -9410,54 +9474,27 @@ input.reading-vocab-sticker-toggle:checked {
 
 /* reader-paper -- the reader canvas itself (renamed from .reader-mode,
    which now only prefixes the mode's own header/toggle sub-parts below).
-   This is the screen's one hero surface: reader-first layout means this
-   card, not the toolbar above it, is what a first glance should land on.
-   Two washi-tape corners (::before/::after) pin it to the workspace behind
-   it, like a page taped into a notebook rather than a floating card. */
+   Phase 119 -- previously its own bordered/shadowed/tape-cornered card,
+   which on mobile boxed the original text inside a panel the mockup never
+   shows (there the text sits straight on the page), and on desktop made it
+   one of two separate floating cards beside the inspector instead of the
+   mockup's single open-book spread. Both problems share one fix: drop
+   this element's own border/shadow/radius/tape entirely. Below 1024px
+   there is nothing else taking over that chrome -- the text is just on
+   the page. At 1024px+, .reader-desk-scene below grows the shared "open
+   book" card instead, so this page and .reader-inspector-rail read as one
+   bound surface rather than two cards with a gap. The faint ruled lines
+   stay at every size -- notebook-paper texture, not card chrome. */
 .reader-paper {
   position: relative;
-  border: 1px solid var(--paper-border);
-  border-top: 2px solid var(--screen-accent, var(--accent));
-  border-radius: 20px 18px 22px 18px;
   padding: 30px;
-  background:
-    repeating-linear-gradient(
-      180deg,
-      transparent 0,
-      transparent 37px,
-      rgba(110, 91, 47, 0.07) 37px,
-      rgba(110, 91, 47, 0.07) 38px
-    ),
-    var(--paper-bg);
-  /* Matches the shared .hero-card shadow tier (study/vocab/shared-deck hero
-     cards) instead of a slightly flatter one-off value -- ties the reader's
-     one hero surface into the same "warm paper" family as the rest of the
-     app instead of reading as a notch quieter than its siblings. */
-  box-shadow: 0 16px 36px var(--paper-shadow);
-}
-
-.reader-paper::before,
-.reader-paper::after {
-  content: "";
-  position: absolute;
-  top: -6px;
-  z-index: 1;
-  width: 52px;
-  height: 18px;
-  border: 1px solid rgba(217, 122, 74, 0.4);
-  background: rgba(217, 122, 74, 0.32);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-  pointer-events: none;
-}
-
-.reader-paper::before {
-  left: 36px;
-  transform: rotate(-4deg);
-}
-
-.reader-paper::after {
-  right: 40px;
-  transform: rotate(3deg);
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 37px,
+    rgba(110, 91, 47, 0.07) 37px,
+    rgba(110, 91, 47, 0.07) 38px
+  );
 }
 
 /* Phase 93 -- single-line toolbar replacing the old title+hint row /
@@ -9473,13 +9510,14 @@ input.reading-vocab-sticker-toggle:checked {
   margin-bottom: 12px;
 }
 
-.reader-toolbar-title {
+/* Phase 119 -- replaces the old plain "읽기 모드" text heading with
+   Shiori's small bookmark mark, echoing the mockup's mascot riding the
+   progress bar. The text label still exists (sr-only-label, see
+   ReaderMode.tsx) for screen readers/heading structure. */
+.reader-toolbar-mark {
+  display: inline-flex;
   flex: 0 0 auto;
-  margin: 0;
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
+  align-items: center;
 }
 
 .reader-toolbar-progress {
@@ -10068,7 +10106,11 @@ input.reading-vocab-sticker-toggle:checked {
      sheet's own border-top accent/shadow/slide-up motion still make it
      read as a focused surface without needing a scrim underneath it. */
   background: transparent;
-  padding: 0;
+  /* Phase 119 -- side/bottom inset so the sheet reads as a floating sticky
+     note lifted off the page (matching the mockup's Inspector board), not
+     an edge-to-edge admin bottom sheet. Overridden by the >=641px docked
+     panel below, which positions itself differently. */
+  padding: 0 12px calc(12px + env(safe-area-inset-bottom));
   animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
 }
 
@@ -10077,15 +10119,19 @@ input.reading-vocab-sticker-toggle:checked {
    dev-tools panel. The pin dot (::before) is the same accent-dot language
    as Home's .home-notebook-pin. All of this card's inner part classes
    (token-sheet-header, token-sheet-meaning-block, ...) keep their existing
-   names -- only the outer wrapper's own look changed. */
+   names -- only the outer wrapper's own look changed. Phase 119 -- full
+   rounded corners + a real border (was top-only radius/accent, relying on
+   .token-sheet-overlay's now-removed edge-to-edge width) so the mobile
+   peek reads as a lifted note card, not a docked panel. */
 .bookmark-inspector {
   position: relative;
   width: 100%;
   max-width: 480px;
   max-height: 85vh;
   overflow-y: auto;
+  border: 1px solid var(--paper-border);
   border-top: 2px solid var(--screen-accent, var(--accent));
-  border-radius: 16px 16px 0 0;
+  border-radius: 18px;
   padding: 24px 20px 20px;
   background: var(--panel-bg);
   box-shadow: 0 -8px 30px rgba(120, 98, 40, 0.22);
@@ -10710,17 +10756,49 @@ input.reading-vocab-sticker-toggle:checked {
 /* Casual Sticker Reader (Phase 65) -- bookmark-inspector-pinned: the
    desk-scene variant of the same .bookmark-inspector card, sitting inside
    the sticky .reader-inspector-rail column instead of a viewport-fixed
-   overlay. Reuses the docked-panel's tilt/shadow language above, but sized
-   to fill its grid column rather than capped to a fixed px width. */
+   overlay. Phase 119 -- previously reused the docked-panel's own tilted
+   card look (border/shadow/tilt), which made this read as a second
+   floating card next to .reader-paper instead of the mockup's single
+   open-book spread. Both its own chrome and .reader-inspector-idle's
+   dashed placeholder box are stripped here -- .reader-desk-scene now
+   carries the one shared border/shadow, .reader-inspector-rail's left
+   border is the only seam between the two "pages", and .reader-paper
+   below gets matching rounded left corners so its own ruled-line
+   background still clips cleanly against the shared card's curve. */
 @media (min-width: 1024px) {
   .bookmark-inspector-pinned {
     width: 100%;
     max-width: none;
     max-height: calc(100vh - 48px);
-    border: 1px solid var(--border);
-    border-radius: 4px 16px 16px 16px;
-    animation-name: app-slide-up-tilt;
-    box-shadow: 0 16px 40px rgba(120, 98, 40, 0.18);
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    animation-name: app-fade-in;
+    box-shadow: none;
+  }
+
+  /* TokenDetailSheet.tsx also puts .card-stack-surface (ghost "pages
+     peeking out" behind the card, see its own comment above) and the pin
+     dot (.bookmark-inspector::before) on this element -- both assume a
+     genuinely floating card with its own visible edge, which this variant
+     no longer has now that it's flush with the shared book. Suppressed
+     here rather than removed from the shared class list in TokenDetailSheet
+     so the mobile/tablet floating presentations (which do want both) are
+     untouched. */
+  .bookmark-inspector-pinned::before,
+  .bookmark-inspector-pinned.card-stack-surface::before,
+  .bookmark-inspector-pinned.card-stack-surface::after {
+    content: none;
+  }
+
+  .reader-inspector-idle {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .reader-paper {
+    border-radius: 20px 0 0 20px;
   }
 }
 
@@ -10801,20 +10879,6 @@ input.reading-vocab-sticker-toggle:checked {
 
   .reader-paper {
     padding: 18px 14px 14px;
-  }
-
-  .reader-paper::before,
-  .reader-paper::after {
-    width: 36px;
-    height: 15px;
-  }
-
-  .reader-paper::before {
-    left: 16px;
-  }
-
-  .reader-paper::after {
-    right: 18px;
   }
 
   .reader-progress-actions .compact-button {
