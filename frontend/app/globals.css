@@ -1239,45 +1239,53 @@ button {
   transform: rotate(-4deg);
 }
 
-.home-cover-pin {
+/* Phase 124 -- asset-kit bridge test (see docs/design/DESIGN.md). The old
+   .home-cover-pin (a plain CSS circle standing in for "something holding
+   this note down") is gone; this SVG washi-tape strip takes over that job
+   with an actual torn-edge, semi-transparent tape shape instead. Position
+   is absolute against .home-cover-sticky (already position:absolute
+   itself, so it's already a valid positioning context for this), overlapping
+   the note's top edge like real tape would.
+   pointer-events:none + aria-hidden -- decorative only, never a click
+   target, and .home-cover-sticky's own aria-hidden="true" already keeps
+   the whole note (including this) out of the accessibility tree. */
+.home-cover-sticky-tape {
   position: absolute;
-  top: 12px;
-  left: 44px;
+  top: -11px;
+  left: 50%;
   z-index: 3;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+  /* Explicit width AND height (not height:auto) -- found via QA that this
+     Chromium build doesn't reliably resolve an <img>'s intrinsic
+     aspect-ratio from an SVG source for height:auto sizing (even with
+     explicit width/height attributes on the SVG root), silently
+     collapsing the rendered box to a few px instead of failing to load.
+     Sized to washi-tape.svg's own 84:30 ratio at this width (46 * 30/84
+     ≈ 16.4, rounded). */
+  width: 46px;
+  height: 16px;
+  transform: translateX(-50%) rotate(-3deg);
+  pointer-events: none;
 }
 
 /* Closure strap -- the diagonal band + snap button both mockups draw
    crossing the cover's lower edge, read as a real notebook's elastic
-   closure rather than a flat rectangle. */
+   closure rather than a flat rectangle. Phase 124 -- the shape/shading
+   itself now comes from a hand-authored SVG (leather-strap-snap.svg: a
+   tapered strap with stitch lines and a shaded snap) instead of a flat
+   CSS rectangle + circle; this rule only keeps position/size/rotation. */
 .home-cover-strap {
   position: absolute;
   right: 46px;
   top: -8%;
   width: 15px;
   height: 58%;
-  border-radius: 3px;
-  background: linear-gradient(180deg, #8a6338 0%, #5c3f22 100%);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+  background-image: url("/brand/decor/leather-strap-snap.svg");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.28));
   transform: rotate(5deg);
   z-index: 1;
-}
-
-.home-cover-strap::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -3px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #e8c98a 0%, #b9862f 70%);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .home-cover-dots {

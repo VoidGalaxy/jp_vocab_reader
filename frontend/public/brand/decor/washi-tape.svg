@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="84" height="30" viewBox="0 0 84 30" role="presentation">
+  <!-- Deckled/torn edges (uneven zigzag, not a clean rectangle) plus a
+       translucent color wash -- real washi tape is semi-transparent, so
+       whatever sits underneath should show faintly through it. -->
+  <path
+    d="M2 5.5 L10 3.6 L19 5 L28 3.2 L37 4.6 L46 3 L55 4.8 L64 2.8 L73 4.4 L81 3.4
+       L82.4 8 L80.6 13 L82 18.5 L80.4 24 L81.6 27.6
+       L73 25.8 L64 27.4 L55 26 L46 27.8 L37 26.2 L28 27.6 L19 25.8 L10 27.2 L2 25.4
+       L3.4 21 L1.8 15.5 L3.2 10.5 Z"
+    fill="rgba(217,122,74,0.5)"
+  />
+  <path
+    d="M2 5.5 L10 3.6 L19 5 L28 3.2 L37 4.6 L46 3 L55 4.8 L64 2.8 L73 4.4 L81 3.4
+       L82.4 8 L80.6 13 L82 18.5 L80.4 24 L81.6 27.6
+       L73 25.8 L64 27.4 L55 26 L46 27.8 L37 26.2 L28 27.6 L19 25.8 L10 27.2 L2 25.4
+       L3.4 21 L1.8 15.5 L3.2 10.5 Z"
+    fill="none"
+    stroke="rgba(217,122,74,0.2)"
+    stroke-width="0.6"
+  />
+  <!-- Faint paper-fiber lines running along the tape -->
+  <line x1="6" y1="10" x2="78" y2="8.6" stroke="rgba(255,255,255,0.3)" stroke-width="0.5" />
+  <line x1="5" y1="15.5" x2="79" y2="14.6" stroke="rgba(255,255,255,0.22)" stroke-width="0.5" />
+  <line x1="6" y1="21" x2="78" y2="20.4" stroke="rgba(255,255,255,0.22)" stroke-width="0.5" />
+</svg>

@@ -1719,3 +1719,96 @@ if a future phase wants zero remaining `panel-card` instances anywhere in
 the app; (3) optional: revisit Analyze's card system only if/when a
 dedicated mockup for that screen is ever produced, since without one
 there's no direction to redesign toward.
+
+Phase 124 was a bridge test, not a final asset kit: by Phase 123, Home and
+Reading matched the mockup's *structure* (composition, hierarchy, spacing)
+but several small decorations were still visibly "CSS pretending to be a
+material" -- a flat rotated rectangle standing in for Home's leather
+closure strap (`.home-cover-strap`, a straight `linear-gradient` bar with
+a filled-circle snap), and a plain filled-circle pin standing in for
+"something holding the sticky note down" (`.home-cover-pin`). Both read as
+geometry, not stationery, next to the mockup's hand-drawn strap/tape.
+Desk props, the reader binding/spine (Phase 122), and the notebook cover's
+own gradient were judged to already read acceptably as CSS gradients/
+shapes and were left alone -- this phase deliberately touched the fewest
+things that would prove the point, not everything the brief's candidate
+list named.
+
+No image-generation tool is available in this environment, so the
+"generate 3-6 PNG candidates" instruction as literally written wasn't
+achievable; confirmed with the user, who redirected to hand-authored SVG
+instead (`frontend/public/brand/decor/`) -- vector, transparent, no text
+baked in, decorative-only, applied as an addition/replacement for the
+existing CSS-only decoration rather than any functional UI. Two assets
+were built and adopted: `leather-strap-snap.svg` (a tapered, hand-cut
+strap shape with dashed hand-stitch lines and a shaded/highlighted snap,
+applied via `background-image` + `background-size: 100% 100%` on the
+existing `.home-cover-strap` span -- position/size/rotation unchanged,
+only the fill mechanism) and `washi-tape.svg` (a small torn-edge,
+semi-transparent tape strip with faint fiber lines, added as a new `<img
+aria-hidden alt="">` inside `.home-cover-sticky`, replacing
+`.home-cover-pin`). Both are under 2KB.
+
+QA surfaced one real bug worth recording for future asset work: an
+`<img>` pointed at an SVG with `width:46px; height:auto` in CSS rendered
+as a ~5px sliver instead of erroring -- this Chromium build doesn't
+reliably resolve an `<img>`'s intrinsic aspect ratio from an SVG source
+for `height:auto` sizing, even with explicit `width`/`height` attributes
+on the SVG root (`naturalWidth` read back as 0 despite the network
+request succeeding with the correct `image/svg+xml` content-type, and
+despite the element visually occupying space). It does not fail loudly,
+so a naive `alt`/error-log check would have missed it -- only a
+`getBoundingClientRect()` size check against the expected aspect ratio
+caught it. Fixed by setting both `width` and `height` explicitly in CSS
+(`46px` / `16px`, matching the SVG's own 84:30 ratio) instead of trusting
+`height: auto`. Any future `<img>`-embedded SVG on this project should
+size both axes explicitly in CSS rather than relying on intrinsic-ratio
+`auto` sizing.
+
+Candidate judgments against the brief's list: **Adopt** --
+leather-strap-snap (clear, visible material improvement, screenshot-
+confirmed both directly and in the before/after comparison), washi-tape
+(subtle but real once correctly sized; a genuine torn/deckled edge is not
+achievable with CSS `border-radius` alone). **Prototype only** -- a
+sticker-note-set for the candidate tray's expanded word list (flagged
+separately in Phase 123 as a Design Gap: the tray reads as a flat card
+grid, not the mockup's playful rotated stickers) and an
+inspector-note-paper texture for `TokenDetailSheet`/`.bookmark-inspector`
+-- both plausible next targets but not exercised this phase, since the
+brief scoped this round to one screen. **Defer** -- binding-spine-texture
+(Phase 122 already gave the reader spine real gutter-shadow/stitch/rivet
+depth via layered CSS gradients + one small SVG-free brass fastener; an
+image asset there would replace something already judged to work, not fix
+a gap) and notebook-cover-texture (the cover's own sage-green gradient
+already reads as fabric/paper reasonably well at every size tested; no
+evidence a texture PNG/SVG would look different enough to justify the
+added asset to maintain). **Reject** -- none outright; nothing tested
+made the screen worse, heavier, or less responsive.
+
+Verified: `npm run build` clean, `git diff --check` clean, both SVGs load
+(200, correct `image/svg+xml` content-type, confirmed via direct fetch
+and via `getBoundingClientRect()` matching the intended rendered size) at
+1280/390/375/320 with zero `scrollWidth`/`clientWidth` mismatch and zero
+console errors/warnings. `elementFromPoint()` on the exact center of both
+decorative elements resolved to `.home-cover` underneath in every case
+(`isSelf: false`), confirming `pointer-events: none` fully passes clicks
+through -- neither asset can ever intercept a tap. Home's CTA (-> Reading
+tab), mobile drawer, account trigger, and feedback slot were all
+re-confirmed reachable and functional after the change. Reading was not
+touched this phase (no files under `frontend/components/Reader*.tsx`
+modified), so no Reading-specific regression risk exists to check.
+
+**Files changed:** `frontend/app/globals.css`, `frontend/components/
+HomeDashboard.tsx`, plus two new files: `frontend/public/brand/decor/
+leather-strap-snap.svg` and `frontend/public/brand/decor/washi-tape.svg`.
+
+**Commit-readiness:** yes -- build and diff-check clean, before/after
+screenshots confirm a real (if intentionally small) material improvement
+on Home with zero functional regression.
+
+**Next phase candidates:** candidate-tray sticker restyling (toward the
+mockup's rotated playful stickers -- likely the highest-leverage next
+asset target, per Phase 123's own Design Gap finding) and an inspector
+note-paper texture for `TokenDetailSheet`, both deferred rather than
+attempted here since this phase's job was to validate the SVG-asset
+approach on one screen first, not to roll it out everywhere at once.

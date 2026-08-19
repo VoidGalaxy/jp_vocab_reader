@@ -75,9 +75,20 @@ export function HomeDashboard({
       <div className="home-stage">
         <div className="home-cover card-stack-surface">
           <span className="home-cover-sticky" aria-hidden="true">
+            {/* Phase 124 -- hand-authored SVG washi tape (no text baked in,
+                decorative only) replaces the old CSS pin dot as the note's
+                "held down" cue -- a small torn-edge, semi-transparent tape
+                strip reads as an actual material a CSS border-radius circle
+                never could. See docs/design/DESIGN.md's Phase 124 asset-kit
+                note for the judgment behind this. */}
+            <img
+              src="/brand/decor/washi-tape.svg"
+              alt=""
+              aria-hidden="true"
+              className="home-cover-sticky-tape"
+            />
             오늘도 책장을 열어요
           </span>
-          <span className="home-cover-pin" aria-hidden="true" />
           <span className="home-cover-charm" aria-hidden="true">
             <ShioriCharacter variant="default" size="lg" />
           </span>
@@ -107,6 +118,12 @@ export function HomeDashboard({
             </button>
           </div>
 
+          {/* Phase 124 -- background-image now points at a hand-authored
+              SVG (leather-strap-snap.svg): a tapered, hand-cut strap shape
+              with stitch lines and a shaded snap, instead of the flat CSS
+              rectangle + circle this used to be. Position/size/rotation
+              still live in .home-cover-strap (globals.css); only the fill
+              mechanism changed. */}
           <span className="home-cover-strap" aria-hidden="true" />
           <span className="home-cover-dots" aria-hidden="true">
             <i />
