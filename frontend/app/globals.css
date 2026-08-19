@@ -3031,7 +3031,7 @@ select {
 /* ShioriMark -- compact inline "brand mark" form for a slot that used to
    hold a plain generic bookmark glyph, e.g. the selected-word panel's
    title icon. Same asset as ShioriCharacter, just deliberately small --
-   screens that need it even smaller (.token-sheet-bookmark-icon,
+   screens that need it even smaller (.token-note-mark,
    .records-log-title-mark, ...) override width/height further. */
 .shiori-mark {
   width: 20px;
@@ -8012,10 +8012,12 @@ input.reading-vocab-sticker-toggle:checked {
    callout box, and clamped to two lines so a long saved sentence can't
    make the library card tower over its neighbors. */
 /* Casual Sticker Reader (Phase 57) -- a small taped-on strip (::before)
-   instead of a colored border-left, same recipe as the reading tab's word
-   inspector (.token-sheet-meaning-block/.bookmark-inspector
-   .context-example-block), so the saved example reads as a note taped
-   inside the expanded row rather than a callout box. */
+   instead of a colored border-left, same recipe the Analyze tab's word
+   card still uses (.token-sheet-meaning-block) -- so the saved example
+   reads as a note taped inside the expanded row rather than a callout box.
+   (Reading's own word inspector dropped this taped-strip language in
+   Phase 120 in favor of a plain quiet note line -- see .token-note-example
+   in the reader inspector rules.) */
 .vocab-item-example {
   position: relative;
   display: grid;
@@ -8087,14 +8089,15 @@ input.reading-vocab-sticker-toggle:checked {
    (.vocab-item-actions, .study-answer-reveal) rather than touching
    .meaning-quick-edit-trigger's own base rule or MeaningQuickEdit.tsx,
    since that trigger is also used by TokenDetailSheet.tsx's word-detail
-   sheet -- deliberately a real button there on desktop/tablet, already
-   demoted only inside the mobile compact sheet by Phase 100. Reuses the
-   same underlined text-link language as .reading-summary-link-button /
-   .study-actions-link-button / .shared-deck-detail-dismiss.
+   sheet, which (Phase 120) demotes it to this same quiet text-link
+   language at every width via its own .token-note-meaning-actions
+   .meaning-quick-edit-trigger scope, not just the mobile compact sheet.
+   Reuses the same underlined text-link language as .reading-summary-link-
+   button / .study-actions-link-button / .shared-deck-detail-dismiss.
    .report-meaning-link-button is a new, single-purpose class (not reused
-   by TokenDetailSheet's own "뜻 오류 신고", which keeps its existing
-   token-sheet-report-meaning treatment), applied directly in
-   VocabSection.tsx and StudySection.tsx's own report-meaning buttons. */
+   by TokenDetailSheet's own "뜻 오류 신고", which is a plain
+   .token-note-action-link there), applied directly in VocabSection.tsx and
+   StudySection.tsx's own report-meaning buttons. */
 .vocab-item-actions .meaning-quick-edit-trigger,
 .study-answer-reveal .meaning-quick-edit-trigger,
 .report-meaning-link-button {
@@ -10117,9 +10120,10 @@ input.reading-vocab-sticker-toggle:checked {
 /* bookmark-inspector (renamed from .token-sheet) -- Casual Sticker Reader:
    a small sticky note pinned beside the reader page, not a bordered
    dev-tools panel. The pin dot (::before) is the same accent-dot language
-   as Home's .home-notebook-pin. All of this card's inner part classes
-   (token-sheet-header, token-sheet-meaning-block, ...) keep their existing
-   names -- only the outer wrapper's own look changed. Phase 119 -- full
+   as Home's .home-notebook-pin. Phase 120 renamed this card's inner part
+   classes to .token-note-* (see below) -- .token-sheet-close/-close-icon
+   and .token-sheet-overlay/-fold-divider are the only .token-sheet-*
+   names still in use here. Phase 119 -- full
    rounded corners + a real border (was top-only radius/accent, relying on
    .token-sheet-overlay's now-removed edge-to-edge width) so the mobile
    peek reads as a lifted note card, not a docked panel. */
@@ -10169,15 +10173,42 @@ input.reading-vocab-sticker-toggle:checked {
   background: transparent;
 }
 
-.token-sheet-header {
+/* Phase 120 -- Reading Inspector Interior Reconstruction. Replaces the old
+   .token-sheet-header/-title-group/-bookmark-icon/-word/-reading/-position-
+   badge, .token-sheet-meaning-block(+::before)/-meaning-label/-meaning-
+   value, .token-sheet-status, the .bookmark-inspector .classify-actions
+   2x2-grid override, .token-sheet-basket-row/-basket-button(+active)/
+   -basket-stamp, .token-sheet-meta-row/-meta-tag, .token-sheet-secondary-
+   actions, and .token-sheet-nav/-nav-button rules that used to live here --
+   every one of those was its own bordered/tinted/pill-shaped block, which
+   stacked into an information-management panel (title bar, tinted meaning
+   card, status sentence, button grid, tag row, callout, footer of same-
+   weight buttons) instead of the mockup's one small word note. .token-
+   sheet-close/-close-icon and .token-sheet-fold-divider are unchanged
+   (still used, just repositioned in TokenDetailSheet.tsx) and kept where
+   they were below. */
+.token-note-header {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-.token-sheet-title-group {
+.token-note-mark {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+}
+
+.token-note-heading {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.token-note-word-row {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -10185,42 +10216,26 @@ input.reading-vocab-sticker-toggle:checked {
   min-width: 0;
 }
 
-/* Small Shiori mark ahead of the word -- the one visual cue (besides the
-   top accent edge) that marks this as "a bookmark note about this word",
-   not a generic word-detail inspector. Sized/aligned to sit inline with
-   the word's baseline rather than towering over it. Square (not the old
-   narrow bookmark-glyph ratio) since object-fit: contain already respects
-   the illustrated character's own proportions inside the box. */
-.token-sheet-bookmark-icon {
-  flex: 0 0 auto;
-  align-self: center;
-  width: 34px;
-  height: 34px;
-}
-
-.token-sheet-word {
+.token-note-word {
   color: var(--text);
   font-size: 30px;
   font-weight: 800;
   overflow-wrap: anywhere;
 }
 
-.token-sheet-reading {
+.token-note-reading {
   color: var(--muted);
   font-size: 15px;
   font-weight: 600;
 }
 
-.token-sheet-position-badge {
-  flex: 0 0 auto;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--soft-bg);
-  border: 1px solid var(--border);
+/* Occurrence position ("3 / 12") -- low-priority reference info, so it's
+   plain small text under the word/reading line rather than a bordered
+   badge competing with them for attention. */
+.token-note-position {
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* De-emphasized icon-only close (was a bordered "닫기" text pill) -- the
@@ -10252,13 +10267,337 @@ input.reading-vocab-sticker-toggle:checked {
   height: 16px;
 }
 
-/* The single most practically useful fact on the card -- called out with
-   its own tinted block, ahead of the (comparatively secondary) base_form/
-   POS/JLPT details below, and read on entry before anything else. A small
-   taped-on strip (::before) marks it instead of a colored border-left --
-   same washi-tape language as the reader page/start card, and this was
-   also the one recurring "side-tab accent border" the design detector kept
-   flagging here. */
+/* Word/reading/meaning is the card's entire "first look" -- no tinted
+   block, no washi-tape accent, no border. Just the note's own biggest,
+   boldest line, the way a word actually looks written on a sticky note. */
+.token-note-meaning-label {
+  display: block;
+  margin: 6px 0 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.token-note-meaning {
+  margin: 0;
+  color: var(--text);
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* Classify "stamp" strip -- was a bordered 2x2 button grid (Phase 65-99);
+   now one row of small chips, each keeping its existing success-/warning-/
+   danger-/secondary-button class (so the shared button[data-active="true"]
+   rule elsewhere in the app still marks the active one with its ✓ suffix)
+   but recolored here to a soft per-status tint instead of a solid fill,
+   only turning solid once actually picked. Scoped to .token-note-stamp so
+   the Analyze tab's own .classify-actions button styling is untouched. */
+.token-note-stamps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.token-note-stamp {
+  min-width: 0;
+  padding: 8px 4px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  word-break: keep-all;
+  box-shadow: none;
+}
+
+.token-note-stamp.success-button {
+  color: #2f6b46;
+  background: rgba(140, 189, 163, 0.22);
+}
+
+.token-note-stamp.warning-button {
+  color: #6f5f96;
+  background: rgba(173, 156, 214, 0.22);
+}
+
+.token-note-stamp.danger-button {
+  color: #96603f;
+  background: rgba(214, 162, 129, 0.22);
+}
+
+.token-note-stamp.secondary-button {
+  color: var(--muted);
+  background: var(--soft-bg);
+}
+
+.token-note-stamp[data-active="true"] {
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.token-note-stamp.success-button[data-active="true"] {
+  background: #4f8c66;
+}
+
+.token-note-stamp.warning-button[data-active="true"] {
+  background: #6f5f96;
+}
+
+.token-note-stamp.danger-button[data-active="true"] {
+  background: #96603f;
+}
+
+.token-note-stamp.secondary-button[data-active="true"] {
+  color: var(--text);
+  background: var(--border);
+}
+
+.token-note-stamp:not(:disabled):hover {
+  box-shadow: none;
+  transform: none;
+  filter: brightness(0.97);
+}
+
+.token-note-stamp-hint {
+  margin: 6px 2px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* Phase 94 -- hidden by default (pinned desktop / docked tablet aren't
+   height-constrained, so there's no "fold" to mark there); shown only on
+   the compact mobile sheet below, right where its max-height actually cuts
+   the card off, so it's a subtle "this scrolls" cue and not a static label
+   that appears whether or not there's anything to find below it. Phase
+   120 -- now sits right after the stamp row/hint (see TokenDetailSheet.tsx):
+   word/reading/meaning/status is the mobile peek's entire first look,
+   everything below this marker (meta/example/basket/nav/edit/report) is
+   secondary and folds under it. */
+.token-sheet-fold-divider {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .token-sheet-fold-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 2px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .token-sheet-fold-divider::before,
+  .token-sheet-fold-divider::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 0;
+    border-top: 1px dashed var(--border);
+  }
+}
+
+/* Quiet meta line -- was a row of bordered pill tags (기본형/품사/등장
+   횟수/JLPT each its own chip); now one small plain-text line, dot-
+   separated, no border/fill of its own -- reference info, not a second
+   row of buttons. */
+.token-note-meta {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+/* Quiet example note -- was a bordered/left-accented callout block (Phase
+   60's "taped note" treatment); now a plain label + line, same weight as
+   .token-note-meta above it, no card-in-card border. */
+.token-note-example {
+  margin-top: 10px;
+}
+
+.token-note-example-label {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.token-note-example-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-style: italic;
+  line-height: 1.6;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.token-note-example-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Secondary actions -- basket toggle, prev/next/모르는 단어로/첫 등장으로,
+   meaning edit, report. All same low weight now (was: one dashed full-
+   width button + a bordered nav row + a bordered footer, each visually
+   competing) -- one quiet wrapping area under a thin divider, small text
+   throughout, so nothing here reads as heavier than "these are optional
+   tools", never mind arguing for attention against the word/meaning/status
+   above. */
+.token-note-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.token-note-basket-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Word Basket toggle -- kept as a real (small) chip rather than a plain
+   text link, since unlike nav/edit/report this one actually changes state
+   the user needs to notice; still far lighter than the old full-width
+   dashed button. */
+.token-note-action-chip {
+  /* width/min-height explicit -- otherwise the app-wide mobile
+     button { width: 100%; min-height: 44px } touch-target rule (see
+     globals.css's max-width:640px block) stretches this into a full-width
+     bar and stacks every other .token-note-action-link below it one per
+     line, same fix .reading-summary-link-button already established. */
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 5px 12px;
+  border: 1px solid var(--screen-accent, var(--accent));
+  border-radius: 999px;
+  color: var(--screen-accent, var(--accent));
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.token-note-action-chip:not(:disabled):hover {
+  background: var(--screen-accent-soft, var(--soft-bg));
+  box-shadow: none;
+  transform: none;
+}
+
+.token-note-action-chip-active {
+  border-style: solid;
+  color: #ffffff;
+  background: var(--screen-accent, var(--accent));
+}
+
+.token-note-action-chip-active:not(:disabled):hover {
+  background: var(--screen-accent, var(--accent));
+  opacity: 0.92;
+}
+
+.token-note-basket-stamp {
+  flex: 0 0 auto;
+}
+
+.token-note-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+}
+
+.token-note-meaning-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+}
+
+/* Plain text-link buttons -- prev/next/모르는 단어로/첫 등장으로/뜻 오류
+   신고 all use this. No border, no fill, no shadow: the quietest tier in
+   the app, quieter even than .ghost-button, since these are the card's
+   least important actions. */
+.token-note-action-link {
+  /* Same app-wide mobile button{width:100%} override as
+     .token-note-action-chip above. */
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 0;
+  border: none;
+  border-radius: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+.token-note-action-link:not(:disabled):hover {
+  color: var(--text);
+  background: transparent;
+  text-decoration: underline;
+  box-shadow: none;
+  transform: none;
+}
+
+.token-note-action-link:disabled {
+  color: var(--border-strong);
+  background: transparent;
+}
+
+/* The meaning-quick-edit trigger keeps its own component (unchanged
+   behavior/markup) but reads at this same quiet tier while inside the
+   inspector card, instead of its usual ghost-button chrome. */
+.token-note-meaning-actions .meaning-quick-edit-trigger {
+  /* Same app-wide mobile button{width:100%} override as
+     .token-note-action-chip above. */
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 0;
+  border: none;
+  border-radius: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.token-note-meaning-actions .meaning-quick-edit-trigger:not(:disabled):hover {
+  color: var(--text);
+  background: transparent;
+  text-decoration: underline;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Phase 120 note: TokenDetailSheet.tsx (Reading inspector) no longer uses
+   any of the six rules below -- it switched to its own .token-note-* set
+   above. Kept here unchanged because AnalyzeSection.tsx's ClassifyWordCard
+   and StudySection.tsx's answer-reveal tags still render these exact
+   classes (see ClassifyWordPrimary/ClassifyWordSecondary and
+   .study-answer-tags) -- both out of scope this phase (Analyze has its own
+   future direction; Study is explicitly protected). */
+.token-sheet-reading {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
 .token-sheet-meaning-block {
   position: relative;
   margin: 8px 0 4px;
@@ -10299,106 +10638,6 @@ input.reading-vocab-sticker-toggle:checked {
   overflow-wrap: anywhere;
 }
 
-.token-sheet-status {
-  margin: 14px 0 10px;
-  color: var(--text);
-}
-
-/* Status pills read as chips (fully rounded) in a 2x2 grid -- wider columns
-   than the Analyze tab's 4-across layout so a label like "완벽히 아는 단어"
-   fits on one line inside a pill instead of wrapping character-by-character.
-   Scoped to .bookmark-inspector so the Analyze tab's classify-card is
-   untouched. */
-.bookmark-inspector .classify-actions {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.bookmark-inspector .classify-actions button {
-  border-radius: 999px;
-  word-break: keep-all;
-}
-
-/* Word Basket toggle -- the inspector's "저장 대상에 추가/제외" action.
-   Full-width and visually distinct (dashed border, screen-accent tint)
-   from the status pills above so "change this word's status" and "put it
-   in the save basket" don't read as the same kind of button. */
-.token-sheet-basket-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.token-sheet-basket-row .token-sheet-basket-button {
-  flex: 1 1 auto;
-  min-width: 180px;
-  margin-top: 0;
-}
-
-.token-sheet-basket-stamp {
-  flex: 0 0 auto;
-}
-
-.token-sheet-basket-button {
-  width: 100%;
-  border: 1.5px dashed var(--screen-accent, var(--accent));
-  border-radius: 999px;
-  color: var(--screen-accent, var(--accent));
-  background: transparent;
-}
-
-.token-sheet-basket-button:not(:disabled):hover {
-  background: var(--screen-accent-soft, var(--soft-bg));
-  box-shadow: none;
-  transform: none;
-}
-
-.token-sheet-basket-button-active {
-  border-style: solid;
-  color: #ffffff;
-  background: var(--screen-accent, var(--accent));
-}
-
-.token-sheet-basket-button-active:not(:disabled):hover {
-  background: var(--screen-accent, var(--accent));
-  opacity: 0.92;
-}
-
-/* Phase 94 -- hidden by default (pinned desktop / docked tablet aren't
-   height-constrained, so there's no "fold" to mark there); shown only on
-   the compact mobile sheet below, right where its max-height actually cuts
-   the card off, so it's a subtle "this scrolls" cue and not a static label
-   that appears whether or not there's anything to find below it. */
-.token-sheet-fold-divider {
-  display: none;
-}
-
-@media (max-width: 640px) {
-  .token-sheet-fold-divider {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 14px 0 2px;
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 700;
-  }
-
-  .token-sheet-fold-divider::before,
-  .token-sheet-fold-divider::after {
-    content: "";
-    flex: 1 1 auto;
-    height: 0;
-    border-top: 1px dashed var(--border);
-  }
-}
-
-/* base_form/품사/JLPT now sit below the status pills as secondary,
-   lower-emphasis reference info once meaning_ko has top billing above. */
-/* Compact meta row -- replaces the old bordered 4-cell definition-list grid
-   (기본형/품사/등장 횟수/JLPT) with a single line of small tags, in line
-   with "Word Inspector를 작은 단어 카드로" (구현3). */
 .token-sheet-meta-row {
   display: flex;
   flex-wrap: wrap;
@@ -10414,54 +10653,8 @@ input.reading-vocab-sticker-toggle:checked {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
-  /* Was white-space: nowrap -- fine for the usual short 품사/기본형 tag,
-     but an unusually long reading (e.g. a long compound word) forced this
-     pill to its full unwrapped text width, which pushed .study-card wider
-     than the viewport and caused page-wide horizontal scroll on mobile.
-     max-width + anywhere let it wrap instead of blowing out the layout. */
   max-width: 100%;
   overflow-wrap: anywhere;
-}
-
-/* Secondary-actions footer: word navigation and meaning edit/report read
-   as supporting actions, not primary ones -- set apart with a divider and
-   muted background so they don't compete with the status buttons above. */
-.token-sheet-secondary-actions {
-  display: grid;
-  gap: 12px;
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-
-/* Phase 99 -- the basket-select row moved in here (was previously its own
-   block above the classify grid, with its own margin-top for that
-   position); the grid's own `gap` already spaces it from its siblings, so
-   drop the now-redundant margin only when it's nested in this footer. */
-.token-sheet-secondary-actions .token-sheet-basket-row {
-  margin-top: 0;
-}
-
-/* Up to 4 nav buttons (이전/다음/모르는 단어로/첫 등장으로) now share one
-   wrapping row instead of two fixed rows -- wide enough screens fit all 4
-   on one line, narrow ones wrap 2x2, but the card never reserves two full
-   rows just for navigation. */
-.token-sheet-nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.token-sheet-nav-button {
-  flex: 1 1 auto;
-  width: auto;
-  min-width: 84px;
-  min-height: 38px;
-  padding: 8px 10px;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .context-example-block {
@@ -10473,30 +10666,6 @@ input.reading-vocab-sticker-toggle:checked {
   border-radius: 10px;
   padding: 12px 14px;
   background: #fdf9ee;
-}
-
-/* Reading tab only (this class is shared with the Analyze/Study "classify
-   card", which keep their own left-border-accent look untouched) -- same
-   taped-strip treatment as .token-sheet-meaning-block above, so the two
-   notes inside the bookmark-inspector read as a matched pair. */
-.bookmark-inspector .context-example-block {
-  position: relative;
-  border-left: 1px solid #ecdfb8;
-  border-radius: 4px 14px 14px 14px;
-}
-
-.bookmark-inspector .context-example-block::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: 14px;
-  z-index: 1;
-  width: 34px;
-  height: 12px;
-  border: 1px solid rgba(232, 194, 92, 0.6);
-  background: rgba(232, 194, 92, 0.45);
-  transform: rotate(2deg);
-  pointer-events: none;
 }
 
 .context-example-label {
@@ -10899,8 +11068,12 @@ input.reading-vocab-sticker-toggle:checked {
     gap: 6px;
   }
 
-  .token-sheet-word {
+  .token-note-word {
     font-size: 22px;
+  }
+
+  .token-note-word-row {
+    gap: 6px;
   }
 
   .bookmark-inspector {
@@ -10925,99 +11098,15 @@ input.reading-vocab-sticker-toggle:checked {
     max-height: 42vh;
   }
 
-  .token-sheet-title-group {
-    gap: 6px;
-  }
-
-  .token-sheet-nav-button {
-    min-height: 44px;
-    padding: 12px 14px;
-    font-size: 15px;
-  }
-
   .classify-actions {
     gap: 8px;
   }
 
-  /* Phase 100 -- below the fold divider, the basket-select toggle, word-nav
-     row, and meaning-edit/report row still read as a small button toolbar
-     even though Phase 99 already moved them under the classify grid's fold
-     line -- a reader who scrolls the compact sheet even slightly lands on
-     a wall of bordered boxes that reads like a feature panel, not the
-     mockup's quiet sticky note. None of these lose function, position, or
-     copy; only their mobile-only chrome drops to a plain text-style
-     action so the classify grid stays the only "boxed button" weight this
-     card carries at this width. Desktop docked (>=641px) and pinned
-     (>=1024px) panels have real vertical room and keep the original
-     bordered buttons -- this whole block is gated to the compact sheet
-     only. */
-  .bookmark-inspector .token-sheet-basket-button {
-    flex: 0 1 auto;
-    width: auto;
-    min-width: 0;
-    border: none;
-    padding: 6px 2px;
-    color: var(--screen-accent, var(--accent));
-    background: transparent;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-  }
-
-  .bookmark-inspector .token-sheet-basket-button:not(:disabled):hover {
-    background: transparent;
-  }
-
-  .bookmark-inspector .token-sheet-basket-button-active {
-    color: var(--screen-accent, var(--accent));
-    background: transparent;
-  }
-
-  .bookmark-inspector .token-sheet-basket-button-active:not(:disabled):hover {
-    background: transparent;
-  }
-
-  .bookmark-inspector .token-sheet-nav-button,
-  .bookmark-inspector .meaning-quick-edit-trigger,
-  .bookmark-inspector .token-sheet-report-meaning {
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    color: var(--muted);
-    text-decoration: underline;
-    text-decoration-color: transparent;
-  }
-
-  .bookmark-inspector .token-sheet-nav-button {
-    min-height: 44px;
-    padding: 8px 6px;
-  }
-
-  .bookmark-inspector .token-sheet-nav-button:not(:disabled):hover,
-  .bookmark-inspector .meaning-quick-edit-trigger:not(:disabled):hover,
-  .bookmark-inspector .token-sheet-report-meaning:not(:disabled):hover {
-    background: transparent;
-    box-shadow: none;
-    transform: none;
-    text-decoration-color: currentColor;
-  }
-
-  .bookmark-inspector .token-sheet-nav-button:disabled {
-    color: #b7c0cc;
-  }
-
-  /* 문맥 예문 loses its bordered/tape-strip card look at this width --
-     it's still the same labeled block, just quieter than a second boxed
-     card sitting under the meaning block above the fold. */
-  .bookmark-inspector .context-example-block {
-    border: none;
-    border-radius: 0;
-    padding: 6px 0 0;
-    background: transparent;
-  }
-
-  .bookmark-inspector .context-example-block::before {
-    display: none;
-  }
+  /* Phase 120 removed this tier's target classes from TokenDetailSheet
+     entirely (.token-sheet-basket-button, .token-sheet-nav-button,
+     .token-sheet-report-meaning, .context-example-block no longer render
+     there -- see .token-note-action-chip/-action-link/-example above,
+     which are quiet at every width now, not gated to this mobile tier). */
 
   /* Mobile-only reflow of the reading tab: the reading card moves ahead of
      the "이 텍스트 학습 요약" card so the core reading experience isn't

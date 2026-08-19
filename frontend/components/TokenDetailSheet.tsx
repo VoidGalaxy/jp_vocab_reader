@@ -1,7 +1,7 @@
 "use client";
 
 import type { TokenStatus, TokenWithStatus } from "./types";
-import { getDisplayMeaning, statusLabels } from "./shared";
+import { getDisplayMeaning } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 import { BookmarkIcon, CloseIcon } from "./icons";
@@ -45,6 +45,34 @@ type TokenDetailSheetProps = {
 // what a word card actually contains.
 type TokenDetailPresentation = "modal" | "pinned";
 
+// Short local labels for the classify stamp row only -- statusLabels
+// (shared.tsx) stays the long/formal form used elsewhere (Analyze tab
+// summary, Vocab list badges, Study). Reuses the exact short forms
+// ReaderMode's own color legend already settled on (아는/헷갈림/모름/
+// 미분류), so the same word doesn't have two different short spellings
+// inside one screen.
+const stampLabels: Record<TokenStatus, string> = {
+  known: "아는",
+  uncertain: "헷갈림",
+  unknown: "모름",
+  unclassified: "미분류",
+};
+
+// Phase 120 -- Reading Inspector Interior Reconstruction. Previously this
+// card was built like an information-management panel: a titled/tinted
+// "한국어 뜻" block, a "현재 상태: X" sentence duplicating the classify
+// grid's own active state, a bordered 2x2 button grid, a bordered pill row
+// of meta tags, a bordered/accented example callout, and a bordered footer
+// of same-weight action buttons (basket toggle, 4 nav buttons, meaning
+// edit, report) -- eight-ish same-looking chrome blocks stacked with no
+// clear "what matters first" read. Rebuilt around one hierarchy instead:
+// word/reading/meaning dominate with no card-in-card chrome at all: a
+// compact single-row classify "stamp" strip (short labels, soft per-status
+// tint, no bordered grid) comes right after; meta/example/basket/nav/edit/
+// report all drop into one quiet, small-text secondary area below a thin
+// divider (further folded behind "자세히" on the mobile peek card, same as
+// before). No functional change -- every handler/prop below is called
+// exactly as it was.
 function TokenDetailContent({
   token,
   onClose,
@@ -81,19 +109,33 @@ function TokenDetailContent({
   const isEditingMeaning =
     vocabItemId !== null && meaningEditItemId === vocabItemId;
 
+  const metaParts: string[] = [];
+  if (token.base_form && token.base_form !== label) {
+    metaParts.push(`기본형 ${token.base_form}`);
+  }
+  if (token.part_of_speech) {
+    metaParts.push(token.part_of_speech);
+  }
+  metaParts.push(`${token.occurrence_count || 1}회 등장`);
+  if (token.jlpt_level) {
+    metaParts.push(`JLPT 추천 ${token.jlpt_level}`);
+  }
+
+  const exampleSentence = token.savedExampleSentence || token.example_sentence;
+
   return (
     <>
-      <div className="token-sheet-header">
-        <div className="token-sheet-title-group">
-          <ShioriMark variant="reading" className="token-sheet-bookmark-icon" />
-          <span className="token-sheet-word">{label}</span>
-          {token.reading && token.reading !== label ? (
-            <span className="token-sheet-reading">{token.reading}</span>
-          ) : null}
+      <div className="token-note-header">
+        <ShioriMark variant="reading" className="token-note-mark" />
+        <div className="token-note-heading">
+          <div className="token-note-word-row">
+            <span className="token-note-word">{label}</span>
+            {token.reading && token.reading !== label ? (
+              <span className="token-note-reading">{token.reading}</span>
+            ) : null}
+          </div>
           {positionLabel ? (
-            <span className="token-sheet-position-badge">
-              {positionLabel}
-            </span>
+            <span className="token-note-position">{positionLabel}</span>
           ) : null}
         </div>
         <button
@@ -105,135 +147,112 @@ function TokenDetailContent({
           <CloseIcon className="token-sheet-close-icon" />
         </button>
       </div>
-      <div className="token-sheet-meaning-block">
-        <span className="token-sheet-meaning-label">한국어 뜻</span>
-        <p className="token-sheet-meaning-value">
-          {getDisplayMeaning(displayedMeaning)}
-        </p>
-      </div>
+
+      <p className="token-note-meaning-label">한국어 뜻</p>
+      <p className="token-note-meaning">{getDisplayMeaning(displayedMeaning)}</p>
+
       {/* Phase 99 -- classification is the primary action now that
           unknown/uncertain auto-save on click (see handleReadingStatusChange
-          in page.tsx), so the status grid moved above the fold instead of
-          sitting below a separate save button -- a reader can look up the
-          meaning and classify in one glance without scrolling. The basket
-          toggle (further down, in the secondary-actions block) only queues
-          a word to save alongside others later; it never persists anything
-          by itself, so its copy says "선택" (select) rather than
-          "담기"/"저장" so it doesn't read as a second, competing save
-          action. */}
-      <p className="token-sheet-status">
-        현재 상태: <strong>{statusLabels[token.status]}</strong>
-        {token.status === "unclassified" ? (
-          <span className="muted-text">
-            {" "}
-            · 모르는·헷갈리는 단어는 자동 저장돼요
-          </span>
-        ) : null}
-      </p>
-      <div className="classify-actions" role="group" aria-label="단어 상태 변경">
+          in page.tsx). Phase 120 -- recast from a bordered 2x2 button grid
+          into a single-row strip of small stamp chips (soft per-status
+          tint, filled only when active via the existing shared
+          [data-active="true"] convention) so it reads as a quick mark, not
+          an admin form section -- but every button still calls the exact
+          same onStatusChange(status) it always did. */}
+      <div
+        className="token-note-stamps"
+        role="group"
+        aria-label="단어 상태 변경"
+      >
         <button
           type="button"
-          className="success-button"
+          className="token-note-stamp success-button"
           aria-pressed={token.status === "known"}
           data-active={token.status === "known"}
           onClick={() => onStatusChange("known")}
         >
-          {statusLabels.known}
+          {stampLabels.known}
         </button>
         <button
           type="button"
-          className="warning-button"
+          className="token-note-stamp warning-button"
           aria-pressed={token.status === "uncertain"}
           data-active={token.status === "uncertain"}
           onClick={() => onStatusChange("uncertain")}
         >
-          {statusLabels.uncertain}
+          {stampLabels.uncertain}
         </button>
         <button
           type="button"
-          className="danger-button"
+          className="token-note-stamp danger-button"
           aria-pressed={token.status === "unknown"}
           data-active={token.status === "unknown"}
           onClick={() => onStatusChange("unknown")}
         >
-          {statusLabels.unknown}
+          {stampLabels.unknown}
         </button>
         <button
           type="button"
-          className="secondary-button"
+          className="token-note-stamp secondary-button"
           aria-pressed={token.status === "unclassified"}
           data-active={token.status === "unclassified"}
           onClick={() => onStatusChange("unclassified")}
         >
-          미분류 / 건너뛰기
+          {stampLabels.unclassified}
         </button>
       </div>
+      {/* No visible "현재 상태: X" line -- each stamp's own aria-pressed
+          already announces the active state accessibly (this is a
+          role="group" of toggle buttons, not a plain button row), so a
+          second sentence saying the same thing would be redundant both
+          visually and for screen readers. */}
+      {token.status === "unclassified" ? (
+        <p className="token-note-stamp-hint">
+          모르는·헷갈리는 단어는 자동 저장돼요
+        </p>
+      ) : null}
+
       {/* Phase 94 -- hidden by default (pinned desktop / docked tablet aren't
           height-constrained); shown only on the compact mobile sheet, right
-          where its max-height actually cuts the card off, so it's a subtle
-          "this scrolls" cue rather than a static label. Purely a visual
-          divider, not a toggle. */}
+          where its max-height actually cuts the card off. Phase 120 -- moved
+          up to sit right after the stamp row (word/meaning/status is now the
+          card's entire "first look"; meta/example/basket/nav/edit/report are
+          all secondary and fold below this same marker). */}
       <div className="token-sheet-fold-divider" aria-hidden="true">
         <span>자세히</span>
       </div>
-      <div className="token-sheet-meta-row">
-        {token.base_form && token.base_form !== label ? (
-          <span className="token-sheet-meta-tag">기본형 {token.base_form}</span>
-        ) : null}
-        {token.part_of_speech ? (
-          <span className="token-sheet-meta-tag">{token.part_of_speech}</span>
-        ) : null}
-        <span className="token-sheet-meta-tag">
-          {token.occurrence_count || 1}회 등장
-        </span>
-        {token.jlpt_level ? (
-          <span className="token-sheet-meta-tag">
-            JLPT 추천 {token.jlpt_level}
-          </span>
-        ) : null}
-      </div>
+
+      <p className="token-note-meta">{metaParts.join(" · ")}</p>
       {token.jlpt_level ? (
         <p className="jlpt-detail-hint">
           JLPT 추천 어휘 기준이며, 비공식 참고용 표시입니다.
         </p>
       ) : null}
-      <div className="context-example-block">
-        <p className="context-example-label">문맥 예문</p>
-        {token.savedExampleSentence ? (
-          <p className="context-example-text">
+
+      <div className="token-note-example">
+        <span className="token-note-example-label">예문</span>
+        {exampleSentence ? (
+          <p className="token-note-example-text">
             <HighlightedExample
-              sentence={token.savedExampleSentence}
+              sentence={exampleSentence}
               surface={token.surface}
               baseForm={token.base_form}
               normalizedForm={token.normalized_form}
             />
           </p>
-        ) : token.example_sentence ? (
-          <>
-            <p className="context-example-text">
-              <HighlightedExample
-                sentence={token.example_sentence}
-                surface={token.surface}
-                baseForm={token.base_form}
-                normalizedForm={token.normalized_form}
-              />
-            </p>
-            <p className="context-example-hint">
-              이 단어가 나온 문장을 복습 카드에 함께 저장해요.
-            </p>
-          </>
         ) : (
-          <p className="context-example-hint">
+          <p className="token-note-example-hint">
             이 단어가 포함된 문장을 찾지 못했어요.
           </p>
         )}
       </div>
-      <div className="token-sheet-secondary-actions">
+
+      <div className="token-note-actions">
         {canAddToBasket ? (
-          <div className="token-sheet-basket-row">
+          <span className="token-note-basket-row">
             <button
               type="button"
-              className={`token-sheet-basket-button${isInBasket ? " token-sheet-basket-button-active" : ""}`}
+              className={`token-note-action-chip${isInBasket ? " token-note-action-chip-active" : ""}`}
               onClick={onToggleBasket}
               aria-pressed={isInBasket}
             >
@@ -244,15 +263,15 @@ function TokenDetailContent({
               <ShioriStamp
                 variant="save"
                 label="선택했어요"
-                className="token-sheet-basket-stamp"
+                className="token-note-basket-stamp"
               />
             ) : null}
-          </div>
+          </span>
         ) : null}
-        <div className="token-sheet-nav" role="group" aria-label="단어 이동">
+        <span className="token-note-nav" role="group" aria-label="단어 이동">
           <button
             type="button"
-            className="ghost-button compact-button token-sheet-nav-button"
+            className="token-note-action-link"
             onClick={onPrevious}
             disabled={!canGoPrevious}
           >
@@ -260,7 +279,7 @@ function TokenDetailContent({
           </button>
           <button
             type="button"
-            className="ghost-button compact-button token-sheet-nav-button"
+            className="token-note-action-link"
             onClick={onNext}
             disabled={!canGoNext}
           >
@@ -268,7 +287,7 @@ function TokenDetailContent({
           </button>
           <button
             type="button"
-            className="ghost-button compact-button token-sheet-nav-button"
+            className="token-note-action-link"
             onClick={onNextUnknown}
             disabled={!canGoNextUnknown}
           >
@@ -277,15 +296,15 @@ function TokenDetailContent({
           {token.occurrence_count > 1 ? (
             <button
               type="button"
-              className="ghost-button compact-button token-sheet-nav-button"
+              className="token-note-action-link"
               onClick={onFirstOccurrence}
               disabled={!canGoFirstOccurrence}
             >
               첫 등장으로
             </button>
           ) : null}
-        </div>
-        <div className="meaning-actions-row">
+        </span>
+        <span className="token-note-meaning-actions">
           {vocabItemId !== null ? (
             <MeaningQuickEdit
               isEditing={isEditingMeaning}
@@ -303,13 +322,13 @@ function TokenDetailContent({
           {!isEditingMeaning ? (
             <button
               type="button"
-              className="ghost-button compact-button token-sheet-report-meaning"
+              className="token-note-action-link"
               onClick={() => onReportMeaning(token)}
             >
               뜻 오류 신고
             </button>
           ) : null}
-        </div>
+        </span>
       </div>
     </>
   );
