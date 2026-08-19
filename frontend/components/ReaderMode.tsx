@@ -773,6 +773,17 @@ export function ReaderMode({
             slots, so adding a 4th contender there risked the exact silent
             cascade collision Phase 73's postmortem covers. */}
         <span className="reader-inspector-tabs" aria-hidden="true" />
+        {/* Phase 122 -- spine/binding polish. .reader-inspector-rail's own
+            ::before/::after (globals.css) draw the gutter shadow, fold
+            highlight, and stitch marks; this is the one physical "binding
+            hardware" detail that needs a real element rather than a
+            pseudo-element slot (both of the rail's own are already spoken
+            for) -- a small brass paper-fastener straddling the spine near
+            the top, echoing "small clipped tape/marker at spine" from the
+            brief. pointer-events:none + aria-hidden like every other desk
+            decoration; purely cosmetic, never the only carrier of
+            information. */}
+        <span className="reader-spine-clip" aria-hidden="true" />
       </div>
 
       {/* Phase 74 -- desk prop layer: a pen, a paperclip, and a small paper

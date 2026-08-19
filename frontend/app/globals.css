@@ -9379,15 +9379,93 @@ input.reading-vocab-sticker-toggle:checked {
     top: 24px;
     /* Phase 119 -- was align-self: start (the column's own box only as
        tall as its content). Stretched to the shared row height instead so
-       the left-border "spine" below runs the merged book's full height
-       even when the pinned card itself is short -- CSS Grid resolves a
-       sticky item's scroll-containing-block from its *grid area*
-       regardless of align-self, so this is a background/visual change
-       only and doesn't touch how far the card travels while sticking. */
+       the spine below runs the merged book's full height even when the
+       pinned card itself is short -- CSS Grid resolves a sticky item's
+       scroll-containing-block from its *grid area* regardless of
+       align-self, so this is a background/visual change only and doesn't
+       touch how far the card travels while sticking. */
     align-self: stretch;
-    border-left: 1px dashed var(--paper-border);
-    box-shadow: inset 10px 0 18px -16px rgba(58, 38, 16, 0.4);
-    padding-left: 2px;
+    /* Phase 122 -- z-index:1 makes this its own stacking context, so the
+       ::before/::after spine layers below (both z-index:-1, confined to
+       this context) paint as one unit above .reader-paper's plain
+       background where they bleed leftward across the column boundary,
+       without needing to fight reader-desk-props (z-index:0) for
+       priority. */
+    z-index: 1;
+    /* No padding-left here -- the spine graphics below live entirely in
+       negative-offset space (left:-26px / -1.5px on the pseudo-elements),
+       taken out of flow, so they need no room reserved in the rail's own
+       box. Content clearance from the spine is .bookmark-inspector-pinned/
+       .reader-inspector-idle's own left padding instead (see both further
+       down), since those are the boxes that actually need to keep their
+       real content clear of it. */
+  }
+
+  /* Phase 122 -- spine/binding polish. Previously a single flat
+     border-left + one soft inset shadow -- a real seam, but a thin,
+     slightly generic one ("dashed line"), not a page gutter with actual
+     depth. ::before now layers three things at once: a wider/deeper
+     center-weighted shadow (the valley where two pages meet), a thin
+     near-white fold highlight just to its right (light catching the
+     right page's raised inner edge), and a faint warm cast further right
+     (the right page's own paper picking up the shadow's tint) -- all pure
+     gradients, no new DOM. Bleeds across the column boundary (left:-26px)
+     since a real gutter shadow falls on both pages, not just one.
+     pointer-events:none -- decorative only, must never intercept a click
+     meant for the reader text or the pinned card. */
+  .reader-inspector-rail::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -26px;
+    width: 52px;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(58, 38, 16, 0.22) 46%,
+        rgba(58, 38, 16, 0.3) 50%,
+        rgba(58, 38, 16, 0.16) 54%,
+        transparent 66%
+      ),
+      linear-gradient(
+        90deg,
+        transparent calc(50% + 3px),
+        rgba(255, 252, 240, 0.6) calc(50% + 4px),
+        rgba(255, 252, 240, 0.4) calc(50% + 6px),
+        transparent calc(50% + 10px)
+      ),
+      linear-gradient(
+        90deg,
+        transparent 60%,
+        rgba(110, 91, 47, 0.05) 72%,
+        transparent 100%
+      );
+  }
+
+  /* The stitches: a narrow repeating tick column pinned exactly on the
+     page boundary, like a notebook's ring/stitch line seen edge-on.
+     Confined to a 3px strip (not the wider ::before band) so it reads as
+     a distinct thread, not a blur. */
+  .reader-inspector-rail::after {
+    content: "";
+    position: absolute;
+    top: 18px;
+    bottom: 18px;
+    left: -1.5px;
+    width: 3px;
+    z-index: -1;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      180deg,
+      rgba(110, 91, 47, 0.4) 0,
+      rgba(110, 91, 47, 0.4) 3px,
+      transparent 3px,
+      transparent 21px
+    );
   }
 }
 
@@ -9415,6 +9493,50 @@ input.reading-vocab-sticker-toggle:checked {
     0 34px 0 0 var(--sage-green),
     0 68px 0 0 var(--tone-dusty-blue);
   pointer-events: none;
+}
+
+/* Phase 122 -- small brass paper-fastener straddling the spine near the
+   top, the one "binding hardware" detail from the brief's list that reads
+   better as an actual small object than another gradient layer on
+   .reader-inspector-rail's own ::before/::after (both already spoken for
+   above). A round brad, not a clip -- flat circular head with an off-
+   center highlight (radial-gradient) and a darker rim (the same recipe
+   .reader-desk-prop--pen already uses for a metal/painted-wood read), plus
+   a tiny center rivet dot. Centered exactly on the page boundary
+   (left:-7px against a 14px width) so it visually pins both pages
+   together. display:none below 1024px -- .reader-inspector-rail itself is
+   already hidden there, but this stays explicit for clarity. */
+.reader-spine-clip {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .reader-spine-clip {
+    display: block;
+    position: absolute;
+    top: -9px;
+    left: -7px;
+    z-index: 2;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background:
+      radial-gradient(
+        circle at 35% 30%,
+        rgba(255, 244, 214, 0.9) 0%,
+        rgba(255, 244, 214, 0.9) 8%,
+        transparent 40%
+      ),
+      radial-gradient(
+        circle at center,
+        var(--tone-ink-brown) 0%,
+        var(--tone-ink-brown) 22%,
+        #b98a44 24%,
+        #b98a44 100%
+      );
+    box-shadow: 0 2px 3px rgba(37, 43, 30, 0.3);
+    pointer-events: none;
+  }
 }
 
 /* reader-inspector-idle -- a blank-note placeholder standing in for the
@@ -10896,16 +11018,23 @@ input.reading-vocab-sticker-toggle:checked {
    card look (border/shadow/tilt), which made this read as a second
    floating card next to .reader-paper instead of the mockup's single
    open-book spread. Both its own chrome and .reader-inspector-idle's
-   dashed placeholder box are stripped here -- .reader-desk-scene now
-   carries the one shared border/shadow, .reader-inspector-rail's left
-   border is the only seam between the two "pages", and .reader-paper
-   below gets matching rounded left corners so its own ruled-line
-   background still clips cleanly against the shared card's curve. */
+   dashed placeholder box are stripped here -- .reader-desk-scene carries
+   the one shared border/shadow, and .reader-inspector-rail's own
+   ::before/::after/.reader-spine-clip (Phase 122) are the seam between the
+   two "pages" now, not a plain border-left. .reader-paper below gets
+   matching rounded left corners so its own ruled-line background still
+   clips cleanly against the shared card's curve. */
 @media (min-width: 1024px) {
   .bookmark-inspector-pinned {
     width: 100%;
     max-width: none;
     max-height: calc(100vh - 48px);
+    /* Phase 122 -- was the base rule's 24px/20px (a mobile-sheet value);
+       bumped to match .reader-paper's own 30px rhythm so both "pages" of
+       the spread share one consistent margin, and given a touch of extra
+       left room so real content (word/meaning/stamps) never sits flush
+       against the spine decoration. */
+    padding: 30px 28px 30px 34px;
     border: none;
     border-radius: 0;
     background: transparent;
@@ -10931,6 +11060,7 @@ input.reading-vocab-sticker-toggle:checked {
     border: none;
     border-radius: 0;
     background: transparent;
+    padding: 28px 22px 28px 34px;
   }
 
   .reader-paper {
