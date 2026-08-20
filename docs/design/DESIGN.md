@@ -2293,3 +2293,82 @@ documented reason (`study-flashcard-stack-candidate-web.webp` above, plus
 Phase 126's `book-cover-green-object-candidate`/`sticky-note-set`/
 `desk-prop-set` candidates). Any further image-asset work would need a
 new generation pass.
+
+Phase 131 is a pure asset-prep pass, no screen changes: it turns the four
+"candidate" source images that earlier phases deferred (vignette/crop/
+multi-object-atlas problems) into 9 individually usable transparent WebP
+files under `frontend/public/brand/decor/phase131/` (full sourcing and
+sizes in that folder's own `ASSET_MANIFEST.md`). Nothing in
+`frontend/components/` or any screen's CSS was touched.
+
+The key finding that made this tractable: the `-web.webp` versions of
+these candidates (already committed and referenced in earlier phases'
+own DESIGN.md notes as "has a vignette, deferred") look dark/vignetted at
+the edges only because that export step flattened the image onto an
+opaque background, discarding alpha. The **source PNGs
+(`*-candidate.png`, sitting right next to each `-web.webp` all along)
+already carry real per-pixel alpha transparency** with a clean matte
+cutout and a natural soft drop shadow baked in -- confirmed by
+compositing each one onto a plain white background with Pillow, which
+revealed a professional-quality studio cutout, not a vignette at all.
+Every Phase 131 crop was made from the source PNG, never the `-web.webp`,
+carrying that real alpha straight through into a new transparent WebP.
+Worth remembering for any future asset-review pass: check the source PNG
+before writing off a `-web.webp` candidate as unusable.
+
+Cropping method: for the two multi-object canvases
+(`sticky-note-set-candidate.png`: 3 notes; `desk-prop-set-candidate.png`:
+4 props), object boundaries were found programmatically via alpha-channel
+projection analysis (row/column sums of `alpha > 10`, gap-detection to
+split into segments) rather than eyeballed -- then each object's tight
+bounding box was computed by scanning for actual alpha-positive pixels
+within its own segment window. A first padding pass (a flat 3% margin on
+every edge) produced a real bug caught in QA: the padding on adjacent
+objects overlapped, bleeding a sliver of the neighboring note/prop into
+the crop (most visible as a thin blue strip inside the yellow sticky-note
+crop). Fixed by computing each edge's padding independently, clamped to
+stop a few px short of the nearest neighbor's own tight bbox rather than
+using one flat margin everywhere -- re-verified clean afterward, no
+bleed on any of the 7 multi-object crops. The two single-object images
+(`book-cover-green-object-candidate.png`, `study-flashcard-stack-
+candidate.png`) had no neighbor-bleed risk and used a plain flat-margin
+crop.
+
+Tooling: Pillow + numpy, installed via `pip install --target` into a
+scratch directory outside the repo (`C:\JV_Project\qa_phase131\pytools`,
+never committed, cleaned up at the end of the phase) rather than added to
+`backend/requirements.txt` -- per the brief, no new project dependency.
+The backend's own `.venv` Python interpreter was used to run the install
+and the crop script since it's the only readily-available local Python
+with network access to fetch packages, but neither package was ever
+installed *into* that venv itself (`--target` points elsewhere), so
+`backend/requirements.txt`/the venv's own site-packages are unaffected.
+
+All 9 outputs visually verified: no vignette, no bled-in neighbor
+fragment, natural shadow intact, transparent background confirmed via a
+white-background composite test for every file, plus one contextual
+sanity check (`study-flashcard-stack-clean.webp` composited onto the
+Study board's actual dark-green felt tone) confirming it now reads
+exactly as intended for a future `.study-card-backing-sheet` application
+-- directly reversing Phase 130's "deferred, vignette risk" call now that
+the real cause (flattened `-web.webp` export, not the source art) is
+understood and worked around.
+
+**Files changed:** `frontend/public/brand/decor/phase131/` (9 new WebP
+files + `ASSET_MANIFEST.md`), this `docs/design/DESIGN.md` entry. No
+`.tsx` or screen CSS changed -- `git diff --check` and `npm run build`
+both still pass since no code moved, only new static assets and docs.
+
+**Commit-readiness:** yes -- all 9 assets pass visual QA, manifest
+documents exact sourcing for reproducibility, no code/behavior changed to
+regress.
+
+**Next phase candidates:** apply `study-flashcard-stack-clean.webp` to
+`.study-card-backing-sheet` (Study, now unblocked -- was Phase 130's one
+deferred item), `sticky-note-yellow/blue/coral.webp` to Home's shortcut
+stickers or a future candidate-tray variant, `desk-prop-*.webp` to
+Home/Reading's existing pure-CSS desk-prop layers (pen/clip/leaf already
+exist as CSS shapes in `.home-desk-prop`/`.reader-desk-prop` -- these
+photographed versions are direct drop-in upgrades), and
+`book-cover-green-object-clean.webp` for a Home/empty-state accent. None
+of these are applied yet; this phase only made them applicable.
