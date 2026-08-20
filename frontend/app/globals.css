@@ -6393,14 +6393,19 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 @media (min-width: 1024px) {
+  /* Phase 128 -- a photographed wood shelf panel (shared-shelf-wood-strip-
+     web.webp) replaces the flat two-stop wood gradient, so the cabinet
+     backdrop is real wood-grain material instead of a simulated one.
+     background-color keeps the old gradient's dark stop as a same-family
+     fallback if the image fails to load. */
   .shared-library-scene {
     padding: 20px;
     border-radius: 26px;
-    background: linear-gradient(
-      165deg,
-      var(--desk-wood) 0%,
-      var(--desk-wood-deep) 100%
-    );
+    background-color: var(--desk-wood-deep);
+    background-image: url("/brand/decor/phase127/shared-shelf-wood-strip-web.webp");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     box-shadow:
       inset 0 2px 10px rgba(37, 23, 10, 0.35),
       inset 0 -2px 0 rgba(255, 255, 255, 0.06);
@@ -6460,19 +6465,27 @@ input.reading-vocab-sticker-toggle:checked {
      (below) inside its own reserved buffer, never under card content --
      same "extra bottom padding is prop clearance" idiom the Phase 75 note
      on this file already established for the cabinet-level leaf/tag. */
+  /* Phase 128 -- same wood photo as the cabinet backdrop above, so the
+     compartment is a real recessed wood shelf rather than a flat cream
+     panel sitting inside a photographed cabinet. A light warm wash
+     (linear-gradient) is layered on top -- not because any text sits
+     directly on this background (the shelf title is its own opaque pill,
+     the deck cards are their own opaque book covers), but to keep this
+     surface reading as a *lighter interior shelf* distinct from the dark
+     cabinet exterior behind it, the same depth cue the old flat
+     var(--panel-bg) fill gave for free. background-color keeps the old
+     fallback tone if the image fails to load. */
   .shared-library-scene .shelf-section {
     position: relative;
     padding: 14px 16px 26px;
     border-radius: 4px 16px 16px 16px;
-    background:
-      repeating-linear-gradient(
-        100deg,
-        transparent 0px,
-        transparent 38px,
-        rgba(110, 91, 47, 0.04) 38px,
-        rgba(110, 91, 47, 0.04) 39px
-      ),
-      var(--panel-bg);
+    background-color: var(--panel-bg);
+    background-image:
+      linear-gradient(rgba(253, 249, 238, 0.3), rgba(253, 249, 238, 0.3)),
+      url("/brand/decor/phase127/shared-shelf-wood-strip-web.webp");
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
     box-shadow: 0 10px 22px rgba(37, 23, 10, 0.16);
   }
 
@@ -6515,18 +6528,18 @@ input.reading-vocab-sticker-toggle:checked {
      Phase 88 -- same plank-grain texture as .shelf-section above; no
      bookend here since .shared-deck-grid already spends both its own
      ::before/::after slots on the shelf-ledge line below. */
+  /* Phase 128 -- same treatment as .shelf-section above (real wood photo +
+     light wash), so the ungrouped fallback compartment matches. */
   .shared-library-scene .desk-surface-section > .shared-deck-grid {
     padding: 14px 16px 22px;
     border-radius: 4px 16px 16px 16px;
-    background:
-      repeating-linear-gradient(
-        100deg,
-        transparent 0px,
-        transparent 38px,
-        rgba(110, 91, 47, 0.04) 38px,
-        rgba(110, 91, 47, 0.04) 39px
-      ),
-      var(--panel-bg);
+    background-color: var(--panel-bg);
+    background-image:
+      linear-gradient(rgba(253, 249, 238, 0.3), rgba(253, 249, 238, 0.3)),
+      url("/brand/decor/phase127/shared-shelf-wood-strip-web.webp");
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat, no-repeat;
     box-shadow: 0 10px 22px rgba(37, 23, 10, 0.16);
   }
 
@@ -6813,32 +6826,30 @@ input.reading-vocab-sticker-toggle:checked {
   transform: translateY(-1px);
 }
 
-/* Course-card "cover" band -- full-bleed strip across the top of the card
-   via negative margins back out to .shared-deck-card's own padding, so the
-   card keeps one consistent radius/padding rhythm with the rest of the app
-   while still reading as a shelved book/course cover. CSS-only, no new
-   image asset: a faint dot-cloth texture plus a folded-corner triangle
-   (::after) sell the "book cover", and the bottom edge gets a hairline
-   shadow standing in for a spine crease. */
+/* Phase 128 -- was a thin (9px-padding) color ribbon across the card's top
+   edge; a real photographed book-cover atlas (shared-deck-cover-set-
+   candidate-web.webp, 5 covers) now fills the whole band instead, and the
+   band itself grows from a ribbon into an actual portrait book-cover
+   shape via `aspect-ratio` -- the photo is the card's dominant surface,
+   not a strip sitting above the "real" white card content. Still full-
+   bleed via the same negative-margin trick back out to .shared-deck-
+   card's own padding. `background-color` per tone/level modifier below is
+   a same-family flat-color fallback if the atlas ever fails to load (was
+   already each modifier's own gradient start color). `aspect-ratio` and
+   `background-size` are the shared crop geometry every modifier's
+   `background-position` picks a cell from -- see the atlas math note on
+   the level modifiers below. */
 .brand-deck-cover {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 6px;
   margin: -16px -16px 0;
-  padding: 9px 16px;
+  aspect-ratio: 335 / 405;
   overflow: hidden;
   border-radius: 16px 16px 0 0;
+  background-image: url("/brand/decor/phase127/shared-deck-cover-set-candidate-web.webp");
+  background-repeat: no-repeat;
+  /* 1399x933 atlas, ~335x405px per cover cell -> 1399/335 and 933/405. */
+  background-size: 417.6% 230.4%;
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  /* Dot-cloth texture size/position/blend apply to whichever two-layer
-     background-image the level/owner modifier below sets -- kept here so
-     each modifier only needs to declare its own color layers. */
-  background-size: 12px 12px, auto;
-  background-blend-mode: overlay;
 }
 
 /* Phase 75 -- a thin light catch along the cover band's left edge, like a
@@ -6873,74 +6884,87 @@ input.reading-vocab-sticker-toggle:checked {
   transition: border-color var(--motion-fast) var(--ease-soft);
 }
 
+/* Icon+label tag -- Phase 128. Previously laid out directly in the cover
+   band's own flex row (a thin ribbon with nowhere else for it to go); now
+   a small pinned plate over one corner of the photographed cover, since
+   the photo itself (not this label) is the cover's dominant surface.
+   Solid dark backing (not just a text-shadow) because the atlas's 5 cover
+   colors range from pale cream to dark blue -- a fixed-contrast plate
+   reads reliably over any of them, where white text + shadow alone would
+   not have on the cream cover. */
+.brand-deck-cover-tag {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 3px;
+  border-radius: 999px;
+  background: rgba(28, 22, 12, 0.62);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
 .brand-deck-cover-icon {
-  position: relative;
   flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
-.brand-deck-cover span {
-  position: relative;
-}
-
-/* Was a full-saturation --primary band (the same teal every primary button
-   uses) -- as a full-width card header next to the app's otherwise warm
-   cream/amber tones, it read as an admin/status banner rather than a book
-   cover. Further desaturated toward the app's neutral gray-brown (less
-   chroma, not a new hue) and given a thinner strip + fainter dot texture so
-   "내가 공유함" reads as a quiet cover tone next to the shelf's warm covers,
-   not a standout status band. */
-.brand-deck-cover-mine {
-  padding: 6px 16px;
-  background-color: #8a9c9c;
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.14) 1px, transparent 1.3px),
-    linear-gradient(135deg, #9aabab 0%, #7d9191 100%);
-}
-
-.brand-deck-cover-shared {
-  background-color: #8a7b5e;
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
-    linear-gradient(135deg, #b3a483 0%, #8a7b5e 100%);
-}
-
-/* Richer book-cover gradient per JLPT level, layered under the same dot
-   texture -- reuses the existing N5->N1 warm ramp (.jlpt-level-n5..n1)
-   instead of introducing new hues, just adds depth for the cover context. */
+/* Tone/level modifiers -- each picks one cell out of the shared 5-cover
+   atlas via `background-position` (the shared base rule above already set
+   `background-size`/`aspect-ratio` to make each cell exactly fill the
+   cover box). Position percentages are solved from the atlas's actual
+   cell geometry (1399x933px, ~335x405px cells, see the base rule's
+   comment) with the standard CSS background-position formula
+   `offset% = cell_left_px / (atlas_px - cell_px) * 100`, not eyeballed --
+   confirmed by screenshot afterward. `background-color` is a flat same-
+   family fallback (the old gradient's start color) if the atlas fails to
+   load. The 5 photographed covers (sage green, cream, dusty blue, coral,
+   mustard) don't share one hue family the way the old N5->N1 gradient
+   ramp did -- a real shelf of books doesn't either -- so N5..N1 just each
+   get a distinct cover instead of a monochrome progression; "내가 공유함"/
+   "공유 덱" reuse two of the five rather than needing new photos, since
+   they never render in the same JLPT-level shelf row as their level-tier
+   double. */
 .brand-deck-cover.jlpt-level-n5 {
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
-    linear-gradient(135deg, #c2a679 0%, #a98a5c 100%);
+  background-color: #a98a5c;
+  background-position: 48.87% 7.58%;
 }
 
 .brand-deck-cover.jlpt-level-n4 {
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
-    linear-gradient(135deg, #d69568 0%, #c17d4a 100%);
+  background-color: #7d9191;
+  background-position: 8.93% 7.58%;
 }
 
 .brand-deck-cover.jlpt-level-n3 {
-  /* Was linear-gradient(..., var(--accent)) -- the shared CTA accent color
-     is more saturated than its N5/N4/N2/N1 neighbors and popped as an odd
-     bright step in the ramp. A dedicated, slightly muted tone keeps the
-     N5->N1 gradient smooth. */
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
-    linear-gradient(135deg, #d68a5f 0%, #c17550 100%);
+  background-color: #c9a23c;
+  background-position: 68.61% 93.75%;
 }
 
 .brand-deck-cover.jlpt-level-n2 {
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
-    linear-gradient(135deg, #cc7350 0%, #b85c35 100%);
+  background-color: #c17550;
+  background-position: 28.2% 93.75%;
 }
 
 .brand-deck-cover.jlpt-level-n1 {
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.35) 1px, transparent 1.3px),
-    linear-gradient(135deg, #a8593a 0%, #8f4324 100%);
+  background-color: #6f8fa6;
+  background-position: 88.35% 7.58%;
+}
+
+.brand-deck-cover-mine {
+  background-color: #7d9191;
+  background-position: 8.93% 7.58%;
+}
+
+.brand-deck-cover-shared {
+  background-color: #6f8fa6;
+  background-position: 88.35% 7.58%;
 }
 
 .shared-deck-meta-row {
@@ -8626,13 +8650,12 @@ input.reading-vocab-sticker-toggle:checked {
     display: none;
   }
 
-  /* Slightly shorter book-cover band on narrow screens -- the desktop
-     height reads fine in a multi-column shelf, but stacked 1-up on mobile
-     a shorter band keeps the title/description from starting too far down
-     the card. */
+  /* Matches .shared-deck-card's own 14px mobile padding (was 16px) so the
+     cover still bleeds exactly to the card's edges at this tier -- height
+     is no longer a fixed padding value (see the base rule's aspect-ratio),
+     so there is nothing else to shrink here. */
   .brand-deck-cover {
     margin: -14px -14px 0;
-    padding: 7px 14px;
   }
 
   .shared-detail-columns {

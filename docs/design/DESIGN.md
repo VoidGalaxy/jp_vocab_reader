@@ -1949,3 +1949,111 @@ for use elsewhere, e.g. a smaller card treatment), and
 once cropped/masked into individual usable pieces -- both explicitly
 deferred this phase rather than attempted under time pressure with a
 "crop later" asset.
+
+Phase 128 applies Phase 127's Shared Deck asset pair -- a 5-cover book
+atlas and a photographed wood shelf strip -- to promote `BrandDeckCover`
+and `.shared-library-scene` from CSS-simulated surfaces to real
+photographed material, since the prior thin color-ribbon cover band still
+read as a UI card with a colored header, not a shelved book.
+
+`BrandDeckCover` (BrandElements.tsx) keeps its `tone`/`level`/`Icon`/label
+resolution logic completely unchanged; the only JSX change is wrapping the
+icon+label in a new `<span className="brand-deck-cover-tag">` so they can
+sit as a small pinned plate on the cover instead of stretching across a
+thin ribbon. `.brand-deck-cover` (globals.css) goes from a ~30px-tall
+`margin:-16px -16px 0; padding:9px 16px` ribbon to a full portrait book
+cover via `aspect-ratio: 335/405` (matching the atlas's own per-cover cell
+size) with `shared-deck-cover-set-candidate-web.webp` as its
+`background-image` -- the photo is now the card's dominant surface, not a
+strip above the "real" white card content.
+
+Cropping one of the atlas's 5 covers per tone/level modifier uses the
+standard CSS background-position-as-sprite-sheet technique, solved from
+the atlas's actual measured geometry (1399x933px, ~335x405px per cell,
+found via `file` on the webp -- not eyeballed): shared
+`background-size: 417.6% 230.4%` (`= atlas_px / cell_px` in each axis) on
+the base rule, then each modifier sets only `background-position`, computed
+as `cell_left_px / (atlas_px - cell_px) * 100%` per axis. This only
+produces an undistorted crop because `aspect-ratio` forces the container's
+own aspect to match one cell's aspect ratio -- confirmed correct on the
+first attempt via an isolated 7-variant test page (all 5 JLPT levels +
+mine/shared) screenshotted side by side, each showing exactly one cover
+with zero bleed from its neighbors. The atlas's 5 covers (sage green,
+cream, dusty blue, coral, mustard) don't share one hue family the way the
+old N5->N1 gradient ramp did; a real shelf of books doesn't either, so
+N5..N1 each get a distinct cover (cream/sage/mustard/coral/blue) instead
+of a monochrome progression, and "내가 공유함"/"공유 덱" reuse two of the
+five (sage, blue) rather than needing new photos -- safe since a tone
+cover and its level-tier photo-double never render in the same shelf row
+(tone-based decks have no JLPT level, so they never enter the leveled
+shelf). Each modifier keeps a flat `background-color` fallback (the old
+gradient's start color) if the atlas fails to load.
+
+The icon+label itself moved into `.brand-deck-cover-tag`: a small pill
+with a solid `rgba(28,22,12,0.62)` dark backing (not just a text-shadow),
+pinned to the cover's bottom-left corner -- needed because the atlas's 5
+cover colors range from pale cream to dark blue, and a fixed-contrast
+plate reads reliably over any of them where white text + shadow alone
+would not have on the cream cover.
+
+`.shared-library-scene` (>=1024px cabinet backdrop) swaps its
+`linear-gradient(165deg, var(--desk-wood), var(--desk-wood-deep))` for
+`shared-shelf-wood-strip-web.webp` (`background-size: cover`), and
+`.shelf-section`/the ungrouped fallback `.shared-deck-grid` (the lighter
+"compartment" recessed inside that cabinet) get the *same* wood photo with
+a light warm wash layered on top via a second `linear-gradient` background
+layer, preserving the existing "lighter interior shelf inside a darker
+cabinet" depth cue the old flat `var(--panel-bg)` fill gave for free.
+
+One real bug caught mid-QA: the first version of that wash used
+`rgba(253, 249, 238, 0.72)` -- far too strong. A zoomed screenshot of a
+gap area next to the deck cards showed a flat, cool pink-gray wash with
+almost no visible wood grain, not the "lighter wood" look intended.
+Isolated in a standalone test page (two boxes, same image, one with the
+wash and one without) to confirm the wood photo itself was loading and
+rendering correctly (it was -- the bare box showed clean, correct
+wood-grain) and that the problem was purely the wash's alpha value.
+Dropped to `0.3`, re-verified: the compartment now reads as real,
+visibly-grained wood, distinctly lighter than the cabinet around it.
+Documented here since the same "an overlay meant to be subtle instead
+washes out the whole photo" failure mode is easy to reintroduce on any
+future wood/paper-photo compartment.
+
+`.shared-deck-card`'s own border/box-shadow/background were deliberately
+left untouched -- the grid-scoped `:not(.selected-shared-deck-card)`
+override already softened them in Phase 41, and once the cover grew from
+a thin ribbon to a full portrait photo, the white meta/button area
+underneath shrank from being most of the card to a small strip at the
+bottom on its own, achieving the "meta/buttons read like a small label in
+front of the shelf" goal without needing new CSS for it.
+
+Verified via headless Chrome (Windows-native, CDP) at 1280/390/375/320
+against real seeded data (a registered owner account with a published
+deck, and a second account viewing/importing it as a non-owner) rather
+than only the empty state: `npm run build` clean, `git diff --check`
+clean, zero console errors/warnings, zero `scrollWidth`/`clientWidth`
+mismatch at any viewport. Both `shared-deck-cover-set-candidate-web.webp`
+and `shared-shelf-wood-strip-web.webp` returned 200, no 404s anywhere.
+Real (not just `elementFromPoint`) button clicks confirmed working through
+the photographed covers at both 1280 and 390: opening/closing the detail
+panel via "상세 보기"/"상세 닫기" toggled `.selected-shared-deck-card`
+correctly, and owner-only ("공유 취소"), non-owner-importable ("학습
+목록에 추가"), and already-imported ("학습 목록에 있음") card states all
+rendered with their correct copy and buttons -- none of that condition
+logic in SharedDeckSection.tsx was touched. No files under `backend/`
+were modified; no SRS/storage/auth/shared-deck-policy logic changed.
+
+**Files changed:** `frontend/app/globals.css`,
+`frontend/components/BrandElements.tsx`. No new asset files -- both used
+Phase 127's already-committed `frontend/public/brand/decor/phase127/`
+assets directly.
+
+**Commit-readiness:** yes -- build and diff-check clean, full browser QA
+against real seeded owner/subscriber data passed at all four required
+viewports, one real bug (the overlay wash) found and fixed before
+shipping.
+
+**Next phase candidates:** `vocab-ring-notebook-spread-web.webp` for
+`.vocab-notebook-scene` (Phase 127's own manifest names this as the next
+highest-priority target) and the Study felt-board/flashcard-stack pair --
+both untouched this phase, which stayed scoped to Shared Deck only.

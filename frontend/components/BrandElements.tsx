@@ -119,11 +119,13 @@ const deckCoverIcons: Record<DeckCoverTone, IconComponent> = {
   shared: FolderIcon,
 };
 
-// Shared-deck card's top "book cover" band. `level` (N5..N1) drives the
-// warm cover-tone ramp already established for JLPT badges elsewhere;
-// `tone` covers the two non-JLPT cases (내가 공유함 / 공유 덱) and picks the
-// icon. One place for the cover visual so every deck card -- recommended
-// or not -- reads as the same shelf/book-cover system.
+// Shared-deck card's "book cover" -- a real photographed cover (see
+// .brand-deck-cover in globals.css, Phase 128) rather than a thin color
+// band. `level` (N5..N1) drives the warm cover-tone ramp already
+// established for JLPT badges elsewhere; `tone` covers the two non-JLPT
+// cases (내가 공유함 / 공유 덱) and picks the icon. One place for the cover
+// visual so every deck card -- recommended or not -- reads as the same
+// shelf/book-cover system.
 export function BrandDeckCover({
   tone,
   level,
@@ -135,8 +137,16 @@ export function BrandDeckCover({
   const Icon = deckCoverIcons[tone];
   return (
     <div className={`brand-deck-cover ${toneClass}`}>
-      <Icon className="brand-deck-cover-icon" />
-      <span>{deckCoverLabels[tone]}</span>
+      {/* Phase 128 -- icon+label wrapped in their own small tag/plate
+          (previously laid out directly in the band's own flex row) so
+          they can sit as a legible overlay pinned to one corner of the
+          now much-taller photographed cover, instead of stretching across
+          it the way they did on the old thin ribbon. tone/level/Icon/label
+          resolution above is unchanged. */}
+      <span className="brand-deck-cover-tag">
+        <Icon className="brand-deck-cover-icon" />
+        <span>{deckCoverLabels[tone]}</span>
+      </span>
     </div>
   );
 }
