@@ -1209,16 +1209,29 @@ button {
   gap: 18px;
 }
 
+/* Phase 126 -- real photographed book-cover cloth texture replaces the flat
+   two-stop gradient: a soft dark-to-transparent wash (top-left, where the
+   title/subtitle sit) is layered over it in the same background-image
+   stack purely for text legibility, not as a design element of its own.
+   background-color is the old gradient's dark stop, kept as a same-family
+   fallback if the image ever fails to load (never a broken box). */
 .home-cover {
   position: relative;
   min-height: min(66vh, 540px);
   padding: 30px 24px 88px;
   border-radius: 30px;
-  background: linear-gradient(
-    165deg,
-    var(--notebook-cover) 0%,
-    var(--notebook-cover-deep) 100%
-  );
+  background-color: var(--notebook-cover-deep);
+  background-image:
+    linear-gradient(
+      135deg,
+      rgba(18, 24, 14, 0.58) 0%,
+      rgba(18, 24, 14, 0.16) 44%,
+      transparent 68%
+    ),
+    url("/brand/decor/phase126/book-cover-green-surface-web.webp");
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
   box-shadow: 0 24px 48px rgba(37, 43, 30, 0.32);
   overflow: hidden;
 }
@@ -1255,7 +1268,7 @@ button {
   left: 50%;
   z-index: 3;
   /* Explicit width AND height (not height:auto) -- found via QA that this
-     Chromium build doesn't reliably resolve an <img>'s intrinsic
+     Chromium build doesn't reliably resolve an image element's intrinsic
      aspect-ratio from an SVG source for height:auto sizing (even with
      explicit width/height attributes on the SVG root), silently
      collapsing the rendered box to a few px instead of failing to load.
@@ -4275,13 +4288,21 @@ select {
 }
 
 @media (min-width: 1024px) {
+  /* Phase 126 -- same open-book-spread photo as .reader-desk-scene, so
+     arriving at Reading and finishing an analysis sit on the literal same
+     photographed notebook, not a flat-fill wrapper that only *becomes* a
+     photo once a result exists. */
   .reader-start-scene {
     gap: 20px;
     padding: 30px;
     border: 1px solid var(--paper-border);
     border-top: 2px solid var(--screen-accent, var(--accent));
     border-radius: 20px;
-    background: var(--paper-bg);
+    background-color: var(--paper-bg);
+    background-image: url("/brand/decor/phase126/open-book-spread-web.webp");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     box-shadow: 0 16px 36px var(--paper-shadow);
   }
 }
@@ -4319,6 +4340,11 @@ select {
   position: relative;
 }
 
+/* Phase 126 -- real photographed ruled-paper texture instead of the fake
+   repeating-gradient ruled lines, so the blank input page is the same
+   material as the reader/start-scene photo elsewhere in Reading.
+   background-color is the old gradient's base tone, kept as a fallback if
+   the image fails to load. */
 .reader-start-page textarea {
   box-sizing: border-box;
   width: 100%;
@@ -4326,13 +4352,11 @@ select {
   border: none;
   border-radius: 12px;
   padding: 20px;
-  background: repeating-linear-gradient(
-    180deg,
-    transparent 0,
-    transparent 37px,
-    rgba(110, 91, 47, 0.09) 37px,
-    rgba(110, 91, 47, 0.09) 38px
-  );
+  background-color: var(--paper-bg);
+  background-image: url("/brand/decor/phase126/paper-page-texture-web.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   color: var(--text);
   font-size: 17px;
   line-height: 2;
@@ -4851,6 +4875,25 @@ select {
   display: flex;
   flex: 0 1 auto;
   max-width: 100%;
+  --reading-sticker-paper: url("/brand/decor/sticker-paper-coral.png");
+  --reading-sticker-border: rgba(190, 122, 91, 0.24);
+  --reading-sticker-shadow: rgba(128, 80, 48, 0.16);
+}
+
+.reading-vocab-sticker-row::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: 20px;
+  z-index: 1;
+  width: 34px;
+  height: 12px;
+  background-image: url("/brand/decor/washi-tape.svg");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  opacity: 0.72;
+  transform: rotate(-4deg);
+  pointer-events: none;
 }
 
 /* Alternating tilt (same convention as the home sticker chips/hero preview
@@ -4860,15 +4903,24 @@ select {
    so a light paper-grain wobble reads better here than the bolder scatter
    the home hero/vocab-notebook stickers use for a "pile of notes" effect. */
 .reading-vocab-sticker-row:nth-child(3n + 1) {
-  transform: rotate(-0.7deg);
+  --reading-sticker-paper: url("/brand/decor/sticker-paper-coral.png");
+  --reading-sticker-border: rgba(190, 122, 91, 0.24);
+  --reading-sticker-shadow: rgba(128, 80, 48, 0.16);
+  transform: rotate(-1.5deg) translateY(1px);
 }
 
 .reading-vocab-sticker-row:nth-child(3n + 2) {
-  transform: rotate(0.5deg);
+  --reading-sticker-paper: url("/brand/decor/sticker-paper-sage.png");
+  --reading-sticker-border: rgba(112, 139, 84, 0.25);
+  --reading-sticker-shadow: rgba(70, 101, 52, 0.14);
+  transform: rotate(1.2deg) translateY(-1px);
 }
 
 .reading-vocab-sticker-row:nth-child(3n) {
-  transform: rotate(-0.3deg);
+  --reading-sticker-paper: url("/brand/decor/sticker-paper-blue.png");
+  --reading-sticker-border: rgba(86, 133, 158, 0.24);
+  --reading-sticker-shadow: rgba(49, 91, 118, 0.14);
+  transform: rotate(-0.9deg);
 }
 
 .reading-vocab-sticker-row:hover,
@@ -4926,32 +4978,88 @@ input.reading-vocab-sticker-toggle:checked {
   height: 11px;
 }
 
-/* Phase 101 -- shrank padding, shadow depth, and corner radius so each
-   sticker reads as a compact list entry rather than a full note card;
-   the checkbox pin/goto icon/status-meta row keep the same functionality
-   and hit targets, just inside a smaller shell. */
+/* Phase 125 -- the expanded candidate tray was the last Reading surface
+   that still read like flat white UI cards. These backgrounds are generated
+   raster paper textures, while the real text/buttons stay live HTML. */
 .reading-vocab-sticker {
   position: relative;
   display: grid;
   gap: 3px;
   width: auto;
   min-width: 128px;
-  max-width: 208px;
-  padding: 9px 18px 7px 10px;
-  border: 1px solid var(--paper-border);
-  border-radius: 4px 9px 9px 9px;
-  background: var(--panel-bg);
+  max-width: 218px;
+  padding: 11px 19px 8px 11px;
+  overflow: visible;
+  border: 1px solid var(--reading-sticker-border);
+  border-radius: 5px 13px 10px 12px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.5),
+      rgba(255, 255, 255, 0.04) 42%,
+      rgba(120, 98, 40, 0.04)
+    ),
+    var(--reading-sticker-paper);
+  background-position: center;
+  background-size: cover;
   color: var(--text);
   text-align: left;
-  box-shadow: 0 2px 6px rgba(120, 98, 40, 0.08);
+  clip-path: polygon(
+    1.5% 3%,
+    97% 0,
+    100% 91%,
+    94% 100%,
+    2% 96%,
+    0 10%
+  );
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.48) inset,
+    0 5px 12px var(--reading-sticker-shadow);
   transition:
     transform var(--motion-fast) var(--ease-soft),
     box-shadow var(--motion-fast) var(--ease-soft);
 }
 
+.reading-vocab-sticker-row:nth-child(3n + 2) .reading-vocab-sticker {
+  border-radius: 12px 5px 12px 9px;
+  clip-path: polygon(
+    0 7%,
+    92% 2%,
+    100% 9%,
+    97% 96%,
+    8% 100%,
+    2% 92%
+  );
+}
+
+.reading-vocab-sticker-row:nth-child(3n + 2)::before {
+  right: 18px;
+  left: auto;
+  transform: rotate(5deg);
+}
+
+.reading-vocab-sticker-row:nth-child(3n) .reading-vocab-sticker {
+  border-radius: 8px 12px 6px 13px;
+  clip-path: polygon(
+    3% 1%,
+    100% 4%,
+    97% 100%,
+    4% 97%,
+    0 88%,
+    1% 8%
+  );
+}
+
+.reading-vocab-sticker-row:nth-child(3n)::before {
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+}
+
 .reading-vocab-sticker:not(:disabled):hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.14);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.56) inset,
+    0 8px 16px var(--reading-sticker-shadow);
 }
 
 /* Selected -- a stamped corner seal (::after) instead of an inset accent
@@ -4960,7 +5068,9 @@ input.reading-vocab-sticker-toggle:checked {
    "currently open in reader" cue) so both can combine. */
 .reading-vocab-sticker-row-checked .reading-vocab-sticker {
   border-color: var(--primary);
-  box-shadow: 0 3px 9px rgba(var(--primary-rgb), 0.18);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.58) inset,
+    0 6px 16px rgba(var(--primary-rgb), 0.2);
 }
 
 .reading-vocab-sticker-row-checked .reading-vocab-sticker::after {
@@ -4984,7 +5094,8 @@ input.reading-vocab-sticker-toggle:checked {
 
 .reading-vocab-sticker-active {
   border-color: #f6d675;
-  background: #fef3b8;
+  outline: 2px solid rgba(246, 214, 117, 0.55);
+  outline-offset: 2px;
 }
 
 .reading-vocab-sticker-word-row {
@@ -9267,6 +9378,12 @@ input.reading-vocab-sticker-toggle:checked {
    and .reader-inspector-rail grows a left border standing in for the
    book's center fold -- see both below. */
 @media (min-width: 1024px) {
+  /* Phase 126 -- a real photographed open-book two-page spread (ruled
+     lines, deckled page edges, its own soft center crease) replaces the
+     flat var(--paper-bg) fill, so this reads as an actual open notebook
+     the reader/inspector content sits on top of, not a card with a paper-
+     colored background. background-color is the old flat fill, kept as a
+     fallback if the image fails to load. */
   .reader-desk-scene {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
@@ -9275,7 +9392,11 @@ input.reading-vocab-sticker-toggle:checked {
     border: 1px solid var(--paper-border);
     border-top: 2px solid var(--screen-accent, var(--accent));
     border-radius: 20px;
-    background: var(--paper-bg);
+    background-color: var(--paper-bg);
+    background-image: url("/brand/decor/phase126/open-book-spread-web.webp");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     box-shadow: 0 16px 36px var(--paper-shadow);
   }
 }
@@ -9409,50 +9530,17 @@ input.reading-vocab-sticker-toggle:checked {
        real content clear of it. */
   }
 
-  /* Phase 122 -- spine/binding polish. Previously a single flat
-     border-left + one soft inset shadow -- a real seam, but a thin,
-     slightly generic one ("dashed line"), not a page gutter with actual
-     depth. ::before now layers three things at once: a wider/deeper
-     center-weighted shadow (the valley where two pages meet), a thin
-     near-white fold highlight just to its right (light catching the
-     right page's raised inner edge), and a faint warm cast further right
-     (the right page's own paper picking up the shadow's tint) -- all pure
-     gradients, no new DOM. Bleeds across the column boundary (left:-26px)
-     since a real gutter shadow falls on both pages, not just one.
-     pointer-events:none -- decorative only, must never intercept a click
-     meant for the reader text or the pinned card. */
-  .reader-inspector-rail::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: -26px;
-    width: 52px;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(58, 38, 16, 0.22) 46%,
-        rgba(58, 38, 16, 0.3) 50%,
-        rgba(58, 38, 16, 0.16) 54%,
-        transparent 66%
-      ),
-      linear-gradient(
-        90deg,
-        transparent calc(50% + 3px),
-        rgba(255, 252, 240, 0.6) calc(50% + 4px),
-        rgba(255, 252, 240, 0.4) calc(50% + 6px),
-        transparent calc(50% + 10px)
-      ),
-      linear-gradient(
-        90deg,
-        transparent 60%,
-        rgba(110, 91, 47, 0.05) 72%,
-        transparent 100%
-      );
-  }
+  /* Phase 122 built a CSS gutter shadow here (wide gradient band standing
+     in for the page valley) -- Phase 126 removed it. .reader-desk-scene's
+     background is now a real photographed open-book spread with its own
+     center crease baked in; that crease doesn't land at this exact column
+     boundary (the grid is an asymmetric ~1fr/300-340px split, not the
+     photo's symmetric 50/50 page split), so keeping a second CSS-drawn
+     "gutter" at the real boundary would have read as two conflicting
+     seams instead of one. The stitch-tick column (::after) and the brass
+     spine-clip below still stay -- both are small, discrete binding
+     hardware, not a big background band, so they layer over the photo
+     fine regardless of where its own crease falls. */
 
   /* The stitches: a narrow repeating tick column pinned exactly on the
      page boundary, like a notebook's ring/stitch line seen edge-on.
@@ -9585,16 +9673,29 @@ input.reading-vocab-sticker-toggle:checked {
    book" card instead, so this page and .reader-inspector-rail read as one
    bound surface rather than two cards with a gap. The faint ruled lines
    stay at every size -- notebook-paper texture, not card chrome. */
+/* Phase 126 -- below 1024px (no shared desk-scene photo behind this yet,
+   see .reader-desk-scene's >=1024px-only background-image) a real
+   photographed ruled-paper texture replaces the old repeating-linear-
+   gradient fake ruled lines. background-color is the old gradient's base
+   tone, kept as a fallback if the image fails to load. At >=1024px this
+   goes fully transparent instead (see override below) -- .reader-desk-
+   scene's own open-book-spread photo already shows through both grid
+   columns, so painting a second, differently-patterned paper texture here
+   too would just be two textures fighting in the same box. */
 .reader-paper {
   position: relative;
   padding: 30px;
-  background: repeating-linear-gradient(
-    180deg,
-    transparent 0,
-    transparent 37px,
-    rgba(110, 91, 47, 0.07) 37px,
-    rgba(110, 91, 47, 0.07) 38px
-  );
+  background-color: var(--paper-bg);
+  background-image: url("/brand/decor/phase126/paper-page-texture-web.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+@media (min-width: 1024px) {
+  .reader-paper {
+    background: none;
+  }
 }
 
 /* Phase 93 -- single-line toolbar replacing the old title+hint row /
@@ -10234,7 +10335,17 @@ input.reading-vocab-sticker-toggle:checked {
   border-top: 2px solid var(--screen-accent, var(--accent));
   border-radius: 18px;
   padding: 24px 20px 20px;
-  background: var(--panel-bg);
+  /* Phase 126 -- the flat var(--panel-bg) fill read as a plain UI card;
+     the same photographed ruled-paper texture .reader-paper/.reader-
+     start-page use now backs this note too, so it reads as a page torn
+     from the same notebook instead of an unrelated white panel.
+     background-color is the old flat fill, kept as a fallback if the
+     image fails to load. */
+  background-color: var(--panel-bg);
+  background-image: url("/brand/decor/phase126/paper-page-texture-web.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow: 0 -8px 30px rgba(120, 98, 40, 0.22);
   animation: app-slide-up var(--motion-base) var(--ease-soft) both;
   /* A thin, quiet scrollbar instead of the OS-default thick one -- on

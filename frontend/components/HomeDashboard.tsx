@@ -73,7 +73,13 @@ export function HomeDashboard({
   return (
     <section className="tab-panel home-dashboard home-scene" aria-live="polite">
       <div className="home-stage">
-        <div className="home-cover card-stack-surface">
+        {/* Phase 126 -- .card-stack-surface (ghost "stack of cards behind
+            this one" layers) dropped: it's real photographic book-cover
+            texture now, a single dominant object, not a card that needs a
+            fake stack illusion behind it to read as "physical". Keeping it
+            would have produced exactly the "card on top of a card" look
+            this phase's own success criteria rules out. */}
+        <div className="home-cover">
           <span className="home-cover-sticky" aria-hidden="true">
             {/* Phase 124 -- hand-authored SVG washi tape (no text baked in,
                 decorative only) replaces the old CSS pin dot as the note's

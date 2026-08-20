@@ -1812,3 +1812,140 @@ asset target, per Phase 123's own Design Gap finding) and an inspector
 note-paper texture for `TokenDetailSheet`, both deferred rather than
 attempted here since this phase's job was to validate the SVG-asset
 approach on one screen first, not to roll it out everywhere at once.
+
+Phase 125 applies the first raster asset-kit pass to the Reading candidate
+tray, specifically the Phase 123 Design Gap where the expanded list still
+read as a flat white card grid. Three generated, text-free paper textures
+were adopted under `frontend/public/brand/decor/`:
+`sticker-paper-coral.png`, `sticker-paper-sage.png`, and
+`sticker-paper-blue.png`. The original generated files were downsampled to
+384px-wide optimized PNGs before entering the repo (about 130-180KB each),
+because these are small card backgrounds rather than full-bleed art.
+
+The implementation keeps the real word buttons, checkbox pins, status
+badges, save logic, search/filter/quick-select controls, and tray layout in
+HTML/CSS. The images provide only the paper material for
+`.reading-vocab-sticker`, varied by `nth-child` alongside asymmetric
+corners, slightly stronger note tilt, and the existing `washi-tape.svg` as a
+small non-interactive tape mark. No text is baked into any image. The goal is
+not a photoreal sticker pack, but a visible move away from the flat list-app
+card surface toward the mockup's handmade sticker-note language.
+
+Phase 126 moves from small decorative accents (Phase 124's SVGs, Phase
+125's tray stickers) to using generated raster images as the dominant
+surface of Home's cover and Reading's page/book, replacing CSS
+gradients/shapes that Phase 123's own strict QA still judged as
+"developer-CSS-simulated" rather than a real physical object. Six WebP
+candidates were supplied under `frontend/public/brand/decor/phase126/`
+(with source PNGs alongside, unused). Judgments: **Adopt** --
+`book-cover-green-surface-web.webp` (a photographed dark-olive cloth
+cover texture, spine crease visible near the left edge -- exactly the
+"one dominant object" Home's cover needed instead of a two-stop
+gradient), `open-book-spread-web.webp` (a photographed two-page ruled
+spread with deckled edges and its own soft center crease -- used for both
+`.reader-desk-scene` and `.reader-start-scene` at >=1024px), and
+`paper-page-texture-web.webp` (plain cream ruled paper, no baked-in
+edges -- used for every mobile/input page surface: `.reader-paper` below
+1024px, `.reader-start-page textarea`, and the mobile
+`.bookmark-inspector` modal card). **Defer** --
+`book-cover-green-object-candidate-web.webp` (has a background
+vignette/crop the brief flagged as unresolved -- noted as a follow-up
+crop candidate, not applied), `sticky-note-set-candidate-web.webp` and
+`desk-prop-set-candidate-web.webp` (both need cropping/masking before
+they're usable as single decorative elements -- explicitly out of scope
+this phase per the brief), `deck-cover-template-candidate-web.webp`
+(reserved for a future Shared Deck pass, never in scope here). **Reject**
+-- none; every adopted asset was a clear improvement with no legibility
+or performance cost.
+
+Home: `.home-cover`'s old `linear-gradient(165deg, var(--notebook-cover),
+var(--notebook-cover-deep))` is now `book-cover-green-surface-web.webp`
+as a `background-image` layer, with a second `linear-gradient` layer
+(dark-to-transparent wash, top-left) stacked above it purely to protect
+the title/subtitle's legibility over the photo's texture variance --
+`background-color: var(--notebook-cover-deep)` stays as a same-family
+fallback if the image ever fails to load. Also removed: the
+`.card-stack-surface` class on `.home-cover` (ghost "stack of cards
+behind this one" pseudo-element layers). That effect was written for a
+flat CSS card that needed a fake-physicality illusion; kept on a real
+photographed book-cover object, it would have produced exactly the
+"card on top of a card" look this phase's success criteria explicitly
+rules out, so it was dropped rather than layered under the photo.
+
+Reading desktop (>=1024px): `.reader-desk-scene` and `.reader-start-scene`
+both now use `open-book-spread-web.webp` as their background (previously
+flat `var(--paper-bg)`), so the reader/inspector columns and the
+pre-analysis textarea all sit as live content on top of one photographed
+open book rather than a paper-colored box. This surfaced a real conflict:
+Phase 122's `.reader-inspector-rail::before` drew its own CSS gutter
+shadow (a 3-layer gradient band) at the grid's actual column boundary
+(~73% of the scene width, since the layout is an asymmetric
+`minmax(0,1fr) minmax(300px,340px)` split, not a symmetric 50/50 page
+split) -- but the photo's own center crease sits at 50% of the image,
+which maps close to the *middle* of the wide text column once
+`background-size: cover` stretches it to the box (confirmed by computing
+`.reader-desk-scene`'s actual `getBoundingClientRect()` and the image's
+1183:793 source ratio: horizontally the photo maps ~1:1 to the box, only
+cropped vertically, so its crease lands well inside the text column, not
+at the grid boundary). Keeping the old CSS gutter shadow at the grid
+boundary on top of the photo's own unrelated crease would have read as
+two competing seams. Removed the `::before` gradient band entirely;
+kept the stitch-tick `::after` and the brass `.reader-spine-clip`
+fastener, since both are small discrete hardware objects, not a
+background band, and layer over the photo correctly regardless of where
+its crease falls. Checked directly via a scaled/clipped screenshot: the
+photo's crease falls in blank page space to the right of the (left-
+aligned, short-line) Japanese text, never crossing live text -- no
+legibility cost. `.reader-paper`'s old `repeating-linear-gradient` ruled-
+line background is now `none` at >=1024px (the shared scene background
+already supplies real ruled lines) and `paper-page-texture-web.webp`
+below 1024px, where there is no shared photo behind it yet.
+
+Reading mobile (<1024px): `.reader-paper` (the original-text surface),
+`.reader-start-page textarea` (the pre-analysis input page), and the
+`.bookmark-inspector` base rule (the mobile/tablet inspector modal, which
+previously used a flat `var(--panel-bg)` fill) all now use
+`paper-page-texture-web.webp`. The inspector modal keeps its own
+`.card-stack-surface`/`.paper-corner` chrome untouched (a floating sticky-
+note-lifted-off-the-page look is a deliberate, different design goal from
+Home's single-dominant-object cover, so it wasn't judged to conflict) --
+only its flat background color changed to the photographed paper. The
+Phase 125 candidate-tray sticker-paper PNGs were left exactly as they
+were; nothing from this phase's asset set was mixed into that surface.
+
+Every `background-image` added this phase pairs with an explicit
+`background-color` fallback (the CSS variable the old flat/gradient fill
+used to be) so a failed image load degrades to the prior look rather than
+a broken or blank box, per the brief's explicit requirement.
+
+Verified via headless Chrome (Windows-native, CDP) at 1280/390/375/320:
+`npm run build` clean, `git diff --check` clean, zero console
+errors/warnings, zero `scrollWidth`/`clientWidth` mismatch at any
+viewport. All six referenced assets (`book-cover-green-surface-web.webp`,
+`open-book-spread-web.webp`, `paper-page-texture-web.webp`, plus the
+Phase 124 SVGs and Phase 125 sticker PNGs, still in use elsewhere on the
+same screens) returned 200/304, no 404s. Exercised the full functional
+path with no policy/API changes needed: Home -> "원문 읽기 시작" CTA ->
+Reading start scene -> sample text -> `/analyze` -> 13 rendered tokens ->
+token click -> inspector opens with real meaning/stamps/example data ->
+candidate tray opens (13-word sticker grid, Phase 125's own asset
+untouched) -- all confirmed working at both viewport tiers. No files
+under `backend/`, no SRS/storage/auth logic, and no Shared Deck code were
+touched.
+
+**Files changed:** `frontend/app/globals.css`,
+`frontend/components/HomeDashboard.tsx`, plus one new directory:
+`frontend/public/brand/decor/phase126/` (the three adopted WebP files;
+source PNGs and deferred-candidate WebPs sit alongside them, unreferenced
+by any CSS).
+
+**Commit-readiness:** yes -- build and diff-check clean, full browser QA
+passed at all four required viewports with zero regressions found.
+
+**Next phase candidates:** the deferred `book-cover-green-object-
+candidate-web.webp` once cropped/vignette-fixed (a standalone book object
+for use elsewhere, e.g. a smaller card treatment), and
+`sticky-note-set-candidate-web.webp`/`desk-prop-set-candidate-web.webp`
+once cropped/masked into individual usable pieces -- both explicitly
+deferred this phase rather than attempted under time pressure with a
+"crop later" asset.
