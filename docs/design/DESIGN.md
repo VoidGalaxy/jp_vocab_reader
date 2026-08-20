@@ -2200,3 +2200,96 @@ phase.
 (`study-flashcard-stack-candidate-web.webp`) are the last unapplied pair
 from Phase 127's asset set -- untouched this phase, which stayed scoped to
 Vocab only.
+
+Phase 130 applies `study-felt-board-texture-web.webp` to `.study-board-
+scene`, the dark-green board every Study state (ready/empty/active/
+complete) sits on. Unlike every prior image-asset phase, this needed no
+crop/position tuning at all: the source photo (1200x800) is a uniform,
+edge-to-edge felt weave with no distinguishing shapes or vignette, so
+`background-size: cover` reads correctly at any board aspect ratio the
+scene renders at -- including the very short board the ready/empty states
+show before any card stack exists. This was the lowest-risk asset
+application of the whole Phase 127 set for exactly that reason: no
+Round-0 alignment question to answer, no per-column crop math, just a
+straight swap.
+
+The old `linear-gradient(165deg, var(--notebook-cover), var(--notebook-
+cover-deep))` two-stop gradient became the `background-color` fallback
+(same tokens, same tone) with the photo layered on top via `background-
+image`. `.study-board-scene::before` -- a faint CSS radial-gradient dot
+pattern simulating felt weave -- is removed outright: the board now has
+*actual* felt grain, so the fake dot texture was pure duplication, the
+exact "CSS texture that now conflicts with the real photo" case the brief
+asks to resolve. The soft top-sheen radial-gradient highlight (8% white
+alpha, arcing across the board's top edge) stays as a second background
+layer painted in front of the photo -- it reads as a light source, not a
+material, so it adds depth rather than fighting the felt underneath it.
+`.study-board-scene::after` (the quiet leaf-sprig corner accent) is
+unrelated material and was left untouched.
+
+`study-flashcard-stack-candidate-web.webp` was evaluated and NOT applied,
+per the brief's own explicit allowance to record it as a deferred crop
+candidate rather than force a bad fit. The natural target would have been
+`.study-card-backing-sheet` (the two ghost sheets peeking out from behind
+the active card, giving the stack its "pile of cards" depth) -- but the
+photo carries a strong dark vignette blurring all four edges toward
+near-black, and the backing sheets are only ever visible as a thin
+(~5-10px) sliver at their own edges (the real `.study-card` on top covers
+the rest). A `background-size: cover` crop on a box that size would very
+likely land on exactly that vignette, most likely rendering as a dark
+smudge at the card-stack edge instead of the clean cream sliver the CSS
+`var(--panel-bg)` fill currently gives for free. Worked out from the
+image's actual composition and how `.study-card-backing-sheet` is
+actually sized/positioned/rotated, not just "it has a vignette" in the
+abstract -- confirmed by inspection, not tested with a broken screenshot,
+since the failure mode was predictable enough not to need shipping it
+first. `.study-card-backing-sheet` is unchanged this phase.
+
+Rating stamps (`.rating-button`, `.study-rating-grid`, all four
+`.rating-again`/`-hard`/`-good`/`-easy` colors/icons/labels) were not
+touched at all -- they're solid-fill buttons with their own colors,
+structurally independent of the board background by construction, so
+they needed no special protection beyond simply not editing that CSS.
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account (5 real vocab items, mixed unknown/uncertain status) at 1280
+desktop and 390/375/320 mobile: `npm run build` clean, `git diff --check`
+clean, zero console errors/warnings, zero `scrollWidth`/`clientWidth`
+mismatch at any viewport. `study-felt-board-texture-web.webp` returned
+200, no 404s. Exercised the full review flow with real state transitions,
+not static screenshots: ready state -> quick-start ("새 단어 학습") ->
+active card -> "정답 보기" reveal -> all 4 rating buttons present and
+functional -> repeated through a full 3-5 card session -> completion
+state with real session-count stats -> "한 번 더 복습" restart. Two
+`elementFromPoint` checks that initially came back `false`/`null` (the
+completion screen's restart button, once below the fold) were re-verified
+with `scrollIntoView()` first and confirmed to be viewport-scroll
+artifacts, not real blocking -- a real click on both the restart button
+and a rating button (`hit: true` after scrolling into view) worked
+correctly on both 1280 and 390. Board texture legibility was checked at
+every width down to 320px -- even where only a thin sliver of board shows
+past the near-full-width card, the felt grain stays visibly real, not
+flattened to a solid color, and never needed the brief's fallback "tame
+it with a light overlay" option since the source photo's own contrast was
+already moderate. No files under `backend/` were touched; no SRS/review/
+queue/studyMode/shared-deck-study logic, and no rating-button structure,
+changed. No `StudySection.tsx` changes at all -- purely a `globals.css`
+edit.
+
+**Files changed:** `frontend/app/globals.css` only. No new asset files --
+reused Phase 127's already-committed
+`frontend/public/brand/decor/phase127/study-felt-board-texture-web.webp`
+directly.
+
+**Commit-readiness:** yes -- build and diff-check clean, full browser QA
+against a real review session (ready -> active -> rating -> complete ->
+restart) passed at all four required viewports, rating-stamp usability
+and visual weight confirmed unchanged.
+
+**Next phase candidates:** none remain from Phase 127's original asset
+manifest -- all six candidates (Home, Reading x2, Shared Deck x2, Vocab,
+Study) have now been either applied or explicitly deferred with a
+documented reason (`study-flashcard-stack-candidate-web.webp` above, plus
+Phase 126's `book-cover-green-object-candidate`/`sticky-note-set`/
+`desk-prop-set` candidates). Any further image-asset work would need a
+new generation pass.

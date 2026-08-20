@@ -3365,36 +3365,38 @@ select {
    complete) sits on, replacing the old light .desk-surface-stage tint.
    Light .study-card sheets read clearly against it the same way the
    mockup's board scenes always place light cards on a dark board, never
-   text directly on the felt itself. */
+   text directly on the felt itself.
+   Phase 130 -- a real photographed felt texture
+   (study-felt-board-texture-web.webp) replaces the flat two-stop
+   gradient as the base layer. Unlike every other image-asset phase so
+   far, this needed no crop/position tuning at all: the source photo is a
+   uniform, edge-to-edge weave with no distinguishing shapes, so
+   `background-size: cover` looks correct at any board aspect ratio,
+   including the very short boards the ready/empty states render (no card
+   stack yet). The soft top-sheen radial-gradient stays as a second layer,
+   painted in front of the photo -- it's a subtle (8% alpha) highlight,
+   not a competing material, so it adds depth rather than fighting the
+   photo underneath it. background-color keeps the old gradient's dark
+   stop as a same-family fallback if the image fails to load. */
 .study-board-scene {
   position: relative;
   padding: 28px 16px 30px;
   border-radius: 28px;
-  background:
+  background-color: var(--notebook-cover-deep);
+  background-image:
     radial-gradient(
       ellipse 70% 45% at 50% 0%,
       rgba(255, 255, 255, 0.08) 0%,
       transparent 70%
     ),
-    linear-gradient(165deg, var(--notebook-cover) 0%, var(--notebook-cover-deep) 100%);
+    url("/brand/decor/phase127/study-felt-board-texture-web.webp");
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 16px 34px rgba(37, 43, 30, 0.22);
   overflow: hidden;
-}
-
-/* Faint felt-weave dot texture -- a material cue, low-contrast enough to
-   never compete with the card stack sitting on top of it. */
-.study-board-scene::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(
-    rgba(255, 255, 255, 0.05) 1px,
-    transparent 1.4px
-  );
-  background-size: 14px 14px;
-  pointer-events: none;
 }
 
 /* Phase 74 -- a quiet leaf-sprig hint in the board's bottom-left corner,
