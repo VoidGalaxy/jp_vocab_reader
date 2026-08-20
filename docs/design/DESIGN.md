@@ -2372,3 +2372,89 @@ exist as CSS shapes in `.home-desk-prop`/`.reader-desk-prop` -- these
 photographed versions are direct drop-in upgrades), and
 `book-cover-green-object-clean.webp` for a Home/empty-state accent. None
 of these are applied yet; this phase only made them applicable.
+
+Phase 132 applies `study-flashcard-stack-clean.webp` (Phase 131's
+transparent crop) to `.study-card-backing-sheet`, closing out the one
+item Phase 130 deferred. `.study-card` itself -- the live HTML flashcard
+carrying word/meaning/rating grid -- is untouched; only the two ghost
+sheets behind it (`-outer`/`-inner`, both sharing this one base rule)
+changed.
+
+The backing-sheet box is nearly the same size as the real card sitting on
+top of it (`top: 14px; bottom: 0` vs. the real card's own height, offset
+only by each instance's few-degree rotation + a handful of px of
+translation) -- so in practice only a thin sliver of it is ever visible,
+peeking out at the rotated corners. `background-size: cover` was chosen
+deliberately over `contain` for exactly that reason: `contain` would
+letterbox the image inside a mismatched-aspect box (the box is portrait-
+ish, the photo is landscape, ~1.48:1) and risk the photo shrinking into
+the dead center where the real card already covers it completely, never
+visible at all; `cover` guarantees paint reaches every rotated corner
+where the peek actually happens, even though it crops out most of the
+source photo's own multi-card illustration in the process. Verified via
+a 3x zoomed screenshot of both the top and bottom peeking edges: real
+paper grain and a natural, slightly irregular rounded corner are clearly
+visible, not a flat color -- confirming the crop-out tradeoff was worth
+it, not just a cosmetic gesture.
+
+CSS removed: the flat `background: var(--panel-bg)` fill and the `1px
+solid rgba(110, 91, 47, 0.16)` border are both gone from the shared
+`.study-card-backing-sheet` rule -- the photo supplies its own paper
+tone and its own natural card edge, so a CSS border on top of it would
+have doubled that edge unnaturally. The existing `box-shadow: 0 10px 20px
+rgba(37, 43, 30, 0.18)` was kept as-is after a visual check: it reads as
+the stack lifting off the felt board underneath, not as a duplicate of
+the photo's own (much softer, tighter) built-in shadow, so the two don't
+visibly compete. `background-color: var(--panel-bg)` (the old flat fill)
+stays as a same-family fallback if the image fails to load, per the
+brief's explicit requirement.
+
+Both `.study-card-backing-sheet-outer` and `-inner` pull from the same
+shared base rule, so both instances get the same photo at their own
+existing rotate/translate offset -- two slightly-offset slivers of one
+real photographed stack, reading as two more paper cards underneath
+rather than one flat image pasted behind a CSS shape. `.study-card-stack`
+(the outer pile wrapper), `.study-card` (the live card), `.complete-card`,
+`.study-rating-grid`/`.rating-button`/`.study-rating-stamp-tray` (all 4
+rating stamps, their colors, icons, and labels), and `.study-board-scene`
+(Phase 130's felt board) are all completely unchanged -- this phase only
+touched the one shared backing-sheet rule.
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account (5 real vocab items) at 1280 desktop and 390/375/320 mobile:
+`npm run build` clean, `git diff --check` clean, zero console
+errors/warnings, zero `scrollWidth`/`clientWidth` mismatch at any
+viewport. `study-flashcard-stack-clean.webp` returned 200, no 404s.
+Exercised the full review flow with real state transitions: ready ->
+quick-start -> active card (backing sheets visible peeking out) -> "정답
+보기" reveal -> real click on a rating button (`hit: true`, confirmed via
+`elementFromPoint` resolving to the button itself, not the image) ->
+repeated through a full 5-card session -> completion state (same backing-
+sheet treatment, shared class) -> real click on "한 번 더 복습" (`hit:
+true`). Mobile rating grid confirmed unchanged in size/position/
+clickability at all three widths -- the backing sheets are absolutely
+positioned behind the card and never participate in its own layout flow,
+so there was no mechanism by which this change could have pushed or
+resized the rating grid, and the screenshots confirm it didn't. No files
+under `backend/` were touched; no SRS/review/queue/studyMode/shared-deck-
+study logic, rating-button structure/colors/labels, or `StudySection.tsx`
+prop/handler, changed -- in fact `StudySection.tsx` itself was never
+opened for editing, only read for Round-0 verification.
+
+**Files changed:** `frontend/app/globals.css` only. No new asset files --
+reused Phase 131's already-committed
+`frontend/public/brand/decor/phase131/study-flashcard-stack-clean.webp`
+directly.
+
+**Commit-readiness:** yes -- build and diff-check clean, full browser QA
+against a real review session (ready -> active -> rating -> complete ->
+restart) passed at all four required viewports, rating-stamp usability
+and visual weight confirmed unchanged, zoomed-edge inspection confirmed
+the image crop is a real visible improvement and not just a theoretical
+one.
+
+**Next phase candidates:** the remaining three Phase 131 crops --
+`sticky-note-yellow/blue/coral.webp`, `desk-prop-pen/washi-tape/
+paperclip/leaf.webp`, and `book-cover-green-object-clean.webp` -- are
+still unapplied to any screen. Phase 131's own DESIGN.md entry has the
+per-asset target-screen suggestions.

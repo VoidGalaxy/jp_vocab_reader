@@ -3458,6 +3458,24 @@ select {
   width: min(440px, 100%);
 }
 
+/* Phase 132 -- was a flat var(--panel-bg) fill + a hairline border; now a
+   real photographed stack of cream index cards (study-flashcard-stack-
+   clean.webp, Phase 131's transparent crop of the same candidate Phase
+   130 deferred over a vignette that turned out to only exist in the
+   flattened -web.webp export, not this source). Only a thin sliver of
+   this box is ever actually visible -- it's nearly the same size as the
+   real .study-card sitting on top of it (z-index 2), offset just a few
+   px by each instance's own rotate+translate below -- so `cover` is used
+   deliberately over `contain`: it guarantees paint reaches every rotated
+   corner where the peek actually happens, even though it crops out most
+   of the source photo's own fanned-card illustration in the process.
+   Both .study-card-backing-sheet-outer and -inner share this rule (same
+   image, each at its own existing offset), so review's stack of two
+   ghost sheets reads as two more real paper cards peeking out, not one
+   photo pasted flat behind a CSS shape. background-color keeps the old
+   flat fill as a same-family fallback if the image fails to load. Border
+   dropped -- the photo already has its own natural card edge/shadow;
+   a CSS border on top of it would have doubled that edge unnaturally. */
 .study-card-backing-sheet {
   position: absolute;
   left: 3%;
@@ -3465,8 +3483,12 @@ select {
   top: 14px;
   bottom: 0;
   border-radius: 20px;
-  background: var(--panel-bg);
-  border: 1px solid rgba(110, 91, 47, 0.16);
+  overflow: hidden;
+  background-color: var(--panel-bg);
+  background-image: url("/brand/decor/phase131/study-flashcard-stack-clean.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow: 0 10px 20px rgba(37, 43, 30, 0.18);
   pointer-events: none;
 }
