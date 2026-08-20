@@ -2057,3 +2057,146 @@ shipping.
 `.vocab-notebook-scene` (Phase 127's own manifest names this as the next
 highest-priority target) and the Study felt-board/flashcard-stack pair --
 both untouched this phase, which stayed scoped to Shared Deck only.
+
+Phase 129 applies `vocab-ring-notebook-spread-web.webp` (1399x933 --
+colored index tabs down the left page edge, a metal ring spine, a right
+page with its own baked-in "clipped card" of folded corners + a red rule
+line) to the desktop Vocab notebook spread, per Phase 127's own manifest
+naming it the next target after Shared Deck.
+
+Round 0 measured the image against `.vocab-notebook-scene`'s actual
+3-column grid (`minmax(150,190) minmax(280,1fr) minmax(260,320)`) and
+found a structural mismatch Reading/Shared Deck didn't have: those scenes'
+boxes stay close to the source photo's own aspect ratio, but Vocab's
+middle list column can run to 50+ rows (far taller than the image's
+933:1399 aspect), so a single `background-size: cover` across the whole
+scene would badly crop the tabs/card out of view to show mostly a thin
+vertical sliver near the ring/spine. Rather than force the image into that
+mismatched box, the phase splits the application per-column, directly
+answering the brief's own three Round-0 questions with a deliberate
+architecture instead of one blanket placement:
+
+- **"이미지 왼쪽 탭 영역이 실제 filter/index와 맞는가?"** -- yes, by
+  design: a zoomed crop (`background-size: 480% auto`, tuned by
+  screenshot) of the image's own left edge is applied directly to
+  `.vocab-notebook-index`, whose content (the deck/search/sort filter +
+  status tabs) is naturally bounded in height, unlike the list.
+- **"이미지 중앙 링/스파인이 실제 list column을 방해하지 않는가?"** --
+  yes, because the ring/spine is never placed anywhere near the list
+  column: `.vocab-notebook-pages`/`.index-card-drawer` deliberately do NOT
+  carry the photo at all. This was a direct, conservative choice for the
+  brief's own explicit scan-safety warning ("Vocab은 Operate 화면이다...
+  스캔성이 깨지면 실패다") -- the safest way to guarantee a dense,
+  scannable list is never fought by a busy photographic texture is to not
+  put one there. The list instead sits on the shared scene's flat
+  `var(--paper-bg)` frame (same tone as the photo's own page color), so it
+  still reads as "more of the same paper" without literally showing the
+  image.
+- **"이미지 오른쪽 clipped page가 detail panel과 맞는가?"** -- yes, and
+  applied to `.vocab-notebook-detail` itself (not the parent scene) for a
+  reason specific to this column: it's `position: sticky`, so as a long
+  list scrolls past, the panel stays pinned near the viewport top while
+  the *scene's own* background (painted once, scrolling normally with
+  the page) would long since have scrolled out of view by the time the
+  user is deep in a 50-word list. Painting the card crop on the sticky
+  element itself means it stays visually correct at any scroll position,
+  not just near the top of the page.
+
+Each of the three photo-backed surfaces keeps a flat `background-color`
+fallback (the same tone the old CSS recipe used) if the image fails to
+load, per the brief's explicit requirement.
+
+CSS-only decoration removed for directly duplicating what the photo now
+supplies: `.vocab-notebook-index .index-card-filter`'s cascading 3-color
+`::after` (a `box-shadow`-drawn stack simulating page-edge tabs) is gone
+-- the column now has real photographed tabs behind it, and the CSS
+stand-in next to the real thing read as two competing tab motifs in one
+column. The washi-tape corner `::before` on the same element stays (a
+different "pinned note" cue, not a second tab simulation, so it doesn't
+conflict). `.vocab-notebook-detail`'s own repeating-gradient ruled-line
+background, border, and box-shadow are all dropped -- the photo's own
+baked-in card edges are the card now, and a second CSS-drawn rectangle
+around the same element would just be an outline a few px off from the
+photo's own unrelated corners. The paperclip pseudo-elements
+(`::before`/`::after`) stay; they're small hardware, not a background
+band, so they layer over the photo fine. `.vocab-desk-empty`'s repeating-
+gradient (fake ruled lines for the "no deck picked yet" state) is
+simplified to `background: none` -- the shared scene frame already
+supplies the page tone directly behind it now.
+
+The one "image background pasted over an unchanged bordered panel"
+failure mode the brief explicitly bans was caught in two places and fixed
+before it shipped, not after: `.vocab-notebook-pages`'s own `.desk-surface`
+class (shared with Study/SharedDeckSection, so overridden with a scoped
+`.vocab-notebook-pages .desk-surface` selector rather than edited
+directly) carries a tan radial-gradient + inset-shadow "resting on a desk"
+tint at every screen that uses it: left as-is, its opaque fill would have
+sat as a second panel directly on top of the scene's new paper frame,
+hiding it completely behind the list. `.index-card-drawer` (the tinted
+box wrapping the row cards, `var(--soft-bg)`) had the same problem for
+the same reason. Both go transparent under `.vocab-notebook-pages`
+specifically (>=1024px only), letting the scene's flat paper tone show
+through the gaps between rows, while the individual `.vocabulary-index-
+row` cards -- the actual scan aid -- stay fully opaque and completely
+untouched.
+
+`.vocab-notebook-index .index-card-filter`'s own background also needed
+one legibility pass mid-QA: a first attempt at `rgba(255, 252, 240, 0.55)`
+(a translucent cream wash, protecting the small label text sitting
+directly on it) washed the photographed tab colors out almost
+completely -- a zoomed screenshot of just that column showed barely any
+color. Dropped to `0.22`, re-verified: the tabs now show as faint but
+genuinely visible colored slivers at the column's left edge, and the
+filter labels stay legible. Smaller version of the same "overlay meant to
+be subtle instead hides the photo" mistake Phase 128's wood-shelf
+compartment made (there at `0.72`, fixed to `0.3`) -- worth remembering as
+a recurring failure mode across every phase that layers a legibility wash
+over a photographed surface: start much lower than seems necessary and
+verify with an actual zoomed screenshot, not by eye on the full-page shot.
+
+No TSX changes were needed this phase -- every change is CSS-only
+(`frontend/app/globals.css`); `VocabSection.tsx`'s row/filter/CRUD/deck-
+management markup, handlers, and conditions are byte-for-byte unchanged.
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account (15 real vocab items across a mix of all 4 statuses, a second
+deck) rather than only the empty state, at 1280 (desktop spread),
+1024 (the exact breakpoint, confirms the 3-column grid activates
+correctly right at the boundary), 900 (tablet, confirms it correctly
+stays the plain pre-existing single-column layout below 1024, no photo),
+and 390/375/320 (mobile, same confirmation): `npm run build` clean,
+`git diff --check` clean, zero console errors/warnings, zero
+`scrollWidth`/`clientWidth` mismatch at any viewport tested.
+`vocab-ring-notebook-spread-web.webp` returned 200, no 404s. Exercised
+real interaction, not just a static screenshot: search filtered 15 items
+down to 1 correctly, a status filter chip toggled correctly, the desktop
+detail panel opened with real content (word/reading/meaning/status/tags/
+review-meta/example/actions) via a real row-toggle click, the no-deck-
+selected empty state rendered correctly on the shared frame, and the
+덱/공유 관리 disclosure opened with a real, focusable, typeable input
+field. Two `elementFromPoint`-based click-blocking checks that initially
+came back `null`/`false` were re-verified with `scrollIntoView()` first
+and confirmed to be viewport-scroll artifacts, not real blocking --
+following up with an actual `.click()` + a small delay for React's
+(batched, not synchronous) re-render showed both the status `<select>`
+and the detail panel's "수정" button work correctly, opening the real
+inline edit form. No files under `backend/` were touched; no SRS/storage/
+auth/shared-deck-policy logic, and no Vocab CRUD/deck-management handler
+or condition, changed.
+
+**Files changed:** `frontend/app/globals.css` only. No new asset files --
+reused Phase 127's already-committed
+`frontend/public/brand/decor/phase127/vocab-ring-notebook-spread-web.webp`
+directly.
+
+**Commit-readiness:** yes -- build and diff-check clean, full browser QA
+against real seeded data passed at all six required viewports/breakpoints,
+one real legibility bug (the 0.55-alpha wash) found and fixed before
+shipping, scan-density/list-behavior confirmed unchanged from before this
+phase.
+
+**Next phase candidates:** Study's felt-board texture
+(`study-felt-board-texture-web.webp`) and flashcard-stack candidate
+(`study-flashcard-stack-candidate-web.webp`) are the last unapplied pair
+from Phase 127's asset set -- untouched this phase, which stayed scoped to
+Vocab only.

@@ -7359,19 +7359,16 @@ input.reading-vocab-sticker-toggle:checked {
    전용 -- 모바일은 이 배경 없이 기존 .desk-surface-section 톤을 그대로
    유지한다. */
 @media (min-width: 1024px) {
+  /* Phase 129 -- the repeating-gradient ruled lines standing in for "blank
+     notebook page" are dropped: .vocab-notebook-scene itself now carries
+     a real photographed notebook page as its background (see below), so
+     this empty state just sits on that directly instead of layering a
+     second, fake ruled-line texture on top of it. */
   .vocab-desk-empty {
     display: grid;
     align-items: center;
     min-height: 320px;
-    background:
-      repeating-linear-gradient(
-        180deg,
-        transparent 0,
-        transparent 37px,
-        rgba(110, 91, 47, 0.05) 37px,
-        rgba(110, 91, 47, 0.05) 38px
-      ),
-      var(--surface-stage);
+    background: none;
   }
 }
 
@@ -7634,6 +7631,18 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 @media (min-width: 1024px) {
+  /* Phase 129 -- a flat paper frame ties the 3 columns into one visible
+     "notebook spread" object, even though (see .vocab-notebook-index and
+     .vocab-notebook-detail below) only the index and detail columns
+     actually carry a photographed crop of vocab-ring-notebook-spread-
+     web.webp -- the wide middle list column deliberately does NOT, since
+     the list can run to 50+ rows (far taller than the image's own natural
+     aspect), and a stretched/cropped photo behind a dense scannable list
+     risked exactly the legibility/scan regression this phase's brief
+     explicitly warns against. Flat var(--paper-bg) here is the same tone
+     as the photo's own page color, so the un-photographed middle column
+     still reads as "more of the same paper", not a visibly different
+     material. */
   .vocab-notebook-scene {
     grid-template-columns: minmax(150px, 190px) minmax(280px, 1fr) minmax(
         260px,
@@ -7641,6 +7650,11 @@ input.reading-vocab-sticker-toggle:checked {
       );
     align-items: start;
     gap: 18px;
+    padding: 20px;
+    border: 1px solid var(--paper-border);
+    border-radius: 20px;
+    background-color: var(--paper-bg);
+    box-shadow: 0 16px 36px var(--paper-shadow);
   }
 
   /* Phase 76 -- a single quiet leaf-sprig hint (same recipe as Home/Study/
@@ -7666,6 +7680,27 @@ input.reading-vocab-sticker-toggle:checked {
     opacity: 0.7;
     transform: rotate(8deg);
     pointer-events: none;
+  }
+
+  /* Phase 129 -- a zoomed-in crop of the photographed spread's own left
+     edge (colored page-edge tabs + the ruled margin just past them),
+     answering the phase brief's own question directly: yes, the image's
+     real tabs now sit behind this real filter/index column, instead of
+     the old CSS-simulated tab stack. background-size zooms in hard (roughly
+     3.5x the column's own width) so only that left slice of the 1399px-
+     wide source is visible, not the whole spread shrunk to fit; position
+     tuned by screenshot, not computed, since this is a single decorative
+     crop rather than a multi-cell sprite needing exact math.
+     background-color is the flat page tone as a fallback if the image
+     fails to load. */
+  .vocab-notebook-index {
+    padding: 6px 4px;
+    border-radius: 4px 12px 12px 4px;
+    background-color: var(--paper-bg);
+    background-image: url("/brand/decor/phase127/vocab-ring-notebook-spread-web.webp");
+    background-repeat: no-repeat;
+    background-size: 480% auto;
+    background-position: 0% 12%;
   }
 
   /* The filter index reads as a column of page-edge tabs, not a row of
@@ -7731,16 +7766,24 @@ input.reading-vocab-sticker-toggle:checked {
     box-shadow: inset 3px 0 0 0 #6b5f3f;
   }
 
-  /* Phase 76 -- the filter box reads as a pinned index-card divider, not a
-     plain dashed toolbar box: a small washi-tape corner (::before) plus a
-     cascading 3-color page-tab accent (::after, box-shadow draws the
-     2nd/3rd tabs -- same one-element/no-extra-DOM trick as
-     .reader-inspector-tabs) echoing the mockup's 최근/모르는 단어/햇갈림
-     index tabs. Scoped to `.vocab-notebook-index .index-card-filter` (not
-     the bare class) so SharedDeckSection's reuse of .index-card-filter for
-     its subscribed-deck word filter is untouched. */
+  /* Phase 129 -- .index-card-filter's own cascading 3-color page-tab accent
+     (::after, box-shadow simulating 2nd/3rd tabs) is removed: it was a
+     CSS stand-in for "this is the index-tab column", and the column now
+     has real photographed page-edge tabs behind it (see
+     .vocab-notebook-index below) -- keeping the fake tab stack next to
+     the real photographed one would read as two competing tab motifs in
+     the same column. The washi-tape corner (::before) stays; it reads as
+     a distinct "pinned note" cue, not a second tab simulation, so it
+     doesn't conflict with the photo the same way. `.index-card-filter`'s
+     own background goes transparent here so the photo on
+     .vocab-notebook-index (its parent) shows through -- scoped to
+     `.vocab-notebook-index .index-card-filter`, not the bare class, so
+     SharedDeckSection's reuse of .index-card-filter for its subscribed-
+     deck word filter is untouched. */
   .vocab-notebook-index .index-card-filter {
     position: relative;
+    border-color: rgba(79, 140, 102, 0.35);
+    background: rgba(255, 252, 240, 0.22);
   }
 
   .vocab-notebook-index .index-card-filter::before {
@@ -7758,25 +7801,22 @@ input.reading-vocab-sticker-toggle:checked {
     pointer-events: none;
   }
 
-  .vocab-notebook-index .index-card-filter::after {
-    content: "";
-    position: absolute;
-    top: 14px;
-    right: -6px;
-    z-index: 1;
-    width: 9px;
-    height: 18px;
-    background: var(--tone-indigo);
-    border-radius: 4px 0 0 4px;
-    box-shadow:
-      0 26px 0 0 var(--sage-green),
-      0 52px 0 0 var(--tone-dusty-blue);
-    pointer-events: none;
-  }
-
   /* Sticky so the note page stays in view while the (potentially long)
      word list scrolls past it, same idea as the reading tab's pinned
-     word inspector (Phase 65). */
+     word inspector (Phase 65). Phase 129 -- the repeating-gradient ruled-
+     line fill is replaced with a zoomed, right-anchored crop of the same
+     photographed spread, landing on its own baked-in "clipped card"
+     (folded corners, a red rule line) -- the exact visual this panel was
+     already trying to simulate with CSS. Applied to this element directly
+     (not the shared scene background) because it's `position: sticky`:
+     painting it here means the card crop travels with the panel as it
+     sticks near the viewport top while the list scrolls past, instead of
+     only lining up while the page happens to be scrolled near the very
+     top. Border/radius/shadow dropped too -- the photo's own card edges
+     are the card now; a second CSS-drawn rectangle around this box would
+     just be a mismatched outline a few px off from the photo's own,
+     unrelated corners. background-color is the flat page tone, kept as a
+     fallback if the image fails to load. */
   .vocab-notebook-detail {
     display: block;
     position: sticky;
@@ -7784,22 +7824,12 @@ input.reading-vocab-sticker-toggle:checked {
     max-height: calc(100vh - 48px);
     overflow-y: auto;
     padding: 18px 16px;
-    border: 1px solid var(--paper-border);
     border-radius: 4px 16px 16px 16px;
-    /* Phase 87 -- reuses .shared-deck-detail's ruled-paper recipe so this
-       reads as an actual notebook page (lined, waiting to be written on)
-       in both its idle and populated states, not a flat white panel that
-       only looks like "a page" once a word happens to be selected. */
-    background:
-      repeating-linear-gradient(
-        180deg,
-        transparent 0,
-        transparent 37px,
-        rgba(110, 91, 47, 0.05) 37px,
-        rgba(110, 91, 47, 0.05) 38px
-      ),
-      var(--panel-bg);
-    box-shadow: 0 14px 32px var(--paper-shadow);
+    background-color: var(--panel-bg);
+    background-image: url("/brand/decor/phase127/vocab-ring-notebook-spread-web.webp");
+    background-repeat: no-repeat;
+    background-size: 260% auto;
+    background-position: 100% 6%;
   }
 
   .vocab-notebook-detail .vocab-row-detail {
@@ -7881,6 +7911,31 @@ input.reading-vocab-sticker-toggle:checked {
   border-top: 2px solid var(--screen-accent, var(--accent));
   border-radius: 12px;
   background: var(--soft-bg);
+}
+
+/* Phase 129 -- on the desktop notebook spread specifically, the drawer's
+   own tinted var(--soft-bg) panel (and .desk-surface's radial-gradient +
+   inset-shadow "resting on a desk" tint, from the shared .desk-surface
+   class this list's wrapper also carries) would sit as a second opaque
+   panel between .vocab-notebook-scene's own paper background and the
+   individually-carded rows -- exactly the "image background with the old
+   bordered panel still showing on top of it" failure mode this phase's
+   brief rules out. Both go transparent here, letting the scene's flat
+   paper tone show straight through the gaps between rows; the rows
+   themselves (.vocabulary-index-row, untouched) stay fully opaque, since
+   they're the actual scan aid, not decoration. Scoped under
+   .vocab-notebook-pages so mobile (a completely different, non-notebook
+   layout below 1024px) and other .desk-surface consumers (Study,
+   SharedDeckSection) are untouched. */
+@media (min-width: 1024px) {
+  .vocab-notebook-pages .desk-surface {
+    background: none;
+    box-shadow: none;
+  }
+
+  .vocab-notebook-pages .index-card-drawer {
+    background: none;
+  }
 }
 
 /* vocabulary-index-row (renamed from .vocab-row) -- the outer row identity;
