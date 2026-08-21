@@ -2563,3 +2563,93 @@ errors and zero failed requests.
 shortcut stickers or a future candidate-tray variant) and
 `book-cover-green-object-clean.webp` (a Home/empty-state accent) are
 the only Phase 131 crops still unapplied.
+
+Phase 134 applies all three Phase 131 sticky-note crops --
+`sticky-note-yellow.webp`, `sticky-note-coral.webp`, `sticky-note-
+blue.webp` -- to the desktop-only (`>=1024px`) `.home-sticker` cards
+(단어장/복습/덱), replacing their flat `background: var(--panel-bg)` +
+`1px solid var(--paper-border)` fill with the photographed torn-paper
+note as a `background-image`. Mapping: `--vocab` gets yellow (a warm
+note color pairing with vocab's existing ink-brown icon),
+`--review` gets coral (review already pairs with `--tone-coral`
+elsewhere in the app, e.g. `.analyze-panel`), `--decks` gets blue
+(matching its existing dusty-blue icon color exactly). Mobile
+(`.home-sticker`'s base, pre-1024px rule) is untouched -- these three
+`background-image` declarations live entirely inside the existing
+`>=1024px` media block, alongside the rest of Phase 118's desktop-only
+sticky-note treatment.
+
+The real judgment call this phase turned on: `.home-sticker`'s actual
+rendered shape at `>=1024px` is a wide horizontal bar (measured ~411x85,
+roughly 4.8:1) while all three note photos are much closer to square
+or landscape 1.5:1 (yellow ~1:1, blue ~1.45:1, coral ~1.57:1). Cover-
+fitting a near-square photo into a 4.8:1 box crops away most of its
+height, which risked losing the note images' whole point -- their
+irregular torn-edge silhouette -- and leaving nothing but a flat color
+swatch, arguably a regression from the clean existing CSS card. This
+was resolved empirically, not by inspection: a 3x zoomed screenshot of
+the actual rendered cards (not the full-page shot) showed real paper
+grain, mottled color variation, and a visible torn edge silhouette
+still surviving at the card's rounded-corner boundary on both left and
+right sides -- the photos' texture reads as genuine paper *through* the
+aggressive crop even without the full silhouette being visible, so the
+photos still outperform a flat CSS fill rather than merely matching it.
+All three colors passed this check; none needed to be reverted per the
+brief's "억지로 3개 전부 적용하지 말고" allowance for partial
+application.
+
+CSS removed: `border: 1px solid var(--paper-border)` (the photo now
+supplies its own visible torn/paper edge) and the flat
+`background: var(--panel-bg)` fill (replaced by `background-color:
+var(--panel-bg)`, kept only as a same-family fallback for a failed
+image load, per every prior phase's convention). `overflow: hidden`
+was added so the existing `border-radius: 4px 18px 18px 18px` keeps
+clipping the photo to the same rounded-card silhouette the mockup's
+Home panel uses -- deliberately kept rather than switched to an
+irregular/organic outline, since the desktop mockup's own shortcut
+notes are clean rounded rectangles, not rustic torn scraps; the photo
+supplies real material texture inside that shape rather than replacing
+the shape itself. The `::before` washi-tape rectangle (flat semi-
+transparent brown box, unchanged since Phase 118) and every rotation/
+hover/tilt rule were kept as-is after the same zoomed check confirmed
+the tape mark still reads correctly sitting on top of the textured
+paper instead of a flat color -- no conflict found, so nothing else was
+touched.
+
+Label/hint text legibility (`.home-sticker-label`/`-hint`, using
+`var(--text)`/`var(--muted)`) was checked against all three photo
+colors directly in the zoomed screenshot rather than assumed: dark text
+stays clearly legible on the yellow, coral, and blue paper alike, no
+contrast regression versus the old cream `var(--panel-bg)` fill.
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account (`homeqa134@test.local`): `npm run build` clean, `git diff
+--check` clean, zero console errors/warnings, zero
+`scrollWidth`/`clientWidth` mismatch at 1280/390/375/320. All three new
+`.webp` requests returned 200, no 404s. `elementFromPoint` hit-tests
+(after `scrollIntoView`) confirmed the CTA and all three stickers
+resolve to themselves, not the photo. Real clicks confirmed routing is
+unchanged: clicking `.home-sticker--vocab` shows `.vocab-panel`,
+clicking `.home-sticker--decks` shows `.shared-deck-section`. Mobile
+(390/375/320) confirmed via `getComputedStyle` that all three stickers
+carry `background-image: none` and `border-width: 0px` at every
+mobile width -- this phase's change is provably inert below 1024px,
+the cover stays the same 528px-tall sole subject it was before this
+phase. `HomeDashboard.tsx` was not opened for editing -- the three
+`.home-sticker--vocab/--review/--decks` modifier classes this phase
+targets already existed in the JSX (added for icon coloring back in
+Phase 118), so no `.tsx` change was needed at all.
+
+**Files changed:** `frontend/app/globals.css` only. No new asset
+files -- reused Phase 131's already-committed
+`frontend/public/brand/decor/phase131/sticky-note-{yellow,coral,
+blue}.webp` directly.
+
+**Commit-readiness:** yes -- build and diff-check clean, full browser
+QA (desktop legibility/texture check via zoomed screenshot, click
+routing, mobile inertness, hit-testing) passed at all four required
+viewports with zero console errors and zero failed requests.
+
+**Next phase candidates:** `book-cover-green-object-clean.webp` is now
+the only Phase 131 crop still unapplied to any screen (a candidate for
+a Home or empty-state accent, per Phase 131's own manifest notes).

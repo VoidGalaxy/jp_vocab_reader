@@ -1579,13 +1579,28 @@ button {
     gap: 14px;
     padding: 16px 20px;
     border-radius: 4px 18px 18px 18px;
-    border: 1px solid var(--paper-border);
-    background: var(--panel-bg);
+    overflow: hidden;
+    background-color: var(--panel-bg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     box-shadow: 0 12px 22px rgba(120, 98, 40, 0.14);
     text-align: left;
     transition:
       transform var(--motion-fast) var(--ease-soft),
       box-shadow var(--motion-fast) var(--ease-soft);
+  }
+
+  .home-sticker--vocab {
+    background-image: url("/brand/decor/phase131/sticky-note-yellow.webp");
+  }
+
+  .home-sticker--review {
+    background-image: url("/brand/decor/phase131/sticky-note-coral.webp");
+  }
+
+  .home-sticker--decks {
+    background-image: url("/brand/decor/phase131/sticky-note-blue.webp");
   }
 
   .home-sticker::before {
