@@ -2653,3 +2653,77 @@ viewports with zero console errors and zero failed requests.
 **Next phase candidates:** `book-cover-green-object-clean.webp` is now
 the only Phase 131 crop still unapplied to any screen (a candidate for
 a Home or empty-state accent, per Phase 131's own manifest notes).
+
+Phase 135 judges `book-cover-green-object-clean.webp` against Home and
+**holds** -- no code change. The object crop (507x700, a full closed
+green cloth notebook shot straight-on: spine, snap closure, rounded
+corners, edge highlight all visible) is a photograph of the *same*
+green cloth book `.home-cover` already wears as
+`book-cover-green-surface-web.webp` (Phase 126) -- the surface file is
+just a tighter, texture-only crop of that same cloth with no spine/
+edge/closure visible, chosen specifically because `.home-cover` is a
+live interactive card (title, subtitle, CTA, sample link, sticky note,
+Shiori charm, strap, dots all rendered as real HTML on top of it) that
+needed a *material* to sit on, not a second whole-book silhouette
+competing for the same visual role. Applying the object crop anywhere
+on Home necessarily reads as a second copy of the one book Home is
+already built around, not a different object -- there's no version of
+"add this" that isn't "duplicate the hero."
+
+All three brief options were checked against this, not just asserted:
+
+Option A (replace the main cover) doesn't work structurally --
+`.home-cover` carries real interactive content baked into the DOM
+(title/CTA/subtitle/sticky-note/Shiori/strap/dots), while the object
+crop is a single flat photo of a *closed* book with no surface left to
+put that content on. Swapping it in would mean either flattening all
+of that live content into a fake baked-in look (explicitly against
+every prior phase's "never bake text into decorative images" guardrail
+-- see Phase 131's own manifest) or cropping the photo down to a
+texture-only region anyway, at which point it's just a worse-cropped
+duplicate of the surface file already in place.
+
+Option B (a small desktop depth prop, e.g. a second book peeking from
+behind the cover) was the one genuinely tempting reading of the brief,
+but it runs straight into a decision Phase 126 already made and
+documented: that phase explicitly removed `.card-stack-surface` (a
+ghost "stack of cards behind this one" pseudo-element layer) from
+`.home-cover` specifically because "kept on a real photographed
+book-cover object, it would have produced exactly the 'card on top of
+a card' look this phase's own success criteria explicitly rules out."
+A second real photographed copy of the *same* green book tucked behind
+the first is that identical mistake wearing a different implementation
+-- not a new depth cue, a regression of one already fixed. Phase 133's
+desk props (leaf/tape/paperclip/pen) work as a depth layer precisely
+*because* they're different objects a desk plausibly holds; two
+identical green notebooks stacked isn't a desk detail, it reads as a
+render glitch. The desktop mockup's own "HOME DESK" panel (`docs/
+design/mockups/casual-sticker-reader-desktop.png`, panel 1) confirms
+this directly -- one notebook, three sticky notes, small props
+(plant/tape/clip/pen/cup) -- no second book anywhere in the reference
+composition this whole redesign has been chasing since Phase 118.
+
+Option C (decorative/empty-state use elsewhere) is plausible in the
+abstract but out of this phase's scope -- the brief frames this
+specifically as a Home judgment, and Home has no empty state of its
+own that isn't the cover itself. Left as a genuine future candidate
+(a different screen's empty state, not Home) rather than forced in
+here just because the asset exists -- the brief explicitly rules out
+applying something "because assets remain," and this phase treats that
+as a hard constraint, not a suggestion.
+
+**Files changed:** `docs/design/DESIGN.md` only. No `.tsx`/`.css`
+touched -- `git diff --check` and `npm run build` both still pass since
+no code moved.
+
+**Commit-readiness:** yes -- this phase's only output is a documented
+judgment; the tree is otherwise identical to Phase 134's committed
+state.
+
+**Next phase candidates:** `book-cover-green-object-clean.webp`
+remains unapplied, now with an explicit "hold" rationale on record
+rather than sitting as an open question -- a future phase could
+revisit it for a genuinely different screen's empty state, but not for
+Home. No other Phase 131 crop remains uncommitted-but-unapplied; all
+nine are now either applied (Phases 132/133/134) or explicitly held
+(this phase).
