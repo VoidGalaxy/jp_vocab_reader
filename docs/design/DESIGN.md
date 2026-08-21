@@ -2946,3 +2946,153 @@ future work should move to ordinary feature work or QA hygiene
 (dependency updates, test coverage, performance) rather than further
 visual-language passes over an app this review found already
 consistent end to end.
+
+Phase 139 is the performance/loading follow-up Phase 138 recommended:
+not a design pass, a check of whether the Phase 126-138 image work
+costs more bytes than it needs to, and whether any of it loads at the
+wrong time. Round 0 started from a full file inventory of
+`frontend/public/brand/decor/` rather than assumption: 31MB total, of
+which **29MB is source PNGs no code anywhere references** -- every
+`grep` hit for an actual `url("/brand/decor/...")` in `globals.css` or
+any `.tsx` resolves to a `-web.webp` or Phase 131 crop, never a raw
+`.png`. Those PNGs are the pre-compression originals Phase 126/127/131
+deliberately kept alongside their WebP exports for potential re-crops
+(Phase 131's own manifest says as much) -- dead weight in terms of
+bytes shipped with the repo/deploy artifact, but genuinely never
+requested by a browser, since nothing links to their URL. Per the
+brief's explicit instruction, they were not deleted -- only recorded
+here as a held judgment, same treatment Phase 135 gave the one unused
+webp crop.
+
+A second, smaller unused-asset finding: five `-web.webp` files from the
+original Phase 126/127 "candidate" pipeline are also unreferenced,
+having been superseded by Phase 131's cleaner individual crops --
+`phase126/book-cover-green-object-candidate-web.webp` (173KB),
+`phase126/deck-cover-template-candidate-web.webp` (78KB, explicitly
+"reserved for a future Shared Deck pass" per Phase 126's own entry,
+never built), `phase126/desk-prop-set-candidate-web.webp` (35KB),
+`phase126/sticky-note-set-candidate-web.webp` (63KB), and
+`phase127/study-flashcard-stack-candidate-web.webp` (30KB) -- roughly
+380KB combined. Also unreferenced: Phase 131's own
+`book-cover-green-object-clean.webp` (96KB), but that one already has
+an explicit hold judgment on record from Phase 135, not a new finding
+here. None of these six were deleted, for the same reason as the PNGs.
+
+The one thing Round 0 could act on directly, per the brief's own
+"CSS media query를 더 정확히 좁혀 불필요한 이미지 로드를 줄이기"
+allowance: a real-browser network-log comparison of Home at 1280 vs.
+390 (cache cleared before each load, via CDP) showed Home's four desk-
+prop `<img>` tags (Phase 133 -- leaf/tape/paperclip/pen) were being
+fetched in full on the *mobile* load too, ~92KB across four requests,
+despite `.home-desk-props { display: none }` at that width and the
+props rendering nowhere on screen. This is a real, measurable browser
+behavior difference from Home's own sticky notes
+(`.home-sticker--vocab/--review/--decks`), which use CSS
+`background-image` inside the same `>=1024px` media query and were
+confirmed absent from the same mobile network log -- a browser does
+not fetch a `background-image` behind a media query that isn't
+currently matched, but an ancestor's `display:none` does not stop it
+from fetching an `<img>`'s own `src` attribute. Phase 133 chose `<img>`
+for the desk props specifically (unlike every other decorative photo in
+the app, which is a CSS background-image) with no stated performance
+rationale for that choice -- just implementation convenience -- so
+converting it was a mechanism fix, not a design one.
+
+Fix: `HomeDashboard.tsx`'s four `<img src=... />` desk-prop elements
+became plain `<span>`s (same `aria-hidden`, same class names, same
+position in the DOM -- `pointer-events: none` still inherited from
+`.home-desk-props`, nothing about click-safety changed), and each
+prop's photo moved into `globals.css` as `background-image` on its
+existing `.home-desk-prop--leaf/--tape/--paperclip/--pen` modifier
+class, still inside the same `>=1024px` block those rules already
+lived in. `background-size: contain` (not `cover`) -- each prop's box
+was already sized to its source photo's exact aspect ratio back in
+Phase 133, so the two are equivalent here (no crop either way), but
+`contain` is the semantically correct choice for "show the whole
+cutout object," matching the reasoning Phase 133 itself gave for these
+same four props.
+
+Re-verified via the same cache-cleared network-log method: Home mobile
+(390px) now shows 5 `/brand/` requests instead of 9, with all four
+desk-prop bytes gone entirely (was 9 requests / ~2.20MB total page
+weight including Shiori, now 5 requests / ~2.11MB -- the ~92KB/4-request
+difference is exactly the four files that used to load invisibly).
+Home desktop (1280px) is unchanged -- still 12 requests, same total
+byte count, since the props still render there and the media query
+still matches. A pixel screenshot comparison and a fresh
+`elementFromPoint` hit-test on all four props (all still resolve to
+whatever's beneath them, never themselves, confirming
+`pointer-events: none` survived the markup change) confirmed the
+desktop result is visually and functionally identical to Phase
+133/138's already-Match state -- this phase did not reopen that
+judgment, only changed how the same pixels get to the screen.
+
+One measurement caveat recorded for future QA sessions in this repo:
+an early pass of this same network-log method used
+`Network.setCacheDisabled: true` and produced apparent duplicate
+fetches of the sticky-note WebP files within a single page load. Tracing
+it down: with cache forcibly disabled, a background-image referenced by
+exactly one CSS rule (confirmed via `grep -c` -- each sticky-note file
+appears exactly once) was still being requested twice, which
+`Network.setCacheDisabled` alone can explain (it forces every reference
+to hit the network, including ones a normal browser session would
+silently serve from its own in-memory resource cache during the same
+page's lifetime). Removing that flag (keeping only
+`Network.clearBrowserCache` before each fresh scenario, which still
+gives an accurate "first visit" byte count without breaking normal
+intra-page caching) made the duplicates disappear entirely for the
+Home scenario. A separate, much smaller instance of this same shape
+persisted afterward -- sticky-note URLs occasionally showed a second
+~243-byte response when navigating between tabs within one session --
+traced to the dev server's own `Cache-Control: public, max-age=0`
+header on every file under `/public` (confirmed via `curl -D -`),
+which is standard `next dev` behavior to keep hot-reloading correct,
+not a production configuration. A production build behind a real host
+(Vercel or any CDN in front of static `/public` assets) typically sends
+long-lived immutable cache headers for these files instead, so this
+specific 243-byte revalidation blip is expected to not reproduce
+outside local dev -- recorded here rather than chased further, since
+changing server cache headers is outside this phase's CSS/asset scope
+and the actual cost (243 bytes, not a full re-download) is negligible
+either way.
+
+Two things were explicitly checked and found already-correct, not
+touched: (1) every currently-*used* WebP (12 files, 11KB-169KB each)
+already comes from the Phase 125/126/131 compression pipeline
+(`quality=88, method=6` per Phase 131's own manifest) -- re-compressing
+any of them further risked visible quality loss for marginal byte
+savings on files that are already small, which the brief's own
+threshold ("실제로 크기 이득이 크고 화질 손상이 없을 때만") rules out;
+(2) Shiori's nine PNGs (`frontend/public/brand/shiori/`, ~700KB-1.2MB
+each, no `loading="lazy"` attribute on the `<img>` in `Shiori.tsx`) are
+the single largest per-screen network cost in the app -- Home alone
+loads two full-size variants (`shiori-default.png` + `shiori-review.png`,
+~1.9MB combined) just for two small mascot corners -- but the brief
+explicitly scoped Shiori to "로드 영향만 확인" (check load impact only,
+no changes to the PNGs or the variant mapping), so this is recorded as
+a load-impact observation and a candidate for a *future* phase, not
+acted on here. A `_backup/` folder sitting alongside the live Shiori
+PNGs (another ~8.1MB, an exact set of slightly-different-sized
+duplicates, never referenced by any code) was also noticed while
+checking Shiori's directory for this report, but falls under the same
+"Shiori files, don't touch" scope line -- noted, not removed.
+
+**Files changed:** `frontend/components/HomeDashboard.tsx`,
+`frontend/app/globals.css`. No asset files added, removed, or
+re-encoded.
+
+**Commit-readiness:** yes -- build and diff-check clean, real-browser
+network-log verification (before/after byte counts at 1280 and 390),
+pixel-screenshot and hit-test confirmation that desktop is unchanged,
+and a full 4-viewport click-through QA pass all came back clean with
+zero console errors and zero failed requests.
+
+**Next phase candidates:** (1) the 29MB of unreferenced source PNGs and
+~380KB of superseded candidate WebPs in `frontend/public/brand/decor/`
+-- a deletion pass, if the team decides the source files are no longer
+worth keeping for future re-crops; (2) Shiori's PNG weight and eager
+loading (~700KB-1.2MB per variant, no lazy-loading, a `_backup/`
+folder of unused duplicates) -- out of this phase's explicit scope but
+the largest remaining per-screen cost in the app; (3) `book-cover-
+green-object-clean.webp` remains held per Phase 135, unrelated to
+performance.

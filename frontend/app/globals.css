@@ -1669,7 +1669,20 @@ button {
      box-shadow/border added to any prop -- each source photo already
      carries its own natural soft drop shadow (see phase131/
      ASSET_MANIFEST.md), so a CSS shadow on top would only double it, the
-     same call Phase 132 made for the study card-backing photo. */
+     same call Phase 132 made for the study card-backing photo.
+     Phase 139 -- each prop's photo moved here as background-image (was an
+     <img src> on the element itself in HomeDashboard.tsx). A network-log
+     check found the four <img> tags were being fetched on every page load
+     regardless of viewport, because an ancestor's display:none does not
+     stop the browser from requesting an <img>'s own src -- confirmed on a
+     fresh mobile load, ~92KB across the four files, for a layer that never
+     renders below 1024px. background-image inside this same >=1024px block
+     doesn't have that problem: the browser doesn't fetch a background-image
+     that lives behind a media query which isn't currently matched (this is
+     exactly how the sticky notes two rules up already avoided the same
+     issue). Each prop's box was already sized to its source photo's own
+     aspect ratio (see the per-rule comments below), so background-size:
+     contain paints the whole photo undistorted with no crop either way. */
   .home-desk-props {
     display: block;
     position: absolute;
@@ -1682,6 +1695,9 @@ button {
     position: absolute;
     display: block;
     pointer-events: none;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
   }
 
   /* 223x400 source -- tall leaf sprig, top-left of the cover, echoing the
@@ -1692,6 +1708,7 @@ button {
     width: 58px;
     height: 104px;
     transform: rotate(-7deg);
+    background-image: url("/brand/decor/phase131/desk-prop-leaf.webp");
   }
 
   /* 400x353 source -- washi tape roll, low-left near the sticky-note
@@ -1702,6 +1719,7 @@ button {
     width: 48px;
     height: 42px;
     transform: rotate(-5deg);
+    background-image: url("/brand/decor/phase131/desk-prop-washi-tape.webp");
   }
 
   /* 400x378 source -- paperclip, resting just past the tape roll rather
@@ -1713,6 +1731,7 @@ button {
     width: 32px;
     height: 30px;
     transform: rotate(14deg);
+    background-image: url("/brand/decor/phase131/desk-prop-paperclip.webp");
   }
 
   /* 184x400 source -- pen, right of the sticky-note column, bleeding into
@@ -1725,6 +1744,7 @@ button {
     width: 42px;
     height: 91px;
     transform: rotate(18deg);
+    background-image: url("/brand/decor/phase131/desk-prop-pen.webp");
   }
 }
 

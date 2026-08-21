@@ -190,31 +190,39 @@ export function HomeDashboard({
             cover as the sole subject. A child of .home-stage (not a
             page-level sibling) so its position:absolute; inset:0 sizes
             against the cover+stickers box it's meant to scatter around, not
-            the whole viewport. Each image is decorative-only: empty alt,
-            aria-hidden, and pointer-events:none inherited from
-            .home-desk-props so none of them can ever intercept a click. */}
+            the whole viewport. Each prop is decorative-only: aria-hidden and
+            pointer-events:none inherited from .home-desk-props so none of
+            them can ever intercept a click.
+            Phase 139 -- these were originally four <img src> elements (see
+            git history), which fetched all four WebP files unconditionally
+            on every page load regardless of viewport, since an ancestor's
+            CSS display:none does not stop the browser from requesting an
+            <img>'s own src (confirmed via network log: the mobile Home load
+            was still pulling ~92KB of desk-prop images that render nowhere
+            below 1024px). Home's own sticky notes (.home-sticker--vocab/
+            --review/--decks) already avoided this exact problem by using
+            CSS background-image inside the >=1024px media query instead of
+            an <img> tag -- a media query the browser correctly skips
+            fetching behind when it doesn't match. Converted to plain <span>
+            + the same background-image pattern here for that reason; each
+            prop's actual photo now lives in globals.css'
+            .home-desk-prop--leaf/--tape/--paperclip/--pen rules, still
+            inside the existing >=1024px block, so mobile now fetches zero
+            bytes for any of the four instead of ~92KB it never rendered. */}
         <div className="home-desk-props" aria-hidden="true">
-          <img
-            src="/brand/decor/phase131/desk-prop-leaf.webp"
-            alt=""
+          <span
             aria-hidden="true"
             className="home-desk-prop home-desk-prop--leaf"
           />
-          <img
-            src="/brand/decor/phase131/desk-prop-washi-tape.webp"
-            alt=""
+          <span
             aria-hidden="true"
             className="home-desk-prop home-desk-prop--tape"
           />
-          <img
-            src="/brand/decor/phase131/desk-prop-paperclip.webp"
-            alt=""
+          <span
             aria-hidden="true"
             className="home-desk-prop home-desk-prop--paperclip"
           />
-          <img
-            src="/brand/decor/phase131/desk-prop-pen.webp"
-            alt=""
+          <span
             aria-hidden="true"
             className="home-desk-prop home-desk-prop--pen"
           />
