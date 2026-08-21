@@ -2869,3 +2869,80 @@ and zero failed requests.
 **Next phase candidates:** none opened by this phase. This was a
 narrowly-scoped typography fix closing Phase 136's one recorded
 observation; no other loose ends remain from that audit.
+
+Phase 138 is the closeout review for the whole Phase 118-137 arc: does
+the app now read as the mockup's casual, desk-scene notebook throughout,
+or does old boxed-web-app structure still show through somewhere, and
+can this series of phases be declared done. Round 0 leaned on Phase
+136's already-fresh, already-exhaustive audit (24 `url("/brand` CSS
+locations checked, every one traced to a documented "photo replaces
+CSS, conflicting CSS removed" decision) and Phase 137's fix of the one
+thing that audit actually found, rather than re-deriving that work from
+scratch in the same session it was produced. What this phase added was
+a second, independent live-browser pass against a fresh seeded account
+and a fresh headless Chrome profile, specifically to catch anything
+that regressed between Phase 136 and now (Phase 137 did touch
+`globals.css` again) rather than trusting the prior audit's screenshots
+were still accurate.
+
+That pass covered, at 1280 desktop, the full product loop rather than
+static screens: Home -> Reading (sample text -> analyze -> result
+workspace -> word inspector, 13 tokens rendered) -> Study (ready ->
+quick-start -> active card -> reveal -> rate all 5 due items through
+"보통" -> completion card with the 4/4 breakdown) -> Vocab (deck
+selected, populated word list) -> Shared Deck (shelf with the seeded
+"여행 단어" cover) -> Analyze -> Stats -> Feedback modal. Separately, at
+390/375/320: Home, Reading, Study (including a second live rate-through
+to confirm the rating grid lands inside the initial viewport without
+scrolling, `y:457-663` inside an 800px-tall viewport at all three
+widths), Vocab, Shared Deck, Analyze, Stats, plus an explicit
+drawer-open-then-close check confirming `.app-nav-drawer` unmounts
+cleanly (it's conditionally rendered, so DOM presence is a reliable
+signal, not a CSS visibility toggle that could leave stale state
+behind).
+
+Results: zero console errors/warnings, zero failed network requests,
+zero `scrollWidth`/`clientWidth` mismatch, and all 17 `/brand/decor/`
+image requests returned 200 -- at every one of the four required
+viewports, across the entire loop above, not just isolated screens.
+Every screen from Phase 136's Match list stayed Match. Per this
+review's own six criteria: (1) no leftover CSS structure was found
+sitting alongside new image structure unexplained -- the few remaining
+pure-CSS elements (Study rating stamps, Vocab's flat word-list rows,
+Shared Deck's inline action buttons) are deliberately CSS per Phase 136
+and this review's own criterion 4 ("기능 화면의 스캔성은 유지한다"), not
+leftovers; (2) every applied image reads as a real object/material in
+its scene (book cover, felt board, flashcard stack, wood shelf, desk
+props, sticky notes, ruled paper), confirmed again via this phase's own
+screenshots, not just re-asserted from Phase 136; (3) mobile keeps a
+single clear protagonist on every screen checked (cover/original
+text/rating decision/word list/shelf), verified via the rating-grid
+viewport-position check and direct screenshot inspection; (4) desktop
+reads as one desk scene per screen, not a card grid, on every screen
+that has a desk-scene treatment; (5) no CSS-vs-photo conflict was
+found, consistent with Phase 136; (6) scan/operate-ability of function
+screens (Vocab list, Study stamps, Shared Deck controls) is untouched,
+confirmed by real clicks succeeding throughout the walkthrough, not
+just visual inspection.
+
+**Closeout verdict: yes.** No code changes this phase -- the review's
+own policy ("기본은 no-code review... P1/P2 명확한 문제만 수정") was
+followed to the letter: nothing at P1 or P2 surfaced, so nothing was
+touched. The temptation to keep polishing (a slightly different desk-
+prop angle here, a slightly different color there) was treated as
+exactly the "안정된 구조를 다시 흔드는 것" this review's own seventh
+criterion warns against, not a missed opportunity.
+
+**Files changed:** `docs/design/DESIGN.md` only.
+
+**Commit-readiness:** yes -- `npm run build` and `git diff --check`
+both pass since no code moved; the tree is identical to Phase 137's
+committed state.
+
+**Recommended next roadmap:** end the image-asset redesign series here.
+The one still-open item (`book-cover-green-object-clean.webp`, held per
+Phase 135) is a minor unresolved decorative question, not a blocker --
+future work should move to ordinary feature work or QA hygiene
+(dependency updates, test coverage, performance) rather than further
+visual-language passes over an app this review found already
+consistent end to end.
