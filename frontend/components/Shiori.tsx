@@ -61,6 +61,20 @@ export const SHIORI_SIZE_MAP: Record<ShioriSize, string> = {
 // if even that fails (assets not delivered yet at all), renders nothing
 // rather than a browser's broken-image glyph so the surrounding layout
 // stays clean.
+//
+// Phase 141 -- loading="lazy"/decoding="async"/fetchPriority="low" added
+// to the single <img> every variant renders through. Each PNG is
+// 700KB-1.2MB (see docs/design/DESIGN.md's Phase 141 entry for the full
+// audit), and several call sites (AppEmptyState's mood illustration,
+// ShioriStamp's success/save marks, ShioriGuideCard's idle hints) only
+// ever mount once a particular state is reached, not on first paint --
+// lazy/async-decode costs nothing for the ones already on screen at load
+// (a browser loads an in-viewport lazy image immediately regardless) but
+// helps the ones that aren't. fetchPriority="low" reflects that Shiori is
+// always a decorative companion, never the content the user actually
+// came for, so real content requests (vocab data, analyzed text) should
+// win contention for bandwidth first. No change to which PNG loads,
+// when a variant switches, or how large/positioned the art renders.
 function ShioriImage({
   variant,
   size,
@@ -97,6 +111,9 @@ function ShioriImage({
         src={src}
         alt={alt}
         draggable={false}
+        loading="lazy"
+        decoding="async"
+        fetchPriority="low"
         onError={() => {
           const fallbackSrc = SHIORI_ASSET_MAP[FALLBACK_VARIANT];
           if (src !== fallbackSrc) {

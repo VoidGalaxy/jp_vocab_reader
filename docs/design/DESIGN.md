@@ -3193,3 +3193,106 @@ its unused `_backup/` folder (still out of scope per every phase's
 "Shiori PNGs/mapping 변경 금지" line, would need its own explicit
 phase to touch); `book-cover-green-object-clean.webp` remains held per
 Phase 135, unrelated to this cleanup.
+
+Phase 141 is that explicit Shiori phase. Round 0 mapped every call site
+of `ShioriCharacter`/`ShioriMark`/`ShioriStamp`/`ShioriGuideCard`/
+`AppEmptyState` across the app (`grep` across every `.tsx`, then read
+each site's actual `variant`/`mood` prop and its render condition) --
+9 variants, all funneled through one shared `<img>` in `Shiori.tsx`'s
+`ShioriImage`, each 693KB-1.19MB. That single choke point matters: any
+loading-behavior fix applied there covers every one of the 30+ call
+sites at once, with no per-site changes needed.
+
+A real network-log sweep (cache cleared before each scenario, same
+method as Phase 139/140) across Home/Reading-start/Reading-result/
+Study-ready/Study-active/Study-complete/Vocab/Shared-Deck/Analyze/
+Stats/Feedback, at both 1280 and 390, found no duplicate same-URL
+fetches within any single screen (each variant loads exactly once per
+page, confirmed) and no viewport-gating bug like Phase 139's desk
+props -- every Shiori call site is genuinely React-conditional
+(`mood ? <ShioriCharacter/> : ...`, `isInBasket ? <ShioriStamp/> :
+null`), never a CSS-hidden-but-mounted `<img>`, so there was nothing
+to gate further. The one real, consistent cost: `shiori-default.png` +
+`shiori-review.png` (Home's cover charm + shortcut sticker icon, ~1.9MB
+combined) load on *every* cold visit to the app regardless of which
+screen the user actually wants, because Home is the SPA's landing
+route and every fresh page load starts there before any client-side
+tab switch -- confirmed identical at 390px, since Shiori is
+intentionally not viewport-gated on Home (the charm/sticker are real
+content at every width, not a desktop-only enhancement, per Phase
+133/134/138's own screenshots). This is expected product behavior, not
+a bug -- Home is supposed to load first -- but it does mean Shiori's
+per-PNG weight is the largest fixed cost on the coldest, most-visited
+path through the app.
+
+Given that, the safe fix available under this phase's own guardrails
+("lazy loading이나 decoding 속성 추가는 안전하면 허용", no PNG
+changes, no variant-mapping changes): `loading="lazy"`,
+`decoding="async"`, and `fetchPriority="low"` added to `ShioriImage`'s
+one `<img>`. All three are loading *hints*, not visual or behavioral
+changes -- confirmed via a second network-log pass that byte counts and
+request counts are unchanged (a lazy image already in the viewport at
+load time is still fetched immediately by the browser; these hints only
+change *priority/timing* for the images that aren't, e.g. `AppEmptyState`
+mood illustrations that only mount once a list is actually empty, or
+`ShioriStamp`'s success/save marks that only mount after an action).
+`fetchPriority="low"` reflects that Shiori is always a decorative
+companion competing for the same connection as the actual content
+(vocab data, analyzed text) the user came for -- deprioritizing it lets
+real content win contention first. A `getBoundingClientRect()` check on
+Home's cover charm and sticker icon (73x73 / ~40x41, matching every
+prior phase's own measurements) and a full-page screenshot confirmed
+zero size/position regression at all four required viewports.
+
+**`_backup/` folder:** 9 PNGs, ~8.7MB, sitting in `frontend/public/
+brand/shiori/_backup/` with zero code references (confirmed via
+`grep -rn "_backup"` across `frontend/`) -- but `md5sum` against each
+live same-named file showed every one is genuinely *different* from
+its current counterpart, not an accidental duplicate. This is a real
+prior generation of the Shiori character art, not junk. Per this
+phase's own explicit caution ("backup 폴더 삭제는 매우 조심스럽게
+판단... provenance/복구용이면 docs 쪽 이동") and the same treatment
+Phase 140 gave the unused decor source PNGs, the folder was moved (not
+deleted) via `git mv` to `docs/design/source-assets/shiori-backup/`,
+with a note in that archive's `README.md` explaining what it is and
+that it should only ever be restored to `frontend/public/` as a
+deliberate character-art rollback decision, never casually.
+
+Net effect: `frontend/public/brand/shiori/` drops from 17MB to 8.0MB
+(the `_backup/` folder's ~8.7MB was the only reduction available here
+-- the 9 live PNGs are explicitly out of scope for re-encoding or
+replacement per this phase's own brief, and Round 0 confirmed why: they
+render at their own quoted per-PNG sizes with no evidence any of them
+is unnecessarily large for what it is, just consistently ~700KB-1.2MB
+illustrated art, which recompressing without an explicit go-ahead would
+risk visibly degrading the brand character).
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account, at 1280/390/375/320: `npm run build` clean (`fetchPriority`
+type-checks fine against this project's React/TS DOM types), `git diff
+--check` clean, zero console errors/warnings, zero failed requests,
+zero `/brand/shiori/` 404s, zero `scrollWidth`/`clientWidth` mismatch,
+across Home -> Reading -> Study -> Vocab -> Shared Deck at every
+viewport. Byte-for-byte identical Shiori request counts/sizes before
+and after the loading-attribute change, confirming it altered priority
+hints only, nothing about which files load or when they visually
+appear.
+
+**Files changed:** `frontend/components/Shiori.tsx` (three loading
+attributes on one `<img>`); `docs/design/source-assets/shiori-backup/`
+(9 PNGs moved via `git mv` from `frontend/public/brand/shiori/
+_backup/`); `docs/design/source-assets/README.md` updated; this
+`docs/design/DESIGN.md` entry. No PNG re-encoded, no variant mapping
+touched, no character added or removed.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+4-viewport network-log and visual QA (byte-identical request counts,
+zero 404s, unchanged character geometry) passed with zero console
+errors and zero failed requests.
+
+**Next phase candidates:** none opened here. The remaining Shiori PNG
+weight (the 9 live files themselves) was explicitly evaluated and left
+alone -- re-encoding brand character art needs its own deliberate
+phase with an explicit quality-tradeoff decision, not a default
+performance pass. `book-cover-green-object-clean.webp` remains held
+per Phase 135, unrelated to Shiori.

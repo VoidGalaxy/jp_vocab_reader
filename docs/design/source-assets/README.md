@@ -42,3 +42,19 @@ re-deriving a crop would go back to the PNG, not a derived WebP).
 
 If a future phase needs a different crop or a higher-resolution start
 point than a currently-shipped WebP, the PNG here is the one to use.
+
+## `shiori-backup/`
+
+Phase 141 moved `frontend/public/brand/shiori/_backup/`'s 9 PNGs here.
+This is a *different* set from the mapping table above -- these are a
+prior generation of the Shiori mascot's own artwork (confirmed via
+`md5sum`: every file here differs from its same-named counterpart still
+live in `frontend/public/brand/shiori/`, so this isn't an accidental
+duplicate). No code has ever referenced `_backup/` -- it was dead
+weight in the deployed `public/` tree (~8.7MB) with no runtime purpose,
+but it's kept here rather than deleted since it's a real prior version
+of the brand character, useful as a rollback reference if a future
+character-art revision needs to compare against or recover the
+previous look. Do not restore these into `frontend/public/` without an
+explicit decision to roll back the character art -- the live PNGs are
+the current, correct brand asset.
