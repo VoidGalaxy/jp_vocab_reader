@@ -23,16 +23,28 @@ buttons, filters, or status controls into images.
 
 3. Study board and card stack
    - `study-felt-board-texture-web.webp`
-   - `study-flashcard-stack-candidate-web.webp`
    - Use felt board texture for `.study-board-scene`.
-   - Flashcard stack is a candidate crop/background for `.study-card-stack`
-     or the active card surface, but should not replace rating buttons or
-     SRS controls.
+   - The flashcard-stack candidate was cropped by Phase 131 into
+     `phase131/study-flashcard-stack-clean.webp` (now in production on
+     `.study-card-backing-sheet`, applied Phase 132) -- should not
+     replace rating buttons or SRS controls.
 
-## Source PNGs
+## Source PNGs (Phase 140 update)
 
-The PNG files in this folder are original candidates kept for future cropping
-or higher-quality reprocessing. Prefer the `*-web.webp` files for CSS usage.
+The original PNG candidates that used to sit in this folder were moved
+to `docs/design/source-assets/phase127/` in Phase 140 -- nothing in
+`frontend/` ever referenced them by URL, so keeping them in
+`frontend/public/` only added ~13MB to every deploy for files no
+browser would fetch. See that folder's own `README.md` for the full
+PNG -> shipped-WebP mapping. Prefer the `*-web.webp` files in this
+folder for CSS usage; go to the archive only if a future crop needs a
+higher-resolution or differently-framed start point than a currently
+shipped WebP already provides.
+
+Also removed in Phase 140: `study-flashcard-stack-candidate-web.webp`
+(the WebP export of the same PNG now archived above) -- fully
+superseded by Phase 131's individual crop, no unique provenance of its
+own.
 
 ## Guardrails
 

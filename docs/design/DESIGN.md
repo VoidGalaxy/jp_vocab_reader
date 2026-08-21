@@ -3096,3 +3096,100 @@ folder of unused duplicates) -- out of this phase's explicit scope but
 the largest remaining per-screen cost in the app; (3) `book-cover-
 green-object-clean.webp` remains held per Phase 135, unrelated to
 performance.
+
+Phase 140 acts on next-phase-candidate (1) above: a real cleanup pass
+over the unused assets Phase 139 catalogued, judged file-by-file rather
+than deleted wholesale. Round 0 re-extracted the code-referenced set
+fresh (`grep -rohE '/brand/decor/...'` across every `.tsx` and
+`globals.css`) and confirmed it hadn't changed since Phase 139: exactly
+20 files. Every one of the 17 remaining decor files (12 raw PNGs, 5
+superseded `-web.webp` exports) was checked with a whole-repo grep for
+its literal filename, not just assumed unused from the earlier list --
+none turned up as a live `url(...)`/`src=` reference anywhere; the only
+hits were prose mentions in `DESIGN.md` and the two
+`ASSET_MANIFEST.md` files describing sourcing, which don't depend on
+the file's physical path.
+
+Three different dispositions came out of that check, matching the
+brief's A/B/C framing per file rather than one blanket decision:
+
+**Deleted (5 files, ~390KB):** the superseded `phase126/*-candidate-
+web.webp` and `phase127/study-flashcard-stack-candidate-web.webp`
+files. Each is a full-canvas WebP export of a PNG that Phase 131 later
+individually-cropped from directly -- the WebP itself carries no
+provenance a future re-crop would ever start from (you'd go back to the
+PNG, never to an old flattened export of it), so once the PNG is
+preserved elsewhere, these have zero remaining value. Confirmed safe:
+the build and a full 4-viewport, 404-checking browser walkthrough (see
+QA below) both came back clean after removal.
+
+**Moved, not deleted (12 files, ~29MB):** every raw source PNG,
+relocated from `frontend/public/brand/decor/{phase126,phase127}/` to
+`docs/design/source-assets/{phase126,phase127}/` via `git mv` (history
+preserved). This is the brief's own suggested resolution for
+provenance-worthy originals -- "public이 아닌 별도 보존 위치/문서화
+방안" -- applied literally rather than improvised: ten of these twelve
+PNGs are the direct, traceable source of a WebP still in production
+today (Home cover, Reading's open-book spread and paper texture,
+Study's felt board, Shared Deck's shelf and covers, Vocab's ring
+notebook, and the three Phase 131 crop sheets for desk props/sticky
+notes/flashcard stack); the other two (`book-cover-green-object-
+candidate.png`, `deck-cover-template-candidate.png`) are the source for
+Phase 135's held asset and a never-built Shared Deck template
+respectively -- lower value but not zero, so treated the same way
+rather than singled out for deletion. The brief's own weak-justification
+warning ("'언젠가 쓸 수도 있음'만으로 public에 29MB 원본을 계속 두는
+것은 약한 근거") was read as an argument against leaving them in the
+*deployed, web-served* `public/` tree specifically, not an argument for
+deleting genuinely-traceable originals outright -- `docs/design/
+source-assets/README.md` (new) documents the full PNG -> shipped-WebP
+mapping so the provenance value survives the move, while the ~29MB
+stops shipping with every deploy. Both `ASSET_MANIFEST.md` files
+(`phase127/`, `phase131/`) got a short update pointing at the new
+location rather than silently going stale -- `phase131/
+ASSET_MANIFEST.md`'s exact crop-box coordinates are left untouched
+since they're still accurate against the same files at their new path.
+
+**Preserved in place, no action (1 file, 96KB):** `phase131/book-cover-
+green-object-clean.webp`. Per Phase 135's explicit hold judgment and
+the brief's own guidance to prefer preservation/documentation over
+deletion for it, this is small, already a finished individual crop
+(not a raw source needing archival), and already correctly documented
+in both the Phase 131 manifest and Phase 135's DESIGN.md entry --
+nothing further to add or move.
+
+The 20 code-referenced production files (WebP/SVG/PNG alike) were not
+touched in any way -- not moved, not renamed, not re-encoded.
+
+Net effect: `frontend/public/brand/decor/` drops from 31MB to 1.4MB.
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account, at 1280/390/375/320: `npm run build` clean, `git diff --check`
+clean, zero console errors/warnings, zero failed network requests, zero
+`scrollWidth`/`clientWidth` mismatch, and zero `/brand/` image 404s
+across Home -> Reading -> Study -> Vocab -> Shared Deck at every
+viewport (20 `/brand/` requests at desktop, 10 at mobile -- consistent
+with Phase 139's own counts, confirming this phase changed nothing
+about which files load, only what else sits unused in the repo).
+
+**Files changed:** 12 PNGs moved (`git mv`) from `frontend/public/
+brand/decor/{phase126,phase127}/` to `docs/design/source-assets/
+{phase126,phase127}/`; 5 superseded WebP files deleted from `frontend/
+public/brand/decor/{phase126,phase127}/`; `frontend/public/brand/
+decor/phase127/ASSET_MANIFEST.md` and `frontend/public/brand/decor/
+phase131/ASSET_MANIFEST.md` updated to point at the new archive
+location; new `docs/design/source-assets/README.md` documenting the
+full mapping; this `docs/design/DESIGN.md` entry. No `.tsx`/`.css`
+touched -- no code change was needed since none of the moved/deleted
+files were ever referenced.
+
+**Commit-readiness:** yes -- build and diff-check clean, full 4-viewport
+browser QA (including an explicit 404 check across every screen this
+phase's changes could plausibly have affected) passed with zero
+console errors and zero failed requests.
+
+**Next phase candidates:** Shiori's PNG weight and eager loading and
+its unused `_backup/` folder (still out of scope per every phase's
+"Shiori PNGs/mapping 변경 금지" line, would need its own explicit
+phase to touch); `book-cover-green-object-clean.webp` remains held per
+Phase 135, unrelated to this cleanup.

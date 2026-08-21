@@ -80,3 +80,14 @@ Cropping used Pillow + numpy, installed into an isolated scratch
 directory outside the repo (`pip install --target`) rather than added to
 `backend/requirements.txt` -- no new project dependency. Not needed again
 unless another crop pass is done.
+
+## Phase 140 update
+
+The `phase126/*-candidate.png` and `phase127/*-candidate.png` source
+files the "Sourcing" section above describes cropping from are no
+longer in `frontend/public/brand/decor/` -- they were never fetched by
+the running app (nothing referenced them by URL) and added ~29MB of
+dead weight to every deploy, so Phase 140 moved them to
+`docs/design/source-assets/` (see that folder's `README.md`). The exact
+crop-box coordinates above are still accurate against those same files
+at their new location if another crop pass is ever needed.
