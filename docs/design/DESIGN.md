@@ -2458,3 +2458,108 @@ one.
 paperclip/leaf.webp`, and `book-cover-green-object-clean.webp` -- are
 still unapplied to any screen. Phase 131's own DESIGN.md entry has the
 per-asset target-screen suggestions.
+
+Phase 133 applies four of Phase 131's photographed desk-prop crops --
+`desk-prop-leaf.webp`, `desk-prop-washi-tape.webp`, `desk-prop-
+paperclip.webp`, `desk-prop-pen.webp` -- to Home's desktop-only
+`.home-desk-props` layer, replacing the four pure-CSS shapes
+(`--plant`, `--stationery`, `--pen`, `--cup`) it held since Phase 118.
+Sticky notes are left for a future phase per the brief; not forced in
+here.
+
+The old `--stationery` prop packed a washi-tape flag shape and a
+paperclip circle into one element's `::before`/`::after`. Since Phase
+131 produced the tape and paperclip as two separate photographed
+objects, they're now two separate `<img>` elements
+(`--tape`/`--paperclip`) rather than one combined shape -- letting each
+sit at its own natural angle instead of being forced into a shared
+bounding box. `--plant` becomes `--leaf` (the photographed sprig).
+`--pen` keeps its name but is now the photo. `--cup` has no
+photographed counterpart among Phase 131's crops, so it's dropped
+rather than left as the one CSS-drawn shape sitting next to three real
+photos -- exactly the "mixed design language" the brief's judgment
+criteria warn against. This takes the scene from four props to four
+props of a different kind, not four down to three as padding -- the
+count was never the point.
+
+`HomeDashboard.tsx`'s `.home-desk-props` container changes from four
+empty `<span>`s (each drawing its own shape via CSS pseudo-elements) to
+four `<img>` elements pointing at the Phase 131 files, each with empty
+`alt`, `aria-hidden="true"`, and inheriting `pointer-events: none` from
+the container (verified, not assumed -- see QA below). Positioning
+values in `globals.css` were re-derived from each asset's real aspect
+ratio (leaf 223x400, tape 400x353, paperclip 400x378, pen 184x400)
+rather than reusing the old CSS shapes' arbitrary box sizes, then
+placed by eye against real screenshots: leaf top-left near the cover's
+own corner (echoing the old plant spot), tape and paperclip low-left
+near the sticky-note column (echoing the old stationery spot, now as
+two independently-angled objects instead of one combined shape), pen
+bottom-right bleeding into the open wood past the sticky-note column
+(echoing the old pen spot). No extra `box-shadow`/`filter: drop-shadow`
+was added to any of the four -- each source photo already carries its
+own natural soft shadow (per `phase131/ASSET_MANIFEST.md`), so a CSS
+shadow on top would only double it, the same call Phase 132 made for
+the study card-backing photo.
+
+Verified via a 3x zoomed screenshot of both prop clusters: the leaf
+reads as a real sprig peeking from behind the cover's corner, the tape
+roll and paperclip read as two distinct objects resting near each
+other on the wood-textured page background (their bounding boxes
+overlap slightly by design -- like a paperclip actually resting near a
+tape roll on a desk, not stacked as one shape), and the pen reads as a
+single object resting at a natural diagonal. All four read as
+photographed objects in one shared flat-lay lighting, not a pile of
+independent stickers -- the "실제 물건이 자연스럽게 놓인 단일 장면"
+bar the brief set.
+
+Nothing else on Home changed: `.home-cover`, `.home-cover-cta`,
+`.home-cover-sample`, `.home-stickers`/`.home-sticker` (including their
+`vocab`/`review`/`decks` click handlers), `.home-footnote`, the
+`>=1024px` desk-scene grid layout, and every non-prop rule in that
+media block are untouched. `page.tsx`'s tab-routing, drawer, account
+menu, and feedback modal wiring were not touched -- only exercised in
+QA to confirm this phase didn't regress them.
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account (`homeqa133@test.local`): `npm run build` clean, `git diff
+--check` clean, zero console errors/warnings, zero
+`scrollWidth`/`clientWidth` mismatch at 1280/390/375/320. All four new
+`.webp` requests returned 200, no 404s. `elementFromPoint` at each
+prop's own center resolved to whatever's actually beneath it (the page
+background, `.home-cover`, or `.home-stage`), never the prop image
+itself -- confirming `pointer-events: none` is honestly inherited, not
+just assumed from the CSS. Real clicks (not just hit-tests) confirmed:
+CTA routes to Reading (`.reading-panel` appears), all three shortcut
+stickers resolve to themselves under `elementFromPoint`, mobile
+hamburger opens/closes `.app-nav-drawer` (conditionally rendered, so
+DOM presence is a reliable open/closed signal, not just a CSS
+visibility toggle), the account-menu trigger opens `.account-menu-panel`
+showing the logged-in email and logout option, and the feedback button
+opens its modal. Mobile (390/375/320) confirmed via `getBoundingClientRect`
++ `offsetParent` (not `getComputedStyle`, which reports an element's own
+`display` value regardless of an ancestor's `display: none` and would
+have been a false positive here) that all four props have zero size and
+no offset parent below 1024px -- the cover is the sole subject on
+mobile, exactly as before this phase. One QA-process finding along the
+way: the scratch backend needed `CORS_ORIGINS` explicitly set to the
+dev server's actual port (3133) since the backend's CORS default only
+allows port 3000 -- without it every authenticated fetch failed
+preflight with a 400, surfacing as misleading "Failed to fetch" console
+errors that had nothing to do with this phase's actual change (caught
+and fixed before treating it as a real regression).
+
+**Files changed:** `frontend/components/HomeDashboard.tsx`,
+`frontend/app/globals.css`. No new asset files -- reused Phase 131's
+already-committed `frontend/public/brand/decor/phase131/desk-prop-
+{leaf,washi-tape,paperclip,pen}.webp` directly.
+
+**Commit-readiness:** yes -- build and diff-check clean, full browser
+QA (desktop composition, mobile prop-hiding, CTA/sticker routing,
+drawer, account menu, feedback modal, click-through hit-testing on
+every prop) passed at all four required viewports with zero console
+errors and zero failed requests.
+
+**Next phase candidates:** `sticky-note-yellow/blue/coral.webp` (Home's
+shortcut stickers or a future candidate-tray variant) and
+`book-cover-green-object-clean.webp` (a Home/empty-state accent) are
+the only Phase 131 crops still unapplied.

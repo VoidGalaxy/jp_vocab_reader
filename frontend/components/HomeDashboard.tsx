@@ -181,16 +181,43 @@ export function HomeDashboard({
           </button>
         </div>
 
-        {/* Desktop-only desk props (plant/tape+clip/pen/cup) -- pure-CSS
-            shapes, no new images. display:none below 1024px in globals.css.
-            A child of .home-stage (not a page-level sibling) so its
-            position:absolute; inset:0 sizes against the cover+stickers
-            box it's meant to scatter around, not the whole viewport. */}
+        {/* Phase 133 -- the pure-CSS plant/stationery/pen/cup shapes are
+            replaced with Phase 131's photographed desk-prop cutouts (real
+            leaf sprig, washi tape roll, brass paperclip, pen). No photo
+            exists for the old CSS cup, so it's dropped rather than left as
+            the one obviously-fake shape in an otherwise-real scene.
+            display:none below 1024px in globals.css -- mobile keeps the
+            cover as the sole subject. A child of .home-stage (not a
+            page-level sibling) so its position:absolute; inset:0 sizes
+            against the cover+stickers box it's meant to scatter around, not
+            the whole viewport. Each image is decorative-only: empty alt,
+            aria-hidden, and pointer-events:none inherited from
+            .home-desk-props so none of them can ever intercept a click. */}
         <div className="home-desk-props" aria-hidden="true">
-          <span className="home-desk-prop home-desk-prop--plant" />
-          <span className="home-desk-prop home-desk-prop--stationery" />
-          <span className="home-desk-prop home-desk-prop--pen" />
-          <span className="home-desk-prop home-desk-prop--cup" />
+          <img
+            src="/brand/decor/phase131/desk-prop-leaf.webp"
+            alt=""
+            aria-hidden="true"
+            className="home-desk-prop home-desk-prop--leaf"
+          />
+          <img
+            src="/brand/decor/phase131/desk-prop-washi-tape.webp"
+            alt=""
+            aria-hidden="true"
+            className="home-desk-prop home-desk-prop--tape"
+          />
+          <img
+            src="/brand/decor/phase131/desk-prop-paperclip.webp"
+            alt=""
+            aria-hidden="true"
+            className="home-desk-prop home-desk-prop--paperclip"
+          />
+          <img
+            src="/brand/decor/phase131/desk-prop-pen.webp"
+            alt=""
+            aria-hidden="true"
+            className="home-desk-prop home-desk-prop--pen"
+          />
         </div>
       </div>
 

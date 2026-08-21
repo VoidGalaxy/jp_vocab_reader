@@ -1647,9 +1647,14 @@ button {
     padding-left: 4px;
   }
 
-  /* Desk props -- plant/tape+clip/pen/cup, pure-CSS shapes clustered around
-     the cover and sticky-note column. pointer-events:none keeps the whole
-     layer click-through. */
+  /* Phase 133 -- desk props are now Phase 131's photographed cutouts
+     (leaf/tape/paperclip/pen) scattered around the cover and sticky-note
+     column, not CSS-drawn shapes. .home-desk-props stays the click-through
+     layer (pointer-events:none, inherited by every child image below); no
+     box-shadow/border added to any prop -- each source photo already
+     carries its own natural soft drop shadow (see phase131/
+     ASSET_MANIFEST.md), so a CSS shadow on top would only double it, the
+     same call Phase 132 made for the study card-backing photo. */
   .home-desk-props {
     display: block;
     position: absolute;
@@ -1661,138 +1666,51 @@ button {
   .home-desk-prop {
     position: absolute;
     display: block;
+    pointer-events: none;
   }
 
-  .home-desk-prop--plant {
-    top: -34px;
+  /* 223x400 source -- tall leaf sprig, top-left of the cover, echoing the
+     old CSS plant's corner spot. */
+  .home-desk-prop--leaf {
+    top: -38px;
     left: -30px;
-    width: 46px;
-    height: 56px;
+    width: 58px;
+    height: 104px;
+    transform: rotate(-7deg);
   }
 
-  .home-desk-prop--plant::before {
-    content: "";
-    position: absolute;
-    left: 8px;
-    bottom: 0;
-    width: 30px;
-    height: 22px;
-    background: var(--tone-ink-brown);
-    clip-path: polygon(12% 0, 88% 0, 100% 100%, 0% 100%);
-    box-shadow: 0 4px 8px rgba(37, 43, 30, 0.18);
+  /* 400x353 source -- washi tape roll, low-left near the sticky-note
+     column's own old "stationery" spot. */
+  .home-desk-prop--tape {
+    left: -32px;
+    top: 336px;
+    width: 48px;
+    height: 42px;
+    transform: rotate(-5deg);
   }
 
-  .home-desk-prop--plant::after {
-    content: "";
-    position: absolute;
-    left: 3px;
-    bottom: 17px;
-    width: 40px;
-    height: 40px;
-    background:
-      radial-gradient(ellipse 9px 16px at 30% 62%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%),
-      radial-gradient(ellipse 9px 18px at 55% 42%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%),
-      radial-gradient(ellipse 8px 15px at 76% 56%, var(--sage-green) 0%, var(--sage-green) 68%, transparent 70%);
-    transform: rotate(-6deg);
-  }
-
-  .home-desk-prop--stationery {
-    left: -34px;
-    top: 340px;
-    width: 44px;
-    height: 30px;
-  }
-
-  .home-desk-prop--stationery::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: radial-gradient(circle at center, var(--paper-bg) 0 34%, var(--tone-dusty-blue) 35% 100%);
-    box-shadow: 0 3px 6px rgba(37, 43, 30, 0.16);
-    transform: rotate(-8deg);
-  }
-
-  .home-desk-prop--stationery::after {
-    content: "";
-    position: absolute;
-    right: 0;
-    top: 2px;
-    width: 16px;
-    height: 20px;
-    background: linear-gradient(160deg, #e3c583 0%, var(--sand-amber) 100%);
-    clip-path: polygon(20% 0, 80% 0, 100% 55%, 50% 100%, 0 55%);
-    box-shadow: 0 3px 6px rgba(37, 43, 30, 0.2);
-    transform: rotate(6deg);
-  }
-
-  .home-desk-prop--pen {
-    /* Right of the sticky-note column (not between it and the cover --
-       that gap is only the grid's 36px column gap, too narrow to hold a
-       diagonal 78px bar without it hiding behind one card or the other).
-       Bleeds into the open wood to the right, which otherwise stayed bare. */
-    top: 60%;
-    right: -34px;
-    width: 78px;
-    height: 10px;
-    transform: rotate(-30deg);
-  }
-
-  .home-desk-prop--pen::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 999px;
-    background: linear-gradient(
-      90deg,
-      var(--tone-ink-brown) 0%,
-      var(--tone-ink-brown) 78%,
-      #d9b46a 78%,
-      #d9b46a 100%
-    );
-    box-shadow: 0 3px 6px rgba(37, 43, 30, 0.18);
-  }
-
-  .home-desk-prop--cup {
-    top: -30px;
-    right: 30px;
+  /* 400x378 source -- paperclip, resting just past the tape roll rather
+     than clipped onto a live sticky-note button (those are real controls,
+     not a surface a decorative layer should visually attach to). */
+  .home-desk-prop--paperclip {
+    left: -4px;
+    top: 372px;
     width: 32px;
-    height: 28px;
-    border-radius: 4px 4px 10px 10px;
-    background: linear-gradient(180deg, #ffffff 0%, #f3ece0 100%);
-    box-shadow:
-      0 4px 8px rgba(37, 43, 30, 0.16),
-      inset 0 -3px 0 rgba(37, 43, 30, 0.06);
+    height: 30px;
+    transform: rotate(14deg);
   }
 
-  .home-desk-prop--cup::before {
-    content: "";
-    position: absolute;
-    right: -8px;
-    top: 4px;
-    width: 10px;
-    height: 12px;
-    border: 3px solid #f3ece0;
-    border-left: 0;
-    border-radius: 0 8px 8px 0;
+  /* 184x400 source -- pen, right of the sticky-note column, bleeding into
+     the open wood the same way the old CSS bar did. The source photo is
+     already shot at a resting diagonal, so only a small extra rotation is
+     needed rather than the ~-30deg the old flat CSS bar required. */
+  .home-desk-prop--pen {
+    top: 58%;
+    right: -18px;
+    width: 42px;
+    height: 91px;
+    transform: rotate(18deg);
   }
-
-  .home-desk-prop--cup::after {
-    content: "";
-    position: absolute;
-    left: -30px;
-    bottom: -14px;
-    width: 20px;
-    height: 14px;
-    background: var(--panel-bg);
-    border: 1px solid var(--paper-border);
-    transform: rotate(8deg);
-    box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-  }
-
 }
 
 .info-strip-icon {
