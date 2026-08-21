@@ -56,5 +56,22 @@ but it's kept here rather than deleted since it's a real prior version
 of the brand character, useful as a rollback reference if a future
 character-art revision needs to compare against or recover the
 previous look. Do not restore these into `frontend/public/` without an
-explicit decision to roll back the character art -- the live PNGs are
-the current, correct brand asset.
+explicit decision to roll back the character art -- the live art (now
+WebP, see `shiori-png-source/` below) is the current, correct brand
+asset.
+
+## `shiori-png-source/`
+
+Phase 142 moved the 9 *current* Shiori PNGs here (not the older
+`shiori-backup/` set above -- these are the ones that were live in
+`frontend/public/brand/shiori/` right up until this phase) after
+converting the production copies to lossless WebP. "Lossless" here is
+verified, not assumed: a pixel diff (`PIL.ImageChops.difference`)
+between every PNG here and its `.webp` counterpart in
+`frontend/public/brand/shiori/` returned an empty bounding box for all
+9 files -- byte-for-byte identical RGBA data, just a different
+container/compression, ~50% smaller. Kept here as the uncompressed
+master in case a future edit needs a non-lossy start point (WebP is
+already lossless today, but re-opening a WebP to edit and re-saving
+risks generational loss the way repeatedly re-saving a JPEG does;
+editing from this PNG avoids that).

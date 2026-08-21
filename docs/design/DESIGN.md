@@ -3296,3 +3296,116 @@ alone -- re-encoding brand character art needs its own deliberate
 phase with an explicit quality-tradeoff decision, not a default
 performance pass. `book-cover-green-object-clean.webp` remains held
 per Phase 135, unrelated to Shiori.
+
+Phase 142 is that deliberate re-encoding phase. Round 0 confirmed the 9
+live PNGs' actual specs (no assumptions carried over from Phase 141):
+all RGBA with real alpha, ~700x1000px to ~1250x840px, 693KB-1.19MB
+each, 8.0MB total -- and cross-checked against `globals.css`'s size
+scale (`.shiori-asset--sm` 24px up to `.shiori-asset--hero`
+`clamp(180px, 16vw, 220px)`), confirming every one of these ~1000px
+source images renders at most at 220px on any real screen, a
+5-6x oversample the brief didn't ask this phase to correct (resizing
+wasn't on the brief's approved candidate list -- only compression
+format changes were, so resolution was left untouched despite the
+headroom).
+
+No system image tools were available (no `cwebp`/`avifenc`/
+`pngquant`/ImageMagick), so Pillow was installed into an isolated
+scratch directory via `pip install --target` (same pattern Phase 131
+established) -- never added to `backend/requirements.txt`, no new
+project dependency. Two candidates were generated per the brief's own
+recommendation, entirely in scratch space first, nothing in
+`frontend/public/` touched until a candidate was actually chosen:
+
+- **Lossless PNG re-optimize** (same pixels, best zlib settings):
+  only 6.6% average savings across the 9 files -- well under the 30%
+  adoption bar, confirming the originals weren't carrying meaningful
+  re-compressible slack at the PNG level.
+- **Lossless WebP** (same pixels, different container): 49.6% average
+  savings (8.0MB -> 4.0MB), comfortably past the bar.
+
+A third, unrequested-but-informative data point was also generated for
+context: quality-90 lossy WebP hit 88.7% savings, but was not seriously
+considered for adoption -- the lossless candidate already cleared the
+30% bar by a wide margin with a strictly stronger quality guarantee
+(mathematically zero difference vs. a "should look fine" judgment call
+on a lossy file), so there was no reason to take on any lossy-artifact
+risk. AVIF was not attempted at all, per the brief's own steer to skip
+it when transparency/browser-support risk isn't worth it for a
+brand-critical character asset -- lossless WebP already met every goal
+without that risk.
+
+The lossless claim was verified, not assumed: `PIL.ImageChops.
+difference()` between each original PNG and its candidate WebP (after
+decoding both back to RGBA) returned an empty bounding box for all 9
+files -- meaning literally zero differing pixels, not just "visually
+indistinguishable." This is a stronger guarantee than the brief's own
+"확대 비교에서 손상 없음" bar asks for, since a pixel-identical decode
+can't fail a zoomed visual comparison by construction. A 4x-zoomed
+screenshot of the Home cover charm (`default` variant, `lg` size) and
+the "복습" shortcut sticker (`review` variant, `md` size) was still
+taken and inspected directly against a real rendered page (not just the
+source files) to confirm the browser's own WebP decode path renders
+identically to what Chrome showed for the PNGs in every prior phase's
+screenshots -- clean line art, sharp alpha edges, no banding or
+fringing.
+
+Adopted: all 9 variants converted. `frontend/components/Shiori.tsx`'s
+`SHIORI_ASSET_MAP` now points at `/brand/shiori/shiori-<variant>.webp`
+instead of `.png` -- the only code change, since every one of the 30+
+call sites across the app already goes through this one shared map
+(Phase 141's own finding). No variant mapping, size class, or character
+geometry touched. The `/design-lab/shiori` internal preview page (not
+linked from app nav, reached only by typing the URL) had its own
+explanatory Korean prose hardcoded a few `.png` mentions describing the
+pipeline to whoever opens it -- updated to `.webp` for accuracy while
+already in this file, text-only, no behavior change.
+
+Per this phase's own "원본 PNG를 바로 덮어쓰지 말고" instruction, the 9
+PNGs that were live right before this phase were moved (not deleted)
+via `git mv` to `docs/design/source-assets/shiori-png-source/` --
+distinct from Phase 141's `shiori-backup/` (an older, different
+generation of the art) -- documented in that archive's own `README.md`
+as the uncompressed master for any future edit, since re-opening and
+re-saving a WebP repeatedly risks generational loss the same way
+repeated JPEG re-saves do, even though today's WebP is itself lossless.
+
+Net effect: `frontend/public/brand/shiori/` drops from 8.0MB to 4.0MB.
+Combined with Phase 141's `_backup/` relocation, the live+deployed
+Shiori footprint has gone from 17MB to 4.0MB across the two phases,
+while the actual brand art shown to users is provably unchanged.
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account, at 1280/390/375/320: `npm run build` clean, `git diff --check`
+clean, zero console errors/warnings, zero failed requests, zero
+`/brand/shiori/` 404s, zero `scrollWidth`/`clientWidth` mismatch,
+across Home -> Reading -> Study -> Vocab -> Shared Deck -> Analyze
+(the `classify` variant's own screen) at every viewport -- confirmed
+via real network log that `shiori-default.webp`, `-review.webp`,
+`-classify.webp`, `-reading.webp`, and `-empty.webp` all served 200 in
+this walkthrough, none 404. A `getBoundingClientRect()`-style visual
+screenshot of the full Home page matched every prior phase's screenshot
+pixel-for-pixel by eye, and the 4x-zoomed crops of the cover charm and
+shortcut sticker showed clean, unartifacted line art.
+
+**Files changed:** `frontend/components/Shiori.tsx` (asset map
+extensions); `frontend/app/design-lab/shiori/page.tsx` (doc-comment
+text only); 9 new `.webp` files added to `frontend/public/brand/
+shiori/`; 9 PNGs moved (`git mv`) to `docs/design/source-assets/
+shiori-png-source/`; that archive's `README.md` updated; this
+`docs/design/DESIGN.md` entry.
+
+**Commit-readiness:** yes -- build and diff-check clean, a verified
+(not assumed) lossless pixel-diff plus full 4-viewport network-log and
+visual QA (zero 404s, unchanged character geometry, clean zoomed
+crops) all passed with zero console errors and zero failed requests.
+
+**Next phase candidates:** none opened here. The 5-6x resolution
+oversample noted in Round 0 (source art up to ~1250px, max on-screen
+use ~220px) is a real further opportunity but was intentionally left
+alone -- resizing wasn't on this phase's approved candidate list, and
+changing pixel dimensions (vs. just re-encoding the same pixels) is a
+different, larger risk category that deserves its own explicit
+decision rather than folding into a "safe re-encoding" phase.
+`book-cover-green-object-clean.webp` remains held per Phase 135,
+unrelated to Shiori.

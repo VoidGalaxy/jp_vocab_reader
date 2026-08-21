@@ -4,12 +4,23 @@ import { useEffect, useState } from "react";
 
 // Shiori (시오리) -- the app's bookmark-spirit brand character. As of this
 // pass she is no longer hand-drawn in SVG/CSS: she's a set of pre-made
-// illustrated PNGs (frontend/public/brand/shiori/shiori-<variant>.png --
+// illustrated art (frontend/public/brand/shiori/shiori-<variant>.webp --
 // see docs/design/shiori-design-spec.md for the art direction those were
 // produced from) and every component in this file is just picking the
 // right local asset for a given variant/size and displaying it. No
 // character geometry lives in this file anymore -- if the art needs to
-// change, edit the PNGs, not this file. No external image URLs, ever.
+// change, edit the source art, not this file. No external image URLs,
+// ever.
+//
+// Phase 142 -- these were PNGs until this phase re-encoded all 9 as
+// lossless WebP (byte-for-byte pixel-identical to the originals --
+// verified via a pixel diff before adoption, not assumed) after
+// Phase 141's audit flagged them as the largest remaining image cost in
+// the app. ~50% smaller per file with zero quality loss, since lossless
+// WebP is a different compression of the exact same RGBA data, not a
+// re-render. The original PNGs are kept at
+// docs/design/source-assets/shiori-png-source/ (not deleted) as the
+// master art in case a future edit needs an uncompressed start point.
 
 export type ShioriVariant =
   | "default"
@@ -24,25 +35,25 @@ export type ShioriVariant =
 
 export type ShioriSize = "sm" | "md" | "lg" | "xl" | "hero";
 
-// Every variant is expected to eventually have its own PNG, but while art
+// Every variant is expected to eventually have its own art, but while it
 // is still being delivered (or if a specific file 404s for any reason)
 // everything falls back to this one -- "default" is the one variant
 // that's always assumed to exist.
 const FALLBACK_VARIANT: ShioriVariant = "default";
 
-// variant -> asset path. One place to confirm against the 9 delivered PNGs
-// (frontend/public/brand/shiori/) -- nothing here draws or edits the art,
-// it only points at the finished file for each situation.
+// variant -> asset path. One place to confirm against the 9 delivered
+// files (frontend/public/brand/shiori/) -- nothing here draws or edits
+// the art, it only points at the finished file for each situation.
 export const SHIORI_ASSET_MAP: Record<ShioriVariant, string> = {
-  default: "/brand/shiori/shiori-default.png",
-  hero: "/brand/shiori/shiori-hero.png",
-  reading: "/brand/shiori/shiori-reading.png",
-  classify: "/brand/shiori/shiori-classify.png",
-  save: "/brand/shiori/shiori-save.png",
-  review: "/brand/shiori/shiori-review.png",
-  success: "/brand/shiori/shiori-success.png",
-  empty: "/brand/shiori/shiori-empty.png",
-  loading: "/brand/shiori/shiori-loading.png",
+  default: "/brand/shiori/shiori-default.webp",
+  hero: "/brand/shiori/shiori-hero.webp",
+  reading: "/brand/shiori/shiori-reading.webp",
+  classify: "/brand/shiori/shiori-classify.webp",
+  save: "/brand/shiori/shiori-save.webp",
+  review: "/brand/shiori/shiori-review.webp",
+  success: "/brand/shiori/shiori-success.webp",
+  empty: "/brand/shiori/shiori-empty.webp",
+  loading: "/brand/shiori/shiori-loading.webp",
 };
 
 // size -> wrapper box class (globals.css defines the actual px/clamp values).
@@ -57,7 +68,7 @@ export const SHIORI_SIZE_MAP: Record<ShioriSize, string> = {
 };
 
 // Shared image renderer every export below is built from -- resolves the
-// variant's PNG, and if it fails to load falls back to the default PNG;
+// variant's art, and if it fails to load falls back to the default one;
 // if even that fails (assets not delivered yet at all), renders nothing
 // rather than a browser's broken-image glyph so the surrounding layout
 // stays clean.

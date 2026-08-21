@@ -7,10 +7,10 @@
 // page (static fixture sketches only), this preview imports the REAL
 // production character components (components/Shiori.tsx) so what's shown
 // here is exactly what real screens render -- a true swatch sheet, not a
-// mockup that could drift from production. Shiori is illustrated PNG
-// assets now (frontend/public/brand/shiori/shiori-<variant>.png), not
+// mockup that could drift from production. Shiori is illustrated WebP
+// assets now (frontend/public/brand/shiori/shiori-<variant>.webp), not
 // hand-drawn SVG -- this page just confirms every variant/size loads (and
-// falls back to shiori-default.png) the same way production does.
+// falls back to shiori-default.webp) the same way production does.
 // ============================================================================
 
 import "./shiori-preview.css";
@@ -50,7 +50,7 @@ export default function ShioriDesignLabPage() {
         <h1>Shiori 캐릭터 시스템 미리보기 -- 이미지 에셋 기반</h1>
         <p>
           components/Shiori.tsx는 이제 SVG를 그리지 않고
-          public/brand/shiori/shiori-&lt;variant&gt;.png를 그대로 불러와
+          public/brand/shiori/shiori-&lt;variant&gt;.webp를 그대로 불러와
           보여줍니다. 이 페이지는 그 로딩/폴백 동작이 실제 화면과 동일하게
           작동하는지 확인하는 내부 전용 페이지입니다. 운영 메뉴에는
           노출되지 않습니다.
@@ -61,7 +61,7 @@ export default function ShioriDesignLabPage() {
         <h2>Hero 사이즈</h2>
         <p className="dl-shiori-preview-section-hint">
           홈 hero 장면에 실제로 쓰이는 크기 (variant=&quot;hero&quot; --
-          shiori-hero.png, 책 위에서 쉬는 모습이 그림 자체에 포함됨)
+          shiori-hero.webp, 책 위에서 쉬는 모습이 그림 자체에 포함됨)
         </p>
         <div className="dl-shiori-preview-hero-row">
           <ShioriCharacter variant="hero" size="hero" />
@@ -84,8 +84,8 @@ export default function ShioriDesignLabPage() {
         <h2>Variant 9종</h2>
         <p className="dl-shiori-preview-section-hint">
           default / hero / reading / classify / save / review / success / empty / loading
-          -- 각 shiori-&lt;variant&gt;.png를 그대로 로딩. 특정 variant 파일이
-          없거나 로드에 실패하면 shiori-default.png로 자동 대체되고, 그마저
+          -- 각 shiori-&lt;variant&gt;.webp를 그대로 로딩. 특정 variant 파일이
+          없거나 로드에 실패하면 shiori-default.webp로 자동 대체되고, 그마저
           없으면 깨진 이미지 아이콘 대신 아무것도 렌더링하지 않습니다
           (components/Shiori.tsx의 onError 처리).
         </p>
@@ -142,7 +142,7 @@ export default function ShioriDesignLabPage() {
         <h2>홈 hero 적용 예시</h2>
         <p className="dl-shiori-preview-section-hint">
           실제 HomeDashboard의 .shiori-book-scene과 동일한 구성 -- 별도
-          일러스트 레이어 없이 shiori-hero.png 하나만 사용
+          일러스트 레이어 없이 shiori-hero.webp 하나만 사용
         </p>
         <div className="dl-shiori-preview-home-mock shiori-book-scene">
           <ShioriCharacter variant="hero" size="hero" />
