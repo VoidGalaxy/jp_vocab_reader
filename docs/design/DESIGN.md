@@ -2806,3 +2806,66 @@ Phase 135's committed state.
 **Next phase candidates:** none forced by this audit. The one
 still-open item from earlier phases is unchanged: `book-cover-green-
 object-clean.webp` remains held per Phase 135's explicit reasoning.
+
+Phase 137 closes the one real observation Phase 136 recorded rather
+than dismissed: the Reading start page's placeholder Japanese sample
+line had no `::placeholder` rule of its own anywhere in the codebase --
+it was inheriting `.reader-start-page textarea`'s own `color: var(--text)`
+at effectively full weight, via whatever default the browser happened
+to apply. The blank page read as "already has a sentence written on
+it" rather than "waiting for one," undercutting the exact "원문을 붙인
+종이" (a page you're about to paste text onto) feeling the surrounding
+photographed ruled-paper texture (Phase 126) was built to sell.
+
+Fix is a single new rule, `.reader-start-page textarea::placeholder`,
+using `var(--muted)` (the app's existing de-emphasized-text token,
+already used for hint copy elsewhere -- not a new color) plus
+`opacity: 0.68` on top, scoped to this one textarea's placeholder
+pseudo-element only. Nothing else changed: no font-weight override (the
+weight difference perceived before was contrast, not boldness -- the
+placeholder was never actually bold), no copy change (same sample
+line), no touch to `.reading-note-sheet textarea` (the post-analysis
+manuscript-tray re-edit field, out of this phase's scope per the
+brief), and critically no touch to the textarea's own `color` rule --
+real typed or sample-loaded text renders exactly as before, since
+`::placeholder` and the base element color are separate CSS surfaces
+that can't cross-affect each other.
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account: a 2x-zoomed crop of the same textarea region, once showing the
+untouched placeholder and once showing real sample text loaded via the
+"샘플 문장으로 체험" chip, confirmed the two are now visibly distinct --
+placeholder reads as a light gray guide line, sample/typed text reads
+as solid dark ink, at 1280 desktop. Manually typing into the field
+(bypassing the sample chip entirely) confirmed real input keeps full
+contrast and legibility. `npm run build` and `git diff --check` both
+clean. At 1280/390/375/320: zero console errors/warnings, zero failed
+network requests, zero `scrollWidth`/`clientWidth` mismatch. Mobile
+(390/375/320) confirmed the "샘플 문장으로 체험" corner chip still
+sits clear of the placeholder's first line with no overlap, and a real
+`elementFromPoint` hit-test on the chip resolved to the chip itself at
+every width. Full flow re-verified end to end: sample chip click loads
+the real multi-sentence SAMPLE_TEXT into the textarea's actual value
+(not just visually), "원문 펼치기" successfully reaches the analyzed
+result workspace (`.reader-paper` present, tokens rendered), matching
+pre-phase behavior exactly. One QA-process note: the first mobile pass
+came back with the sample chip missing entirely -- traced to this
+session's own headless Chrome profile still holding a `reading-session`
+draft in `localStorage` from an earlier desktop test run in the same
+profile (the chip only renders when the field is empty), not a real
+regression; fixed by clearing that key before each mobile navigation
+in the QA script itself, not in app code.
+
+**Files changed:** `frontend/app/globals.css` only. No `.tsx` file
+touched -- `ReadingTab.tsx` was read for Round 0 but never edited,
+since the fix is a pure CSS addition with no new class needed.
+
+**Commit-readiness:** yes -- build and diff-check clean, full browser
+QA (placeholder-vs-real-text contrast verified via zoomed screenshot,
+sample-chip/CTA collision checked, full analyze flow re-verified end to
+end) passed at all four required viewports with zero console errors
+and zero failed requests.
+
+**Next phase candidates:** none opened by this phase. This was a
+narrowly-scoped typography fix closing Phase 136's one recorded
+observation; no other loose ends remain from that audit.

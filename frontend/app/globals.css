@@ -4319,6 +4319,23 @@ select {
   line-height: 2;
 }
 
+/* Phase 137 -- no ::placeholder rule existed here before; the browser's own
+   default rendered this sample line nearly as dark/heavy as real typed
+   text (per Phase 136's audit), so an empty page read as "already has a
+   sentence on it" rather than "waiting for one". var(--muted) (the app's
+   existing de-emphasized-text token, already used for hint copy elsewhere)
+   plus a touch of extra opacity on top is enough to read as a light guide
+   line without going so faint it stops looking legible. Scoped to this one
+   textarea's own ::placeholder only -- .reading-note-sheet's re-edit
+   textarea (post-analysis manuscript tray) shares the same placeholder
+   string but is untouched, and real typed/sample-loaded text (the
+   textarea's own `color` above) is a completely separate rule, never
+   touched by this one. */
+.reader-start-page textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.68;
+}
+
 .reader-start-page textarea:focus {
   outline: none;
   box-shadow: inset 0 0 0 1.5px var(--screen-accent, var(--primary));
