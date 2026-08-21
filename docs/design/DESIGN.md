@@ -3409,3 +3409,112 @@ different, larger risk category that deserves its own explicit
 decision rather than folding into a "safe re-encoding" phase.
 `book-cover-green-object-clean.webp` remains held per Phase 135,
 unrelated to Shiori.
+
+Phase 143 is that explicit resizing decision. Round 0 re-measured
+rather than assuming: the 9 live WebPs are ~700-1250px, and a fresh
+`grep 'size="'` across every real (non-design-lab) call site found the
+actual production maximum is `xl` (104px) -- three `moodSize="xl"`
+calls in `SharedDeckSection.tsx` for the loading/empty/error states the
+brief's own screen list named -- not `hero` (`clamp(180px,16vw,220px)`),
+which turned out to be unused on any real screen; only the internal
+`/design-lab/shiori` preview renders `size="hero"`. The brief's own
+disqualifying rule ("512px이 좋더라도 hero clamp 220px × DPR3 = 660px
+기준을 못 맞추면 512px은 보류한다") was applied literally regardless of
+that finding -- `size` and `variant` are fully decoupled in
+`ShioriCharacter`'s API, so any of the 9 files could be shown at `hero`
+size in a future screen without this file ever needing to change, and
+the design-lab page is real, reachable code today, not a deleted
+fixture.
+
+Two candidates were generated per the brief's own minimum (512px and
+768px max-dimension, LANCZOS resampling from the Phase 142 PNG source,
+saved lossless-WebP), entirely in scratch space first. Both cleared the
+30% savings bar on their own (69.5% and 39.5% respectively against the
+Phase 142 baseline), so the deciding factor was quality, not size --
+tested three ways, not just eyeballed:
+
+1. **Quantitative, at realistic render sizes.** Rather than comparing
+   the candidate files at their own resolution, each candidate was
+   *resampled again* (same LANCZOS filter a browser's own image
+   scaling uses) down to the actual on-screen pixel sizes that matter --
+   312px (today's real max: `xl` 104px x DPR3) and 660px (the unused-
+   today but brief-mandated `hero` 220px x DPR3 safety check) -- and
+   diffed against the same resample done from the original. At 312px,
+   768px scored a mean per-pixel channel difference of 0.8-1.2 (out of
+   255) across all 9 files, with under 0.7% of pixels differing by more
+   than 20/255 -- consistent with imperceptible. 512px was noticeably
+   worse even here (1.4-2.1 mean). At the 660px hero check, 768px held
+   up (1.4-2.1 mean, still under 1% of pixels significantly different),
+   while 512px broke down clearly -- mean differences of 4.8-7.1, with
+   several files hitting the maximum possible 255 difference on some
+   pixels and 3-6% of pixels significantly different, i.e. visible
+   upscaling softness, exactly what the brief's rule predicted for a
+   512px source pushed past its own resolution at 3x. This alone
+   disqualifies 512px under the brief's stated bar, independent of any
+   visual judgment call.
+2. **Visual, face-cropped.** Side-by-side 4x-nearest-neighbor crops of
+   the top ~45% (head/face) of four representative variants
+   (default/review/classify/empty), each independently rendered at the
+   312px real-world target from the original and from the 768px
+   candidate, inspected directly -- outline weight, eye/mouth linework,
+   the charm ring's highlight, and the alpha edge against a mid-gray
+   test background were indistinguishable between the two.
+3. **Real browser, real DPR3.** Headless Chrome set to
+   `deviceScaleFactor: 3` (not simulated -- an actual 3x render pass),
+   navigated to Shared Deck (the screen hosting the real `xl`-sized
+   instances), and a 4x-zoomed screenshot crop taken of the live
+   `shiori-default.webp` icon actually rendered in that page. Clean line
+   art, sharp alpha edge against the page background, no blur or
+   banding -- confirming the synthetic Pillow-based tests reflect what
+   a real browser's own decode+scale pipeline actually produces, not
+   just what a Python resampling library predicts.
+
+**Adopted: 768px max-dimension. Held: 512px** (fails the brief's own
+hero/DPR3 bar with real, measured softness -- not a judgment call,
+data). No filename or extension changed -- each `shiori-<variant>.webp`
+in `frontend/public/brand/shiori/` was replaced in place with its
+768px-resized content, so `Shiori.tsx`'s `SHIORI_ASSET_MAP` needed zero
+changes; variant mapping, CSS size classes, and character
+geometry/position are all untouched.
+
+Preservation, per the brief's explicit "원본 PNG와 Phase 142 무손실
+WebP는 보존" instruction: Phase 142's full-resolution lossless WebP
+files (the ones live immediately before this phase) were copied to the
+new `docs/design/source-assets/shiori-webp-fullsize/` *before* being
+overwritten in `frontend/public/`, documented in that archive's
+`README.md` as the go-to source if a future screen ever needs more than
+768px (rather than re-deriving from the even-larger PNG). The Phase 142
+PNG masters in `shiori-png-source/` are untouched by this phase.
+
+Net effect: `frontend/public/brand/shiori/` drops from 4.0MB to 2.5MB.
+Across Phases 141-143 together, the live+deployed Shiori footprint has
+gone from 17MB (PNGs + unused `_backup/`) to 2.5MB, while every
+quality check available -- pixel diff at realistic render sizes, visual
+crop comparison, and a real browser DPR3 screenshot -- found no
+measurable or visible difference in what a user actually sees.
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account: `npm run build` clean, `git diff --check` clean, zero console
+errors/warnings, zero failed requests, zero `/brand/shiori/` 404s, zero
+`scrollWidth`/`clientWidth` mismatch, at 1280 (both DPR1 and a real
+DPR3 pass), 390, 375, and 320, across Home -> Analyze -> Reading ->
+Study -> Vocab -> Shared Deck.
+
+**Files changed:** 9 files in `frontend/public/brand/shiori/`
+overwritten in place with 768px-resized content (same filenames); new
+`docs/design/source-assets/shiori-webp-fullsize/` (9 files, Phase 142's
+full-resolution WebPs preserved); that archive's `README.md` updated;
+this `docs/design/DESIGN.md` entry. `Shiori.tsx` and `page.tsx`
+(design-lab) both read during Round 0 but needed no edits -- the
+resize required no code change at all.
+
+**Commit-readiness:** yes -- build and diff-check clean, a
+three-method quality verification (quantitative diff at realistic
+render sizes, visual face-crop comparison, real-browser DPR3
+screenshot) plus full-viewport 404/console/overflow QA all passed.
+
+**Next phase candidates:** none opened here. Both resize tiers the
+brief asked for were tried and resolved (768px adopted, 512px held
+with data backing the hold); no further Shiori loading/encoding work
+is outstanding. `book-cover-green-object-clean.webp` remains held per
+Phase 135, unrelated to Shiori.

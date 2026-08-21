@@ -75,3 +75,17 @@ master in case a future edit needs a non-lossy start point (WebP is
 already lossless today, but re-opening a WebP to edit and re-saving
 risks generational loss the way repeatedly re-saving a JPEG does;
 editing from this PNG avoids that).
+
+## `shiori-webp-fullsize/`
+
+Phase 143 copied Phase 142's original full-resolution lossless WebP
+files here (~1000px-1250px on the long edge) before replacing the live
+copies in `frontend/public/brand/shiori/` with a 768px-max-dimension
+resize. The resize was judged safe (see Phase 143's DESIGN.md entry for
+the full quantitative case) but is not lossless the way Phase 142's
+format change was, so the true full-resolution version is preserved
+here rather than only existing as the even-larger PNG in
+`shiori-png-source/` -- if a future need ever calls for more than
+768px (a redesign that displays Shiori larger than any current screen
+does, for instance), this is the WebP to start from instead of
+re-deriving one from the PNG.
