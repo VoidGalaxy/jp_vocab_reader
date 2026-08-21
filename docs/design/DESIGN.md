@@ -3518,3 +3518,69 @@ brief asked for were tried and resolved (768px adopted, 512px held
 with data backing the hold); no further Shiori loading/encoding work
 is outstanding. `book-cover-green-object-clean.webp` remains held per
 Phase 135, unrelated to Shiori.
+
+Phase 144 is the closeout review for the Phase 139-143 performance/
+asset-cleanup arc: does everything those five phases changed still
+hold, or did something drift/break across them. Every one of the
+brief's 10 checklist items was verified directly against current state
+rather than recalled from memory, since Phase 143 (the most recent)
+could plausibly have touched something Phase 139-141 depended on.
+
+File-level: `grep -rohE '/brand/(decor|shiori)/...'` across every
+`.tsx`/`globals.css` produced the same 29-file reference set Phase 140
+and 141 already established (20 decor + 9 Shiori), and every one of
+those 29 was confirmed present on disk -- zero missing, zero orphaned.
+`frontend/public/brand/decor/` holds exactly those 20 referenced files
+plus the two `ASSET_MANIFEST.md`s (1.4MB); `frontend/public/brand/
+shiori/` holds exactly the 9 Shiori WebPs, each still at its Phase 143
+768px-resized byte size, confirmed by direct comparison against that
+phase's own recorded output (2.5MB). `docs/design/source-assets/`
+holds all five archives Phases 140-143 created
+(`phase126/`, `phase127/`, `shiori-backup/`, `shiori-png-source/`,
+`shiori-webp-fullsize/`, 50MB total) with nothing missing.
+
+Code-level: Phase 139's `<span>`-based desk props (not `<img>`) are
+still in `HomeDashboard.tsx`; Phase 141's `loading="lazy"`/
+`decoding="async"`/`fetchPriority="low"` are still on `Shiori.tsx`'s
+one shared `<img>`; Phase 142/143's `SHIORI_ASSET_MAP` still points at
+`.webp` (not `.png`) for all 9 variants; `/design-lab/shiori/page.tsx`
+has zero remaining `.png` mentions, confirmed by direct `grep` rather
+than assuming Phase 142's text edit was complete.
+
+Live verification (not just static checks): a real-browser walkthrough
+at 1280/390/375/320 through Home -> Reading -> Study -> Vocab -> Shared
+Deck -> Analyze -> Stats -> Feedback modal came back with zero console
+errors, zero failed requests, zero `/brand/` 404s, and zero
+`scrollWidth`/`clientWidth` mismatch at every viewport. Network-log
+filtering for `source-assets`/`shiori-backup`/`shiori-png-source`/
+`shiori-webp-fullsize` in the URL returned an empty list at every
+viewport -- direct confirmation that the docs-level archives are
+genuinely inert at runtime, not just assumed inert because nothing
+references them in source. A final full-page screenshot of Home matched
+every prior phase's screenshot pixel-for-pixel by eye.
+
+No discrepancies were found -- not a documentation mismatch, not a
+broken reference, not a regressed behavior. Per this phase's own
+"기본은 no-code review" policy, nothing was changed.
+
+**Closeout verdict: yes.** The Phase 139-143 arc is done: `frontend/
+public/brand/decor/` (31MB -> 1.4MB), `frontend/public/brand/shiori/`
+(17MB -> 2.5MB), combined deployed image footprint roughly 48MB ->
+3.9MB, with zero visual or functional regression at any point along
+the way and 50MB of genuine provenance preserved outside the deployed
+path in `docs/design/source-assets/`.
+
+**Files changed:** none. This phase's only output is verification.
+
+**Commit-readiness:** n/a -- no changes to commit. Tree is identical to
+Phase 143's committed state (confirmed via `git status --short`
+returning empty before this DESIGN.md entry was added).
+
+**Recommended next roadmap:** end the performance/asset-cleanup series
+here, same call Phase 138 made for the visual redesign series. The one
+remaining open item across both series (`book-cover-green-object-
+clean.webp`, held per Phase 135) is a minor unresolved decorative
+question, not a blocker. Future work should move to ordinary feature
+work, or a genuinely new concern (e.g. `backend/` performance, test
+coverage) rather than continuing to re-audit an asset pipeline this
+phase found fully consistent.
