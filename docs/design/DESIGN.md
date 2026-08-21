@@ -2727,3 +2727,82 @@ revisit it for a genuinely different screen's empty state, but not for
 Home. No other Phase 131 crop remains uncommitted-but-unapplied; all
 nine are now either applied (Phases 132/133/134) or explicitly held
 (this phase).
+
+Phase 136 is a full audit pass, not an asset phase: it checks whether
+Phases 126-135's image-based redesign actually reads as one integrated
+mockup language across every screen, or whether some corner still
+shows a photo sitting awkwardly behind unmodified CSS card chrome. No
+new assets, no `.tsx`/`.css` changes -- the phase's only output is this
+record and the screenshots that back it (not committed; see QA below).
+
+Round 0 started from `grep 'url("/brand'` across `globals.css` (24
+locations) rather than trusting memory, to get an exhaustive worklist
+instead of only the phases already fresh in context. Reading through
+the surrounding CSS at each hit turned up something the brief didn't
+expect going in: nearly every seam this audit was designed to catch
+had already been found and fixed *in a prior phase*, with the fix's
+own reasoning left in a comment at the site. Phase 119 stripped
+`.bookmark-inspector-pinned`'s own border/shadow/tilt specifically
+because keeping the floating-card look next to the open-book photo
+"made this read as a second floating card... instead of the mockup's
+single open-book spread." Phase 126 removed `.card-stack-surface` from
+`.home-cover` for the same reason. Phase 129 removed
+`.vocab-notebook-index .index-card-filter`'s CSS tab-stack accent once
+a real photographed page-edge tab sat behind it, "keeping the fake tab
+stack next to the real photographed one would read as two competing
+tab motifs." This is the exact failure mode this phase was sent to
+find -- and in every one of these cases it was already found and fixed
+before this phase started, which is why the live-rendered check below
+came back clean rather than turning up a backlog of P1 fixes.
+
+Live verification (not just reading comments) covered, at 1280 desktop
+and 390/375/320 mobile, against a seeded real account (6 vocab items
+across known/uncertain/unknown, a published shared deck, a due-today
+review queue): Home (cover, desk props, sticky notes), Reading (start
+page, sample-text analyzed result, desktop pinned-inspector idle
+state, mobile bottom-sheet `TokenDetailSheet`), Study (ready, active
+card mid-review, rating-stamp reveal), Vocab (notebook index/filter
+rail, word list, detail rail idle state), Shared Deck (wood shelf,
+book-cover cards, inline detail actions), Analyze, Stats/Info, and the
+feedback modal. Screenshots were the deciding evidence, not the CSS
+comments alone -- e.g. the Vocab detail rail's photographed folded-
+corner-and-red-rule-line crop (Phase 129) is visible and legible at
+actual render size, not just described as such in a comment.
+
+Per-screen judgment: **Match** for all eight areas in the audit scope
+(Home, Reading, Study, Vocab, Shared Deck, Analyze, Stats/Info,
+Feedback). No Mixed or Problem findings. Analyze/Stats/Info/Feedback
+carry no photo assets (as expected -- these are function-first
+screens, not desk-scene screens per the brief's own implementation
+order), but read as the same app: same paper-grid page background,
+same cream/warm palette, same soft-shadow card language as the
+photo-backed screens, not a colder admin-dashboard style breaking the
+illusion.
+
+Two things were noticed but are explicitly **not** findings for this
+phase's scope, recorded here only so a future pass doesn't waste time
+rediscovering them: (1) the Reading start page's placeholder Japanese
+sample text renders in the same weight/color as real typed input,
+which is a typography/content nit, not an image-vs-CSS mixing issue;
+(2) duplicate "여행 단어" shared-deck cards appeared during this
+audit's own QA runs -- traced to this session's seed script publishing
+the same deck name multiple times across repeated re-seeds, a test-data
+artifact of the audit harness, not app behavior, so not reported as a
+product finding.
+
+Nothing was fixed because nothing in the P1/P2 sense was found -- per
+the brief's own instruction ("정말 작은 수정으로 해결 가능한 경우만
+고친다"), a clean audit is a valid outcome, not a sign the audit was
+insufficiently thorough. The 24-location CSS inventory plus the
+16-screenshot live walkthrough above is offered as the evidence for
+that conclusion rather than an assertion of it.
+
+**Files changed:** `docs/design/DESIGN.md` only.
+
+**Commit-readiness:** yes -- `npm run build` and `git diff --check`
+both pass since no code moved; the tree is otherwise identical to
+Phase 135's committed state.
+
+**Next phase candidates:** none forced by this audit. The one
+still-open item from earlier phases is unchanged: `book-cover-green-
+object-clean.webp` remains held per Phase 135's explicit reasoning.
