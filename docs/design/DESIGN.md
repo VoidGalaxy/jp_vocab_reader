@@ -3584,3 +3584,280 @@ question, not a blocker. Future work should move to ordinary feature
 work, or a genuinely new concern (e.g. `backend/` performance, test
 coverage) rather than continuing to re-audit an asset pipeline this
 phase found fully consistent.
+
+Phase 145 opens a new series: a "casual cute" hard redesign against a
+fresh mockup board (`docs/design/mockups/phase145-casual-cute-mockup-
+board.png`) and asset set (`frontend/public/brand/decor/phase145/`),
+explicitly instructed to remove conflicting old structure rather than
+lightly reskin it. This entry covers Phase 145 (Home) only.
+
+Round 0 found the new `home-cute-notebook-cover-object.webp` is a
+fundamentally different *kind* of asset than the one it replaces:
+Phase 126's `book-cover-green-surface-web.webp` was a tileable cloth
+*texture* (no inherent shape, used full-bleed under a dark legibility
+wash with title text painted on top), while the new asset is a real
+photographed *object* -- a closed notebook, elastic strap and brass
+snap physically in frame, natural soft shadow baked in (confirmed via
+a Pillow composite onto a wood-tan test background before writing any
+CSS -- clean alpha cutout, no vignette), landscape at its own fixed
+~1.67:1 aspect ratio (1619x971). Doing the actual math on that ratio at
+real mobile widths mattered: a box locked to the image's own aspect is
+only ~170-210px tall at 320-390px wide, while the title+subtitle+CTA+
+sample stack the old design painted onto the cover needs roughly
+240px. Forcing the old "wash + white text on the photo" technique onto
+this asset would have meant either cropping the object (cutting off
+the spine/snap the photo exists to show -- exactly the kind of fake
+compositing this whole redesign avoids) or squeezing text past
+comfortable reading. Resolved by restructuring rather than
+reskinning: `.home-cover-heading` (title/subtitle/CTA/sample, live
+dark-ink text, no wash needed since it no longer sits on a photo) now
+stacks above `.home-cover-object` (the notebook photo itself, shown
+whole via `background-size: contain` at its own real aspect ratio, no
+crop). This reads as "today's message, then a real notebook on the
+desk below it" rather than "text embossed on a product photo," and
+removes the legibility gamble the old wash-on-photo technique always
+carried.
+
+Two structures were removed outright because the new photo made them
+redundant or explicitly forbidden, not just visually stale:
+`.home-cover-strap` (a hand-authored SVG elastic band from Phase 124)
+is gone -- the new photo already has its own elastic strap and snap
+physically in frame, so the CSS one would have drawn a second,
+duplicate strap next to the real one. `.home-cover-dots` (the bottom
+pagination dots) is gone per this phase's explicit instruction; removing
+them also removed the one thing anchoring `.home-cover`'s old fixed
+`padding-bottom: 88px`, which no longer exists either. No CSS
+`box-shadow` was added anywhere on the new cover -- the photo's own
+baked-in shadow is the grounding cue, matching the "자연스럽게, 귀엽고
+가볍게, 과한 luxury shadow 금지" instruction directly: the old
+`box-shadow: 0 24px 48px rgba(37,43,30,0.32)` was a deliberately
+dramatic, heavy shadow; the new cover has none of its own, only what
+the photograph already shows.
+
+A second, independent bug was found and fixed while implementing the
+"wood desk to the bottom of the screen" requirement: `:root` (this
+file's very first rule, `background: #f7f3ea`) gives `<html>` its own
+explicit background, which per the CSS canvas-background-propagation
+spec means `<body>`'s background (wood, at >=1024px) only ever painted
+within `<body>`'s own content-height box, never propagated to fill the
+rest of the scrollable canvas the way it would if `<html>` had no
+background of its own. Every other tab's content already exceeds
+viewport height, so this was invisible everywhere except Home, whose
+short content stopped a full 182px above the bottom of a typical 900px
+desktop viewport in the "before" screenshot, showing `:root`'s cream
+fallback in a hard seam below the wood. Fixed with one line --
+`min-height: 100vh` added to the existing `body` rule inside the same
+`@media (min-width: 1024px)` block that already sets the wood
+background -- rather than touching `:root` globally, since that keeps
+the fix scoped to exactly the rule already responsible for "wood
+should be the desktop backdrop," with no risk to any other tab's
+layout (a `min-height` floor can only ever add height, never remove
+content real screens already need).
+
+Shiori and the washi-tape sticky note both moved from being positioned
+against the old tall `.home-cover` to being positioned against the new
+`.home-cover-object` specifically (bottom-right corner and top-left
+corner of the photographed cover respectively) -- both now read as
+resting on the physical book itself, not floating over an unrelated
+text block. Desk props (Phase 133/139's leaf/tape/paperclip/pen) and
+Home's shortcut sticky notes (Phase 134) needed no position changes at
+all -- both are positioned against `.home-stage` independent of
+`.home-cover`'s own internal structure, and a zoomed screenshot
+confirmed they still cluster naturally around the new, shorter cover
+(washi tape roll and paperclip now read as sitting on the desk right
+beside the notebook, which if anything looks more intentional than
+their old placement against a taller card).
+
+One unrelated file became orphaned by this phase and was left alone
+rather than cleaned up: `frontend/public/brand/decor/leather-strap-
+snap.svg` (confirmed via `grep`, zero remaining references anywhere in
+`frontend/`). Tiny (1.9KB) and out of scope for a Home-reconstruction
+phase -- noted here rather than acted on, matching this project's
+established "don't casually delete, don't silently ignore either"
+convention for newly-unused assets.
+
+Verified via headless Chrome (Windows-native, CDP) against a seeded
+account, at 1280/390/375/320: `npm run build` clean, `git diff --check`
+clean, zero console errors/warnings, zero failed requests, zero
+`scrollWidth`/`clientWidth` mismatch at every viewport (one false-
+positive along the way -- deleting `.next` while the dev server was
+still running corrupted its build cache mid-session, producing a real
+500 error and a misleading `sw:980` overflow reading; traced via the
+dev server's own log, fixed by a clean restart, not a code change).
+Real click-throughs confirmed the CTA still routes to Reading
+(`.reading-panel` appears), all three shortcut stickers and the sample
+link resolve to themselves under `elementFromPoint`, mobile drawer
+opens then fully unmounts on close, the account menu panel opens, and
+the feedback modal opens. A full-page screenshot comparison at all
+three widths confirmed wood now reaches the bottom of the desktop
+viewport with no seam, no pagination dots anywhere, and the shortcut
+stickers are unchanged from Phase 134's already-real sticky-note
+treatment.
+
+**Actually removed:** `.home-cover-strap` (redundant with the new
+photo's own strap), `.home-cover-dots` + its pagination dots, the dark
+legibility-wash gradient + `box-shadow` that used to sit on
+`.home-cover`, the old fixed portrait `min-height`/`padding-bottom`
+sizing that assumed a tall card shape.
+
+**Closer to the mockup:** the notebook now reads as one real object
+resting on a desk that extends the full screen, not a texture-filled
+card floating above a cream gap; shadow is light/natural (baked into
+the photo) instead of a heavy drop shadow; no pagination UI breaking
+the scene.
+
+**Still short of the mockup:** the mockup's book has a character
+resting on top of it as part of the illustration -- this phase uses
+the real Shiori component in that same spot instead (per this whole
+series' hard character-policy line), which is correct per instruction
+but means the moment reads slightly less "hand-illustrated" than the
+mockup's own art. Not a defect, an intentional divergence already
+covered by the project's absolute character rule.
+
+**Files changed:** `frontend/components/HomeDashboard.tsx`,
+`frontend/app/globals.css`. New asset files
+(`frontend/public/brand/decor/phase145/*`), the mockup board, and the
+rebuild plan doc were supplied as phase input, not generated by this
+phase -- left in place as-is (the `.png` sources alongside each
+`.webp` are explicitly "retained for review/cropping" per that
+folder's own `ASSET_MANIFEST.md`, not a leftover this phase should
+clean up).
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+4-viewport browser QA (hit-testing, real click-throughs on every
+preserved interaction, drawer/account/feedback, a zoomed screenshot of
+the desk-prop cluster) all passed with zero console errors and zero
+failed requests.
+
+**Next phase candidates:** Phase 146 (Vocab physical index tabs), per
+the rebuild plan's suggested order. The `body`/`:root` canvas-
+background fix in this phase is global (not Home-scoped), so it's
+already protecting every other tab from the same latent seam risk --
+worth keeping in mind if a future phase ever shortens another tab's
+content below viewport height.
+
+## Phase 146 -- Vocab Physical Index Tabs
+
+Phase 146 rebuilds the Vocab tab's status-filter area against
+`vocab-physical-index-tabs.webp`, replacing the old CSS-pill filter
+chips with real protruding physical tab shapes, scoped to desktop
+(`@media (min-width: 1024px)`) only -- the brief's target structure
+(`.vocab-notebook-index` as a literal ring-bound index) only exists at
+that breakpoint; mobile already uses a flat horizontal chip row that
+the brief did not ask to change.
+
+The source sprite has no alpha gaps between its 7 stacked tab shapes
+(they're drawn touching/overlapping, unlike Phase 131's multi-object
+crops), so the usual alpha-projection boundary scan produced only one
+run. Switched to a row-by-row RGB color-boundary scan along a sample
+column instead, which cleanly revealed 7 distinct color bands (green/
+coral/yellow/blue/purple/orange/mint) and let each tab's true center
+be read directly off the color sequence. Each `.vocab-filter-chip`
+was then given the same sprite as its own fixed-size
+`background-image` with a per-chip `background-position-y` computed
+as `-(scaled_tab_center_px - chip_height/2)`; `align-items: flex-start`
+was required on the `.vocab-status-filters` flex column so the fixed
+chip width actually takes effect instead of being stretched.
+
+Sizing the chips took three real-browser iterations, not source-image
+math alone: 118px cut off several long labels into the sprite's spine/
+ring area; 150px still cut off the three longest ("완벽히 아는 단어",
+"분류되지 않음", "복습 예정만"); the final 172px/11.5px-font/15px-
+left-padding state leaves only the very last character of those three
+labels lightly touching the decorative ring graphic. Widening further
+was capped by the rail's own measured clearance -- `getBoundingClientRect()`
+showed the chip's right edge sitting only ~5px inside
+`.vocab-notebook-index`'s own right edge at both 1280px and 1024px
+(chip right 254 vs rail right 259 at 1280px; 249 vs 254 at 1024px) --
+so accepted as a minor cosmetic detail rather than risked overflowing
+into the center word-list column. Text stays fully legible at this
+size (dark ink over the lighter ring color, full contrast, no
+character actually obscured), which is why this was accepted rather
+than chased further.
+
+Active state uses a small colored dot (`::after`, 6x6px, reusing each
+status's existing color token -- known/uncertain/unknown/unclassified)
+plus a 9px `translateX` shift and a saturation/brightness bump, not a
+border or box-shadow ring -- per this phase's explicit "표시는 작은
+표식/색 강도/위치 이동 정도로, 두꺼운 테두리 버튼 금지" instruction.
+
+**Actually removed/weakened:** `.vocab-notebook-index`'s old
+480%-zoomed `vocab-ring-notebook-spread-web.webp` background and its
+`border-radius: 4px 12px 12px 4px` (both gone -- the new sprite tabs
+are the ring-notebook cue now, so the old zoomed-photo suggestion was
+redundant); `.index-card-filter`'s dashed border, tinted background,
+and washi-tape corner `::before` pseudo-element (all removed --
+boxed panel chrome that visually competed with the new protruding-tab
+structure); the old `.vocab-filter-chip` CSS-pill treatment and its
+box-shadow active-state ring (replaced by the sprite + small-dot
+treatment above).
+
+**Closer to the mockup:** filters now read as real protruding index
+tabs reaching out from a ring-bound spine, not rounded button chips
+inside a dashed box; active state is a subtle mark/shift instead of a
+thick outlined button, matching the mockup's understated "already-open
+tab" cue.
+
+**Word-list scannability:** untouched by construction -- no changes
+were made to `.index-card-drawer`, `.vocabulary-index-row`, or any
+row-level markup/CSS this phase; the center column remains the same
+dense list, not a card grid.
+
+**Functionality/API/SRS/storage:** unchanged. All edits this phase
+were CSS-only inside `frontend/app/globals.css`'s existing
+`@media (min-width: 1024px)` block; no `.tsx` file was touched, no
+prop, handler, or backend call was added, removed, or renamed.
+
+Verified via headless Chrome (Windows-native, CDP) against a freshly
+seeded account (5 vocab items across mixed statuses), at
+1280/1024/390/375/320:
+
+- **Desktop (1280/1024):** zero `scrollWidth`/`clientWidth` mismatch,
+  sprite loads (`200` on `vocab-physical-index-tabs.webp`), labels sit
+  correctly on their tabs, deck/search/sort read as plain unboxed
+  labels, word list and detail panel unchanged, zero console errors.
+- **Mobile (390/375/320):** zero `scrollWidth`/`clientWidth` mismatch
+  at all three widths; the desktop-only sprite rule does not apply
+  (`background-image: none` confirmed via computed style, zero network
+  requests for the sprite file); `.vocab-status-filters` stays in its
+  original `flex-direction: row` chip layout; zero console
+  errors/warnings; a full-page screenshot at 390px confirmed the
+  existing mobile filter/search/sort block is visually unchanged from
+  before this phase.
+- **Interaction QA (real state changes, not just hit-tests):** search
+  input actually filters the list (5 rows -> 1, `声` only, confirmed
+  via a real `input` event through the native value setter); clicking
+  a status tab moves the active class and the small dot to that tab
+  and actually filters the list (1 matching row for "완벽히 아는
+  단어"); the sort `<select>` firing a `change` event sends the
+  correct request (`GET /vocab-items?deck_id=2&sort=wrong_desc`,
+  confirmed via `Network.requestWillBeSent`) -- the on-screen order
+  didn't visibly change only because all 5 seeded rows share
+  `wrong_count: 0`, a seed-data tie, not a filter bug; the deck
+  `<select>` lists and switches between real decks; the row toggle
+  button (`aria-label*="펼치기"`) expands the row and populates the
+  desktop right-hand detail panel; the "내 단어장 뜻 수정" trigger
+  opens its textarea; the "삭제" button was confirmed reachable and
+  correctly hit-testable via `elementFromPoint()` (not actually
+  clicked through, to avoid destroying seed data mid-QA-pass -- delete
+  wiring itself was not touched by this phase's CSS-only diff).
+
+`npm run build` clean, `git diff --check` clean.
+
+**Files changed:** `frontend/app/globals.css` only.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (desktop sprite/layout, mobile non-regression,
+real interaction state changes across search/filter/sort/deck/expand/
+edit/delete-reachability) all passed with zero console errors and
+zero failed requests.
+
+**Remaining risk:** the last character of the three longest filter
+labels lightly touches the sprite's decorative ring at the chosen
+172px chip width -- purely cosmetic (text stays fully legible), and
+already at the practical width ceiling the rail's own measured
+clearance allows without risking overflow into the center word-list
+column.
+
+**Next phase candidates:** Phase 147 (Deck Mini Bookshelf
+Reconstruction), per the rebuild plan's suggested order.

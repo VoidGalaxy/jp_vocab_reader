@@ -73,33 +73,38 @@ export function HomeDashboard({
   return (
     <section className="tab-panel home-dashboard home-scene" aria-live="polite">
       <div className="home-stage">
-        {/* Phase 126 -- .card-stack-surface (ghost "stack of cards behind
-            this one" layers) dropped: it's real photographic book-cover
-            texture now, a single dominant object, not a card that needs a
-            fake stack illusion behind it to read as "physical". Keeping it
-            would have produced exactly the "card on top of a card" look
-            this phase's own success criteria rules out. */}
+        {/* Phase 145 -- Home Hard Reconstruction. The old .home-cover was a
+            tall portrait card: a full-bleed cloth *texture* (not a discrete
+            object) with title/CTA text painted directly onto it via a dark
+            legibility wash. The new phase145 asset is a real photographed
+            notebook *object* (closed, elastic strap + snap baked into the
+            photo itself, natural soft shadow, alpha-cut on transparent) --
+            landscape, ~1.67:1. Doing the math on that aspect ratio at real
+            mobile widths (title+subtitle+CTA+sample needs ~240px of
+            vertical room; a box locked to the image's own aspect ratio is
+            only ~170-210px tall at 320-390px wide) makes clear the old
+            "paint text onto the cover" technique can't carry over --
+            forcing it would mean either cropping the object (cutting off
+            the spine/snap the photo exists to show) or squeezing text
+            past the point of comfortable reading. Restructured instead:
+            .home-cover-heading (title/subtitle/CTA/sample, live text, dark
+            ink on the page's own background -- no wash needed since it's
+            no longer sitting on a photo) stacked above .home-cover-object
+            (the notebook photo itself, shown whole via `contain`, at its
+            own aspect ratio, with the sticky note and Shiori charm
+            attached to it). This reads as "a message, then a real notebook
+            sitting on the desk below it" rather than "text embossed on a
+            product photo" -- more legible, and closer to how the object
+            actually looks (a closed book has no room to print a whole
+            heading across its spine-to-snap width anyway).
+            .home-cover-strap (the separate SVG elastic band Phase 124
+            drew) is gone -- the new photo already has its own elastic
+            strap and snap physically in frame, so the CSS one would have
+            drawn a second, redundant strap. .home-cover-dots (pagination)
+            is gone per this phase's explicit instruction; nothing in this
+            layout was ever a paged carousel. */}
         <div className="home-cover">
-          <span className="home-cover-sticky" aria-hidden="true">
-            {/* Phase 124 -- hand-authored SVG washi tape (no text baked in,
-                decorative only) replaces the old CSS pin dot as the note's
-                "held down" cue -- a small torn-edge, semi-transparent tape
-                strip reads as an actual material a CSS border-radius circle
-                never could. See docs/design/DESIGN.md's Phase 124 asset-kit
-                note for the judgment behind this. */}
-            <img
-              src="/brand/decor/washi-tape.svg"
-              alt=""
-              aria-hidden="true"
-              className="home-cover-sticky-tape"
-            />
-            오늘도 책장을 열어요
-          </span>
-          <span className="home-cover-charm" aria-hidden="true">
-            <ShioriCharacter variant="default" size="lg" />
-          </span>
-
-          <div className="home-cover-face">
+          <div className="home-cover-heading">
             <h2 className="home-cover-title">
               오늘도 한 문장,
               <br />한 단어.
@@ -124,19 +129,20 @@ export function HomeDashboard({
             </button>
           </div>
 
-          {/* Phase 124 -- background-image now points at a hand-authored
-              SVG (leather-strap-snap.svg): a tapered, hand-cut strap shape
-              with stitch lines and a shaded snap, instead of the flat CSS
-              rectangle + circle this used to be. Position/size/rotation
-              still live in .home-cover-strap (globals.css); only the fill
-              mechanism changed. */}
-          <span className="home-cover-strap" aria-hidden="true" />
-          <span className="home-cover-dots" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
+          <div className="home-cover-object">
+            <span className="home-cover-sticky" aria-hidden="true">
+              <img
+                src="/brand/decor/washi-tape.svg"
+                alt=""
+                aria-hidden="true"
+                className="home-cover-sticky-tape"
+              />
+              오늘도 책장을 열어요
+            </span>
+            <span className="home-cover-charm" aria-hidden="true">
+              <ShioriCharacter variant="default" size="lg" />
+            </span>
+          </div>
         </div>
 
         <div className="home-stickers" role="group" aria-label="바로가기">

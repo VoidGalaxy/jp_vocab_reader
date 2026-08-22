@@ -880,6 +880,20 @@ button {
    little more "physically attached to that board" treatment to match. */
 @media (min-width: 1024px) {
   body {
+    /* Phase 145 -- :root (html) carries its own flat fallback background
+       (see the top of this file) for the canvas-propagation edge case
+       where html has one and body doesn't; here it's the reverse problem
+       -- html's background wins canvas-painting priority whenever html has
+       an explicit one of its own, so body's wood background only ever
+       painted within body's own content-height box, not the full
+       viewport. On tall-content tabs that box already exceeds the
+       viewport so this was invisible, but Home's shorter content exposed
+       a visible seam where cream (html's fallback) showed below the wood
+       once body's content ended before the viewport did. min-height
+       guarantees body's own box -- and therefore its wood background --
+       always reaches at least the full viewport, regardless of html's
+       separate background or how short a given tab's content is. */
+    min-height: 100vh;
     background-color: var(--desk-wood);
     background-image:
       /* fine end-grain streaks, two pitches so it doesn't read as a flat
@@ -1209,37 +1223,100 @@ button {
   gap: 18px;
 }
 
-/* Phase 126 -- real photographed book-cover cloth texture replaces the flat
-   two-stop gradient: a soft dark-to-transparent wash (top-left, where the
-   title/subtitle sit) is layered over it in the same background-image
-   stack purely for text legibility, not as a design element of its own.
-   background-color is the old gradient's dark stop, kept as a same-family
-   fallback if the image ever fails to load (never a broken box). */
+/* Phase 145 -- Home Hard Reconstruction. .home-cover is no longer one
+   card-shaped surface -- it's a text heading stacked above a real
+   photographed notebook object (see HomeDashboard.tsx's own comment for
+   the full reasoning: the new object photo's own aspect ratio doesn't
+   leave room to paint a heading across it the way the old full-bleed
+   texture did). No background/border/shadow at this outer level -- it's
+   two children on the page's/wood's own surface, not a box of its own. */
 .home-cover {
   position: relative;
-  min-height: min(66vh, 540px);
-  padding: 30px 24px 88px;
-  border-radius: 30px;
-  background-color: var(--notebook-cover-deep);
-  background-image:
-    linear-gradient(
-      135deg,
-      rgba(18, 24, 14, 0.58) 0%,
-      rgba(18, 24, 14, 0.16) 44%,
-      transparent 68%
-    ),
-    url("/brand/decor/phase126/book-cover-green-surface-web.webp");
-  background-size: cover, cover;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
-  box-shadow: 0 24px 48px rgba(37, 43, 30, 0.32);
-  overflow: hidden;
+  display: grid;
+  gap: 18px;
+}
+
+.home-cover-heading {
+  display: grid;
+  gap: 10px;
+}
+
+.home-cover-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.home-cover-subtitle {
+  margin: 0;
+  max-width: 40ch;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.home-cover-cta {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+  padding: 15px 20px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: var(--tone-ink-green);
+  font-size: 15.5px;
+}
+
+.home-cover-cta:not(:disabled):hover {
+  filter: brightness(1.08);
+  box-shadow: 0 10px 20px rgba(37, 43, 30, 0.2);
+}
+
+.home-cover-sample {
+  justify-self: start;
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border);
+  box-shadow: none;
+}
+
+.home-cover-sample:not(:disabled):hover {
+  color: var(--text-secondary);
+  text-decoration-color: var(--border-strong);
+  box-shadow: none;
+  transform: none;
+}
+
+/* The notebook itself -- a real photographed object (elastic strap, snap,
+   and its own natural soft shadow all baked into the photo, confirmed via
+   a white/wood-background composite test before this was applied), shown
+   at its own aspect ratio via `contain` rather than cropped to fill an
+   arbitrary box. No CSS box-shadow added on top -- the photo's own shadow
+   is the grounding cue; stacking a second CSS shadow under it would only
+   double it, the same call every other photographed object in this app
+   (Phase 131 desk props, Phase 132 flashcard stack) already made. */
+.home-cover-object {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 1619 / 971;
+  background-image: url("/brand/decor/phase145/home-cute-notebook-cover-object.webp");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .home-cover-sticky {
   position: absolute;
-  top: 22px;
-  left: 22px;
+  top: -6px;
+  left: 4%;
   z-index: 2;
   padding: 9px 14px 7px;
   border: 1px solid var(--paper-border);
@@ -1280,123 +1357,20 @@ button {
   pointer-events: none;
 }
 
-/* Closure strap -- the diagonal band + snap button both mockups draw
-   crossing the cover's lower edge, read as a real notebook's elastic
-   closure rather than a flat rectangle. Phase 124 -- the shape/shading
-   itself now comes from a hand-authored SVG (leather-strap-snap.svg: a
-   tapered strap with stitch lines and a shaded snap) instead of a flat
-   CSS rectangle + circle; this rule only keeps position/size/rotation. */
-.home-cover-strap {
-  position: absolute;
-  right: 46px;
-  top: -8%;
-  width: 15px;
-  height: 58%;
-  background-image: url("/brand/decor/leather-strap-snap.svg");
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.28));
-  transform: rotate(5deg);
-  z-index: 1;
-  pointer-events: none;
-}
-
-.home-cover-dots {
-  position: absolute;
-  left: 50%;
-  bottom: 22px;
-  z-index: 1;
-  display: flex;
-  gap: 6px;
-  transform: translateX(-50%);
-}
-
-.home-cover-dots i {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: rgba(247, 241, 222, 0.4);
-}
-
-.home-cover-dots i:first-child {
-  background: rgba(247, 241, 222, 0.85);
-}
-
+/* Shiori charm now sits on the notebook photo itself (.home-cover-object,
+   the new positioning context), not the outer .home-cover -- there's no
+   separate "spine" edge for her to rest against anymore, so she's placed
+   over the photo's own lower-right cover area instead. */
 .home-cover-charm {
   position: absolute;
-  right: 8px;
-  bottom: 30px;
+  right: 4%;
+  bottom: 6%;
   z-index: 1;
   opacity: 0.97;
 }
 
 .home-cover-charm .shiori-asset-img {
   animation: shiori-idle-float 6.5s ease-in-out infinite;
-}
-
-.home-cover-face {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  gap: 12px;
-  max-width: 78%;
-  margin-top: 46px;
-}
-
-.home-cover-title {
-  margin: 0;
-  color: var(--notebook-cream);
-  font-size: 26px;
-  font-weight: 800;
-  line-height: 1.4;
-  text-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.14),
-    0 -1px 1px rgba(0, 0, 0, 0.22);
-}
-
-.home-cover-subtitle {
-  margin: 0;
-  max-width: 34ch;
-  color: rgba(247, 241, 222, 0.78);
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.home-cover-cta {
-  width: 100%;
-  justify-content: center;
-  margin-top: 6px;
-  padding: 15px 20px;
-  border-radius: 999px;
-  color: var(--notebook-cover-deep);
-  background: var(--notebook-cream);
-  font-size: 15.5px;
-}
-
-.home-cover-cta:not(:disabled):hover {
-  background: #ffffff;
-  box-shadow: 0 10px 20px rgba(37, 43, 30, 0.24);
-}
-
-.home-cover-sample {
-  justify-self: start;
-  padding: 4px 2px;
-  border: none;
-  background: none;
-  color: rgba(247, 241, 222, 0.75);
-  font-size: 12.5px;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: rgba(247, 241, 222, 0.35);
-  box-shadow: none;
-}
-
-.home-cover-sample:not(:disabled):hover {
-  color: var(--notebook-cream);
-  text-decoration-color: rgba(247, 241, 222, 0.6);
-  box-shadow: none;
-  transform: none;
 }
 
 /* Bare icon+label shortcut row -- no card, no border, no fill. This is the
@@ -1539,18 +1513,12 @@ button {
     padding: 14px 10px 44px;
   }
 
-  .home-cover {
-    min-height: 460px;
-    padding: 42px 46px 46px;
-  }
-
-  .home-cover-face {
+  .home-cover-heading {
     max-width: 430px;
-    margin-top: 6px;
   }
 
   .home-cover-title {
-    font-size: 35px;
+    font-size: 34px;
   }
 
   .home-cover-cta {
@@ -1559,9 +1527,8 @@ button {
     padding: 14px 28px;
   }
 
-  .home-cover-charm {
-    right: 34px;
-    bottom: 30px;
+  .home-cover-object {
+    max-width: 380px;
   }
 
   .home-stickers {
@@ -7687,14 +7654,14 @@ input.reading-vocab-sticker-toggle:checked {
      crop rather than a multi-cell sprite needing exact math.
      background-color is the flat page tone as a fallback if the image
      fails to load. */
+  /* Phase 146 -- the zoomed/blurred photo crop that used to stand in for
+     "page-edge tabs" here is gone; real tabs (below) now do that job
+     directly, so this rail goes back to a flat page tone -- keeping the
+     old photo behind the real tabs would have stacked two different tab
+     languages on top of each other. */
   .vocab-notebook-index {
-    padding: 6px 4px;
-    border-radius: 4px 12px 12px 4px;
+    padding: 10px 4px 10px 20px;
     background-color: var(--paper-bg);
-    background-image: url("/brand/decor/phase127/vocab-ring-notebook-spread-web.webp");
-    background-repeat: no-repeat;
-    background-size: 480% auto;
-    background-position: 0% 12%;
   }
 
   /* The filter index reads as a column of page-edge tabs, not a row of
@@ -7713,86 +7680,150 @@ input.reading-vocab-sticker-toggle:checked {
     min-width: 0;
   }
 
+  /* Phase 146 -- align-items:flex-start (not the flex-column default of
+     stretch) so each chip's own explicit width below actually takes
+     effect instead of being stretched to fill the rail; margin-left
+     bleeds the whole column left past the rail's own padding so the tabs
+     read as protruding past the notebook's edge, not sitting inside a
+     filter box. */
   .vocab-notebook-index .vocab-status-filters {
     flex-direction: column;
-    gap: 10px;
+    align-items: flex-start;
+    gap: 6px;
+    margin-left: -16px;
   }
 
-  /* Phase 87 -- the status filters were plain underline text-tabs at every
-     width, which read as form labels rather than the mockup's stack of
-     "최근/모르는 단어/헷갈림" page-edge tabs once they had a whole rail
-     column to themselves. Desktop-only: each chip becomes a left-accented,
-     right-rounded tab (flex-column's default stretch already makes each
-     one span the rail's width), using the same per-status colors the
-     active underline already carried -- only the shape changes, not the
-     filter logic or which chip is active. Mobile/tablet keep the Phase 57
-     underline-tab look untouched. */
+  /* Phase 146 -- each chip now shows its own slice of the phase145 tab
+     sprite (vocab-physical-index-tabs.webp: 7 blank tabs on a ring-binder
+     spine, 723x2172 source) as its own background-image, instead of a
+     CSS pill shape. Fixed width/height (not stretch-to-fill) is what
+     makes the sprite math reliable -- background-size/position below
+     assume an exact 172x517px scaled render, computed from the source's
+     own real tab-center pixel rows (found via a row-by-row RGB scan
+     along a column inside the tab body, not eyeballed): tab centers at
+     y=187/458/728/1020/1320/1628 of 2172px, scaled by 172/723 ≈ 0.2379,
+     centered against this chip's own 44px height. Two earlier passes
+     (118px, then 150px) both still overflowed the longest label
+     ("완벽히 아는 단어", 8 characters) past the tab's own colored body
+     into the spine/rings next to it -- caught both times via a real
+     zoomed screenshot, not the source image's own proportions alone,
+     since what actually matters is the *rendered* text width against
+     the *rendered* tab width. 172px (plus a smaller 11.5px font and
+     tighter padding) was checked against the rail's own measured right-
+     edge clearance (~23px of slack at both 1280 and 1024px, confirmed
+     via getBoundingClientRect before widening further) so the tabs still
+     never overflow the notebook rail itself. Six tabs
+     used for six live filters (전체/모르는/헷갈림/아는/미분류/복습예정);
+     the source's 7th (mint) tab is intentionally left unused rather than
+     forced onto a 7th filter that doesn't exist -- a spare tab peeking
+     out at the bottom of a real divider set is normal, not a bug. */
   .vocab-notebook-index .vocab-status-filters .vocab-filter-chip {
-    padding: 6px 10px 6px 12px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 172px;
+    height: 44px;
+    padding: 0 10px 0 15px;
+    border: none;
     border-bottom: none;
-    border-radius: 0 999px 999px 0;
-    background: var(--soft-bg);
+    border-radius: 0;
+    background-color: transparent;
+    background-image: url("/brand/decor/phase145/vocab-physical-index-tabs.webp");
+    background-repeat: no-repeat;
+    background-size: 172px 517px;
+    background-position-x: 0;
+    color: var(--text);
+    font-size: 11.5px;
     text-align: left;
+    filter: saturate(0.7) brightness(0.99);
+    transition:
+      transform var(--motion-fast) var(--ease-soft),
+      filter var(--motion-fast) var(--ease-soft);
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip:nth-child(1) {
+    background-position-y: -23px;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip:nth-child(2) {
+    background-position-y: -87px;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip:nth-child(3) {
+    background-position-y: -151px;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip:nth-child(4) {
+    background-position-y: -221px;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip:nth-child(5) {
+    background-position-y: -292px;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip:nth-child(6) {
+    background-position-y: -365px;
   }
 
   .vocab-notebook-index .vocab-status-filters .vocab-filter-chip:hover {
-    background: var(--paper-bg);
+    filter: saturate(0.88) brightness(1.02);
   }
 
+  /* Active = pulled out further, like a real selected divider sitting
+     proud of the stack, plus full saturation instead of the resting
+     dimness -- no border/box-shadow ring, per this phase's explicit
+     "두꺼운 bordered button처럼 만들지 않는다" instruction. The small
+     color dot (::after) is the one place the old per-status color
+     language survives, now as a small mark instead of a box-shadow edge. */
   .vocab-notebook-index .vocab-status-filters .vocab-filter-chip-active {
-    background: var(--paper-bg);
-    box-shadow: inset 3px 0 0 0 var(--primary);
+    transform: translateX(9px);
+    filter: saturate(1.15) brightness(1.02);
+    font-weight: 800;
   }
 
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-known.vocab-filter-chip-active {
-    box-shadow: inset 3px 0 0 0 #1b6b3a;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-uncertain.vocab-filter-chip-active {
-    box-shadow: inset 3px 0 0 0 #6f5f96;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-unknown.vocab-filter-chip-active {
-    box-shadow: inset 3px 0 0 0 #96603f;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-unclassified.vocab-filter-chip-active {
-    box-shadow: inset 3px 0 0 0 #6b5f3f;
-  }
-
-  /* Phase 129 -- .index-card-filter's own cascading 3-color page-tab accent
-     (::after, box-shadow simulating 2nd/3rd tabs) is removed: it was a
-     CSS stand-in for "this is the index-tab column", and the column now
-     has real photographed page-edge tabs behind it (see
-     .vocab-notebook-index below) -- keeping the fake tab stack next to
-     the real photographed one would read as two competing tab motifs in
-     the same column. The washi-tape corner (::before) stays; it reads as
-     a distinct "pinned note" cue, not a second tab simulation, so it
-     doesn't conflict with the photo the same way. `.index-card-filter`'s
-     own background goes transparent here so the photo on
-     .vocab-notebook-index (its parent) shows through -- scoped to
-     `.vocab-notebook-index .index-card-filter`, not the bare class, so
-     SharedDeckSection's reuse of .index-card-filter for its subscribed-
-     deck word filter is untouched. */
-  .vocab-notebook-index .index-card-filter {
-    position: relative;
-    border-color: rgba(79, 140, 102, 0.35);
-    background: rgba(255, 252, 240, 0.22);
-  }
-
-  .vocab-notebook-index .index-card-filter::before {
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip-active::after {
     content: "";
     position: absolute;
-    top: -7px;
-    left: 16px;
-    z-index: 1;
-    width: 40px;
-    height: 14px;
-    border: 1px solid rgba(79, 140, 102, 0.4);
-    background: rgba(79, 140, 102, 0.3);
-    box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-    transform: rotate(-4deg);
-    pointer-events: none;
+    top: 9px;
+    right: 10px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-known.vocab-filter-chip-active::after {
+    background: #1b6b3a;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-uncertain.vocab-filter-chip-active::after {
+    background: #6f5f96;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-unknown.vocab-filter-chip-active::after {
+    background: #96603f;
+  }
+
+  .vocab-notebook-index .vocab-status-filters .vocab-filter-unclassified.vocab-filter-chip-active::after {
+    background: #6b5f3f;
+  }
+
+  /* Phase 146 -- .index-card-filter's dashed border/radius/tinted fill
+     (still active on every other screen that reuses this class -- Shared
+     Deck's own subscribed-deck filter, untouched) is dropped entirely
+     here, and the Phase 124 washi-tape corner (::before) that used to
+     mark "this is a filter drawer" is removed rather than kept: real
+     protruding tabs now do that job directly on .vocab-status-filters
+     below, and a second, fake "pinned note" cue sitting right above them
+     would read as two competing physical-attachment motifs in the same
+     column. 덱/검색/정렬 now sit as plain unboxed labels directly on the
+     rail's own page background -- exactly what this phase's brief asks
+     for ("index tab과 충돌하는 boxed panel chrome은 제거"). */
+  .vocab-notebook-index .index-card-filter {
+    border: none;
+    border-radius: 0;
+    padding: 4px 4px 4px 0;
+    background: transparent;
   }
 
   /* Sticky so the note page stays in view while the (potentially long)
