@@ -4035,3 +4035,184 @@ could reintroduce the same class of bug.
 
 **Next phase candidates:** Phase 148 (Study Cute Board Reconstruction),
 per the rebuild plan's suggested order.
+
+## Phase 148 -- Study Cute Board Reconstruction
+
+Phase 148 rebuilds the Study tab against `study-light-mint-felt-board.webp`
+and the mockup board's panel 3, replacing the deep-green felt board and
+the boxed quick-start card above it with a lighter, casual-cute pairing:
+a light-mint board every session state sits on, and a flat heading with
+small pinned memo tabs instead of a bordered dashboard widget choosing a
+study mode.
+
+`.study-board-scene` (shared by all four session states -- ready/empty/
+active/complete, confirmed by reading `StudySection.tsx`'s render tree
+before touching anything) swapped `study-felt-board-texture-web.webp`
+(Phase 130's dark weave photo, `--notebook-cover-deep` fallback) for
+`study-light-mint-felt-board.webp` -- same "uniform edge-to-edge weave,
+no distinguishing shapes" property as the old photo, so `background-size:
+cover` still needed no per-instance crop/position tuning at any board
+height, including the very short boards ready/empty render with no card
+stack yet. The top-sheen radial-gradient layer was dropped (it existed to
+add depth to a dark surface; on the light photo it just read as a faint
+haze), and the heavy `0 16px 34px rgba(37,43,30,0.22)` drop shadow was
+cut down to a soft `0 10px 22px rgba(120,98,40,0.12)` -- not an opacity
+tweak on the old dark image (the brief's explicit "금지"), a full asset
+swap plus a shadow rewrite, matching the "light/natural, not heavy
+luxury" shadow language every other Phase 145-147 surface already
+adopted. The bottom-left leaf-sprig hint (`::after`, unrelated to the
+board photo) needed no color change -- checked via a zoomed crop, the
+existing `--sage-green` blobs still read with clear contrast against the
+new light mint.
+
+The quick-start hero above the board (`StudyQuickStartHero` /
+`.study-hero-card`) was a bordered, shadowed `.hero-card` panel holding a
+washi-tape strip at its corner -- the exact boxed-card recipe Phase 115/
+146/147 already removed from Home/Vocab/Deck's own top headers, for the
+identical reason: it read as an admin panel sitting above the tab's real
+content. Flattened to the same unboxed heading-strip recipe those phases
+use (a dashed bottom rule, no fill/border/shadow) -- one of this phase's
+two JSX edits (the `hero-card` class and the now-meaningless
+`.study-hero-tape` span were both removed from `StudySection.tsx`, since
+a tape strip that exists to look like it's holding down a card's corner
+has nothing left to hold down once that card has no boxed edge; same
+call Phase 145 made dropping Home's old elastic-strap SVG for an
+identical reason).
+
+The quick-start mode grid (`.study-cta-grid`/`.study-cta-button`, 4
+tiles: 오늘 복습 시작/새 단어 학습/어려운 단어 복습/덱별 학습) was a
+single bordered/gradient-filled tray -- one dashboard widget choosing a
+mode, not "학습 도구" resting on a board. The tray chrome was dropped
+entirely (no border/background/shadow on the grid itself, CSS-only, no
+JSX change); each tile became its own small pinned memo tab -- a light
+`--panel-bg` chip with a colored dot "pin" marker (`::before`) at its top
+edge and a slight per-tile rotation, the same "several small hand-placed
+paper pieces" language this series already established for Vocab's index
+tabs (Phase 146) and Deck's cover tag (Phase 147), done here with plain
+CSS shapes since the mockup's tabs are flat-colored notes with no
+photographed texture to crop from. Pin colors are purely decorative
+markers (primary/`--sand-amber`/`--rose`/`--accent`) and don't reuse the
+rating buttons' result colors, so nothing here could read as review-
+result meaning. The primary "오늘 복습 시작" tile keeps its existing
+solid-teal-gradient fill (now with a white pin dot) so it still visually
+outranks the other three, matching the original "one loud action, three
+quiet ones" hierarchy exactly -- only the shape changed. Mobile's
+existing 3-column-plus-full-width-primary layout (Phase 82, already
+CSS-only, already dropped the tray chrome at that breakpoint) needed no
+structural change, just its now-orphaned
+`.study-cta-button + .study-cta-button::before` divider-line override
+removed as dead code once the base rule stopped drawing that divider.
+
+Rating buttons/grid, the SRS review/rating handlers, and the flashcard
+backing-sheet photo were deliberately left untouched, per the brief's
+explicit protection: `.study-rating-grid`/`.rating-button`'s existing
+"4 rubber-stamp seals" treatment (asymmetric radius, alternating tilt,
+ink-flash press animation, the rose/sand-amber/primary/sage-green result
+colors) already matched "paper stamp" language the brief asks for, so
+Phase 148 changes zero lines of that CSS and zero lines of `onReview`/
+`onShowAnswer`/`onStart`/`onQuickStart` wiring in `StudySection.tsx`.
+`.study-card-backing-sheet` (the cream flashcard-stack photo peeking out
+behind the active card) was checked against the new light board via
+screenshot rather than assumed safe -- it reads clearly, if anything more
+so than against the old dark felt, so it was left as-is exactly per the
+brief's "live card readability는 우선한다" instruction (no conflict
+found, no change needed).
+
+**Actually removed/weakened:** the deep-green felt board photo + its
+heavy 34px drop shadow + top-sheen highlight gradient (replaced by the
+light-mint photo + a soft shadow, no highlight layer); `.study-hero-
+card`'s border/panel-bg fill/accent-top-border/28px shadow (now a flat
+dashed-underline heading strip); `.study-hero-tape`'s washi-tape decor
+(removed outright, nothing left for it to hold down); `.study-cta-grid`'s
+bordered/gradient-filled tray chrome (now no container styling at all,
+each tile carries its own small pinned-tab look instead).
+
+**Board asset application:** `background-image: url(".../study-light-
+mint-felt-board.webp")`, `background-size: cover`, single layer (no
+second gradient layer, unlike the old two-layer felt rule) -- verified
+loading with a `200` via `Network.responseReceived` at every tested
+viewport (1280/1024/390/375/320), since (unlike Phase 146's desktop-only
+index-tab sprite) this board needs to render at every breakpoint the
+same way the old dark board always did.
+
+**Ready/empty/active/complete:** all four verified via headless Chrome
+(Windows-native, CDP) against a seeded account (6 vocab items, mixed
+statuses, `due_today_count: 4`). Ready (no session started) and empty
+(a mode selected with 0 matching items, triggered by re-clicking "오늘
+복습 시작" after exhausting it) both render `AppEmptyState` inside the
+same light-mint `.study-board-scene`, no dark-board flash between them.
+Active renders the flashcard + rating-stamp tray clearly on the mint
+board, unchanged in every way except the board color underneath it.
+Complete renders the receipt card (stats grid, Shiori success stamp,
+restart/원문읽기/어휘노트 links) on the same board. Screenshots at each
+state confirm all four now read as one continuous light-board world
+instead of the ready/empty/complete states inheriting a heavy dark board
+that only the active card's own white sheet ever fully offset visually.
+
+**Rating stamp/SRS protection confirmed:** a full real review flow was
+driven end-to-end via CDP click automation, not just visual inspection --
+클릭 "오늘 복습 시작" -> 카드 로드 확인 (표면 텍스트 검증) -> "정답 보기"
+클릭 -> 뜻/예문/4개 rating 버튼 렌더 확인 -> "보통" 클릭 -> 다음 카드로
+실제 전환 확인 (단어 텍스트가 바뀜) -> 남은 카드 반복 rate -> 완료 화면
+도달, `study-complete-stats`에 실제 세션 카운트(다시/어려움/보통/쉬움/
+총 학습) 반영 확인. Re-run against a second, freshly-seeded account after
+the dev-server restart below, with identical results. Zero console
+errors/warnings throughout. No rating button class, color, icon, label,
+or `onReview`/`onShowAnswer` handler was touched by this phase's diff --
+confirmed both by the diff itself (CSS-only outside the two JSX
+deletions noted above) and by this click-through actually completing a
+session correctly.
+
+**Mobile (390/375/390 heights matched to 812/844/640, plus 320/375/390
+widths at the standard 1000px height for the overflow sweep):** zero
+`scrollWidth`/`clientWidth` mismatch at every width, board image still
+loads correctly (`200`) at every width, zero console errors. The rating
+grid's actual concern -- "밀려서 fold 아래로 가려지는지" -- was checked
+with real `getBoundingClientRect()` measurements after starting a
+session and revealing the answer, at the three device-height combos the
+existing `resolveScrollBehavior`/`scrollIntoView` safety-net code
+comment already names (320x640, 375x812, 390x844): the rating grid's
+full bounding box sits inside the viewport at all three (e.g. 320x640:
+grid bottom 623 vs. viewport height 640) without needing that scroll
+assist to fire at all, so the existing safety net remains exactly as
+much a safety net as before -- unused in the common case, still present
+for anything taller than a normal phone chrome/keyboard eats. The
+quick-start pinned tabs also verified at mobile: primary tile keeps its
+own full-width row, the three secondary tabs sit in their own row below
+it with their pin dots and colors intact.
+
+One QA-infrastructure lesson, not a product bug: running `npm run build`
+while the QA dev server was still serving the same `frontend/` directory
+corrupted its `.next` cache mid-session (the project's own documented
+"never build+dev concurrently" quirk) -- surfaced as a real client-side
+`__webpack_modules__[moduleId] is not a function` runtime error on the
+next screenshot attempt. Confirmed as the known infra artifact (not a
+code regression) by cross-checking against the *separate*, already-clean
+`next build` output from moments earlier, then fixed by stopping the dev
+server, deleting `.next`, and restarting fresh -- after which every
+viewport and the full review-flow click-through were re-verified clean
+against the new server, and the build's own already-clean output stood
+as the actual build-validation result throughout.
+
+`npm run build` clean, `git diff --check` clean.
+
+**Files changed:** `frontend/app/globals.css`,
+`frontend/components/StudySection.tsx` (two JSX deletions only: the
+`hero-card` class and the `.study-hero-tape` span, both noted above --
+no prop, handler, or SRS-facing markup changed).
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (board asset loading, all 4 session states on one
+consistent light-board language, mobile rating-grid fold clearance,
+pinned quick-start tabs) plus a real end-to-end review-flow click-through
+all passed with zero console errors and zero failed requests.
+
+**Remaining risk:** none identified specific to this phase's own changes.
+`study-felt-board-texture-web.webp` (Phase 130's now-unreferenced dark
+board photo) was left in place rather than deleted, matching this
+project's established "note, don't silently clean up" convention for a
+newly-orphaned asset -- confirmed via `grep` that no `.tsx`/`.css` file
+still references it.
+
+**Next phase candidates:** Phase 149 (Reading Selected Strip
+Visibility), per the rebuild plan's suggested order.

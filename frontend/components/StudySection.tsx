@@ -201,8 +201,7 @@ function StudyQuickStartHero({
   const percent = total > 0 ? Math.min(Math.round((completed / total) * 100), 100) : 0;
 
   return (
-    <section className="study-hero-card hero-card">
-      <span className="study-hero-tape" aria-hidden="true" />
+    <section className="study-hero-card">
       <div className="study-hero-header">
         <CardsIcon className="study-hero-icon" />
         <div>

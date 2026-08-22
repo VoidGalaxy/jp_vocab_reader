@@ -3067,8 +3067,9 @@ select {
 }
 
 /* Secondary utility panel (deck + mode picker) sitting below the primary
-   study-hero-card -- flatter shadow and tighter padding keep it reading as
-   "advanced options", not a second competing headline card. */
+   study-hero-card -- a muted tinted fill with no border/shadow of its own
+   keeps it reading as "advanced options" tucked inside its <details>
+   disclosure, not a second competing headline card. */
 .study-control-panel-compact {
   gap: 12px;
   padding: 14px;
@@ -3278,44 +3279,41 @@ select {
   border-radius: 16px;
 }
 
-/* Casual Sticker Reader (Phase 66) -- study-board-scene: a deep-green felt
-   board (reuses Home's --notebook-cover tokens -- see docs/design/
-   DESIGN.md's "reuse these for any future notebook-cover-styled surface"
-   note) that every Study active-session state (ready/empty/active/
-   complete) sits on, replacing the old light .desk-surface-stage tint.
-   Light .study-card sheets read clearly against it the same way the
-   mockup's board scenes always place light cards on a dark board, never
-   text directly on the felt itself.
-   Phase 130 -- a real photographed felt texture
-   (study-felt-board-texture-web.webp) replaces the flat two-stop
-   gradient as the base layer. Unlike every other image-asset phase so
-   far, this needed no crop/position tuning at all: the source photo is a
-   uniform, edge-to-edge weave with no distinguishing shapes, so
-   `background-size: cover` looks correct at any board aspect ratio,
-   including the very short boards the ready/empty states render (no card
-   stack yet). The soft top-sheen radial-gradient stays as a second layer,
-   painted in front of the photo -- it's a subtle (8% alpha) highlight,
-   not a competing material, so it adds depth rather than fighting the
-   photo underneath it. background-color keeps the old gradient's dark
-   stop as a same-family fallback if the image fails to load. */
+/* Casual Sticker Reader (Phase 66) -- study-board-scene: the board every
+   Study active-session state (ready/empty/active/complete) sits on,
+   replacing the old light .desk-surface-stage tint. Light .study-card
+   sheets read clearly against it the same way the mockup's board scenes
+   always place light cards on a board, never text directly on the felt
+   itself.
+   Phase 148 -- was a deep-green felt board (Phase 66's --notebook-cover
+   tokens, then Phase 130's photographed dark-weave texture); this whole
+   "dark board" treatment was the single heaviest-reading surface left in
+   the casual-cute series (Phase 145-147 already moved Home/Vocab/Deck to
+   light paper/wood-adjacent surfaces), so it's replaced outright with
+   study-light-mint-felt-board.webp -- a real photographed light-mint felt
+   weave, same "uniform edge-to-edge texture, no distinguishing shapes"
+   property as the old photo, so `background-size: cover` still needs no
+   per-instance crop/position tuning at any board aspect ratio (including
+   the very short boards ready/empty render with no card stack yet). The
+   soft top-sheen radial-gradient is dropped -- it existed to add depth to
+   a dark surface; the light photo already has its own visible weave
+   depth and the highlight read as a washed-out haze on top of it instead.
+   box-shadow dropped from a deliberately heavy `0 16px 34px` drop shadow
+   to a much softer one, matching every other Phase 145-147 surface's
+   "light/natural, not heavy luxury" shadow language -- the board still
+   reads as sitting slightly proud of the page, just not as a slab.
+   background-color is a flat same-family fallback sampled from the new
+   photo if it fails to load. */
 .study-board-scene {
   position: relative;
   padding: 28px 16px 30px;
   border-radius: 28px;
-  background-color: var(--notebook-cover-deep);
-  background-image:
-    radial-gradient(
-      ellipse 70% 45% at 50% 0%,
-      rgba(255, 255, 255, 0.08) 0%,
-      transparent 70%
-    ),
-    url("/brand/decor/phase127/study-felt-board-texture-web.webp");
-  background-size: cover, cover;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 16px 34px rgba(37, 43, 30, 0.22);
+  background-color: #cfe6c2;
+  background-image: url("/brand/decor/phase145/study-light-mint-felt-board.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 10px 22px rgba(120, 98, 40, 0.12);
   overflow: hidden;
 }
 
@@ -5502,40 +5500,25 @@ input.reading-vocab-sticker-toggle:checked {
   white-space: nowrap;
 }
 
-/* The single strongest CTA on the tab -- title + one-line copy above the
-   quick-start tiles, wrapped in .hero-card so it visually outranks the
-   compact stats strip and the deck/mode utility panel below it.
-   .hero-card only contributes border-radius/shadow, not a fill -- this
-   needed its own opaque background + border, unlike home-hero-card which
-   already pairs .hero-card with .panel-card for that. Without it the
-   panel rendered with no background at all, reading as transparent
-   against the page. */
-/* Casual Sticker Reader (Phase 58) -- position:relative + overflow:hidden
-   so .study-hero-tape (a real element, not ::before -- kept consistent
-   with Vocab's own hero tape) can sit half outside the card's top edge. */
+/* Phase 148 -- was a bordered/shadowed .hero-card box (opaque panel-bg
+   fill, accent top border) holding a washi-tape strip at its corner, the
+   same boxed-card recipe Phase 115/146/147 already removed from Home/
+   Vocab/Deck's own top headers for the identical reason: it read as an
+   admin panel sitting above the tab's real content instead of a heading
+   leading into it. Flattened to the same unboxed heading-strip recipe
+   those phases used (a dashed bottom rule, no fill/border/shadow of its
+   own) -- title/progress/quick-start tabs now read as page content
+   leading into the mint board below, not a card floating above it. The
+   washi-tape strip (.study-hero-tape) existed specifically to look like
+   it was holding this card's corner down -- with no card left to hold
+   down, it was dropped rather than kept as orphaned decoration (see
+   Phase 145's identical call on Home's old elastic-strap SVG). */
 .study-hero-card {
   position: relative;
   display: grid;
   gap: 12px;
-  padding: 20px 16px 16px;
-  border: 1px solid var(--border);
-  border-top: 2px solid var(--screen-accent, var(--accent));
-  background: var(--panel-bg);
-  box-shadow: 0 12px 28px var(--paper-shadow);
-}
-
-.study-hero-tape {
-  position: absolute;
-  top: -6px;
-  left: 26px;
-  z-index: 1;
-  width: 46px;
-  height: 16px;
-  border: 1px solid rgba(217, 122, 74, 0.4);
-  background: rgba(217, 122, 74, 0.32);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-  transform: rotate(-4deg);
-  pointer-events: none;
+  padding: 4px 2px 16px;
+  border-bottom: 1px dashed var(--paper-border);
 }
 
 .study-hero-header {
@@ -5656,54 +5639,89 @@ input.reading-vocab-sticker-toggle:checked {
   min-width: 180px;
 }
 
+/* Phase 148 -- was a single bordered/shadowed tray (a soft gradient fill
+   behind all 4 tiles) that read as one dashboard widget choosing a study
+   mode, not "학습 도구" resting on the board below. The tray chrome is
+   dropped entirely (no border/background/shadow on the grid itself); each
+   tile becomes its own small pinned memo tab instead, matching the
+   mockup's 4 colored-pin note tabs above the flashcard. */
 .study-cta-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(247, 236, 208, 0.52)),
-    var(--surface-stage);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.66);
+  gap: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
 }
 
-/* Non-primary tiles (새 단어 학습/어려운 단어 복습/덱별 학습) were nearly as
-   opaque/shadowed/bold as the primary "오늘 복습 시작" tile below (same
-   panel-bg fill, same border-strong, a visible shadow) -- so all 4 tiles
-   read as equally important, weakening which one is actually the
-   recommended action. Lighter fill/border/shadow/weight here; the primary
-   modifier still overrides these back up to full weight. */
+/* Each tile is its own light paper tab with a small colored "pin" dot
+   (::before) at its top edge and a slight per-tile rotation -- the same
+   "several hand-placed small paper pieces" language this series already
+   uses for Vocab's index tabs (Phase 146) and Deck's cover tag (Phase
+   147), applied here with plain CSS (dot + tilt) since the mockup's tabs
+   have no photographed texture of their own to crop from, just flat
+   color. Colors are purely decorative pin markers, not a new semantic
+   layer -- they don't reuse the rating buttons' result colors, so
+   nothing here could be mistaken for review-result meaning. */
 .study-cta-button {
   position: relative;
   display: grid;
   gap: 2px;
   justify-items: center;
-  min-height: 66px;
-  padding: 12px 10px;
-  border: 0;
-  border-radius: 10px;
+  min-height: 60px;
+  padding: 14px 10px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px 4px 10px 10px;
   color: var(--text-secondary);
-  background: transparent;
-  box-shadow: none;
+  background: var(--panel-bg);
+  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.1);
   text-align: center;
+  transform: rotate(-1.5deg);
+}
+
+.study-cta-button::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 2px 3px rgba(37, 43, 30, 0.3);
+  transform: translateX(-50%);
+}
+
+.study-cta-button:nth-child(2) {
+  transform: rotate(1.2deg);
+}
+
+.study-cta-button:nth-child(2)::before {
+  background: var(--sand-amber);
+}
+
+.study-cta-button:nth-child(3) {
+  transform: rotate(-1deg);
+}
+
+.study-cta-button:nth-child(3)::before {
+  background: var(--rose);
+}
+
+.study-cta-button:nth-child(4) {
+  transform: rotate(1.6deg);
+}
+
+.study-cta-button:nth-child(4)::before {
+  background: var(--accent);
 }
 
 .study-cta-button:hover {
-  background: rgba(255, 255, 255, 0.52);
-  transform: translateY(-1px);
-}
-
-.study-cta-button + .study-cta-button::before {
-  content: "";
-  position: absolute;
-  top: 14px;
-  bottom: 14px;
-  left: 0;
-  width: 1px;
-  background: var(--border);
-  opacity: 0.74;
+  transform: rotate(0deg) translateY(-2px);
+  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.14);
 }
 
 .study-cta-label {
@@ -5723,21 +5741,21 @@ input.reading-vocab-sticker-toggle:checked {
 
 /* "오늘 복습 시작" is the one action the tab wants the learner to take --
    filled in the primary color so it outranks the other three quick-start
-   tiles instead of sitting as an equal-weight grid cell. */
+   tiles instead of sitting as an equal-weight tab. */
 .study-cta-button-primary {
   color: #ffffff;
   background: linear-gradient(180deg, #3d7885 0%, var(--primary) 100%);
-  box-shadow: 0 10px 22px rgba(61, 120, 133, 0.22);
+  border-color: transparent;
+  box-shadow: 0 8px 18px rgba(61, 120, 133, 0.24);
+}
+
+.study-cta-button-primary::before {
+  background: #ffffff;
 }
 
 .study-cta-button-primary:hover {
   background: linear-gradient(180deg, #3d7885 0%, var(--primary) 100%);
-  box-shadow: 0 12px 24px rgba(61, 120, 133, 0.25);
-}
-
-.study-cta-button-primary::before,
-.study-cta-button-primary + .study-cta-button::before {
-  display: none;
+  box-shadow: 0 10px 20px rgba(61, 120, 133, 0.27);
 }
 
 .study-cta-button-primary .study-cta-hint {
@@ -8684,10 +8702,15 @@ input.reading-vocab-sticker-toggle:checked {
     justify-content: stretch;
   }
 
+  /* Phase 148 -- .study-hero-card removed from this shared 14px mobile
+     padding list: it's a flat unboxed heading strip now (see its own base
+     rule), not a bordered card, so forcing card-style padding back onto
+     it at this breakpoint would misalign it against the rest of the flat
+     heading content around it -- the same fix Phase 147 already made for
+     .shared-deck-card when it left the boxed-card family. */
   .analyze-form,
   .result-section,
   .study-control-panel,
-  .study-hero-card,
   .study-card,
   .shared-deck-detail,
   .vocab-form-panel,
@@ -9211,10 +9234,6 @@ input.reading-vocab-sticker-toggle:checked {
   .study-cta-button:not(.study-cta-button-primary) .study-cta-hint {
     font-size: 10.5px;
     opacity: 0.8;
-  }
-
-  .study-cta-button + .study-cta-button::before {
-    display: none;
   }
 
   .study-control-footer {
