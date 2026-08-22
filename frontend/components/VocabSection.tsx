@@ -341,38 +341,39 @@ export function VocabSection({
 
   return (
     <section className="tab-panel vocab-panel" aria-live="polite">
-      {/* Phase 114 -- was a bordered/shadowed .panel-card.hero-card box (plus
-          a card-stack ghost-layer ::before/::after ) sitting above the
-          notebook spread below, reading as "a card on top of the board." The
-          mockup's Vocab boards show no separate header card at all -- the
-          notebook scene starts immediately under the toolbar. This keeps the
-          same real content (title, live stat chips, primary actions -- 단어
-          장 is one of the screens DESIGN.md's own "minimize numbers" rule
-          exempts) but as a flat heading strip on the page itself, matching
-          Reading's own unboxed post-analyze input area
-          (.reading-input-open's border-bottom-dashed recipe). */}
-      <section className="vocab-hero-card vocab-hero-compact">
+      {/* Phase 149 -- full reconstruction of the old boxed hero card. The
+          bordered/shadowed panel is gone entirely: the title sits directly
+          on the page, the stat counts render as small pinned paper notes
+          (.vocab-pinned-notes, not a chip row of database pills), and the
+          three actions render as small bookmark-flag labels
+          (.vocab-bookmark-actions, reusing the same right-notch clip-path
+          .vocab-item-status-wrap already established elsewhere in the
+          brand system) instead of a row of full webapp CTA buttons. See
+          docs/design/DESIGN.md Phase 149 for the full before/after
+          rationale. */}
+      <section className="vocab-notebook-header">
         <div className="panel-card-header">
           <h2 className="panel-card-title">내 단어장</h2>
           <p className="panel-card-description">
             읽으며 담은 단어를 모아두고 다시 복습해요.
           </p>
         </div>
-        <div className="vocab-hero-chip-row">
-          <span className="memo-label vocab-hero-deck-label">{selectedDeckLabel}</span>
-          <span className="vocab-hero-chip">
+        <div className="vocab-pinned-notes">
+          <span className="vocab-pinned-note vocab-pinned-note-deck">{selectedDeckLabel}</span>
+          <span className="vocab-pinned-note">
             전체 {stats ? stats.total_vocab_count : items.length}개
           </span>
-          <span className="vocab-hero-chip vocab-hero-chip-accent">
+          <span className="vocab-pinned-note vocab-pinned-note-accent">
             복습 예정 {stats ? stats.due_today_count : "-"}개
           </span>
-          <span className="vocab-hero-chip">
+          <span className="vocab-pinned-note">
             어려운 단어 {stats ? stats.hard_count : "-"}개
           </span>
         </div>
-        <div className="landing-hero-actions vocab-hero-actions-compact">
+        <div className="vocab-bookmark-actions">
           <button
             type="button"
+            className="vocab-bookmark-action vocab-bookmark-action-primary"
             onClick={onStudySelectedDeck}
             disabled={selectedDeckId === "all" || selectedDeckId === ""}
             title={
@@ -383,13 +384,17 @@ export function VocabSection({
           >
             <CardsIcon className="button-icon" />이 덱 학습하기
           </button>
-          <button type="button" className="secondary-button" onClick={onGoToReading}>
+          <button
+            type="button"
+            className="vocab-bookmark-action"
+            onClick={onGoToReading}
+          >
             <BookIcon className="button-icon" />
             원문 읽기
           </button>
           <button
             type="button"
-            className="ghost-button compact-button vocab-hero-more-toggle"
+            className="vocab-bookmark-action-toggle"
             onClick={() => setIsMoreActionsOpen((value) => !value)}
             aria-expanded={isMoreActionsOpen}
           >
@@ -402,10 +407,10 @@ export function VocabSection({
           </button>
         </div>
         {isMoreActionsOpen ? (
-          <div className="vocab-hero-more-menu">
+          <div className="vocab-bookmark-more">
             <button
               type="button"
-              className="ghost-button compact-button"
+              className="vocab-bookmark-action"
               onClick={onGoToStudyToday}
             >
               <CardsIcon className="button-icon" />
@@ -413,7 +418,7 @@ export function VocabSection({
             </button>
             <button
               type="button"
-              className="ghost-button compact-button"
+              className="vocab-bookmark-action"
               onClick={onGoToShared}
             >
               <BookshelfIcon className="button-icon" />
@@ -421,7 +426,7 @@ export function VocabSection({
             </button>
             <button
               type="button"
-              className="ghost-button compact-button"
+              className="vocab-bookmark-action"
               onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
             >
               {isNewVocabFormOpen ? "단어 추가 닫기" : "+ 단어 직접 추가"}
@@ -433,7 +438,7 @@ export function VocabSection({
                 맞춘 뒤 위 useEffect가 실제 내용으로 스크롤해 준다. */}
             <button
               type="button"
-              className="ghost-button compact-button"
+              className="vocab-bookmark-action"
               onClick={() => {
                 setIsManagementOpen(true);
                 setIsCustomTermManagerOpen(true);
@@ -443,7 +448,7 @@ export function VocabSection({
             </button>
             <button
               type="button"
-              className="ghost-button compact-button"
+              className="vocab-bookmark-action"
               onClick={() => setIsManagementOpen((open) => !open)}
               aria-expanded={isManagementOpen}
             >
@@ -516,7 +521,7 @@ export function VocabSection({
                 key={option.value}
                 type="button"
                 className={`vocab-filter-chip${isActive ? " vocab-filter-chip-active" : ""}${
-                  isActive && colorClass ? ` ${colorClass}` : ""
+                  colorClass ? ` ${colorClass}` : ""
                 }`}
                 aria-pressed={isActive}
                 onClick={() => onStatusFilterChange(option.value)}
@@ -527,7 +532,7 @@ export function VocabSection({
           })}
           <button
             type="button"
-            className={`vocab-filter-chip${dueOnly ? " vocab-filter-chip-active" : ""}`}
+            className={`vocab-filter-chip vocab-filter-due${dueOnly ? " vocab-filter-chip-active" : ""}`}
             aria-pressed={dueOnly}
             onClick={() => onDueOnlyChange(!dueOnly)}
           >
@@ -760,7 +765,7 @@ export function VocabSection({
           65). selectedItem is only non-null once expandedItemIds still
           has it -- collapsing a row on desktop falls back to idle for
           free, no extra bookkeeping needed. */}
-      <aside className="vocab-notebook-detail">
+      <aside className="vocab-notebook-detail paper-corner">
         {(() => {
           const selectedItem =
             selectedItemId !== null && expandedItemIds.has(selectedItemId)

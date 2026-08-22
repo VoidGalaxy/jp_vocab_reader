@@ -4216,3 +4216,154 @@ still references it.
 
 **Next phase candidates:** Phase 149 (Reading Selected Strip
 Visibility), per the rebuild plan's suggested order.
+
+## Phase 149 -- Vocab Full Reconstruction / Physical Index Correction
+
+Phase 149 is a correction phase, not the next item on the rebuild
+plan's suggested order (that was Reading Selected Strip Visibility --
+deferred). Real 1280/1024 screenshots of Phase 146's Vocab tab showed
+it landing far short of "index tabbed notebook": the physical-tab
+sprite's longest labels still brushed its decorative ring, the top of
+the screen still read as a boxed admin panel (stat-pill chip row + a
+row of full gradient CTA buttons), and the detail column's stretched
+photo crop looked like a decoration bolted onto an otherwise plain
+white column, not a page of the same notebook as the list next to it.
+The brief explicitly permitted abandoning both photographed-asset
+techniques in favor of a more robust CSS-built structure, and this
+phase does exactly that.
+
+**Removed/replaced (per the phase brief's own request, listed
+first):**
+- **`.vocab-hero-card` boxed hero** (`panel-card-header` + a
+  `vocab-hero-chip-row` of rounded stat pills + a `landing-hero-actions`
+  row of full-gradient webapp buttons) -- gone. Replaced by
+  `.vocab-notebook-header`: the same title/subtitle, `.vocab-pinned-notes`
+  (small paper tags pinned at a slight alternating rotation, reusing the
+  washi-tape `rgba(217,122,74,...)` accent `.vocab-page-guide` already
+  established), and `.vocab-bookmark-actions` (small notched bookmark-flag
+  labels for 이 덱 학습하기/원문 읽기, reusing the same right-notch
+  clip-path `.vocab-item-status-wrap` already established elsewhere in
+  the brand system, not a new shape).
+- **Phase 145's `vocab-physical-index-tabs.webp` sprite** -- dropped
+  entirely (no longer referenced anywhere in `globals.css`). Its
+  per-chip fixed 172px width was the actual root cause of the label/ring
+  overlap the brief flagged as a correction target, not a minor
+  cosmetic detail: a raster crop has no way to grow with a long Korean
+  label. Replaced with real CSS-built tabs (flat status-tinted fill,
+  `width: 100%` of a widened, fluid rail column) that structurally
+  cannot run out of room.
+- **Phase 129's `vocab-ring-notebook-spread-web.webp` crop behind the
+  detail column** (`background-size: 260% auto`) -- dropped. Replaced
+  with the exact same flat `var(--paper-bg)` + repeating-rule-line +
+  red-margin-line recipe now shared with the list column, so the two
+  columns read as two pages of one notebook instead of "photo column"
+  next to "plain column."
+- The middle list column's previously bare flat tone (no texture at
+  all, the actual "흰 배경 위에 대충" complaint) -- given the same
+  ruled-line + margin-rule background as the detail column.
+
+**New structure:**
+- `.vocab-notebook-header`: unboxed title, pinned-note stat tags,
+  bookmark-flag actions -- see removals above.
+- Left rail (`.vocab-notebook-index`): widened
+  (`minmax(178px,210px)`, was `minmax(150px,190px)`) so real CSS tabs
+  have genuine surface area; each tab is `width: 100%` with a
+  status-tinted flat fill (resting) or a deep solid fill (active,
+  `.vocab-filter-chip-active`), rounded on its protruding outer corner,
+  square on the spine-side inner corner. `VocabSection.tsx` now applies
+  each status's color class regardless of active state (was
+  active-only), so tabs are color-coded even at rest. A small
+  ring/rivet mark (`::after`) sits inside a reserved 28px right-padding
+  gutter on every tab -- structurally incapable of touching the label
+  text at any label length, unlike the old per-chip pixel math.
+- Middle list (`.vocab-notebook-pages`): unchanged dense
+  `.vocabulary-index-row` list (scan-first, per the brief), now sitting
+  on the shared ruled-paper texture instead of bare flat color.
+- Right detail (`.vocab-notebook-detail`, now also `.paper-corner` in
+  JSX): same ruled-paper/margin-rule tone as the list, plus the
+  existing sticky positioning and wire-paperclip pseudo-elements
+  (unchanged, already lightweight CSS, not image-based).
+
+**Two real-browser regressions found and fixed during QA, not just
+declared clean from source reading:**
+1. Widening the rail to `minmax(196px,248px)` (first attempt) starved
+   the middle column at 1024px specifically -- CSS Grid gives
+   `minmax(min,max)` tracks their max before handing leftover space to
+   the `1fr` track, so the rail ate space the list column needed,
+   wrapping "저장된 단어장" into 3 lines and clipping the "복습 예정"
+   chip. Fixed by re-measuring actual column widths via
+   `getBoundingClientRect()` (not guessing) and settling on
+   `minmax(178px,210px)` rail / `minmax(250px,300px)` detail, plus a
+   narrow scoped `.vocab-notebook-pages .result-heading { flex-wrap:
+   wrap }` (button drops to its own line before the title text wraps --
+   `.result-heading` itself is shared with other tabs and was left
+   untouched).
+2. The bookmark-flag `clip-path` notch used a percentage point (`88%`),
+   which scales with element width -- harmless at a normal button
+   width, but on mobile where `.vocab-bookmark-action-primary` goes
+   full-width (`width: 100%` under the app's existing 640px touch-target
+   rule) it turned into a huge arrow spanning much of the button.
+   Fixed by switching the notch to a fixed-pixel offset
+   (`calc(100% - 16px)`) so the shape reads the same small flag at any
+   width.
+
+**Functionality/API/SRS/storage:** unchanged. deck picker, search,
+status filter, sort, due-only filter, row expand/detail selection,
+meaning edit, meaning report, status update, delete, deck
+management/share/custom-term/import/export, and the Reading/Study nav
+callbacks are all the same handlers wired to the same props -- only two
+small, additive JSX changes touched behavior-adjacent code: the status
+filter chips now always carry their color class (was active-only, a
+CSS-only visual change) and the due-only chip gained a
+`vocab-filter-due` class for its own resting tint.
+
+**Verified via headless Chrome (Windows-native, CDP) against a local
+sqlite dev database** (`backend/vocab.db`, the dev-mode auto-user's
+"리제로" deck, 5 items across known/uncertain/unknown, seeded by an
+earlier phase -- not the Neon production database):
+- **Desktop (1280/1024):** zero old-hero/sprite remnants
+  (`.vocab-hero-card` absent, zero requests to either dropped asset
+  file), 6 status tabs render at their full color-coded width with the
+  longest label ("완벽히 아는 단어") sitting well clear of its ring
+  mark, deck picker switches decks, search "가" cut 5 rows to 1, the
+  known-status tab filtered to 2 rows and moved its own active
+  highlight, sort fired the expected request, row expand populated the
+  right-hand detail page (not a separate idle image), meaning-edit
+  form opened, delete button hit-test-confirmed reachable (not
+  clicked), zero `scrollWidth`/`clientWidth` mismatch at either width,
+  zero console errors/warnings, zero failed network requests.
+- **Mobile (390/375/320):** zero overflow mismatch at all three
+  widths, status filter row stays its original flat `flex-direction:
+  row` chip layout (untouched), row expand/meaning-edit-form-open/
+  delete-reachability all confirmed via DOM state and a scrolled
+  screenshot, primary bookmark action's fixed-pixel notch confirmed
+  small and consistent (not the runaway-arrow regression above), zero
+  console errors, zero failed requests.
+
+`npm run build` clean (fresh `.next`, dev server stopped first per this
+project's WSL/Windows build-vs-dev conflict note), `git diff --check`
+clean.
+
+**Files changed:** `frontend/components/VocabSection.tsx`,
+`frontend/app/globals.css`, this file.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (structural-removal confirmation, real
+deck/search/filter/sort/expand/meaning-edit/delete-reachability
+interaction QA, two real regressions found and fixed via
+`getBoundingClientRect()` measurement rather than assumption) all
+passed with zero console errors and zero failed requests.
+
+**Remaining risk:** `vocab-physical-index-tabs.webp` and the desktop
+per-column use of `vocab-ring-notebook-spread-web.webp` are now both
+unreferenced in `globals.css` (left in place, matching this project's
+"note, don't silently clean up" convention rather than deleting
+assets outside this phase's explicit scope). The `.result-heading`
+button-wraps-first fix is scoped to `.vocab-notebook-pages` only and
+was not applied to the equivalent shared heading on other tabs, since
+none of them were reported as broken and widening this fix's blast
+radius wasn't asked for.
+
+**Next phase candidates:** Phase 150 (Reading Selected Strip
+Visibility), continuing the rebuild plan's suggested order now that
+this correction phase is resolved.
