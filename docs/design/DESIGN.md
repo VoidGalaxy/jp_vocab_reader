@@ -3861,3 +3861,177 @@ column.
 
 **Next phase candidates:** Phase 147 (Deck Mini Bookshelf
 Reconstruction), per the rebuild plan's suggested order.
+
+## Phase 147 -- Deck Mini Bookshelf Reconstruction
+
+Phase 147 rebuilds the Deck tab's shared-deck cards against
+`deck-cute-cover-tile-atlas.webp`, replacing the old large solid-color
+cover band with a real 10-cell cute cover atlas (5 cols x 2 rows) and
+shrinking the whole grid so decks read as a shelf of small books,
+matching the mockup board's Deck panel, instead of a grid of wide
+color-blocked cards.
+
+The atlas swap uncovered a real, pre-existing cascade bug rather than a
+new one introduced by this phase: `BrandDeckCover` puts both
+`brand-deck-cover` and a bare tone/level class (`jlpt-level-n5` etc.) on
+the same div, and this exact bare class name is *also* used, completely
+unrelated, by the small JLPT badge tag elsewhere on the same card
+(`.jlpt-level-tag.jlpt-level-n5`). That badge's own rule --
+`.jlpt-level-n5 { background: #a98a5c; }` -- uses the `background`
+shorthand, which resets every other `background-*` longhand (image,
+size, position) to its initial value for *any* element carrying that
+bare class, cover div included. Both this rule and the base
+`.brand-deck-cover { background-image: url(...); }` rule sit at the
+same (0,1,0) specificity, so the winner was whichever came later in the
+file -- the badge rule, as it happens, which silently zeroed out the
+cover's background-image/size on every JLPT-tier card. Confirmed via
+computed style before any visual fix was attempted (`background-image:
+none`, `background-size: auto`, while `.brand-deck-cover.jlpt-level-n5`'s
+own `background-color` fallback was still visibly painting flat color).
+This collision predates this phase -- the old Phase 128 photo atlas used
+the identical class-naming/selector shape and would have hit the same
+bug, meaning the "photographed cover" almost certainly never actually
+rendered even before this phase touched the file. Fixed by having the
+compound `.brand-deck-cover.jlpt-level-n5` (etc.) selectors -- (0,2,0)
+specificity, so they win regardless of source order -- redeclare
+`background-image`/`background-repeat`/`background-size` themselves
+instead of relying on inheritance from the lower-specificity base rule.
+`.brand-deck-cover-mine`/`-shared` were never affected (those class
+names don't collide with anything else).
+
+The atlas's 10 cells map cleanly to a standard N-cell sprite formula
+since the atlas is exactly 1536x1024px over a 5x2 grid (each cell is
+exactly 1/5 the width, 1/2 the height): `background-size: 500% 200%`,
+and cell (row r, col c) sits at `background-position: (c/4)*100%
+(r/1)*100%`. The existing 7 tone/level variants (JLPT N5-N1, "내가
+공유함", "공유 덱") were mapped onto 7 of the 10 cells -- N5 through N1
+walk left-to-right across the atlas's top row (green -> cream -> coral
+-> blue -> purple) so the ramp still reads as one ordered sequence the
+way the old flat-color gradient did, just with real cover art; "내가
+공유함"/"공유 덱" each got their own distinct bottom-row cell (mint,
+gold) instead of reusing a JLPT tile, since the atlas has 3 cells to
+spare. `background-color` on every variant is a same-family flat
+fallback sampled directly from each chosen tile's fabric, for the case
+the atlas fails to load.
+
+Card/grid density: `.shared-deck-grid`'s column minimum shrank from
+280px to 148px (desktop) so far more decks fit per shelf row;
+`.shared-deck-card`'s own padding dropped from 16px to 12px and
+`.brand-deck-cover`'s aspect-ratio changed from 335:405 (~0.83:1, close
+to square) to the atlas's native 3:5 (a real portrait book-cover
+ratio) -- together these are what make a resting card actually read as
+a small book rather than a scaled-down version of the old wide card.
+Title/count/imported/JLPT-badge/description were all demoted in place
+(font-size only, scoped to `.shared-deck-card` so the opened detail
+panel's own larger heading is untouched) to read as a small book-label
+under the cover instead of competing with it for attention, matching
+the brief's "낮은 위계" instruction. Buttons (owner cards can show up to
+3: 상세 보기/가져오기/공유 취소) were left at their existing
+`.compact-button` size and `.row-actions`'s existing `flex-wrap: wrap`
+was relied on rather than shrunk further -- at ~150-180px card width
+they now wrap onto 2 lines instead of staying on one, which is a
+visible layout change but not a functional one (every button keeps its
+full tap target), and was judged preferable to shrinking already-small
+touch targets just to keep a stale one-line layout.
+
+Mobile needed its own fix, not just a smaller version of the desktop
+number: a single forced column (`grid-template-columns: 1fr`, unchanged
+since long before this phase) combined with the new 3:5 cover ratio
+made a full-width mobile card's cover balloon to roughly 500-600px
+tall -- one oversized portrait image per row, arguably a bigger miss of
+"작은 책들이 꽂힌 책장" than the "cards too small" risk the brief
+explicitly names. Measuring the grid's own available width at each
+tested mobile breakpoint (not assumed) showed why a single minmax
+threshold didn't just work everywhere: 390px and 375px viewports leave
+the grid ~300-320px wide (comfortable for two ~150px columns at almost
+any reasonable minimum), but 320px leaves only ~248px -- page/detail
+padding eats more of the viewport proportionally at the narrowest width
+this phase tests, so a minimum higher than ~124px collapses back to one
+column there specifically. Settled on `minmax(110px, 1fr)`, verified via
+computed `grid-template-columns` to actually produce two columns at
+320/375/390px (119px/147px/154px respectively), not just assumed from
+the CSS. The existing `.shared-deck-section .shared-deck-card { width:
+100% }` mobile override needed no change -- it already means "100% of
+this grid cell," not "100% of the page," so it automatically shrank
+along with the new column count.
+
+**Actually removed/weakened:** the old large solid-color/photo cover
+band at 335:405 (~0.83:1) aspect ratio, full negative-margin bleed onto
+a ~280-340px-wide card -- replaced by the small 3:5 atlas-cover
+treatment above; the oversized title (16px -> 12px), meta badges (12px
+-> 10-11px), and description (unclamped size -> 11px) that used to read
+as primary card content now read as a quiet label under the cover; the
+single-column forced mobile grid that produced one oversized cover per
+screen.
+
+**Atlas tile mapping:** N5=row0/col0 (green), N4=row0/col1 (cream),
+N3=row0/col2 (coral), N2=row0/col3 (blue), N1=row0/col4 (purple),
+mine=row1/col2 (mint), shared=row1/col3 (gold) -- see the CSS comment
+above `.brand-deck-cover.jlpt-level-n5` for the exact formula and the
+cascade-bug writeup.
+
+**Desktop (1280/1024):** verified via headless Chrome (Windows-native,
+CDP) against two seeded accounts (an owner with a published JLPT-titled
+deck, a published non-JLPT deck, and an unpublished deck; a subscriber
+who imported one deck and left the JLPT deck un-imported). Zero
+`scrollWidth`/`clientWidth` mismatch at both widths, atlas image loads
+(`200`), zero console errors, real screenshots at both widths confirm
+cards now read as small books resting on the shelf with visible cover
+art (washi tape, ribbon, floral/label details from the atlas), not flat
+color blocks.
+
+**Mobile (390/375/320):** zero `scrollWidth`/`clientWidth` mismatch at
+all three widths, atlas image still loads correctly (decks need it on
+mobile too, unlike Phase 146's desktop-only index-tab sprite), zero
+console errors. Screenshots at all three widths confirm two book covers
+per row (not one oversized cover, not cards too small to read/tap) with
+title/count/badge/description/buttons all legible and buttons still
+individually reachable even where they wrap to two lines within a
+~110-155px-wide card.
+
+**Owner/newcomer/subscriber condition checks (real clicks, not just
+hit-tests):** as the owner, 상세 보기 opened the detail panel with the
+correct title and word list, then 닫기 closed it; 다시 공유하기 on the
+already-unpublished "중단될 덱" (through a real `window.confirm` dialog,
+auto-accepted via a `Page.javascriptDialogOpening` handler) flipped the
+card to show 공유 취소 and dropped the "공유 중단됨" badge, confirmed via
+a real API round-trip; 공유 취소 on the same deck immediately after
+flipped it back to its original unpublished state (다시 공유하기 +
+"공유 중단됨" badge again), so this test left the seed data exactly as
+it found it. As the subscriber, the not-yet-imported JLPT deck's 학습
+목록에 추가 button was clicked; afterward the card correctly shows 열기
+and the "학습 목록에 있음" badge, confirming a real import went through
+(not just a hit-test). One CDP-tooling lesson from this pass, not a
+product bug: the first click on a `window.confirm`-gated button (공유
+취소/다시 공유하기) hung the whole tab, since headless Chrome blocks
+the entire renderer main thread on a native dialog with nothing to
+answer it -- fixed by registering a `Page.javascriptDialogOpening` ->
+auto-accept listener before any such click, not by changing app code.
+
+**Functionality/API/SRS/storage/shared-deck logic:** unchanged. Every
+edit this phase was CSS-only inside `frontend/app/globals.css`; no
+`.tsx` file was touched, no button condition, handler, prop, or backend
+call was added, removed, or renamed -- the owner/newcomer/subscriber
+button matrix above is exactly the pre-existing logic, just visually
+smaller.
+
+`npm run build` clean, `git diff --check` clean.
+
+**Files changed:** `frontend/app/globals.css` only.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (desktop cover-art rendering, mobile two-column
+non-oversized layout, real owner/newcomer/subscriber interaction state
+changes) all passed with zero console errors and zero failed requests.
+
+**Remaining risk:** none identified specific to this phase's own
+changes. Worth flagging for whoever next touches `BrandDeckCover` or
+its bare tone/level class names: the cascade-bug fix here is scoped to
+`.brand-deck-cover`'s own compound selectors, not a rename of the
+colliding bare class names themselves (`jlpt-level-n5` etc. are still
+shared between the cover and the unrelated badge tag) -- a future rule
+added for either one, using the bare class without checking for this,
+could reintroduce the same class of bug.
+
+**Next phase candidates:** Phase 148 (Study Cute Board Reconstruction),
+per the rebuild plan's suggested order.

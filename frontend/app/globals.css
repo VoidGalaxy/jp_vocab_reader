@@ -6505,16 +6505,19 @@ input.reading-vocab-sticker-toggle:checked {
   }
 
   /* Phase 88 -- caps how wide a shelf card can stretch to fill its row.
-     .shared-deck-grid's base rule (further below) uses minmax(280px, 1fr),
-     which lets a lone deck in a sparse shelf balloon to the compartment's
-     full width; a fixed upper bound keeps every card close to its normal
-     book-cover proportions regardless of how many decks are on the shelf,
-     so a 1-2 deck row sits at a believable size next to the new plank
-     texture/bookend filling the rest of the compartment instead of one
-     oversized tile. Matches both .shelf-section's grid and the ungrouped
-     fallback grid (same selector reaches both). */
+     .shared-deck-grid's base rule (further below) uses minmax(148px, 1fr)
+     as of Phase 147, which still lets a lone deck in a sparse shelf
+     balloon to the compartment's full width; a fixed upper bound keeps
+     every card close to its normal book-cover proportions regardless of
+     how many decks are on the shelf, so a 1-2 deck row sits at a
+     believable size next to the new plank texture/bookend filling the
+     rest of the compartment instead of one oversized tile. Phase 147
+     shrank both ends of the range (was 280-340px) to match the new small
+     book-cover treatment -- a real bookshelf holds many small books per
+     shelf, not 2-3 wide ones. Matches both .shelf-section's grid and the
+     ungrouped fallback grid (same selector reaches both). */
   .shared-library-scene .shared-deck-grid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 340px));
+    grid-template-columns: repeat(auto-fit, minmax(148px, 176px));
   }
 
   /* Loading/error/empty states keep the existing AppEmptyState look but
@@ -6615,12 +6618,16 @@ input.reading-vocab-sticker-toggle:checked {
 .shared-deck-grid {
   position: relative;
   display: grid;
-  /* 280px (not 260px) gives the 3-button owner-card footer ("상세 보기" /
-     "가져오기" / "공유 취소") more room to stay on one line, so owner cards
-     don't wrap to a visibly taller card than the 2-button ones next to
-     them. */
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 14px;
+  /* Phase 147 -- was minmax(280px, 1fr), sized around a full-height solid-
+     color cover band with a 3-button footer that needed room to stay on
+     one line. The new mini book-cover treatment (see .brand-deck-cover
+     below) is meant to read as a shelf of small books, not a grid of
+     wide cards, so this shrinks to fit far more per row; the owner
+     footer's buttons are allowed to wrap onto a second line at this width
+     (row-actions already wraps -- see .row-actions), which keeps every
+     touch target intact without forcing the card back to its old width. */
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 10px;
   padding-bottom: 18px;
 }
 
@@ -6658,12 +6665,17 @@ input.reading-vocab-sticker-toggle:checked {
 
 .shared-deck-card {
   display: grid;
-  gap: 10px;
+  gap: 6px;
   align-content: start;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--panel-bg);
-  padding: 16px;
+  /* Phase 147 -- was 16px, sized for a much larger card. Shrunk to 12px so
+     a whole row of these reads as small books close together on a shelf
+     rather than spaced-out cards; .brand-deck-cover's own -12px negative
+     margin below matches this exactly so the cover still bleeds flush to
+     the card's edges. */
+  padding: 12px;
   /* A soft inner shadow along the left edge reads as a book spine/gutter
      next to the cover band -- small addition to the existing drop shadow,
      no new element. */
@@ -6787,29 +6799,31 @@ input.reading-vocab-sticker-toggle:checked {
   transform: translateY(-1px);
 }
 
-/* Phase 128 -- was a thin (9px-padding) color ribbon across the card's top
-   edge; a real photographed book-cover atlas (shared-deck-cover-set-
-   candidate-web.webp, 5 covers) now fills the whole band instead, and the
-   band itself grows from a ribbon into an actual portrait book-cover
-   shape via `aspect-ratio` -- the photo is the card's dominant surface,
-   not a strip sitting above the "real" white card content. Still full-
-   bleed via the same negative-margin trick back out to .shared-deck-
-   card's own padding. `background-color` per tone/level modifier below is
-   a same-family flat-color fallback if the atlas ever fails to load (was
-   already each modifier's own gradient start color). `aspect-ratio` and
-   `background-size` are the shared crop geometry every modifier's
-   `background-position` picks a cell from -- see the atlas math note on
-   the level modifiers below. */
+/* Phase 147 -- was a real photographed cover atlas (shared-deck-cover-set-
+   candidate-web.webp, 5 covers) filling the same box this fills now, but
+   at a much larger card size (335:405, ~0.83:1, close to square) that
+   made the whole shelf-grid read as big color-blocked cards rather than
+   small books. Replaced with deck-cute-cover-tile-atlas.webp -- a 2-row,
+   5-column atlas of 10 small cute cover crops (see ASSET_MANIFEST.md) --
+   at a taller 3:5 portrait ratio that reads as an actual small book cover
+   standing on a shelf next to its neighbors, matching the mockup board's
+   Deck panel. `background-color` per tone/level modifier below is a
+   same-family flat-color fallback if the atlas ever fails to load.
+   `aspect-ratio`/`background-size` are the shared crop geometry every
+   modifier's `background-position` below picks a cell from -- standard
+   N-cell sprite math (atlas is 1536x1024px, 5 cols x 2 rows, so each cell
+   is exactly 1/5 the atlas width and 1/2 its height): background-size is
+   500% 200% (5x/2x the box), and a cell at column c (0-4), row r (0-1)
+   sits at background-position (c/4)*100% (r/1)*100%. */
 .brand-deck-cover {
   position: relative;
-  margin: -16px -16px 0;
-  aspect-ratio: 335 / 405;
+  margin: -12px -12px 0;
+  aspect-ratio: 3 / 5;
   overflow: hidden;
-  border-radius: 16px 16px 0 0;
-  background-image: url("/brand/decor/phase127/shared-deck-cover-set-candidate-web.webp");
+  border-radius: 12px 12px 0 0;
+  background-image: url("/brand/decor/phase145/deck-cute-cover-tile-atlas.webp");
   background-repeat: no-repeat;
-  /* 1399x933 atlas, ~335x405px per cover cell -> 1399/335 and 933/405. */
-  background-size: 417.6% 230.4%;
+  background-size: 500% 200%;
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
 }
 
@@ -6855,77 +6869,113 @@ input.reading-vocab-sticker-toggle:checked {
    not have on the cream cover. */
 .brand-deck-cover-tag {
   position: absolute;
-  left: 10px;
-  bottom: 10px;
+  left: 7px;
+  bottom: 7px;
   z-index: 1;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px 3px;
+  gap: 4px;
+  /* Phase 147 -- shrunk (was 4px 10px 3px / 11px / 13px icon) to match the
+     cover's own much smaller footprint at the new denser grid size; still
+     a small pinned mark, not a panel, so it stays legible rather than
+     dominating a book cover that may now be under 150px wide. */
+  padding: 3px 7px 2px;
   border-radius: 999px;
   background: rgba(28, 22, 12, 0.62);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
   color: #ffffff;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.01em;
 }
 
 .brand-deck-cover-icon {
   flex: 0 0 auto;
-  width: 13px;
-  height: 13px;
+  width: 10px;
+  height: 10px;
 }
 
-/* Tone/level modifiers -- each picks one cell out of the shared 5-cover
-   atlas via `background-position` (the shared base rule above already set
-   `background-size`/`aspect-ratio` to make each cell exactly fill the
-   cover box). Position percentages are solved from the atlas's actual
-   cell geometry (1399x933px, ~335x405px cells, see the base rule's
-   comment) with the standard CSS background-position formula
-   `offset% = cell_left_px / (atlas_px - cell_px) * 100`, not eyeballed --
-   confirmed by screenshot afterward. `background-color` is a flat same-
-   family fallback (the old gradient's start color) if the atlas fails to
-   load. The 5 photographed covers (sage green, cream, dusty blue, coral,
-   mustard) don't share one hue family the way the old N5->N1 gradient
-   ramp did -- a real shelf of books doesn't either -- so N5..N1 just each
-   get a distinct cover instead of a monochrome progression; "내가 공유함"/
-   "공유 덱" reuse two of the five rather than needing new photos, since
-   they never render in the same JLPT-level shelf row as their level-tier
-   double. */
+/* Tone/level modifiers -- each picks one cell out of the shared 10-cover
+   (5 col x 2 row) atlas via `background-position` (the shared base rule
+   above already sets `background-size: 500% 200%` so each cell exactly
+   fills the cover box). For an evenly-spaced N-cell sprite this reduces to
+   the simple `column / (columns - 1) * 100%` / `row / (rows - 1) * 100%`
+   form rather than the general per-pixel formula (5 cols -> 0/25/50/75/
+   100%, 2 rows -> 0/100%), confirmed by screenshot afterward.
+   `background-color` is a flat same-family fallback sampled from each
+   chosen tile's fabric if the atlas fails to load. N5..N1 walk left-to-
+   right across the atlas's top row (green -> cream -> coral -> blue ->
+   purple) so the ramp still reads as one ordered sequence like the old
+   gradient did, just with real cover art instead of flat color; "내가
+   공유함"/"공유 덱" each get their own distinct bottom-row tile (mint,
+   gold) rather than reusing a top-row JLPT tile, since the new atlas has
+   enough spare cells (10 total, only 7 needed) to give every tone its own
+   cover instead of borrowing one.
+
+   Bug found while implementing this phase: the JLPT badge tag elsewhere on
+   this same card (.jlpt-level-tag, further below) reuses these exact
+   bare "jlpt-level-n5".."jlpt-level-n1" class names for its own coloring,
+   and its rule (`.jlpt-level-n5 { background: #a98a5c; }`) uses the
+   `background` shorthand -- which resets background-image to `none` for
+   any element carrying that class, including this cover (BrandDeckCover
+   puts both `brand-deck-cover` and `jlpt-level-n5` on the same div). That
+   bare single-class selector has the same (0,1,0) specificity as this
+   file's base `.brand-deck-cover { background-image: url(...); }` rule,
+   so without deciding a winner explicitly here, whichever rule happens to
+   come later in the file wins the cascade for the background-image
+   property specifically (verified via computed style: it was losing,
+   silently rendering flat fallback color only, even before this phase's
+   atlas swap -- the exact same collision would have broken the old
+   Phase 128 photo atlas too). Fixed by having this compound selector
+   (0,2,0) redeclare background-image itself, which now unconditionally
+   outranks the bare badge selector regardless of source order. The same
+   shorthand-reset collision affects every other `background-*` longhand
+   too (confirmed via computed style: background-size was also silently
+   falling back to `auto`), so this redeclares every longhand the base
+   rule sets, not just background-image. */
+.brand-deck-cover.jlpt-level-n5,
+.brand-deck-cover.jlpt-level-n4,
+.brand-deck-cover.jlpt-level-n3,
+.brand-deck-cover.jlpt-level-n2,
+.brand-deck-cover.jlpt-level-n1 {
+  background-image: url("/brand/decor/phase145/deck-cute-cover-tile-atlas.webp");
+  background-repeat: no-repeat;
+  background-size: 500% 200%;
+}
+
 .brand-deck-cover.jlpt-level-n5 {
-  background-color: #a98a5c;
-  background-position: 48.87% 7.58%;
+  background-color: #83844f;
+  background-position: 0% 0%;
 }
 
 .brand-deck-cover.jlpt-level-n4 {
-  background-color: #7d9191;
-  background-position: 8.93% 7.58%;
+  background-color: #e9ae57;
+  background-position: 25% 0%;
 }
 
 .brand-deck-cover.jlpt-level-n3 {
-  background-color: #c9a23c;
-  background-position: 68.61% 93.75%;
+  background-color: #ba4b2e;
+  background-position: 50% 0%;
 }
 
 .brand-deck-cover.jlpt-level-n2 {
-  background-color: #c17550;
-  background-position: 28.2% 93.75%;
+  background-color: #8a9ab9;
+  background-position: 75% 0%;
 }
 
 .brand-deck-cover.jlpt-level-n1 {
-  background-color: #6f8fa6;
-  background-position: 88.35% 7.58%;
+  background-color: #c8a8c1;
+  background-position: 100% 0%;
 }
 
 .brand-deck-cover-mine {
-  background-color: #7d9191;
-  background-position: 8.93% 7.58%;
+  background-color: #89a086;
+  background-position: 50% 100%;
 }
 
 .brand-deck-cover-shared {
-  background-color: #6f8fa6;
-  background-position: 88.35% 7.58%;
+  background-color: #e3b557;
+  background-position: 75% 100%;
 }
 
 .shared-deck-meta-row {
@@ -6968,12 +7018,38 @@ input.reading-vocab-sticker-toggle:checked {
 /* Clamp to 2 lines so a long non-JLPT deck title ("내가 공유한 덱" cards
    don't share the JLPT cards' short "N5 추천 어휘" naming) doesn't add a
    second, independent source of card-height variance on top of the
-   description clamp below. */
+   description clamp below. Phase 147 -- font-size dropped from the shared
+   16px (still used by .shared-deck-detail h3) to 12px here specifically,
+   so the shelf card's title reads as a small book-label under the cover
+   instead of a heading competing with the cover art for attention; the
+   opened detail panel keeps the original larger heading untouched. */
 .shared-deck-card h3 {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  font-size: 12px;
+}
+
+/* Phase 147 -- demotes the shelf card's meta row (word-count/imported/JLPT
+   badges) and description to match the smaller book-cover/title above --
+   same badges the opened detail panel uses at their original size, scoped
+   down only inside the shelf card so this doesn't touch the detail
+   header. */
+.shared-deck-card .shared-deck-word-count-badge,
+.shared-deck-card .shared-deck-imported-badge,
+.shared-deck-card .shared-deck-status-badge {
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
+.shared-deck-card .jlpt-level-tag {
+  padding: 1px 7px;
+  font-size: 10px;
+}
+
+.shared-deck-card .shared-deck-description {
+  font-size: 11px;
 }
 
 /* Now composed on top of .info-strip (icon + quiet caption row) instead of
@@ -8613,7 +8689,6 @@ input.reading-vocab-sticker-toggle:checked {
   .study-control-panel,
   .study-hero-card,
   .study-card,
-  .shared-deck-card,
   .shared-deck-detail,
   .vocab-form-panel,
   .vocab-management-panel,
@@ -8621,6 +8696,15 @@ input.reading-vocab-sticker-toggle:checked {
   .panel-card {
     padding: 14px;
   }
+
+  /* Phase 147 -- .shared-deck-card removed from the shared 14px mobile
+     padding list above: the base (all-viewport) rule now already sets
+     12px to match the shrunk shelf-card size, which is smaller than this
+     block's 14px, so leaving it in would have grown the card back up
+     specifically at this breakpoint. Mobile still renders the grid
+     single-column (see .shared-deck-grid below), so the 12px base value
+     only affects the card's own inner spacing here, not how many fit per
+     row. */
 
   /* Top padding stays a touch taller than the shared 14px above so
      .shared-deck-detail-tape (added after this rule, so it wins) still has
@@ -8686,8 +8770,28 @@ input.reading-vocab-sticker-toggle:checked {
     font-size: 11px;
   }
 
+  /* Phase 147 -- was a single forced column (1fr). At the new 3:5 book-
+     cover ratio a single full-width mobile card makes the cover balloon
+     to ~500-600px tall (card width * 5/3), which reads as one oversized
+     portrait image per row rather than the "many small books" shelf this
+     phase is going for -- arguably a worse miss of the brief's intent
+     than the "cards too small" risk it explicitly asks to check for.
+     auto-fill with a minmax lower bound (see the exact px value and its
+     own comment just below) fits two book-covers per row at every mobile
+     width this phase tests (390/375/320), keeping each cover close to its
+     intended small size while .shared-deck-card's own width: 100% mobile
+     override (further below) still just means "100% of this grid cell",
+     not "100% of the page" -- so cards size to the cell, not the
+     viewport. */
   .shared-deck-grid {
-    grid-template-columns: 1fr;
+    /* 110px (not 128px) specifically so 320px-wide viewports still get two
+       columns -- .shared-deck-grid's own available width at 320px body
+       width measures ~248px (page/detail padding eats more of the
+       viewport proportionally at the smallest width this phase tests),
+       and 2*128px+gap would no longer fit there while 2*110px+gap does;
+       390/375px already had comfortable room for two 128px+ columns
+       before this adjustment and still do at 110px. */
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     gap: 10px;
     padding-bottom: 0;
   }
@@ -8730,13 +8834,11 @@ input.reading-vocab-sticker-toggle:checked {
     display: none;
   }
 
-  /* Matches .shared-deck-card's own 14px mobile padding (was 16px) so the
-     cover still bleeds exactly to the card's edges at this tier -- height
-     is no longer a fixed padding value (see the base rule's aspect-ratio),
-     so there is nothing else to shrink here. */
-  .brand-deck-cover {
-    margin: -14px -14px 0;
-  }
+  /* Phase 147 -- .shared-deck-card's mobile padding is now the same 12px
+     as its base (all-viewport) rule (no separate mobile override left, see
+     above), which already matches .brand-deck-cover's own base -12px
+     margin, so this mobile-only override is no longer needed and was
+     removed rather than left pointing at a stale -14px value. */
 
   .shared-detail-columns {
     grid-template-columns: 1fr;
