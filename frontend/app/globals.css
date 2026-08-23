@@ -3257,23 +3257,64 @@ select {
   line-height: 1.5;
 }
 
-/* Full stats-panel behind a native <details> toggle -- keeps the tab's
-   dominant real estate for the study-start flow while the full numbers
-   stay one tap away instead of disappearing entirely. */
-.study-stats-collapsible summary {
+/* study-board-tag-row / study-board-tag -- Phase 160. Was two plain
+   <details> rows, each summary a dashed-bottom-border line reading as a
+   settings-panel row on the page background above the felt board. Both
+   disclosures now render *inside* .study-board-scene (see
+   StudySection.tsx), so their closed state has to read as something
+   sitting on felt, not a settings list -- each summary is now a small
+   pinned paper tag (same rounded-cutout-plus-shadow family
+   .study-cta-button already established on this same board), and the row
+   holding both sits directly under the quick-start tiles as one more
+   pinned item on the board, not a control strip below it. */
+.study-board-tag-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 6px 4px 0;
+}
+
+.study-board-tag {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.study-board-tag > summary {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 2px 10px;
-  border-bottom: 1px dashed var(--border);
+  max-width: 100%;
+  padding: 8px 14px;
+  border-radius: 4px 14px 14px 14px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.16);
   cursor: pointer;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 700;
   list-style: none;
+  transform: rotate(-1deg);
+  transition:
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
 }
 
-.study-stats-collapsible summary::-webkit-details-marker {
+.study-board-tag:nth-child(2) > summary {
+  transform: rotate(1deg);
+}
+
+.study-board-tag > summary:hover {
+  transform: rotate(0deg) translateY(-1px);
+  box-shadow: 0 9px 18px rgba(120, 98, 40, 0.22);
+}
+
+.study-board-tag[open] > summary {
+  transform: rotate(0deg);
+}
+
+.study-board-tag > summary::-webkit-details-marker {
   display: none;
 }
 
@@ -3284,13 +3325,13 @@ select {
 
 .study-stats-collapsible summary:focus-visible,
 .study-options-collapsible summary:focus-visible {
-  border-radius: 10px;
   outline: 2px solid rgba(47, 100, 112, 0.32);
   outline-offset: 3px;
 }
 
 .study-stats-collapsible summary::before {
   content: "▸";
+  flex: 0 0 auto;
   color: var(--screen-accent, var(--border-strong));
 }
 
@@ -3298,15 +3339,14 @@ select {
   content: "▾";
 }
 
-/* Nested-only softening -- StatsPanel's own .stats-panel rule (shared with
-   nowhere else right now, but kept general-purpose) still gets its normal
-   card treatment; scoped here so only this disclosure's entrance loses the
-   boxed border/shadow and reads as continuing the board above it instead of
-   a second stacked card. */
+/* Opened, the stats panel keeps its normal bordered/shadowed card look
+   (StatsPanel's own .stats-panel rule, previously stripped down to a flat
+   fill "to continue the board above it" -- back when this disclosure sat
+   outside the board, that flattening made sense; now it's meant to read
+   as a small note that unfolded off the felt, so the border/shadow is
+   kept, just given room to sit clear of the tag above it). */
 .study-stats-collapsible .stats-panel {
-  margin-top: 12px;
-  border-color: transparent;
-  box-shadow: none;
+  margin-top: 10px;
 }
 
 /* "덱과 모드 직접 선택" used to sit open on the tab by default, right next
@@ -3317,14 +3357,8 @@ select {
 .study-options-collapsible summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 2px 10px;
-  border-bottom: 1px dashed var(--border);
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 600;
+  gap: 6px;
+  min-width: 0;
   list-style: none;
 }
 
@@ -3348,7 +3382,7 @@ select {
 .study-options-summary-hint {
   flex: 1 1 auto;
   min-width: 0;
-  text-align: right;
+  max-width: 150px;
   overflow: hidden;
   color: var(--muted);
   font-weight: 600;
@@ -3356,8 +3390,18 @@ select {
   white-space: nowrap;
 }
 
+/* Opened, the deck/mode picker is its own small note unfolded below the
+   tag -- same panel-bg card look .stats-panel keeps, given its own
+   surface now that it's not stripped flat to match a page-background
+   settings row that no longer exists. */
 .study-options-collapsible .study-control-panel {
-  margin-top: 12px;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.1);
+}
+
+.study-options-collapsible .study-control-panel-compact {
+  background: var(--panel-bg);
 }
 
 /* desk-surface -- the reusable "sitting on a desk, not bare page
@@ -3417,7 +3461,9 @@ select {
    photo if it fails to load. */
 .study-board-scene {
   position: relative;
-  padding: 28px 16px 30px;
+  display: grid;
+  gap: 16px;
+  padding: 22px 16px 30px;
   border-radius: 28px;
   background-color: #cfe6c2;
   background-image: url("/brand/decor/phase145/study-light-mint-felt-board.webp");
@@ -5803,18 +5849,20 @@ input.reading-vocab-sticker-toggle:checked {
    admin panel sitting above the tab's real content instead of a heading
    leading into it. Flattened to the same unboxed heading-strip recipe
    those phases used (a dashed bottom rule, no fill/border/shadow of its
-   own) -- title/progress/quick-start tabs now read as page content
-   leading into the mint board below, not a card floating above it. The
-   washi-tape strip (.study-hero-tape) existed specifically to look like
-   it was holding this card's corner down -- with no card left to hold
-   down, it was dropped rather than kept as orphaned decoration (see
-   Phase 145's identical call on Home's old elastic-strap SVG). */
-.study-hero-card {
+   own).
+   Phase 160 -- renamed from .study-hero-card (also dropped the dashed
+   bottom rule): that rule existed specifically to mark "content ends here,
+   the felt board begins below" -- now this heading is itself rendered
+   *inside* .study-board-scene (see StudySection.tsx), so there is no
+   board below it to separate from. Title/progress/quick-start tiles read
+   as the board's own top content, continuous with everything under them,
+   not a header sitting above a separate surface. */
+.study-board-header {
   position: relative;
+  z-index: 1;
   display: grid;
   gap: 12px;
-  padding: 4px 2px 16px;
-  border-bottom: 1px dashed var(--paper-border);
+  padding: 6px 4px 4px;
 }
 
 .study-hero-header {

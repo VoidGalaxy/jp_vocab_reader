@@ -179,13 +179,18 @@ const ratingButtons: Array<{
   },
 ];
 
-// "오늘의 복습 준비" hero -- the one card the tab wants seen first. Each
-// quick-start tile already shows its own count (오늘 복습/새 단어/어려운
-// 단어/전체), so a separate stat-dashboard strip above it would just repeat
-// the same numbers twice; the only number that isn't already on a tile is
-// "오늘 완료", folded in here as a single compact progress line instead of
-// its own stat-grid section.
-function StudyQuickStartHero({
+// Phase 160 -- Study v2 Board Unity. Was StudyQuickStartHero, its own
+// <section className="study-hero-card"> sitting above .study-board-scene
+// on the plain page background -- a heading/progress/quick-start cluster
+// followed, two DOM levels down, by a visually separate felt board. This
+// is no longer a section of its own: it's a plain fragment of content
+// meant to be rendered *inside* .study-board-scene by the caller below, so
+// the heading, progress line, and pinned quick-start tiles are physically
+// part of the same board surface as everything else on this tab. Every
+// class the quick-start tiles already used (.study-cta-grid/-button, the
+// per-tile pin/rotation) is untouched -- that pinned-memo language already
+// worked, it was just rendered in the wrong place.
+function StudyBoardQuickStart({
   stats,
   onQuickStart,
   onGoToVocab,
@@ -201,7 +206,7 @@ function StudyQuickStartHero({
   const percent = total > 0 ? Math.min(Math.round((completed / total) * 100), 100) : 0;
 
   return (
-    <section className="study-hero-card">
+    <div className="study-board-header">
       <div className="study-hero-header">
         <CardsIcon className="study-hero-icon" />
         <div>
@@ -258,7 +263,7 @@ function StudyQuickStartHero({
           어휘 노트 보기
         </button>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -374,102 +379,118 @@ export function StudySection({
 
   return (
     <section className="tab-panel study-panel" aria-live="polite">
+      {/* Phase 160 -- Study v2 Board Unity. Every prior Study pass (66's
+          felt board, 148's light-mint rework, 153's box removal) still
+          left the quick-start hero and the 학습 옵션/학습 현황 disclosures
+          as their own elements on the plain page background, one full DOM
+          level above .study-board-scene -- so the first viewport always
+          read as "controls on top, board underneath," no matter how much
+          each individual piece was de-boxed. There is only one board now:
+          .study-board-scene wraps the quick-start header, both
+          disclosures, the inline message, and every ready/empty/active/
+          complete state, so everything on this tab is physically part of
+          the same felt surface. See globals.css for how the disclosures
+          were restyled from settings rows into small pinned tags to match
+          that surface. */}
+      <div className="study-board-scene">
       {!isReviewingActive ? (
         <>
-          <StudyQuickStartHero
+          <StudyBoardQuickStart
             stats={stats}
             onQuickStart={onQuickStart}
             onGoToVocab={onGoToVocab}
             onGoToReading={onGoToReading}
           />
 
-          <details className="study-options-collapsible">
-            <summary>
-              <span className="study-options-summary-label">학습 옵션</span>
-              <span className="study-options-summary-hint">
-                {selectedDeckName} · {modeLabel}
-              </span>
-            </summary>
+          <div className="study-board-tag-row">
+            <details className="study-board-tag study-options-collapsible">
+              <summary>
+                <span className="study-options-summary-label">학습 옵션</span>
+                <span className="study-options-summary-hint">
+                  {selectedDeckName} · {modeLabel}
+                </span>
+              </summary>
 
-            <div className="study-control-panel study-control-panel-compact">
-              <div className="study-control-footer">
-                <label className="inline-field">
-                  학습 모드
-                  <select
-                    value={studyMode}
-                    onChange={(event) =>
-                      onStudyModeChange(event.target.value as StudyMode)
-                    }
+              <div className="study-control-panel study-control-panel-compact">
+                <div className="study-control-footer">
+                  <label className="inline-field">
+                    학습 모드
+                    <select
+                      value={studyMode}
+                      onChange={(event) =>
+                        onStudyModeChange(event.target.value as StudyMode)
+                      }
+                    >
+                      {/* 퀵스타트로 진입한 new/recent 모드도 select가 현재 상태를
+                          그대로 보여줄 수 있도록 옵션을 하나 덧붙인다. */}
+                      {selectableStudyModes.some((mode) => mode === studyMode) ? null : (
+                        <option value={studyMode}>{studyModeLabels[studyMode]}</option>
+                      )}
+                      {selectableStudyModes.map((mode) => (
+                        <option key={mode} value={mode}>
+                          {studyModeLabels[mode]} ({studyModeCounts[mode]}개)
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="inline-field">
+                    학습 덱
+                    <select
+                      value={selectedDeckId}
+                      onChange={(event) => onSelectedDeckChange(event.target.value)}
+                    >
+                      <option value="all">전체 단어장</option>
+                      {decks.map((deck) => (
+                        <option key={deck.id} value={String(deck.id)}>
+                          {deck.name}
+                        </option>
+                      ))}
+                      {sharedDeckOptions.length > 0 ? (
+                        <optgroup label="학습 목록">
+                          {sharedDeckOptions.map((deck) => (
+                            <option key={deck.id} value={deck.id}>
+                              {deck.title}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ) : null}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="study-start-button"
+                    onClick={onStart}
+                    disabled={isLoading}
                   >
-                    {/* 퀵스타트로 진입한 new/recent 모드도 select가 현재 상태를
-                        그대로 보여줄 수 있도록 옵션을 하나 덧붙인다. */}
-                    {selectableStudyModes.some((mode) => mode === studyMode) ? null : (
-                      <option value={studyMode}>{studyModeLabels[studyMode]}</option>
+                    {isLoading ? (
+                      "불러오는 중..."
+                    ) : (
+                      <>
+                        <CardsIcon className="button-icon" />
+                        학습 시작
+                      </>
                     )}
-                    {selectableStudyModes.map((mode) => (
-                      <option key={mode} value={mode}>
-                        {studyModeLabels[mode]} ({studyModeCounts[mode]}개)
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="inline-field">
-                  학습 덱
-                  <select
-                    value={selectedDeckId}
-                    onChange={(event) => onSelectedDeckChange(event.target.value)}
-                  >
-                    <option value="all">전체 단어장</option>
-                    {decks.map((deck) => (
-                      <option key={deck.id} value={String(deck.id)}>
-                        {deck.name}
-                      </option>
-                    ))}
-                    {sharedDeckOptions.length > 0 ? (
-                      <optgroup label="학습 목록">
-                        {sharedDeckOptions.map((deck) => (
-                          <option key={deck.id} value={deck.id}>
-                            {deck.title}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ) : null}
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  className="study-start-button"
-                  onClick={onStart}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    "불러오는 중..."
-                  ) : (
-                    <>
-                      <CardsIcon className="button-icon" />
-                      학습 시작
-                    </>
-                  )}
-                </button>
+                  </button>
+                </div>
+                {isSharedDeckSelected ? (
+                  <p className="muted-text study-shared-stats-hint">
+                    공유덱 전용 통계는 아직 지원하지 않아, 위 학습 모드 옆 숫자는 전체
+                    단어장 기준이에요.
+                  </p>
+                ) : null}
               </div>
-              {isSharedDeckSelected ? (
-                <p className="muted-text study-shared-stats-hint">
-                  공유덱 전용 통계는 아직 지원하지 않아, 위 학습 모드 옆 숫자는 전체
-                  단어장 기준이에요.
-                </p>
-              ) : null}
-            </div>
-          </details>
+            </details>
 
-          <details className="study-stats-collapsible">
-            <summary>학습 현황 자세히 보기</summary>
-            <StatsPanel
-              title="학습 현황"
-              stats={stats}
-              isLoading={isStatsLoading}
-              message={statsMessage}
-            />
-          </details>
+            <details className="study-board-tag study-stats-collapsible">
+              <summary>학습 현황 자세히 보기</summary>
+              <StatsPanel
+                title="학습 현황"
+                stats={stats}
+                isLoading={isStatsLoading}
+                message={statsMessage}
+              />
+            </details>
+          </div>
         </>
       ) : null}
 
@@ -477,24 +498,6 @@ export function StudySection({
         <p className={`message message--${messageTone}`}>{message}</p>
       ) : null}
 
-      {/* Casual Sticker Reader (Phase 66) -- study-board-scene: every
-          "focused single card" state (ready/empty/active/complete) sits on
-          one deep-green felt board instead of a light desk tint (reuses the
-          same --notebook-cover tokens Home's cover already uses -- see
-          docs/design/DESIGN.md). Active/complete additionally sit inside
-          .study-card-stack, which layers 2 real backing-sheet elements
-          behind the current card so review reads as flipping through a
-          pile of cards, not a single card centered on a page.
-          Phase 153 -- ready/empty no longer share .study-card/.hero-card
-          (the full 640px-wide, 28px-padded, bordered flashcard shell) --
-          a real screenshot showed that shell used for a one-line "학습할
-          단어를 불러오세요" guidance message reading as a big stiff white
-          box sitting on the board, not a note pinned to it. .study-board-
-          note (globals.css) is a small, rotated, unbordered paper note
-          instead -- still part of the same board world, just sized for
-          what it actually says instead of borrowing the active card's
-          full flashcard footprint. */}
-      <div className="study-board-scene">
       {!hasStarted && !currentItem && !isComplete ? (
         <div className="study-card-stack-stage">
           <AppEmptyState

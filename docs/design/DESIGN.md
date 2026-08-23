@@ -6210,3 +6210,221 @@ audit specifically on Home once this lands, the same close-the-loop
 step recommended for Shared Deck in Phase 158. Otherwise the existing
 queue holds: Shared Deck card-shape rework (Phase 158's own next-step),
 then Study ready-state board unity, then Stats scene texture.
+
+## Phase 160 -- Study v2 Board Unity / One Felt Board Scene
+
+Phase 66 introduced the felt board, Phase 148 lightened it, Phase 153
+de-boxed the quick-start tiles and the ready/empty note into pinned-
+memo/paper-note language -- but none of those passes ever questioned
+where `.study-board-scene` actually started in the DOM. It always
+began right before the ready/empty/active/complete states; the
+quick-start hero and the 학습 옵션/학습 현황 disclosures rendered as
+siblings *above* it, on the plain page background. Every individual
+piece looked right in isolation (Phase 153 in particular already made
+the quick-start tiles and the ready note read as genuinely pinned
+objects), but the actual DOM boundary meant the tab was always
+"controls, then a board," regardless of how good each half looked on
+its own -- exactly the split this phase's brief names directly. This
+phase moves the boundary, not the decoration.
+
+**Removed:**
+- **The DOM boundary itself** -- `.study-board-scene` used to open
+  right before the ready-state block; it now opens as the very first
+  child of `.study-panel`, wrapping the quick-start header, both
+  disclosures, the inline message, and every ready/empty/active/
+  complete state in one element. This is the actual fix; everything
+  else in this phase is downstream of it.
+- **`.study-hero-card`'s dashed bottom border** -- existed specifically
+  to mark "page content ends here, the board begins below." With the
+  heading now rendered *inside* the board, there is no seam left to
+  mark, so the rule (and the class name, renamed to `.study-board-
+  header`) is gone.
+- **Both disclosure summaries' settings-row look** (`border-bottom: 1px
+  dashed`, full-width flex row, no surface of its own) -- read as
+  settings-panel rows when they sat on the plain page background above
+  the board; now that they're rendered on felt, that treatment would
+  have been invisible-to-illegible depending on contrast. Replaced with
+  small pinned paper tags (see below).
+- **The disclosures' flattened-open-panel styling** (`.study-stats-
+  collapsible .stats-panel`'s border/shadow stripped to nothing, "to
+  continue the board above it") -- that flattening made sense when the
+  disclosure sat on a plain page background transitioning into a board;
+  now that the closed tag itself sits on felt, the *opened* panel is
+  supposed to read as a small note that unfolded off the board, which
+  needs its own border/shadow to read as a distinct surface, not a
+  flattened extension of the felt.
+
+**New one-board-scene silhouette:** `.study-board-scene` is the only
+board on the tab, and it now holds everything: `.study-board-header`
+(icon/title/subtitle, the compact progress bar, the four pinned
+`.study-cta-button` quick-start tiles -- untouched, they already read
+as pinned memos, just relocated -- and the two quiet secondary links),
+`.study-board-tag-row` (the two disclosures, now small rotated paper
+tags), the inline message if any, and then whichever of ready/empty/
+active/complete state applies. Every one of those pieces sits on the
+same `study-light-mint-felt-board.webp` texture, in one continuous
+`display: grid` flow with no nested "settings area."
+
+**How quick-start was integrated into the board:** `StudyQuickStartHero`
+(a `<section className="study-hero-card">` rendered as a sibling above
+the board) became `StudyBoardQuickStart`, a plain fragment returning
+`<div className="study-board-header">` -- no section wrapper, no
+boxed/bordered chrome of its own, meant to be rendered as the first
+child inside `.study-board-scene` by the caller. The four quick-start
+tiles' own CSS (`.study-cta-grid`/`.study-cta-button`, the per-tile
+pin-dot/rotation/stagger) is completely unchanged -- that pinned-memo
+language already worked (Phase 153's own fix), the only problem was
+which element it was a child of.
+
+**How options/details/deck summary were demoted:** both `<details>`
+elements gained a shared `.study-board-tag` class. The closed
+`<summary>` is now a small `var(--panel-bg)` paper tag (rounded
+asymmetric corners, drop shadow, ±1deg rotation, same family as the
+quick-start tiles beside it) instead of a full-width dashed-border row
+-- "학습 옵션 · 전체 단어장 · 오늘 복습" and "학습 현황 자세히 보기"
+now read as two small pinned labels sitting on the felt next to the
+quick-start cluster, not a settings list below it. Opened, each
+reveals its existing content (`.study-control-panel`/`StatsPanel`)
+restyled as a small unfolded note -- kept its light `panel-bg` card
+look (border + soft shadow) rather than flattening it, so it reads as
+"this tag opened into a note," not a seam continuing the felt. No
+`<select>`, `onChange`, or `onStart` handler was touched -- only the
+JSX nesting and the summary/panel CSS.
+
+**Empty/ready/active/completion connectivity:** the ready-state note
+(`.study-board-note`, Phase 153's pinned-note treatment) and the
+active review card stack (`.study-card-stack`) were already board
+children before this phase and needed no restructuring -- moving the
+DOM boundary up around everything else is what makes them read as
+continuous with the quick-start/tags above them instead of "the one
+part of the screen that was already on the board." The completion
+state gets this for free from existing logic, not new code:
+`isReviewingActive` (`Boolean(currentItem) && !isComplete`) is false
+once a session completes, so the quick-start header and both tags
+reappear *above* the completion receipt, all still inside the same
+`.study-board-scene` -- confirmed via screenshot that a completed
+session shows the full quick-start cluster, the "다음 복습이
+예약됐어요" message, and the stamped completion card all on one
+continuous felt surface, letting a learner start another mode
+immediately without leaving the board.
+
+**Desktop (1280/1024) results:** confirmed via headless Chrome
+screenshot at both widths -- the first viewport is unambiguously one
+felt board: heading, progress bar, four pinned quick-start tiles, two
+secondary links, two small disclosure tags, and the ready note all
+sit on the same mint-green weave with no visible seam between a
+"control area" and "board area." Opened both disclosures in the same
+screenshot to confirm their unfolded panels read as notes on the
+board, not settings dialogs. `document.documentElement.scrollWidth
+=== clientWidth` at both widths.
+
+**Mobile (390/375/320) results:** the same one-board composition holds
+at every width -- quick-start's primary tile stays a full-width bar (an
+intentional, pre-existing Phase 82/153 choice for the one loud action,
+not the "full-width button stack" failure this phase's brief warns
+against) while the three secondary tiles and both disclosure tags stay
+compact and pinned, not stretched. Verified the mobile answer-reveal
+rating grid specifically against Phase 110's own protected concern,
+using real phone viewport heights (375x812, 390x844, 320x640, not the
+taller 1400px used for full-page screenshots elsewhere in this pass) --
+`getBoundingClientRect()` confirmed the 2x2 rating grid's bottom edge
+stays within the visible viewport at all three sizes (e.g. 623px bottom
+edge against a 640px viewport at 320x640), so the four-way decision is
+visible immediately after reveal without scrolling. Zero
+`scrollWidth`/`clientWidth` mismatch at any width.
+
+**Rating/SRS/API/storage confirmation:** no backend, API, schema, SRS,
+storage, or auth file was touched. `git diff` on `StudySection.tsx`
+confirmed `ratingButtons` (labels/colors/hints/icons/handlers),
+`onReview`, `onShowAnswer`, `onStart`, `onQuickStart`,
+`onSelectedDeckChange`, `onStudyModeChange`, and every other callback
+signature are byte-identical to before this phase -- changes scoped to
+JSX nesting, class names, and comments. A real review session was
+driven end-to-end via CDP click automation (not just diffed): selected
+"헷갈리는 단어" mode and the default deck via the real `<select>`
+elements inside the reopened options tag, clicked "학습 시작", then
+separately drove 5 distinct cards through reveal -> rate -> next-card
+on "오늘 복습" (오늘 복습 20개), confirming the progress marker advanced
+1/19 -> 5/19 and the surface text actually changed each time (중 ->
+響い -> 体 -> 猫 -> 闇), not just that a click handler fired.
+
+**Build/browser QA results:** `npm run build` clean (fresh `.next`, no
+concurrent dev server). `git diff --check` clean. Verified via headless
+Chrome (Windows-native, CDP) against the running dev server and real
+backend at 1280/1024/390/375/320: Study tab load; all four quick-start
+tiles rendered and clickable; deck/mode selection via the real options
+disclosure; both disclosures opened/closed; a real review session
+started, answer revealed, 4-way rating clicked, next card confirmed
+distinct; a session driven to natural completion (rating every card
+"보통" until `.complete-card` appeared); completion state's restart/
+read/vocab links confirmed reachable and not full-width bars; toolbar
+피드백 opened a real modal. A follow-up full 7-tab x 5-viewport sweep
+confirmed zero regressions elsewhere in the app. Zero console
+errors/warnings, zero failed requests, zero image errors throughout
+(one pre-existing, unrelated `/favicon.ico` 404 excluded, consistent
+with every prior phase's own finding).
+
+**Failure-criteria pass/fail (this phase's own 10-point list):**
+1. Quick-start no longer reads as a board-external top control area --
+   **pass** (rendered inside `.study-board-scene` as its first child;
+   confirmed via `querySelector('.study-board-scene .study-board-
+   header')`).
+2. Options/details rows don't read as a settings panel -- **pass**
+   (small pinned tags replacing full-width dashed-border rows).
+3. The empty note isn't a big white card/modal -- **pass** (unchanged
+   from Phase 153's own small rotated `.study-board-note`, now simply
+   continuous with the rest of the board instead of the one board-
+   native element on the tab).
+4. The board isn't a decorative backdrop under separately-floating
+   controls -- **pass** (every interactive element -- quick-start
+   tiles, both disclosure tags, the deck/mode selects, the rating
+   grid -- is a DOM descendant of `.study-board-scene`).
+5. Ready/empty/active/complete all read as the same board, not just
+   the active branch -- **pass**, confirmed via screenshot at all
+   four states, including the completion state showing quick-start
+   above the receipt on the same felt.
+6. Mobile quick-start doesn't degrade to a full-width button stack --
+   **pass** (only the one intentional primary tile is full-width, a
+   pre-existing choice this phase didn't touch; the three secondary
+   tiles and both tags stay compact/pinned).
+7. The rating grid doesn't get pushed below the mobile fold -- **pass**
+   (measured, not assumed, at three real phone viewport heights).
+8. Rating stamp semantics/colors/handlers are unchanged -- **pass**
+   (confirmed via `git diff` showing `ratingButtons` and `onReview`
+   untouched, and via a real session that correctly saved 다시/어려움/
+   보통/쉬움 results).
+9. No non-Shiori character/animal/person -- **pass** (no new character
+   assets; `ShioriStamp`'s existing `success` variant reused unchanged
+   on the completion card).
+10. No text baked into a raster asset -- **pass** (no new image assets;
+    the existing felt-board photo and flashcard-stack photo are reused
+    unchanged, both textures with no text in them).
+
+**Files changed:** `frontend/components/StudySection.tsx`,
+`frontend/app/globals.css`, this file.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (structural unity confirmed via screenshot at
+every state including disclosures-open and completion, a full click-
+through review session with distinct-card verification, mobile rating-
+grid fold position measured at real phone heights rather than assumed)
+all passed with zero console errors and zero failed requests. Per this
+project's standing process, no commit/push was made -- left staged for
+the user to review and commit alongside Phase 157/158/159's own still-
+uncommitted changes.
+
+**Remaining risk:** none identified specific to this phase's own
+changes -- this was a pure DOM-relocation-plus-restyle pass with no
+new interaction logic. The two disclosure tags' `.study-options-
+summary-hint` text (deck name · mode label) is now capped at
+`max-width: 150px` with ellipsis truncation, tighter than its old
+full-row width -- a very long personal deck name could truncate more
+aggressively than before, though the full deck/mode selection remains
+one tap away inside the opened tag regardless.
+
+**Next phase recommendation:** re-run a Phase-157-style scene-first
+audit specifically on Study once this lands, the same close-the-loop
+step already recommended for Shared Deck (Phase 158) and Home
+(Phase 159). Otherwise the queue holds: Shared Deck card-shape rework
+(Phase 158's own next-step, still open), then Stats scene texture
+(the one remaining P2 from Phase 157's original audit).
