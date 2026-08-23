@@ -1,4 +1,4 @@
-import { AppEmptyState, BrandSectionBadge } from "./BrandElements";
+import { AppEmptyState } from "./BrandElements";
 import { ShioriStamp } from "./Shiori";
 import { getDisplayMeaning } from "./shared";
 import {
@@ -24,31 +24,13 @@ type StudyLogPageProps = {
 };
 
 // ---------------------------------------------------------------------------
-// StudyLogHero -- title + one-line description only, no stat/number here.
+// LogbookHeader -- title/subtitle plus the "오늘" numbers stamped directly
+// under it. Phase 161: the three numbers used to be their own titled section
+// ("오늘 학습" h3 + a row below it), which read as a small stat block bolted
+// onto the top of the page. They're postmarks on the page itself now -- no
+// section heading of their own, no dedicated <section> wrapper.
 // ---------------------------------------------------------------------------
-function StudyLogHero() {
-  return (
-    <div className="reading-hero study-log-hero">
-      <div className="study-log-hero-row">
-        <h2 className="reading-hero-title">학습 통계</h2>
-        <ShioriStamp variant="success" label="학습 기록" />
-      </div>
-      <p className="reading-hero-subtitle">오늘까지의 학습 현황을 한눈에 확인하세요.</p>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// TodayStudyMemo -- at most 3 numbers, large: 오늘 복습 / 최근 담은 단어 /
-// 어려운 단어. Deliberately not a 6+-cell stat grid.
-// Phase 155 -- was 3 rounded pill badges (.home-summary-chip), the exact
-// "dashboard metric pill" shape the brief calls out; each is now a small
-// pinned paper tag (.study-stamp-tag) instead -- same washi-tape-pinned
-// sticky-note family Home's/Vocab's/Deck's own pinned notes already
-// established, reused here rather than inventing a fourth "small tag"
-// language for the same idea.
-// ---------------------------------------------------------------------------
-function TodayStudyMemo({
+function LogbookHeader({
   dueTodayCount,
   recentCount,
   hardCount,
@@ -58,9 +40,13 @@ function TodayStudyMemo({
   hardCount: number;
 }) {
   return (
-    <section className="study-log-entry today-study-memo">
-      <h3 className="records-log-title">오늘 학습</h3>
-      <div className="records-today-row">
+    <header className="stats-logbook-header">
+      <div className="study-log-hero-row">
+        <h2 className="reading-hero-title">학습 통계</h2>
+        <ShioriStamp variant="success" label="학습 기록" />
+      </div>
+      <p className="reading-hero-subtitle">오늘까지의 학습 현황을 한눈에 확인하세요.</p>
+      <div className="stats-today-stamps">
         <span className="study-stamp-tag">
           <ClockIcon className="study-stamp-tag-icon" />
           <span>오늘 복습</span>
@@ -77,22 +63,15 @@ function TodayStudyMemo({
           <strong>{hardCount}</strong>
         </span>
       </div>
-    </section>
+    </header>
   );
 }
 
 // ---------------------------------------------------------------------------
-// StudyTimeline -- short diary-style lines instead of another stat block,
-// so the same underlying numbers also read as "what happened", not just
-// counts.
-// Phase 155 -- each line used to be its own bordered/filled chip
-// (.study-log-journal-line), the exact same rounded-box shape as
-// TodayStudyMemo's stat pills right above it -- two different pieces of
-// content (numbers vs. sentences) reading as one repeated shape. Now one
-// continuous ruled-paper sheet (.study-diary-sheet, the same repeating-
-// line texture Reading/Vocab's own worksheet surfaces already use) with
-// each entry as a plain line divided by a hairline rule -- a real diary
-// page, not a second row of pill badges.
+// StudyTimeline -- diary-style lines ruled directly on the logbook page (no
+// border/background of its own anymore -- see .study-diary-sheet, Phase
+// 161: dropped the box chrome so this reads as ruled paper on the same page
+// as everything else, not a card floating on top of it).
 // ---------------------------------------------------------------------------
 type JournalEntry = { icon: typeof ClockIcon; text: string };
 
@@ -102,7 +81,7 @@ function StudyTimeline({ entries }: { entries: JournalEntry[] }) {
   }
   return (
     <section className="study-log-entry study-timeline">
-      <h3 className="records-log-title">학습 일지</h3>
+      <h3 className="stats-section-tab">학습 일지</h3>
       <div className="study-diary-sheet">
         {entries.map((entry, index) => (
           <p className="study-diary-line" key={index}>
@@ -116,18 +95,9 @@ function StudyTimeline({ entries }: { entries: JournalEntry[] }) {
 }
 
 // ---------------------------------------------------------------------------
-// DeckProgressJournal -- each deck is a notebook progress row (name,
-// progress bar, 오늘 복습 수, 모르는 단어 수), not a data-table row. Deeper
-// numbers (전체/아는/헷갈리는 단어) stay behind a small "자세히 보기"
-// disclosure.
-// Phase 155 -- was a stack of individually bordered/shadowed cards, each
-// carrying its own full dashboard-style progress bar -- a small ledger of
-// several decks read as a stack of separate admin widgets. Now one
-// continuous "서가 기록지" ledger (.records-deck-ledger): rows share one
-// surface, divided by a hairline rule instead of each having its own box
-// edge, and the progress indicator is a slim underline track (.records-
-// deck-progress-line) instead of a thick rounded dashboard bar. Same
-// numbers, same disclosure, same scan order.
+// DeckProgressJournal -- same ledger rows as before, now unboxed (Phase 161:
+// .records-deck-ledger lost its own border/background) so the rows sit
+// directly on the logbook page instead of inside a second nested card.
 // ---------------------------------------------------------------------------
 function DeckProgressJournal({ deckStats }: { deckStats: DeckStats[] }) {
   if (deckStats.length === 0) {
@@ -135,7 +105,7 @@ function DeckProgressJournal({ deckStats }: { deckStats: DeckStats[] }) {
   }
   return (
     <section className="study-log-entry deck-progress-journal">
-      <h3 className="records-log-title">서가별 통계</h3>
+      <h3 className="stats-section-tab">서가별 통계</h3>
       <div className="records-deck-ledger">
         {deckStats.map((deck) => (
           <div className="records-deck-ledger-row" key={deck.deck_id}>
@@ -165,6 +135,58 @@ function DeckProgressJournal({ deckStats }: { deckStats: DeckStats[] }) {
 }
 
 // ---------------------------------------------------------------------------
+// WordSlip -- Phase 161: replaces the old "aside" widget-panel sections.
+// Each of 최근 담은 단어/자주 틀린 단어 is now its own small pinned note slip
+// (washi tape + slight tilt, same pinned-note family .study-stamp-tag and
+// Vocab/Home's own sticky notes already use) resting on the logbook page
+// next to the ledger, not a bordered sidebar column of app-style cards.
+// ---------------------------------------------------------------------------
+function WordSlip({
+  title,
+  icon: Icon,
+  isLoading,
+  words,
+  emptyText,
+  showWrongCount,
+}: {
+  title: string;
+  icon: typeof ClockIcon;
+  isLoading: boolean;
+  words: VocabItem[];
+  emptyText: string;
+  showWrongCount?: boolean;
+}) {
+  return (
+    <div className="stats-word-slip">
+      <h3 className="stats-section-tab stats-section-tab--slip">
+        <Icon className="stats-section-tab-icon" />
+        {title}
+      </h3>
+      {isLoading && words.length === 0 ? (
+        <p className="muted-text">불러오는 중...</p>
+      ) : words.length > 0 ? (
+        <div className="stats-word-slip-list">
+          {words.map((item) => (
+            <div className="stats-word-slip-row" key={item.id}>
+              <span className="records-word-surface">{item.surface}</span>
+              {item.reading && item.reading !== item.surface ? (
+                <span className="records-word-reading">{item.reading}</span>
+              ) : null}
+              <span className="records-word-meaning">{getDisplayMeaning(item.meaning_ko)}</span>
+              {showWrongCount ? (
+                <span className="records-word-wrong-badge">다시 {item.wrong_count}회</span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="muted-text">{emptyText}</p>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // StudyLogEmptyState -- small bookmark/notebook illustration + short copy +
 // one CTA, for a brand-new account with no study history yet.
 // ---------------------------------------------------------------------------
@@ -185,10 +207,14 @@ function StudyLogEmptyState({ onGoToReading }: { onGoToReading: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
-// StudyLogPage -- composes the above into a study log / library journal,
-// not a stats dashboard. All values come from the existing StudyStats/
-// VocabItem data already fetched in page.tsx (loadInfoStats/
-// loadInfoWordHighlights) -- no new API calls, no route change.
+// StudyLogPage -- Phase 161 (Study Logbook full reconstruction): the whole
+// tab is now one physical ledger book (.stats-logbook-page) instead of a
+// main-column-plus-widget-sidebar dashboard. Today's numbers are postmark
+// stamps on the header, the diary and deck ledger sit unboxed on the page,
+// and recent/difficult words are two small note slips resting beside the
+// ledger (below it on narrow screens) rather than a separate panel. All
+// values still come from the existing StudyStats/VocabItem data already
+// fetched in page.tsx -- no new API calls, no route change.
 // ---------------------------------------------------------------------------
 export function StudyLogPage({
   stats,
@@ -233,109 +259,69 @@ export function StudyLogPage({
 
   return (
     <section className="tab-panel study-log-page" aria-live="polite">
-      <StudyLogHero />
+      <div className="stats-logbook-scene">
+        <div className="stats-logbook-page paper-corner">
+          <LogbookHeader
+            dueTodayCount={stats?.due_today_count ?? 0}
+            recentCount={recentWords.length}
+            hardCount={hardWords.length}
+          />
 
-      {isStatsLoading && !stats ? (
-        <p className="muted-text">학습 기록을 불러오는 중입니다.</p>
-      ) : null}
-      {statsMessage ? <p className="message message--info">{statsMessage}</p> : null}
+          {isStatsLoading && !stats ? (
+            <p className="muted-text">학습 기록을 불러오는 중입니다.</p>
+          ) : null}
+          {statsMessage ? <p className="message message--info">{statsMessage}</p> : null}
 
-      {isEmpty ? <StudyLogEmptyState onGoToReading={onGoToReading} /> : null}
+          {isEmpty ? <StudyLogEmptyState onGoToReading={onGoToReading} /> : null}
 
-      {hasStats && stats ? (
-        <div className="study-log-scene">
-          <div className="study-log-scene-main">
-            <TodayStudyMemo
-              dueTodayCount={stats.due_today_count}
-              recentCount={recentWords.length}
-              hardCount={hardWords.length}
-            />
-            <StudyTimeline entries={journalEntries} />
-            <DeckProgressJournal deckStats={stats.deck_stats} />
-          </div>
+          {hasStats && stats ? (
+            <div className="stats-logbook-spread">
+              <div className="stats-logbook-leaf stats-logbook-leaf--main">
+                <StudyTimeline entries={journalEntries} />
+                <DeckProgressJournal deckStats={stats.deck_stats} />
+              </div>
 
-          <aside className="study-log-scene-aside">
-            <section className="study-log-entry">
-              <h3 className="records-log-title">
-                <BrandSectionBadge icon={BookmarkIcon} />
-                최근 담은 단어
-              </h3>
-              {isWordsLoading && recentWords.length === 0 ? (
-                <p className="muted-text">불러오는 중...</p>
-              ) : recentWords.length > 0 ? (
-                <div className="records-word-log">
-                  {recentWords.map((item) => (
-                    <div className="records-word-row paper-corner" key={item.id}>
-                      <span className="records-word-surface">{item.surface}</span>
-                      {item.reading && item.reading !== item.surface ? (
-                        <span className="records-word-reading">{item.reading}</span>
-                      ) : null}
-                      <span className="records-word-meaning">
-                        {getDisplayMeaning(item.meaning_ko)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="muted-text">아직 담은 단어가 없어요.</p>
-              )}
-            </section>
+              <div className="stats-logbook-gutter" aria-hidden="true" />
 
-            <section className="study-log-entry">
-              <h3 className="records-log-title">
-                <BrandSectionBadge icon={PencilIcon} />
-                자주 틀린 단어
-              </h3>
-              {isWordsLoading && hardWords.length === 0 ? (
-                <p className="muted-text">불러오는 중...</p>
-              ) : hardWords.length > 0 ? (
-                <div className="records-word-log">
-                  {hardWords.map((item) => (
-                    <div className="records-word-row paper-corner" key={item.id}>
-                      <span className="records-word-surface">{item.surface}</span>
-                      {item.reading && item.reading !== item.surface ? (
-                        <span className="records-word-reading">{item.reading}</span>
-                      ) : null}
-                      <span className="records-word-meaning">
-                        {getDisplayMeaning(item.meaning_ko)}
-                      </span>
-                      <span className="records-word-wrong-badge">다시 {item.wrong_count}회</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="muted-text">아직 자주 틀린 단어가 없어요.</p>
-              )}
-            </section>
-          </aside>
+              <div className="stats-logbook-leaf stats-logbook-leaf--slips">
+                <WordSlip
+                  title="최근 담은 단어"
+                  icon={BookmarkIcon}
+                  isLoading={isWordsLoading}
+                  words={recentWords}
+                  emptyText="아직 담은 단어가 없어요."
+                />
+                <WordSlip
+                  title="자주 틀린 단어"
+                  icon={PencilIcon}
+                  isLoading={isWordsLoading}
+                  words={hardWords}
+                  emptyText="아직 자주 틀린 단어가 없어요."
+                  showWrongCount
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {hasStats ? (
+            <button type="button" className="ghost-button compact-button" onClick={onGoToVocab}>
+              <CardFileIcon className="button-icon" />
+              어휘 노트 전체 보기
+            </button>
+          ) : null}
+
+          <footer className="stats-logbook-footer">
+            <p className="stats-logbook-footer-line">
+              <ShieldIcon className="info-strip-icon" />
+              원문 전체는 저장하지 않아요. 단어와 짧은 예문만 노트에 남아요.
+            </p>
+            <p className="stats-logbook-footer-line">
+              <BookIcon className="info-strip-icon" />
+              사전 뜻풀이는 JMdict/EDRDG, Kaikki/Wiktionary 데이터를 참고합니다.
+            </p>
+          </footer>
         </div>
-      ) : null}
-
-      {hasStats ? (
-        <button type="button" className="ghost-button compact-button" onClick={onGoToVocab}>
-          <CardFileIcon className="button-icon" />
-          어휘 노트 전체 보기
-        </button>
-      ) : null}
-
-      <div className="info-panel">
-        <section className="panel-card info-panel-card study-log-policy-card paper-corner">
-          <div className="panel-card-header">
-            <h2 className="panel-card-title">
-              <BrandSectionBadge icon={ShieldIcon} />
-              저장 정책
-            </h2>
-          </div>
-          <p className="panel-card-description">
-            원문 전체는 저장하지 않아요. 단어와 짧은 예문만 노트에 남아요.
-          </p>
-        </section>
       </div>
-
-      <p className="info-strip">
-        <BookIcon className="info-strip-icon" />
-        사전 뜻풀이는 JMdict/EDRDG, Kaikki/Wiktionary 데이터를 참고합니다.
-      </p>
     </section>
   );
 }

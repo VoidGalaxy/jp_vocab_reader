@@ -6567,12 +6567,8 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 6px;
 }
 
-/* study-log-page/study-log-entry (renamed from .records-panel/
-   .records-log-section) -- "학습 기록장/서재 로그" 재구성. 이전엔
-   .stats-panel의 7칸 stat-card 그리드 + .deck-stat-row 테이블형 목록이라
-   관리자 대시보드처럼 보였다. 이 화면만 별도로 섹션 단위 로그 레이아웃을
-   쓰고, .stats-panel/.stat-card 자체는 학습(복습) 탭의 접혀있는
-   "학습 현황 자세히 보기" 안에서 그대로 재사용되므로 변경하지 않는다. */
+/* study-log-entry -- generic section grouping inside the logbook page (see
+   .stats-logbook-page below); not a card of its own, just spacing. */
 .study-log-entry {
   display: grid;
   gap: 10px;
@@ -6580,43 +6576,85 @@ input.reading-vocab-sticker-toggle:checked {
   max-width: 100%;
 }
 
-/* Casual Sticker Reader (Phase 71) -- study-log-scene: at >=1024px the "오늘
-   학습/학습 일지/서가별 통계" main journal and the "최근 담은 단어/자주 틀린
-   단어" word logs split into a two-column notebook spread instead of one
-   long stack of sections, the same "main surface + side rail" idea Reading/
-   Vocab/Shared Deck already use at this tier. DOM order is unchanged (main
-   sections still render before the word-log sections), so below 1024px this
-   is a plain single column identical to before this Phase. */
-.study-log-scene {
+/* Phase 161 (Study Logbook full reconstruction) -- replaces the old
+   .study-log-scene "main column + sticky sidebar" split, which was already
+   a dashboard silhouette (main journal + a persistent, bordered-off side
+   rail) even after Phase 155 softened its edges. The whole tab is now one
+   physical ledger book, .stats-logbook-page: a single bordered/shadowed
+   paper surface resting on the desk background, with every section
+   (header stamps, diary, deck ledger, word slips) unboxed *inside* that
+   one surface instead of each being its own nested card. */
+.stats-logbook-scene {
   min-width: 0;
 }
 
-.study-log-scene-main,
-.study-log-scene-aside {
+.stats-logbook-page {
+  position: relative;
   display: grid;
   gap: 18px;
   min-width: 0;
+  max-width: 100%;
+  padding: 22px 22px 18px;
+  border: 1px solid var(--paper-border);
+  border-radius: 6px 22px 22px 22px;
+  background: var(--paper-bg);
+  box-shadow: 0 14px 30px rgba(120, 98, 40, 0.14);
+}
+
+.stats-logbook-header {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--paper-border);
+}
+
+/* The "오늘" numbers -- postmark stamps sitting directly under the title,
+   not a titled stat section of their own (see .study-stamp-tag). */
+.stats-today-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px 14px;
+  margin: 6px 0 -4px;
+}
+
+/* Below 1024px: one continuous page, ledger then word slips in DOM order.
+   At/above 1024px: an open two-page spread -- ledger/diary on the left
+   leaf, word slips pinned to the right leaf, split by a bound-page gutter
+   instead of a sticky sidebar rule. */
+.stats-logbook-spread {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
+.stats-logbook-leaf {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  align-content: start;
+}
+
+.stats-logbook-gutter {
+  display: none;
 }
 
 @media (min-width: 1024px) {
-  .study-log-scene {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
-    align-items: start;
-    gap: 20px;
+  .stats-logbook-spread {
+    grid-template-columns: minmax(0, 1fr) 1px minmax(240px, 300px);
+    gap: 22px;
   }
 
-  /* Phase 155 -- was a filled var(--soft-bg) box with its own radius, the
-     shape of a separate floating dashboard widget parked beside the main
-     column. Dropped the fill/box entirely -- a thin dashed rule now reads
-     as a notebook margin the word tickets sit in, part of the same page
-     as the log/ledger to its left rather than a second surface. */
-  .study-log-scene-aside {
-    position: sticky;
-    top: 24px;
-    align-self: start;
-    padding: 2px 0 2px 18px;
-    border-left: 1px dashed var(--paper-border);
+  .stats-logbook-gutter {
+    display: block;
+    align-self: stretch;
+    background: repeating-linear-gradient(
+      180deg,
+      var(--paper-border) 0,
+      var(--paper-border) 5px,
+      transparent 5px,
+      transparent 11px
+    );
   }
 }
 
@@ -6632,26 +6670,39 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 8px;
 }
 
-.records-log-title {
-  display: flex;
+/* Phase 161 -- was .records-log-title: plain bold text, which read as a
+   generic app section header floating above a card. A page in a real
+   ledger book has a small tab/flag label instead -- the underline-in-
+   accent-color here is that tab, cheap enough to survive every width
+   without new clipping/overflow risk. */
+.stats-section-tab {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
+  padding: 0 2px 4px 0;
+  border-bottom: 2px solid var(--screen-accent, var(--accent));
   color: var(--text);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.stats-section-tab-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--screen-accent, var(--muted));
+}
+
+/* A slip's own tab sits inside a smaller, tilted note object rather than
+   directly on the page, so it stays flush-left with a touch less weight. */
+.stats-section-tab--slip {
+  font-size: 12px;
 }
 
 .records-log-hint {
   margin: -4px 0 0;
-}
-
-.records-today-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 10px 14px;
-  margin: 2px 0;
 }
 
 /* Phase 155 -- previously forced a single full-width column below 640px
@@ -6713,18 +6764,19 @@ input.reading-vocab-sticker-toggle:checked {
    flat paper background and are divided by a hairline rule instead of
    each owning its own box edge, and the fill indicator is a slim
    underline track rather than a thick rounded bar. Same numbers, same
-   <details> disclosure, same scan order top-to-bottom. */
+   <details> disclosure, same scan order top-to-bottom.
+   Phase 161 -- dropped the ledger's own border/background/radius. It now
+   sits directly on .stats-logbook-page's single shared paper surface
+   instead of being a second nested card on top of it; only the row
+   dividers below still mark it as its own ledger region. */
 .records-deck-ledger {
   display: grid;
-  border: 1px solid var(--paper-border);
-  border-radius: 4px 14px 14px 14px;
-  background: var(--paper-bg);
 }
 
 .records-deck-ledger-row {
   display: grid;
   gap: 4px;
-  padding: 12px 16px;
+  padding: 10px 2px;
 }
 
 .records-deck-ledger-row + .records-deck-ledger-row {
@@ -6815,21 +6867,21 @@ input.reading-vocab-sticker-toggle:checked {
    repeated dashboard shape stacked twice. Now one continuous ruled-paper
    sheet (same repeating-linear-gradient rule recipe .shared-deck-detail's
    notebook page already uses) with each entry as a plain line divided by
-   a hairline rule -- a real diary page, not a second row of pill badges. */
+   a hairline rule -- a real diary page, not a second row of pill badges.
+   Phase 161 -- dropped its own border/background fill too, for the same
+   reason as .records-deck-ledger above: the ruled lines are real page
+   texture, but the box chrome around them duplicated .stats-logbook-page's
+   own border one layer in. */
 .study-diary-sheet {
   display: grid;
-  border: 1px solid var(--paper-border);
-  border-radius: 4px 14px 14px 14px;
-  padding: 4px 16px;
-  background:
-    repeating-linear-gradient(
-      180deg,
-      transparent 0,
-      transparent 33px,
-      rgba(110, 91, 47, 0.06) 33px,
-      rgba(110, 91, 47, 0.06) 34px
-    ),
-    var(--paper-bg);
+  padding: 4px 2px;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0,
+    transparent 33px,
+    rgba(110, 91, 47, 0.06) 33px,
+    rgba(110, 91, 47, 0.06) 34px
+  );
 }
 
 .study-diary-line {
@@ -6854,9 +6906,52 @@ input.reading-vocab-sticker-toggle:checked {
   color: var(--screen-accent, var(--accent));
 }
 
-.records-word-log {
+/* Phase 161 -- 최근 담은 단어/자주 틀린 단어 note slips. Each is its own
+   small pinned-paper object (washi tape + slight tilt, same family as
+   .study-stamp-tag/.home-shortcut-tab) resting on the logbook page next to
+   the ledger -- not a bordered sidebar list of app-style cards. */
+.stats-word-slip {
+  position: relative;
+  padding: 14px 14px 10px;
+  border-radius: 2px 14px 14px 14px;
+  background: var(--panel-bg);
+  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.1);
+  transform: rotate(-0.6deg);
+}
+
+.stats-word-slip + .stats-word-slip {
+  transform: rotate(0.6deg);
+}
+
+.stats-word-slip::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 28px;
+  width: 20px;
+  height: 10px;
+  border: 1px solid rgba(217, 122, 74, 0.42);
+  background: rgba(217, 122, 74, 0.3);
+  box-shadow: 0 2px 3px rgba(37, 43, 30, 0.12);
+  transform: rotate(-4deg);
+  pointer-events: none;
+}
+
+.stats-word-slip-list {
   display: grid;
-  gap: 8px;
+  margin-top: 8px;
+}
+
+.stats-word-slip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 10px;
+  padding: 8px 0;
+}
+
+.stats-word-slip-row + .stats-word-slip-row {
+  border-top: 1px dashed var(--paper-border);
 }
 
 .records-word-row {
@@ -6869,17 +6964,6 @@ input.reading-vocab-sticker-toggle:checked {
   border-radius: 10px;
   background: var(--panel-bg);
   box-shadow: 0 2px 6px rgba(120, 98, 40, 0.05);
-}
-
-/* Scoped to the 통계 tab's own log lists only (not the shared
-   .custom-term-card use of this same row class in VocabSection, which
-   stays untouched) -- a touch tighter so a long "최근 담은 단어"/"자주
-   틀린 단어" list reads less like a management list once it grows past
-   a handful of rows. */
-.records-word-log .records-word-row {
-  gap: 5px 10px;
-  padding: 6px 12px;
-  border-radius: 10px 10px 10px 3px;
 }
 
 .records-word-surface {
@@ -9469,37 +9553,28 @@ input.reading-vocab-sticker-toggle:checked {
   align-items: flex-end;
 }
 
-/* Info tab's "서비스 개요 / 저장 정책 / ..." section grid -- each section is
-   a regular .panel-card (or .note-card for the two policy/attribution
-   asides), so this only owns the grid layout, not the card box itself
-   (previously a parallel, un-themed `.info-panel > div` box). */
-.info-panel {
+/* Phase 161 -- was .info-panel/.study-log-policy-card: the 저장 정책 note
+   and the dictionary-attribution line lived in their own boxed card below
+   the main scene, the last leftover "floating widget" once the rest of
+   the tab moved onto one shared page. Both are now plain footnote lines
+   inside .stats-logbook-page itself (see .stats-logbook-footer in
+   InfoSection.tsx), not a separate card. */
+.stats-logbook-footer {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 4px;
+  margin-top: 2px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--paper-border);
 }
 
-.info-panel-card:first-child {
-  grid-column: 1 / -1;
-}
-
-/* Casual Sticker Reader (Phase 60) -- was .note-card (a colored border-left
-   "side-tab" accent, the app-wide default for policy/trust asides). That
-   pattern reads as an admin-callout box, which is exactly what this whole
-   tab is trying to move away from -- swapped for the plain .panel-card look
-   plus one corner fold.
-   Phase 155 -- the rest of the tab has since moved off boxed/bordered
-   .panel-card surfaces entirely (stamp tags, diary sheet, deck ledger), so
-   the one remaining bordered card at the very bottom read as the last
-   leftover dashboard box. Drops .panel-card's border + drop-shadow for a
-   flat paper fill -- still its own page (the corner fold stays), just no
-   longer boxed like a floating widget. */
-.study-log-policy-card {
-  border: none;
-  border-radius: 3px 12px 12px 12px;
-  padding: 16px 18px;
-  background: var(--paper-bg);
-  box-shadow: none;
+.stats-logbook-footer-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .info-panel-list {
@@ -9729,7 +9804,6 @@ input.reading-vocab-sticker-toggle:checked {
   }
 
   .analyze-options,
-  .info-panel,
   .stats-grid,
   .deck-stat-row {
     grid-template-columns: 1fr;
@@ -9744,7 +9818,8 @@ input.reading-vocab-sticker-toggle:checked {
     min-width: 28px;
   }
 
-  .records-word-row {
+  .records-word-row,
+  .stats-word-slip-row {
     align-items: flex-start;
   }
 
