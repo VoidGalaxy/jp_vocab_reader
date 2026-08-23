@@ -1205,88 +1205,103 @@ button {
 }
 
 /* ==========================================================================
-   Phase 118 (Hard Mockup Reconstruction) -- Home, rebuilt against
-   docs/design/mockups/casual-sticker-reader-mobile.png's "Home" board and
-   the desktop mockup's "HOME DESK" panel. Base rules here are the mobile
-   composition: one dominant notebook cover (title+CTA printed on it, a
-   sticky note, Shiori peeking from the corner, a closure strap, and
-   pagination dots -- the physical object the mockup shows), then a bare
-   icon+label shortcut row directly on the page background with NO card
-   chrome (no border/fill/shadow) -- unlike Phase 54-117's bordered,
-   shadowed sticker chips, which read as three admin tiles no matter how
-   much tape/tilt was layered on. The >=1024px override further down (see
-   the desk-scene block near .page--home) turns this into a two-column
-   desk scene and only THERE do the shortcuts pick up sticky-note chrome,
-   matching the desktop mockup's taller side notes. */
-.home-stage {
-  display: grid;
-  gap: 14px;
+   Phase 159 (Home v2 Scene Rebuild) -- every prior Home pass (118's card-
+   chrome removal, 145's cover object, 151's scale/overlap correction) still
+   left the shortcuts as their own grid column beside the book. Fixing the
+   book's size and the note's overlap never fixed that underlying shape --
+   two independent tracks read as two clusters no matter how tightly packed.
+   There is no grid here any more. .home-hero-cluster is a single
+   relatively-positioned object sized to the book photo itself
+   (.home-cover-object drives its width via max-width, see below); the
+   title note overlaps the book's top edge (Phase 151's technique, kept --
+   it already worked), and the three shortcuts (.home-shortcut-tabs) are
+   absolutely positioned along the book's own bottom edge, overlapping it
+   like tabs tucked under a notebook on a desk -- one object, not two
+   surfaces. Base rules here are mobile: flat CSS-color tabs (no photo
+   fetch), everything still one cover scene, not stacked vertical sections.
+   The >=1024px override further down upgrades tab size/photo texture and
+   repositions the desk props around the single cluster. */
+.home-hero {
+  display: block;
 }
 
-/* Phase 151 -- Home Hero Scene Scale Correction. Phase 145's .home-cover
-   stacked the heading and the book as two separate rows with real gap
-   between them (a `display:grid; gap:18px` column) -- a real screenshot at
-   1280 showed that gap reading as "text, then a small unrelated book
-   further down," not one object. .home-cover is now a plain block-flow
-   container instead of a grid: .home-cover-heading is a real paper note
-   (background/shadow/rotation, see below) that a negative margin-bottom
-   pulls down to physically overlap the book's own top edge, so the two
-   read as one glued cluster -- text pinned to the book, not text above the
-   book. Still no card/border around the *outer* .home-cover itself (that
-   would be the "boxed hero panel" this project's rules explicitly ban);
-   only the small heading note has its own surface, same family as every
-   other pinned-note/sticky-tag element elsewhere in the app. */
-.home-cover {
+.home-hero-cluster {
   position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding-bottom: 46px;
 }
 
-/* The heading is now a physical note object, not bare text on the page --
-   pinned across the book's top edge via the negative margin-bottom below.
-   z-index puts it above .home-cover-object in the paint order (source
-   order alone would put the book, which comes second in the DOM, on top
-   of the note where they overlap). Asymmetric radius (echoes the app's
-   established index-card/sticky-note corner language) + a slight
-   rotation + a soft shadow read as "a note resting on top of the book,"
-   not a second bordered card competing with it. */
-.home-cover-heading {
+/* The note is a physical object pinned across the book's top edge via the
+   negative margin-bottom below, not bare text above it. z-index puts it
+   above .home-cover-object in paint order (source order alone would put
+   the book, which comes second in the DOM, on top of the note where they
+   overlap). Asymmetric radius (echoes the app's established index-card/
+   sticky-note corner language) + a slight rotation + a soft shadow read as
+   "a note resting on top of the book," not a second bordered card
+   competing with it. */
+.home-cover-note {
   position: relative;
   z-index: 2;
   display: grid;
-  gap: 8px;
-  max-width: 360px;
-  margin: 0 0 -34px;
-  padding: 16px 18px 40px;
-  border-radius: 3px 18px 3px 18px;
+  gap: 7px;
+  max-width: 78%;
+  margin: 0 0 -28px;
+  padding: 13px 15px 32px;
+  border-radius: 3px 16px 3px 16px;
   background: var(--panel-bg);
-  box-shadow: 0 10px 22px rgba(37, 43, 30, 0.16);
+  box-shadow: 0 8px 18px rgba(37, 43, 30, 0.16);
   transform: rotate(-1deg);
 }
 
 .home-cover-title {
   margin: 0;
   color: var(--text);
-  font-size: 21px;
+  font-size: 17px;
   font-weight: 800;
-  line-height: 1.32;
+  line-height: 1.3;
 }
 
 .home-cover-subtitle {
   margin: 0;
   max-width: 40ch;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 11.5px;
+  line-height: 1.5;
 }
 
+/* Phase 159 -- was border-radius:999px, a plain rounded pill -- exactly
+   the "generic pill" this phase's own failure list names, and the one
+   remaining CTA in the app still using that shape (every other tab moved
+   to the fixed-pixel clip-path notch family across Phases 149-158:
+   .reader-bookmark-button, .classify-stamp-button, .shared-deck-tab-
+   action, ...). Reuses that same notch here instead of inventing a
+   Home-only shape, so the CTA reads as a bookmark/tag pinned to the note,
+   not a web-app button that happens to sit on a photo. Fixed-pixel notch
+   (not a percentage) so it stays a small flag rather than ballooning into
+   an arrow once width:100% applies on mobile -- the same lesson Phase 149
+   learned the hard way, applied proactively here. */
 .home-cover-cta {
-  width: 100%;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  gap: 6px;
+  width: 100%;
   margin-top: 4px;
-  padding: 15px 20px;
-  border-radius: 999px;
+  padding: 12px 32px 12px 18px;
+  border: 0;
+  border-radius: 3px;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 18px) 0,
+    100% 50%,
+    calc(100% - 18px) 100%,
+    0 100%
+  );
   color: #ffffff;
   background: var(--tone-ink-green);
-  font-size: 15.5px;
+  font-size: 13.5px;
 }
 
 .home-cover-cta:not(:disabled):hover {
@@ -1300,7 +1315,7 @@ button {
   border: none;
   background: none;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -1316,22 +1331,18 @@ button {
 }
 
 /* The notebook itself -- a real photographed object (elastic strap, snap,
-   and its own natural soft shadow all baked into the photo). Phase 151 --
-   was capped at max-width:420px regardless of how much wider its own
-   layout column actually was (up to ~700px+ at 1280, see .home-stage's
-   1.55fr column below), leaving the book small and isolated with a large
-   band of bare wood beside it. Raised to a real hero size at every tier
-   (see the >=1024px override further down for the largest size) so the
-   book actually fills the space its own column reserves for it, instead
-   of floating inside unused room. Shown at its own aspect ratio via
-   `contain` rather than cropped. No CSS box-shadow added on top -- the
-   photo's own shadow is the grounding cue. position:relative stays (the
-   Shiori charm below is still absolutely positioned against it). */
+   and its own natural soft shadow all baked into the photo), shown at its
+   own aspect ratio via `contain` rather than cropped. Phase 159 -- no
+   longer carries its own max-width/centering: .home-hero-cluster (above)
+   is now sized to match this object exactly, so every sibling (note, tabs,
+   props) can position itself with simple percentages against the same box
+   this photo fills, instead of guessing where the book sits inside a wider
+   independently-sized parent. No CSS box-shadow added on top -- the
+   photo's own shadow is the grounding cue. */
 .home-cover-object {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 480px;
   aspect-ratio: 1619 / 971;
   background-image: url("/brand/decor/phase145/home-cute-notebook-cover-object.webp");
   background-size: contain;
@@ -1353,91 +1364,118 @@ button {
   animation: shiori-idle-float 6.5s ease-in-out infinite;
 }
 
-/* Bare icon+label shortcut row -- no card, no border, no fill. This is the
-   single biggest silhouette change from the old sticker-chip cards: three
-   flat marks resting on the page, exactly like the mockup's Home board. */
-.home-stickers {
+/* home-shortcut-tabs -- Phase 159, replaces .home-stickers (a full sibling
+   grid column beside the book). Absolutely positioned along the book's own
+   bottom edge and pulled up to overlap it (negative-feeling placement via
+   `bottom` measured from the cluster's padding-bottom reserve, see above)
+   so the three shortcuts read as tabs tucked under the notebook, not a
+   second row/column living beside it. Flat CSS color at this (mobile)
+   tier -- no background photo fetched here, see the >=1024px override for
+   the photographed sticky-note texture. */
+.home-shortcut-tabs {
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  bottom: 16px;
+  z-index: 2;
   display: flex;
-  align-items: flex-start;
   justify-content: space-between;
   gap: 6px;
-  padding: 2px 8px;
 }
 
-.home-sticker {
+.home-shortcut-tab {
   display: flex;
   flex: 1 1 0;
   min-width: 0;
-  flex-direction: column;
   align-items: center;
-  gap: 7px;
-  padding: 4px;
-  border: none;
-  background: none;
-  box-shadow: none;
+  gap: 6px;
+  padding: 7px 8px;
+  border-radius: 3px 12px 12px 3px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.2);
   color: var(--text);
-  text-align: center;
+  text-align: left;
 }
 
-.home-sticker:not(:disabled):hover {
-  box-shadow: none;
-  transform: translateY(-2px);
+.home-shortcut-tab:nth-child(1) {
+  transform: rotate(-1.5deg);
 }
 
-.home-sticker-icon {
+.home-shortcut-tab:nth-child(2) {
+  transform: rotate(1deg);
+}
+
+.home-shortcut-tab:nth-child(3) {
+  transform: rotate(-1deg);
+}
+
+.home-shortcut-tab:not(:disabled):hover {
+  box-shadow: 0 9px 18px rgba(120, 98, 40, 0.26);
+  transform: translateY(-2px) rotate(0deg);
+}
+
+.home-shortcut-tab-icon {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   color: #ffffff;
 }
 
-.home-sticker-icon svg {
-  width: 21px;
-  height: 21px;
+.home-shortcut-tab-icon svg {
+  width: 13px;
+  height: 13px;
 }
 
-.home-sticker--vocab .home-sticker-icon {
+.home-shortcut-tab--vocab .home-shortcut-tab-icon {
   background: var(--tone-ink-brown);
 }
 
-.home-sticker--decks .home-sticker-icon {
+.home-shortcut-tab--decks .home-shortcut-tab-icon {
   background: var(--tone-dusty-blue);
 }
 
-.home-sticker-icon--character {
+.home-shortcut-tab-icon--character {
   background: var(--soft-bg);
 }
 
-.home-sticker-text {
+.home-shortcut-tab-text {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 2px;
   min-width: 0;
 }
 
-.home-sticker-label {
-  font-size: 13.5px;
+.home-shortcut-tab-label {
+  overflow: hidden;
+  font-size: 10.5px;
   font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-/* Desktop-only hint line (see .home-sticker-hint's >=1024px override
-   further down) -- the mobile mockup's shortcut row is label-only, so this
-   stays hidden until the desktop sticky-note treatment has room for it. */
-.home-sticker-hint {
+/* Desktop-only hint line (see .home-shortcut-tab-hint's >=1024px override
+   further down) -- the mobile tabs are label-only (icon + short word), no
+   room for a second line at this size. */
+.home-shortcut-tab-hint {
   display: none;
 }
 
+/* Phase 159 -- was justify-self:center as a grid-item child of the old
+   .home-stage grid; .home-hero is plain block flow now, so this is a
+   simple centered block sitting close under the cluster -- brief requires
+   this read as a small desk label near the scene, not a footer far below
+   it, which is what a larger default paragraph gap would have looked
+   like. */
 .home-footnote {
-  justify-self: center;
+  margin: 6px auto 0;
   text-align: center;
 }
 
 /* Desktop-only desk props (see HomeDashboard.tsx) -- hidden until the
-   >=1024px desk-scene override gives them a canvas to sit on. */
+   >=1024px override gives them a canvas to sit on. */
 .home-desk-props {
   display: none;
 }
@@ -1478,30 +1516,20 @@ button {
     box-shadow: none;
   }
 
-  /* Phase 151 -- desktop desk-scene composition for Home (see
-     HomeDashboard.tsx's .home-stage/.home-cover/.home-stickers). Mirrors
-     the desktop mockup's HOME DESK panel: notebook cover large and
-     left-anchored, three sticky-note shortcuts stacked beside it, desk
-     props bridging the gap between them -- one dense scene, not a small
-     book floating next to a distant column with bare wood between.
-     align-items:stretch (was start) so .home-stickers -- naturally shorter
-     than the now-much-taller book column -- stretches to match its height
-     instead of sitting short at the top with empty space below it; see
-     .home-stickers' own justify-content:space-between below, which is what
-     actually spreads the three notes across that full height. Column ratio
-     tightened (was 1.55fr/0.9fr) and the gap between them shrunk (was
-     36px) now that the book itself is much larger and no longer leaves a
-     large aisle of bare wood before the sticky-note column even starts. */
-  .home-stage {
-    position: relative;
-    z-index: 0;
-    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.85fr);
-    align-items: stretch;
-    gap: 22px;
-    padding: 14px 10px 44px;
+  /* Phase 159 -- desktop composition for Home's one-hero-object scene (see
+     HomeDashboard.tsx's .home-hero-cluster). The book grows to its full
+     hero size and the whole cluster is centered; the three shortcuts stay
+     absolutely positioned tabs (see .home-shortcut-tabs below), now fanned
+     as bigger photographed sticky notes along the book's lower-right edge
+     instead of a tall column stacked beside it. padding-bottom grows to
+     give those larger tabs room to hang below the book without the
+     cluster's own box clipping them. */
+  .home-hero-cluster {
+    max-width: 760px;
+    padding-bottom: 100px;
   }
 
-  .home-cover-heading {
+  .home-cover-note {
     max-width: 460px;
     margin-bottom: -72px;
     padding: 22px 26px 58px;
@@ -1511,141 +1539,155 @@ button {
     font-size: 34px;
   }
 
+  .home-cover-subtitle {
+    font-size: 13px;
+  }
+
   .home-cover-cta {
     width: auto;
     justify-self: start;
-    padding: 14px 28px;
+    padding: 14px 40px 14px 24px;
+    font-size: 15.5px;
   }
 
-  .home-cover-object {
-    max-width: 640px;
+  .home-cover-sample {
+    font-size: 12.5px;
   }
 
-  .home-stickers {
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: space-between;
-    gap: 18px;
-    padding: 8px 0;
-  }
-
-  .home-sticker {
-    position: relative;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
+  /* home-shortcut-tabs at desktop -- was a full-height column stacked
+     beside the book (.home-stickers' old 1.4fr/0.85fr grid track). Now a
+     fanned row of three bigger sticky notes anchored to the book's own
+     lower-right region, overlapping its bottom edge, mirroring the title
+     note's overlap of the top edge on the opposite corner -- both live
+     text clusters are pinned to the same object instead of one being pinned
+     and the other occupying its own track. */
+  .home-shortcut-tabs {
+    left: auto;
+    right: 4%;
+    bottom: 26px;
+    width: 62%;
+    justify-content: flex-end;
     gap: 14px;
-    padding: 16px 20px;
+  }
+
+  .home-shortcut-tab {
+    position: relative;
+    flex: 1 1 170px;
+    max-width: 200px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 16px 18px;
     border-radius: 4px 18px 18px 18px;
     overflow: hidden;
     background-color: var(--panel-bg);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    box-shadow: 0 12px 22px rgba(120, 98, 40, 0.14);
-    text-align: left;
+    box-shadow: 0 12px 22px rgba(120, 98, 40, 0.16);
     transition:
       transform var(--motion-fast) var(--ease-soft),
       box-shadow var(--motion-fast) var(--ease-soft);
   }
 
-  .home-sticker--vocab {
+  .home-shortcut-tab--vocab {
     background-image: url("/brand/decor/phase131/sticky-note-yellow.webp");
   }
 
-  .home-sticker--review {
+  .home-shortcut-tab--review {
     background-image: url("/brand/decor/phase131/sticky-note-coral.webp");
   }
 
-  .home-sticker--decks {
+  .home-shortcut-tab--decks {
     background-image: url("/brand/decor/phase131/sticky-note-blue.webp");
   }
 
-  .home-sticker::before {
+  .home-shortcut-tab::before {
     content: "";
     position: absolute;
     top: -6px;
-    left: 22px;
-    width: 26px;
-    height: 11px;
+    left: 20px;
+    width: 24px;
+    height: 10px;
     background: rgba(139, 108, 66, 0.28);
     border: 1px solid rgba(139, 108, 66, 0.35);
     transform: rotate(-5deg);
     pointer-events: none;
   }
 
-  .home-sticker:nth-child(1) {
-    transform: rotate(-1.5deg);
-  }
-
-  .home-sticker:nth-child(2) {
-    transform: rotate(1deg);
-  }
-
-  .home-sticker:nth-child(3) {
-    transform: rotate(-1.2deg);
-  }
-
-  .home-sticker:not(:disabled):hover {
+  .home-shortcut-tab:not(:disabled):hover {
     transform: translateY(-3px) rotate(0deg);
-    box-shadow: 0 16px 28px rgba(120, 98, 40, 0.2);
+    box-shadow: 0 16px 28px rgba(120, 98, 40, 0.22);
   }
 
-  .home-sticker-icon {
-    flex: 0 0 auto;
-    width: 42px;
-    height: 42px;
+  .home-shortcut-tab-icon {
+    width: 40px;
+    height: 40px;
   }
 
-  .home-sticker-text {
+  .home-shortcut-tab-icon svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .home-shortcut-tab-text {
     align-items: flex-start;
     gap: 3px;
   }
 
-  .home-sticker-label {
-    font-size: 14.5px;
+  .home-shortcut-tab-label {
+    font-size: 14px;
+    white-space: normal;
   }
 
-  .home-sticker-hint {
+  .home-shortcut-tab-hint {
     display: block;
     color: var(--muted);
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1.4;
   }
 
   .home-footnote {
-    justify-self: start;
-    text-align: left;
-    padding-left: 4px;
+    margin: 10px auto 0;
   }
 
-  /* Phase 133 -- desk props are now Phase 131's photographed cutouts
-     (leaf/tape/paperclip/pen) scattered around the cover and sticky-note
-     column, not CSS-drawn shapes. .home-desk-props stays the click-through
-     layer (pointer-events:none, inherited by every child image below); no
-     box-shadow/border added to any prop -- each source photo already
-     carries its own natural soft drop shadow (see phase131/
-     ASSET_MANIFEST.md), so a CSS shadow on top would only double it, the
-     same call Phase 132 made for the study card-backing photo.
-     Phase 139 -- each prop's photo moved here as background-image (was an
-     <img src> on the element itself in HomeDashboard.tsx). A network-log
-     check found the four <img> tags were being fetched on every page load
-     regardless of viewport, because an ancestor's display:none does not
-     stop the browser from requesting an <img>'s own src -- confirmed on a
-     fresh mobile load, ~92KB across the four files, for a layer that never
-     renders below 1024px. background-image inside this same >=1024px block
-     doesn't have that problem: the browser doesn't fetch a background-image
-     that lives behind a media query which isn't currently matched (this is
-     exactly how the sticky notes two rules up already avoided the same
-     issue). Each prop's box was already sized to its source photo's own
-     aspect ratio (see the per-rule comments below), so background-size:
-     contain paints the whole photo undistorted with no crop either way. */
+  /* Phase 133/139 -- desk props are photographed cutouts (leaf/tape/
+     paperclip/pen), not CSS-drawn shapes. .home-desk-props stays the
+     click-through layer (pointer-events:none, inherited by every child
+     below); no box-shadow/border added to any prop -- each source photo
+     already carries its own natural soft drop shadow. background-image
+     (not <img src>) inside this same >=1024px block only, so mobile
+     fetches zero bytes for a layer that never renders there (confirmed via
+     network log in Phase 139 -- an ancestor display:none does not stop the
+     browser fetching an <img>'s own src, but it does skip a background-
+     image behind an unmatched media query).
+     Phase 159 -- repositioned around the single hero cluster instead of
+     spanning two grid columns: leaf still pins the title note's corner,
+     tape+paperclip now weight the book's lower-left corner (recomputed
+     against this phase's own book height, ~432px at the new 720px hero
+     width, not the old narrower column's), and pen tucks just left of the
+     shortcut tabs instead of bridging a column gap that no longer
+     exists. */
   .home-desk-props {
     display: block;
     position: absolute;
     inset: 0;
-    z-index: -1;
+    /* Phase 159 -- was z-index:-1, correct for the old two-column .home-
+       stage where props sat in genuinely empty gaps between the book and
+       sticky-note columns. In the single-cluster scene every prop's
+       sensible position overlaps an opaque sibling (the note or the book
+       photo itself) at some point, and -1 rendered them fully invisible
+       behind whichever opaque layer they crossed (confirmed via
+       elementFromPoint -- the leaf prop was there in the DOM at the right
+       coordinates, just painted behind .home-cover-note with nothing
+       visible). z-index:1 matches .home-cover-object's own z-index, so
+       props now paint on top of the book photo (props render after the
+       book in DOM order, so same-level stacking resolves in their favor)
+       like real objects resting on the notebook, while staying under
+       .home-cover-note/.home-shortcut-tabs (both z-index:2) so nothing
+       ever covers live text or a click target. */
+    z-index: 1;
     pointer-events: none;
   }
 
@@ -1658,59 +1700,50 @@ button {
     background-repeat: no-repeat;
   }
 
-  /* Phase 151 -- every prop below is scaled up (roughly 1.5-1.7x) from its
-     Phase 133 size. At the old small scale, against a now much larger
-     book + sticky-note cluster, these read as stray specks lost in open
-     wood rather than real objects sitting on the desk -- the phase brief's
-     own "장식물이 너무 작게 흩어지지 않는가" QA question directly. Position
-     is still relative to the whole .home-stage box (this element spans
-     both columns via inset:0), so a 0-100% left offset can land the pen
-     prop in the *gap* between the book and sticky-note columns instead of
-     only at the book's own corners -- one prop now visually bridges the
-     two clusters instead of every prop orbiting the book alone. */
-
-  /* 223x400 source -- tall leaf sprig, top-left of the cover. */
+  /* 223x400 source -- tall leaf sprig, top-left of the cover, tucked just
+     behind the title note's own top-left corner. */
   .home-desk-prop--leaf {
-    top: -12px;
-    left: -40px;
+    top: -22px;
+    right: 54px;
+    left: auto;
     width: 92px;
     height: 165px;
-    transform: rotate(-7deg);
+    transform: rotate(6deg);
     background-image: url("/brand/decor/phase131/desk-prop-leaf.webp");
   }
 
-  /* 400x353 source -- washi tape roll, low-left of the book. */
+  /* 400x353 source -- washi tape roll, low-left of the book, resting on
+     the cover itself (props now paint above the book, see .home-desk-
+     props' z-index above) rather than tucked entirely behind it. */
   .home-desk-prop--tape {
-    left: -40px;
-    top: 420px;
-    width: 74px;
-    height: 65px;
+    left: 18px;
+    top: 366px;
+    width: 78px;
+    height: 69px;
     transform: rotate(-5deg);
     background-image: url("/brand/decor/phase131/desk-prop-washi-tape.webp");
   }
 
-  /* 400x378 source -- paperclip, resting just past the tape roll. */
+  /* 400x378 source -- paperclip, clipped to the book's own bottom-left
+     corner, spilling slightly past its edge onto the desk. */
   .home-desk-prop--paperclip {
-    left: 4px;
-    top: 468px;
-    width: 50px;
-    height: 47px;
+    left: 92px;
+    top: 396px;
+    width: 54px;
+    height: 51px;
     transform: rotate(14deg);
     background-image: url("/brand/decor/phase131/desk-prop-paperclip.webp");
   }
 
-  /* 184x400 source -- pen, now positioned in the gap between the book and
-     sticky-note columns (left: a percentage of the whole stage, landing
-     roughly on the column boundary -- see .home-stage's 1.4fr/0.85fr split
-     above) rather than bleeding off the far right edge of the whole scene,
-     past the shortcuts entirely. This is the one prop actually bridging
-     the two clusters instead of decorating the book alone. */
+  /* 184x400 source -- pen, tucked just left of the fanned shortcut tabs
+     (which occupy the cluster's own right ~60%), resting across the book's
+     lower half as though it were used to pin/write the notes down. */
   .home-desk-prop--pen {
-    top: 46%;
-    left: 61.5%;
-    width: 66px;
-    height: 143px;
-    transform: rotate(20deg);
+    top: 300px;
+    left: 32%;
+    width: 60px;
+    height: 130px;
+    transform: rotate(24deg);
     background-image: url("/brand/decor/phase131/desk-prop-pen.webp");
   }
 }

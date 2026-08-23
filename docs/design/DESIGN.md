@@ -6000,3 +6000,213 @@ silhouette holds up under the same strict rubric it was built to pass.
 Otherwise, the three P2 items Phase 157 already queued (Study
 ready-state board unity, Stats scene texture) remain the next candidates
 in priority order once Deck's own re-audit closes out clean.
+
+## Phase 159 -- Home v2 Scene Rebuild / One Hero Object, Not Two Clusters
+
+Phase 151 fixed the book's scale and pulled the title note down to
+physically overlap its top edge, but never touched the underlying
+shape Phase 145 first built: `.home-stage { grid-template-columns:
+1.4fr 0.85fr }`, book on one track, three sticky-note shortcuts
+stacked on the other. Tightening that grid's gap and stretching the
+shortcut column to match the book's height (both Phase 151) made the
+two tracks sit closer together, but they never stopped being two
+independent tracks -- a real screenshot still reads as a hero text
+panel beside a shortcut column, i.e. an improved landing-page layout,
+not a single object-centered scene. This phase discards the grid
+entirely rather than tuning it again.
+
+**Removed:**
+- **`.home-stage`'s two-column CSS Grid** (`grid-template-columns:
+  minmax(0,1.4fr) minmax(260px,0.85fr)`) -- the actual mechanism
+  producing two clusters. There is no grid anywhere in the new
+  markup; `.home-hero-cluster` is a single relatively-positioned box.
+- **`.home-stickers`** -- the shortcut column's own sibling track,
+  stretched via `align-items:stretch`/`justify-content:space-between`
+  to fill the book's full height. Discarded along with the grid it
+  depended on, not resized.
+- **`.home-cover-cta`'s `border-radius:999px` plain pill shape** --
+  this phase's own explicit failure list names "CTA가 admin button
+  또는 generic pill처럼 보이면 실패," and a fully rounded pill button
+  is exactly that shape, regardless of color. Home's CTA was the last
+  one in the app still using it -- every other tab converted to the
+  fixed-pixel clip-path notch family across Phases 149-158.
+- **The old desk-prop z-index (`-1`)** -- correct for the two-column
+  layout, where props sat in genuinely empty gaps between tracks;
+  invisible in the single-cluster scene, where every sensible prop
+  position now crosses an opaque sibling (the note or the book photo).
+  Confirmed via `elementFromPoint()` that the leaf prop was present in
+  the DOM at its intended coordinates with nothing visible -- painted
+  entirely behind `.home-cover-note`.
+
+**New one-hero-object silhouette:** `.home-hero-cluster` is sized to
+the book photo itself (`.home-cover-object` drives its width via
+`max-width`; nothing else in the cluster is independently sized). The
+title note still overlaps the book's top-left edge (Phase 151's
+technique, unchanged -- it already worked, the note was never the
+problem). The three shortcuts are now `.home-shortcut-tab` elements,
+absolutely positioned as a fanned row along the book's own bottom-right
+edge, overlapping it by ~14-30px depending on viewport -- tabs tucked
+under a notebook lying on a desk, not a second surface beside it. Desk
+props (leaf/tape/paperclip/pen) reposition around the single cluster's
+corners instead of bridging a column gap that no longer exists, now
+painted *above* the book photo (see the z-index fix above) so they read
+as real objects resting on the cover -- a pen crossing the spine, tape
+and a paperclip weighting the lower-left corner, a leaf sprig behind
+the top-right corner, opposite the note.
+
+**How book/title/CTA/shortcuts were unified into one object:** every
+piece shares the same positioning context (`.home-hero-cluster`,
+`position:relative`), so "where does this sit" is always answered in
+the same coordinate space the book itself is drawn in -- a percentage
+or pixel offset on the note, a tab, or a prop is inherently relative to
+the book's own box, not to an independently-sized sibling column.
+Concretely: the note's negative `margin-bottom` pulls it onto the
+book's top edge (kept from Phase 151); the CTA lives inside that note,
+now shaped as a notched bookmark tag instead of a pill so it reads as
+part of the note's own stationery rather than a web control sitting on
+top of it; the shortcuts are pinned via `position:absolute; bottom`
+inside the same cluster box the book fills, so their vertical position
+is defined in terms of the book's own bottom edge, not a separate
+track's height.
+
+**How the shortcut column was discarded:** `.home-stickers` (flex
+column stretched to the book's full height, each sticky note a
+same-width tile stacked top-to-bottom) is gone outright. The three
+`.home-shortcut-tab` buttons keep the exact same `onClick` handlers
+(`onGoToVocab`, the `isDevUser ? onOpenAccount : onStartTodayReview`
+branch, `onGoToSharedDecks`) and the same live hint-text logic
+(`vocabHint`/`reviewHint`/`decksHint`, computed identically), just
+positioned as a fanned row overlapping the book's bottom-right instead
+of a column beside it. Mobile uses flat CSS-color tabs (no background-
+image fetch); desktop upgrades to the same photographed sticky-note
+textures (yellow/coral/blue) the old column used, just repositioned.
+
+**Desktop (1280/1024) results:** confirmed via headless Chrome
+screenshot at both widths -- the first viewport is unambiguously one
+object: book dominant and centered, note glued to its top-left corner,
+CTA shaped as a notched tag instead of a pill, three sticky-note tabs
+fanned under the book's bottom-right edge with visible torn-paper
+overlap, four props resting visibly on the cover. No separate "text
+panel" or "shortcut column" read survives at either width. Iterated on
+`.home-hero-cluster`'s `max-width` (720px -> 820px -> settled at 760px)
+and `.home-shortcut-tabs`' vertical offset specifically to keep the
+whole cluster, tabs included, within a realistic ~900px browser
+viewport height without cutting the shortcuts below the fold -- verified
+via `getBoundingClientRect()` measurement, not just a screenshot glance,
+after finding the first (820px) attempt pushed the tabs' bottom edge to
+y=928 against a 900px viewport. `document.documentElement.scrollWidth
+=== clientWidth` at both widths.
+
+**Mobile (390/375/320) results:** book, note, CTA, and the three tabs
+render as one continuous cover scene at every width tested -- no
+vertical section break between them. The CTA's notch shape and the
+tabs' torn-paper overlap with the book's bottom edge are both still
+legible at 320px. Tuned the mobile tab overlap specifically (`bottom:
+4px` measured only ~2px of real overlap with the book's edge; raised to
+`bottom: 16px` for a genuine ~14px overlap, confirmed via measurement)
+rather than accepting a "close but not attached" result. Zero
+`scrollWidth`/`clientWidth` mismatch at any of the three widths.
+
+**Function/routing/storage confirmation:** no backend, API, schema,
+SRS, storage, or auth file was touched. `git diff` on
+`HomeDashboard.tsx` confirmed the component's prop signature and every
+`onClick` handler wiring (`onStartReading`, `onTryWithSample`,
+`onGoToVocab`, the dev-user account-panel branch on 복습,
+`onGoToSharedDecks`) are unchanged -- only JSX structure, class names,
+and comments differ. `vocabHint`/`reviewHint`/`decksHint` computation
+is untouched.
+
+**Build/browser QA results:** `npm run build` clean (fresh `.next`, no
+concurrent dev server). `git diff --check` clean. Verified via headless
+Chrome (Windows-native, CDP) against the running dev server and real
+backend at 1280/1024/390/375/320: Home load; CTA click navigated to
+Reading (confirmed via the result heading text, not just tab-active
+state); sample action confirmed via a real second check after the
+first attempt's naive "does a `<textarea>` have this text" assumption
+turned out wrong for this app's actual behavior -- `onTryWithSample`
+jumps straight to the analyzed reader result, confirmed instead by
+reading `.reader-text`'s real content, which matched the sample
+sentence; vocab shortcut navigated to 단어; review shortcut correctly
+opened the account panel for the dev user (pre-existing behavior,
+re-confirmed, not a regression); decks shortcut navigated to 덱;
+toolbar 피드백 opened a real modal and 로그인 opened the real account
+panel. A `window.confirm()` dialog triggered by chaining a sample-
+action test after an already-active reading session (pre-existing
+`startSampleReadingFromHome` behavior, unrelated to this phase) was
+handled via `Page.handleJavaScriptDialog` rather than worked around by
+skipping the check. A follow-up full 7-tab x 5-viewport sweep confirmed
+zero regressions elsewhere in the app. Zero console errors/warnings,
+zero failed requests, zero image errors throughout (one pre-existing,
+unrelated `/favicon.ico` 404 excluded, consistent with every prior
+phase's own finding).
+
+**Failure-criteria pass/fail (this phase's own 10-point list):**
+1. Title/CTA no longer separated from the book -- **pass** (same
+   physical overlap technique as Phase 151, now the CTA itself is also
+   shaped as part of the note's stationery rather than a floating
+   control).
+2. Shortcuts don't read as an independent right-hand column -- **pass**
+   (no grid track exists for them to occupy; they are positioned
+   directly against the book's own box).
+3. The book is a layout anchor, not decoration -- **pass** (every other
+   element's position is defined in terms of the book's own box).
+4. First impression isn't a landing-page layout -- **pass** (one
+   centered object with everything attached, confirmed via screenshot
+   at every required width).
+5. No wide abandoned empty wood area -- **pass**, with a caveat: side
+   margins at 1280 are real but modest (roughly matching a normal
+   centered-content margin, not a conspicuous gap) after widening the
+   cluster from 720px to 760px specifically to address this; a
+   materially wider cluster was tried (820px) and reverted because it
+   pushed the shortcut tabs below a realistic fold.
+6. Props are large enough to read as a scene -- **pass** (same
+   Phase 151 prop sizes, now actually visible after the z-index fix,
+   confirmed via screenshot -- pen, tape, and paperclip are clearly
+   legible individual objects, not specks).
+7. Mobile doesn't split back into vertical sections -- **pass**
+   (measured overlap between the tabs and the book's bottom edge at
+   390px, not just visually similar spacing).
+8. CTA isn't a generic pill -- **pass** (converted to the app's
+   established notched-tag CTA family).
+9. Shortcut text doesn't read as forced onto an image -- **pass**
+   (mobile tabs are flat CSS color, not an image; desktop tabs use the
+   same sticky-note photo texture every other tab's equivalent shortcut
+   already uses successfully).
+10. No non-Shiori character/animal/person -- **pass** (no new character
+    assets; Shiori's existing `review`/`default` variants reused
+    unchanged, now at `size="sm"` for the smaller review tab icon
+    instead of `md`).
+
+**Files changed:** `frontend/components/HomeDashboard.tsx`,
+`frontend/app/globals.css`, this file.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (structural silhouette confirmed via screenshot
+and `getBoundingClientRect()` measurement at multiple iteration
+points, not accepted on the first attempt; full functional click-
+through coverage; a real prop-invisibility bug found via
+`elementFromPoint()` and fixed, not just visually patched) all passed
+with zero console errors and zero failed requests. Per this project's
+standing process, no commit/push was made -- left staged for the user
+to review and commit alongside Phase 157/158's own still-uncommitted
+changes.
+
+**Remaining risk:** the shortcut tabs' overlap with the book's bottom
+edge (26-46px offset depending on viewport) was tuned against this
+phase's own current copy lengths (온단어/복습/덱, plus their hint
+lines) -- meaningfully longer hint text in the future could make a
+desktop tab wrap to a third line and grow taller than the space
+reserved for it, in the same general category of risk Phase 151's own
+closing note already flagged for the title note's copy length. Not a
+concern for the current copy (verified at all five required widths).
+The 1280 side margins, while much reduced from before this phase,
+are a deliberate compromise against fold height rather than fully
+eliminated -- a next pass could explore reclaiming more of that width
+without growing the book's height (e.g. widening only the prop/shadow
+canvas, not the book photo itself) if a future audit still flags it.
+
+**Next phase recommendation:** re-run a Phase-157-style scene-first
+audit specifically on Home once this lands, the same close-the-loop
+step recommended for Shared Deck in Phase 158. Otherwise the existing
+queue holds: Shared Deck card-shape rework (Phase 158's own next-step),
+then Study ready-state board unity, then Stats scene texture.

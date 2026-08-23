@@ -24,23 +24,20 @@ type HomeDashboardProps = {
   recentWords: VocabItem[];
 };
 
-// Phase 118 (Hard Mockup Reconstruction) -- Phase 54-117's Home kept the
-// right *ingredients* (notebook cover, three shortcuts, Shiori corner) but
-// wrapped them in UI-panel language the mockup never has: three bordered,
-// shadowed, padded cards under the cover read as an admin tile row, not
-// "stickers on a desk." This pass throws out the card chrome entirely.
-// Mobile: .home-stickers below is bare icon+label pairs sitting directly on
-// the page background -- no border, no fill, no shadow, matching
-// docs/design/mockups/casual-sticker-reader-mobile.png's Home board exactly
-// (icon, one line of text, nothing else). Desktop-only (see globals.css'
-// >=1024px block) they become small rotated sticky notes beside the cover,
-// matching the desktop mockup's "HOME DESK" panel -- but the *mobile*
-// default is intentionally chrome-less. The cover itself is unchanged in
-// spirit (title/CTA printed on it, Shiori peeking from the corner) but
-// grows taller and drops the inner "page-edge lines" busywork in favor of
-// a plainer, larger presence -- it has to fill the screen the way the
-// mockup's phone-height notebook does, not share it evenly with the row
-// below.
+// Phase 159 (Home v2 Scene Rebuild) -- every prior Home pass (118's card
+// chrome removal, 151's scale/overlap correction) still left the shortcuts
+// as their own grid column beside the book: `.home-stage { grid-template-
+// columns: 1.4fr 0.85fr }`, book on one side, three sticky notes stacked on
+// the other. Fixing the book's size and the note's overlap never fixed
+// that underlying shape -- two independent tracks read as two clusters (a
+// "hero text panel" and a "shortcut column") no matter how tightly they
+// were packed, which is exactly what this phase's brief names as the
+// remaining failure. There is no grid here any more: `.home-hero-cluster`
+// is a single relatively-positioned object sized to the book photo itself,
+// and the three shortcuts are `.home-shortcut-tab` elements absolutely
+// positioned along the book's own bottom edge, overlapping it like tabs
+// tucked under a notebook lying on a desk -- physically part of the same
+// object the title note sits on top of, not a second surface beside it.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -72,27 +69,19 @@ export function HomeDashboard({
 
   return (
     <section className="tab-panel home-dashboard home-scene" aria-live="polite">
-      <div className="home-stage">
-        {/* Phase 151 -- Home Hero Scene Scale Correction. Phase 145 stacked
-            .home-cover-heading (title/CTA) directly above .home-cover-object
-            (the book, capped at a small 420px max-width) as two separate
-            rows -- a real screenshot at 1280 showed the book sitting alone,
-            small, with a huge gap of bare wood between it and the shortcut
-            column, and the heading reading as its own block rather than
-            attached to the book at all. This restructures .home-cover into
-            one physically overlapping cluster instead: the book grows much
-            larger (main hero object, not a small accent), and
-            .home-cover-heading becomes a paper note pinned across its own
-            top edge (negative margin-bottom pulls it down onto the book --
-            see globals.css), the same "note glued to a physical object"
-            language .home-cover-sticky already used for one small tag. The
-            old standalone .home-cover-sticky tag ("오늘도 책장을 열어요")
-            is removed rather than kept alongside the new heading note --
-            both were doing the same job (a note pinned to the book's top
-            edge) in the same spot, and keeping both would have stacked two
-            competing notes on top of each other. */}
-        <div className="home-cover">
-          <div className="home-cover-heading">
+      <div className="home-hero">
+        {/* Phase 159 -- home-hero-cluster is the one hero object: sized to
+            the book photo itself (.home-cover-object drives the box's
+            width), not a grid column. The title note still overlaps the
+            book's top edge (Phase 151's technique, unchanged), and the
+            three shortcuts (.home-shortcut-tabs, new) are absolutely
+            positioned along the book's own bottom edge instead of living in
+            a sibling grid track -- see globals.css for how each piece is
+            actually pinned. Everything in this cluster shares one
+            positioning context, which is what makes it read as a single
+            object instead of two. */}
+        <div className="home-hero-cluster">
+          <div className="home-cover-note">
             <h2 className="home-cover-title">
               오늘도 한 문장,
               <br />한 단어.
@@ -122,102 +111,102 @@ export function HomeDashboard({
               <ShioriCharacter variant="default" size="lg" />
             </span>
           </div>
+
+          {/* Phase 159 -- was .home-stickers, a full sibling grid column
+              beside the book (three tall sticky-note cards stacked on
+              their own track). Discarded, not resized: these are now
+              .home-shortcut-tab elements pinned along the book's bottom
+              edge, each overlapping it by a few px like a tab tucked
+              under a notebook lying on a desk -- part of the book object
+              itself, not a second surface next to it. Same three
+              onClick handlers, same dev-user account-panel branch on
+              복습, unchanged. */}
+          <div className="home-shortcut-tabs" role="group" aria-label="바로가기">
+            <button
+              type="button"
+              className="home-shortcut-tab home-shortcut-tab--vocab"
+              onClick={onGoToVocab}
+            >
+              <span className="home-shortcut-tab-icon">
+                <CardFileIcon />
+              </span>
+              <span className="home-shortcut-tab-text">
+                <span className="home-shortcut-tab-label">단어장</span>
+                <span className="home-shortcut-tab-hint">{vocabHint}</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="home-shortcut-tab home-shortcut-tab--review"
+              onClick={isDevUser ? onOpenAccount : onStartTodayReview}
+            >
+              <span className="home-shortcut-tab-icon home-shortcut-tab-icon--character">
+                <ShioriCharacter variant="review" size="sm" />
+              </span>
+              <span className="home-shortcut-tab-text">
+                <span className="home-shortcut-tab-label">복습</span>
+                <span className="home-shortcut-tab-hint">{reviewHint}</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="home-shortcut-tab home-shortcut-tab--decks"
+              onClick={onGoToSharedDecks}
+            >
+              <span className="home-shortcut-tab-icon">
+                <BookshelfIcon />
+              </span>
+              <span className="home-shortcut-tab-text">
+                <span className="home-shortcut-tab-label">덱</span>
+                <span className="home-shortcut-tab-hint">{decksHint}</span>
+              </span>
+            </button>
+          </div>
+
+          {/* Phase 133/139/151's photographed desk-prop cutouts (leaf,
+              washi tape, paperclip, pen), repositioned for Phase 159: with
+              the sticky-note column gone, there is no second cluster left
+              to bridge -- each prop now anchors a different edge of the
+              single hero cluster instead (leaf pins the title note's
+              corner, tape+paperclip weight the book's lower-left corner,
+              pen tucks between two shortcut tabs). display:none below
+              1024px in globals.css, unchanged -- mobile keeps the cover as
+              the sole subject. background-image (not <img src>) inside the
+              >=1024px block only, so mobile fetches zero bytes for any of
+              the four (see the Phase 139 note this comment used to carry,
+              still accurate, just condensed here since the full history is
+              already in DESIGN.md). */}
+          <div className="home-desk-props" aria-hidden="true">
+            <span
+              aria-hidden="true"
+              className="home-desk-prop home-desk-prop--leaf"
+            />
+            <span
+              aria-hidden="true"
+              className="home-desk-prop home-desk-prop--tape"
+            />
+            <span
+              aria-hidden="true"
+              className="home-desk-prop home-desk-prop--paperclip"
+            />
+            <span
+              aria-hidden="true"
+              className="home-desk-prop home-desk-prop--pen"
+            />
+          </div>
         </div>
 
-        <div className="home-stickers" role="group" aria-label="바로가기">
-          <button
-            type="button"
-            className="home-sticker home-sticker--vocab"
-            onClick={onGoToVocab}
-          >
-            <span className="home-sticker-icon">
-              <CardFileIcon />
-            </span>
-            <span className="home-sticker-text">
-              <span className="home-sticker-label">단어장</span>
-              <span className="home-sticker-hint">{vocabHint}</span>
-            </span>
-          </button>
-          <button
-            type="button"
-            className="home-sticker home-sticker--review"
-            onClick={isDevUser ? onOpenAccount : onStartTodayReview}
-          >
-            <span className="home-sticker-icon home-sticker-icon--character">
-              <ShioriCharacter variant="review" size="md" />
-            </span>
-            <span className="home-sticker-text">
-              <span className="home-sticker-label">복습</span>
-              <span className="home-sticker-hint">{reviewHint}</span>
-            </span>
-          </button>
-          <button
-            type="button"
-            className="home-sticker home-sticker--decks"
-            onClick={onGoToSharedDecks}
-          >
-            <span className="home-sticker-icon">
-              <BookshelfIcon />
-            </span>
-            <span className="home-sticker-text">
-              <span className="home-sticker-label">덱</span>
-              <span className="home-sticker-hint">{decksHint}</span>
-            </span>
-          </button>
-        </div>
-
-        {/* Phase 133 -- the pure-CSS plant/stationery/pen/cup shapes are
-            replaced with Phase 131's photographed desk-prop cutouts (real
-            leaf sprig, washi tape roll, brass paperclip, pen). No photo
-            exists for the old CSS cup, so it's dropped rather than left as
-            the one obviously-fake shape in an otherwise-real scene.
-            display:none below 1024px in globals.css -- mobile keeps the
-            cover as the sole subject. A child of .home-stage (not a
-            page-level sibling) so its position:absolute; inset:0 sizes
-            against the cover+stickers box it's meant to scatter around, not
-            the whole viewport. Each prop is decorative-only: aria-hidden and
-            pointer-events:none inherited from .home-desk-props so none of
-            them can ever intercept a click.
-            Phase 139 -- these were originally four <img src> elements (see
-            git history), which fetched all four WebP files unconditionally
-            on every page load regardless of viewport, since an ancestor's
-            CSS display:none does not stop the browser from requesting an
-            <img>'s own src (confirmed via network log: the mobile Home load
-            was still pulling ~92KB of desk-prop images that render nowhere
-            below 1024px). Home's own sticky notes (.home-sticker--vocab/
-            --review/--decks) already avoided this exact problem by using
-            CSS background-image inside the >=1024px media query instead of
-            an <img> tag -- a media query the browser correctly skips
-            fetching behind when it doesn't match. Converted to plain <span>
-            + the same background-image pattern here for that reason; each
-            prop's actual photo now lives in globals.css'
-            .home-desk-prop--leaf/--tape/--paperclip/--pen rules, still
-            inside the existing >=1024px block, so mobile now fetches zero
-            bytes for any of the four instead of ~92KB it never rendered. */}
-        <div className="home-desk-props" aria-hidden="true">
-          <span
-            aria-hidden="true"
-            className="home-desk-prop home-desk-prop--leaf"
-          />
-          <span
-            aria-hidden="true"
-            className="home-desk-prop home-desk-prop--tape"
-          />
-          <span
-            aria-hidden="true"
-            className="home-desk-prop home-desk-prop--paperclip"
-          />
-          <span
-            aria-hidden="true"
-            className="home-desk-prop home-desk-prop--pen"
-          />
-        </div>
+        {/* Phase 159 -- was a page-level footer sitting well below the
+            whole .home-stage box. Brief requires this stay close enough to
+            read as a small desk label, not a footer outside the scene --
+            now sits tight under the cluster with its own small "note"
+            treatment (see .home-footnote in globals.css) instead of the
+            generic full-width info-strip spacing. */}
+        <p className="info-strip info-strip-quiet home-footnote">
+          <ShieldIcon className="info-strip-icon" />
+          원문 전체는 서버에 저장하지 않아요.
+        </p>
       </div>
-
-      <p className="info-strip info-strip-quiet home-footnote">
-        <ShieldIcon className="info-strip-icon" />
-        원문 전체는 서버에 저장하지 않아요.
-      </p>
     </section>
   );
 }
