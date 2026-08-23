@@ -1750,32 +1750,58 @@ button {
   box-shadow: none;
 }
 
-/* Small count chip, now used by the 기록 tab's 오늘 학습 row (see
-   InfoSection) -- home folds the same numbers into its CTA label instead. */
-.home-summary-chip {
-  display: flex;
+/* Phase 155 -- was .home-summary-chip, a rounded pill badge (border +
+   var(--panel-bg) fill, same shape as any dashboard metric chip). The 기록
+   탭's 오늘 학습 row now uses this instead: a small paper tag pinned at a
+   slight rotation with a torn washi-tape strip, the same rgba(217,122,74,
+   ...) tape/.vocab-pinned-note family Vocab/Home/Study already reuse for
+   "this note is physically pinned to the page" -- same 3 numbers, no pill
+   shape left. */
+.study-stamp-tag {
+  position: relative;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--panel-bg);
+  padding: 7px 12px 6px;
+  border-radius: 2px 2px 8px 2px;
+  background: var(--soft-bg);
+  box-shadow: 0 3px 6px rgba(120, 98, 40, 0.12);
+  transform: rotate(-1.3deg);
 }
 
-.home-summary-chip-icon {
+.study-stamp-tag:nth-child(even) {
+  transform: rotate(1.1deg);
+}
+
+.study-stamp-tag::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  z-index: 1;
+  width: 16px;
+  height: 9px;
+  border: 1px solid rgba(217, 122, 74, 0.42);
+  background: rgba(217, 122, 74, 0.3);
+  box-shadow: 0 2px 3px rgba(37, 43, 30, 0.12);
+  transform: translateX(-50%) rotate(-4deg);
+  pointer-events: none;
+}
+
+.study-stamp-tag-icon {
   flex: 0 0 auto;
   width: 14px;
   height: 14px;
   color: var(--screen-accent, var(--muted));
 }
 
-.home-summary-chip span {
+.study-stamp-tag span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
 }
 
-.home-summary-chip strong {
+.study-stamp-tag strong {
   color: var(--text);
   font-size: 15px;
 }
@@ -6326,13 +6352,17 @@ input.reading-vocab-sticker-toggle:checked {
     gap: 20px;
   }
 
+  /* Phase 155 -- was a filled var(--soft-bg) box with its own radius, the
+     shape of a separate floating dashboard widget parked beside the main
+     column. Dropped the fill/box entirely -- a thin dashed rule now reads
+     as a notebook margin the word tickets sit in, part of the same page
+     as the log/ledger to its left rather than a second surface. */
   .study-log-scene-aside {
     position: sticky;
     top: 24px;
     align-self: start;
-    padding: 16px;
-    border-radius: 4px 16px 16px 16px;
-    background: var(--soft-bg);
+    padding: 2px 0 2px 18px;
+    border-left: 1px dashed var(--paper-border);
   }
 }
 
@@ -6365,20 +6395,16 @@ input.reading-vocab-sticker-toggle:checked {
 .records-today-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 10px 14px;
+  margin: 2px 0;
 }
 
-.records-today-row .home-summary-chip {
-  flex: 1 1 150px;
-  min-width: 0;
-}
-
-@media (max-width: 640px) {
-  .records-today-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
+/* Phase 155 -- previously forced a single full-width column below 640px
+   (each pill stretching edge-to-edge, stacked like an admin card list).
+   The pinned tags stay small, wrapped tags instead -- same "notebook
+   margin" reading order Vocab's own pinned notes already use at every
+   width, not a phone-only dashboard-stack fallback. */
 
 /* Small vertical bar-log (not a chart-library dashboard) -- one thin bar
    per review level, height only, no axis/legend/gridlines. */
@@ -6425,23 +6451,30 @@ input.reading-vocab-sticker-toggle:checked {
   white-space: nowrap;
 }
 
-.records-deck-log {
+/* Phase 155 -- was .records-deck-log/.records-deck-row: each deck its own
+   bordered, drop-shadowed card, each carrying its own full rounded
+   dashboard-style progress bar -- several decks in a row read as a stack
+   of separate analytics widgets. Now one continuous "서가 기록지" ledger
+   surface (like the .study-diary-sheet just above it): rows share one
+   flat paper background and are divided by a hairline rule instead of
+   each owning its own box edge, and the fill indicator is a slim
+   underline track rather than a thick rounded bar. Same numbers, same
+   <details> disclosure, same scan order top-to-bottom. */
+.records-deck-ledger {
   display: grid;
-  gap: 8px;
+  border: 1px solid var(--paper-border);
+  border-radius: 4px 14px 14px 14px;
+  background: var(--paper-bg);
 }
 
-/* Same "paper-corner index card" language as the vocab notebook rows --
-   the deck breakdown reads as shelf log entries, not table rows. Asymmetric
-   corner (one squared-off corner) matches the index-card family used across
-   Vocab/Study/Shared Deck instead of a plain uniform-radius rectangle. */
-.records-deck-row {
+.records-deck-ledger-row {
   display: grid;
   gap: 4px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px 10px 10px 3px;
-  background: var(--panel-bg);
-  box-shadow: 0 2px 6px rgba(120, 98, 40, 0.05);
+  padding: 12px 16px;
+}
+
+.records-deck-ledger-row + .records-deck-ledger-row {
+  border-top: 1px dashed var(--paper-border);
 }
 
 .records-deck-row-head {
@@ -6457,8 +6490,19 @@ input.reading-vocab-sticker-toggle:checked {
   font-weight: 700;
 }
 
-.records-deck-progress {
-  height: 6px;
+.records-deck-progress-line {
+  position: relative;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.records-deck-progress-line div {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--screen-accent, var(--accent));
+  transition: width var(--motion-slow) var(--ease-soft);
 }
 
 /* Primary-visible row: 오늘 복습 N / 모르는 단어 N -- 전체/아는 단어/헷갈리는
@@ -6510,34 +6554,46 @@ input.reading-vocab-sticker-toggle:checked {
   font-size: 12px;
 }
 
-/* study-log-journal -- short diary-style lines instead of another stat
-   block, so the same underlying numbers (오늘 복습/최근 담은 단어/자주
-   틀린 단어) also read as "what happened", not just counts. */
-/* Wraps as compact chip-like lines instead of full-width grid rows -- a
-   short sentence stretched across the whole tab width used to leave a lot
-   of dead space after the text and read like an empty bar. */
-.study-log-journal-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+/* Phase 155 -- was .study-log-journal-list/-line: each of the (at most 3)
+   sentences got its own bordered, filled chip -- the same rounded-box
+   shape as TodayStudyMemo's stat tags directly above it, just wider, so
+   two different kinds of content (numbers vs. sentences) read as one
+   repeated dashboard shape stacked twice. Now one continuous ruled-paper
+   sheet (same repeating-linear-gradient rule recipe .shared-deck-detail's
+   notebook page already uses) with each entry as a plain line divided by
+   a hairline rule -- a real diary page, not a second row of pill badges. */
+.study-diary-sheet {
+  display: grid;
+  border: 1px solid var(--paper-border);
+  border-radius: 4px 14px 14px 14px;
+  padding: 4px 16px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0,
+      transparent 33px,
+      rgba(110, 91, 47, 0.06) 33px,
+      rgba(110, 91, 47, 0.06) 34px
+    ),
+    var(--paper-bg);
 }
 
-.study-log-journal-line {
+.study-diary-line {
   display: flex;
-  flex: 0 1 auto;
-  max-width: 100%;
   align-items: center;
   gap: 8px;
   margin: 0;
-  padding: 10px 14px;
-  border: 1px solid var(--paper-border);
-  border-radius: 10px;
-  background: var(--paper-bg);
+  padding: 10px 0;
   color: var(--text);
   font-size: 13px;
+  line-height: 1.4;
 }
 
-.study-log-journal-icon {
+.study-diary-line + .study-diary-line {
+  border-top: 1px dashed var(--paper-border);
+}
+
+.study-diary-line-icon {
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
@@ -9219,10 +9275,19 @@ input.reading-vocab-sticker-toggle:checked {
    "side-tab" accent, the app-wide default for policy/trust asides). That
    pattern reads as an admin-callout box, which is exactly what this whole
    tab is trying to move away from -- swapped for the plain .panel-card look
-   everywhere else uses plus one corner fold, so it reads as another
-   notebook page rather than a flagged notice. */
+   plus one corner fold.
+   Phase 155 -- the rest of the tab has since moved off boxed/bordered
+   .panel-card surfaces entirely (stamp tags, diary sheet, deck ledger), so
+   the one remaining bordered card at the very bottom read as the last
+   leftover dashboard box. Drops .panel-card's border + drop-shadow for a
+   flat paper fill -- still its own page (the corner fold stays), just no
+   longer boxed like a floating widget. */
 .study-log-policy-card {
-  border-radius: 12px 12px 12px 3px;
+  border: none;
+  border-radius: 3px 12px 12px 12px;
+  padding: 16px 18px;
+  background: var(--paper-bg);
+  box-shadow: none;
 }
 
 .info-panel-list {

@@ -5208,3 +5208,181 @@ Classify IA) has now been explicitly judged (Option A, this phase).
 Future work in this area, if any, should start from real usage data on
 how often Classify and Reading sessions chain together for the same
 text, not from a code-only investigation.
+
+## Phase 155 -- Stats Brand Alignment / Study Log Reconstruction
+
+Stats ("통계") was functionally sound but, per direct user feedback,
+the last tab still reading as an operations dashboard rather than the
+"학습 일지/스티커 로그/작은 기록지 묶음" every other rebuilt tab now
+commits to: a row of rounded metric pills, a second row of near-
+identically-shaped journal chips repeating the same three numbers as
+sentences, a stack of individually bordered/shadowed deck-progress
+cards each with its own thick rounded bar, a filled `--soft-bg` side
+panel holding the word lists, and a bordered `.panel-card` policy box
+at the bottom -- five variations on one shape (white, rounded-corner,
+thin-bordered box) applied to unrelated content types. The prior
+failure mode this phase was explicitly warned against repeating
+("기존 dashboard 위에 paper texture 얹기") did not apply here in the
+literal sense -- there was no separate paper layer sitting on top --
+but the underlying box-repetition was the same admin-list instinct in
+plain CSS form.
+
+**Removed:**
+- **`.home-summary-chip`** -- the 3-pill metric row (border +
+  `panel-bg` fill, `border-radius: 999px`), the single most literal
+  "dashboard badge" shape in the tab. No longer used anywhere; the old
+  rule block is fully replaced, not left as dead CSS.
+- **The mobile-only forced single-column stack on `.records-today-row`**
+  (`display: grid; grid-template-columns: minmax(0, 1fr)` below
+  640px) -- the exact "메트릭이 dashboard card stack처럼 보이면 실패"
+  case named in this phase's brief; every metric pill became a
+  full-width bar on phones.
+- **`.study-log-journal-list`/`.study-log-journal-line`/
+  `.study-log-journal-icon`** -- each diary sentence as its own
+  bordered, filled chip, the same rounded-box language as the stat
+  pills directly above it, just wider. Two different kinds of content
+  (numbers vs. sentences) reading as one repeated shape stacked twice.
+- **`.records-deck-log`/`.records-deck-row`** -- each deck its own
+  bordered card with `box-shadow`, holding a full rounded 6px
+  `.progress-bar` -- a stack of N decks read as a stack of N separate
+  analytics widgets, worse the more decks a user has.
+- **The aside's filled `background: var(--soft-bg)` box** (`.study-
+  log-scene-aside` at `>=1024px`) -- the "최근 담은 단어"/"자주 틀린
+  단어" word lists sat inside a tinted panel with its own border-radius,
+  reading as a separate dashboard widget parked beside the main column
+  rather than part of the same page.
+- **`.study-log-policy-card`'s `.panel-card` border + drop-shadow** --
+  by the time every other surface on this tab had moved off boxed
+  cards, the one bordered card left at the very bottom read as the
+  last leftover admin box, even though Phase 60 had already lightened
+  it once from the app's default `.note-card` callout.
+
+**Kept as-is (judged already correct, not dashboard-shaped):**
+`.records-word-row`/`.paper-corner` word-ticket rows (already an
+index-card look, just freed from their filled aside wrapper);
+`.records-word-wrong-badge` (a small functional count badge, not a
+dashboard pill in the sense the brief targets); the `<details>`
+disclosure interaction on each deck row; `StudyLogEmptyState` (already
+`AppEmptyState` + Shiori, matches the brief's own empty-state
+direction untouched); `.records-level-strip`/`.records-level-bar*`
+(confirmed unused in `InfoSection.tsx` -- dead CSS predating this
+phase, left alone rather than bundled into an unrelated cleanup).
+
+**New structure:**
+- **오늘 학습 → `.study-stamp-tag`:** the same washi-tape-pinned,
+  slightly-rotated paper-tag family Home/Vocab/Study's own pinned
+  notes already established (`rgba(217, 122, 74, ...)` tape strip,
+  alternating `±rotate()` per tag, `var(--soft-bg)` fill with a
+  squared-then-rounded corner) -- reused verbatim rather than inventing
+  a fourth "small tag" language for the same idea. `.records-today-row`
+  now just wraps these as small flex items at every width (`flex-wrap:
+  wrap`, no forced mobile grid column), so on narrow screens the three
+  tags wrap two-then-one instead of stacking as full-width bars.
+- **학습 일지 → `.study-diary-sheet`:** one continuous ruled-paper
+  surface (the same `repeating-linear-gradient` rule recipe
+  `.shared-deck-detail`'s notebook page already uses, at a tighter
+  33px line height suited to short sentences) holding plain
+  `.study-diary-line` entries divided by a hairline dashed rule instead
+  of each having its own filled box.
+- **서가별 통계 → `.records-deck-ledger`:** one shared paper surface
+  (`var(--paper-bg)`, single outer border) instead of N separate cards;
+  rows (`.records-deck-ledger-row`) are divided by a hairline dashed
+  rule between rows rather than each owning its own box edge. The
+  progress indicator is now `.records-deck-progress-line`, a 2px
+  underline track instead of a 6-9px rounded dashboard bar, filled with
+  the tab's own `--screen-accent` (sage green). Same 오늘 복습/모르는
+  단어 counts, same "자세히 보기" `<details>` disclosure with the same
+  전체/아는 단어/헷갈리는 단어 breakdown, same deck name and percent --
+  none of `DeckProgressJournal`'s data or JSX structure below the row
+  wrapper changed.
+- **최근 담은 단어 / 자주 틀린 단어 aside:** the `--soft-bg` fill and
+  its own border-radius were dropped; at `>=1024px` the aside is now
+  a plain sticky column separated from the main log by a single thin
+  dashed vertical rule (`.study-log-scene-aside`), reading as a margin
+  column of the same notebook page rather than a second floating
+  surface. The individual `.records-word-row.paper-corner` "ticket"
+  rows are unchanged, so word/reading/meaning/wrong-count scan-ability
+  is identical to before.
+- **저장 정책 card:** kept its own paper fill and folded corner
+  (`.paper-corner`) but dropped the `.panel-card` border and drop-
+  shadow, so it now reads as the closing page of the same notebook
+  rather than a bordered callout box.
+
+**Desktop (1280/1024) results:** confirmed via headless Chrome
+screenshot (both viewports) that no bordered/shadowed `.panel-card`-
+style box remains anywhere in the populated state except the outer
+deck-ledger and diary-sheet surfaces, both of which are now single
+shared paper surfaces rather than repeated per-item cards; the metric
+tags read as pinned notes, not badges; the aside now visually
+continues the main column instead of floating as a separate widget.
+`document.documentElement.scrollWidth === clientWidth` at both widths
+(1280x1280, 1024x1024).
+
+**Mobile (390/375/320) results:** the three stamp tags wrap
+two-then-one instead of stacking as full-width pills; the diary sheet,
+deck ledger, and word tickets all flow as single-column content with
+no card-in-card boxing; zero overflow at all three widths
+(`scrollWidth === clientWidth`: 390x390, 375x375, 320x320). One
+pre-existing, non-regression cosmetic edge case noted at 320px: a dev-
+QA-only test deck with an unusually long name ("Stability Shared
+1783129745082") wraps its "0%" onto a second line inside
+`.records-deck-row-head`'s `justify-content: space-between` flex row --
+this is unchanged pre-existing row-head layout behavior triggered only
+by synthetic test data, not something this phase's ledger restructure
+introduced.
+
+**Function/API/stats/storage confirmation:** `git diff` on
+`InfoSection.tsx` confirmed scoped entirely to `className` changes,
+JSX element restructuring inside `DeckProgressJournal`/`StudyTimeline`/
+`TodayStudyMemo`, and comments -- zero lines touched in `StudyLogPage`'s
+props, the `journalEntries` construction logic, `DeckStats`/`StudyStats`/
+`VocabItem` types, or any data passed in from `page.tsx`
+(`loadInfoStats`/`loadInfoWordHighlights`). No backend, API route,
+schema, SRS/review-log, or deck-progress-calculation file was touched.
+`StatsPanel.tsx` (Study tab's own separate "학습 현황 자세히 보기"
+disclosure) was confirmed out of scope and left untouched.
+
+**Build/QA results:** `npm run build` clean (stopped the dev server,
+`rm -rf .next` first, per this project's build/dev-concurrency rule).
+`git diff --check` clean. Verified via headless Chrome (Windows-native,
+CDP) against the running dev server: Stats tab load and populated
+state confirmed at 1280/1024/390/375/320; deck-progress `<details>`
+disclosure opened via a real click (not a hit-test) and confirmed
+`[open]`, screenshotted before/after; recent/difficult word lists
+rendered with live word/reading/meaning/wrong-count text
+(`.study-stamp-tag`: 3, `.study-diary-line`: 3, `.records-deck-ledger-
+row`: 4, aside `.records-word-row`: 8 -- all matching the dev account's
+real data); hamburger drawer opened via a real click at 390px width,
+confirmed 통계 highlighted as the active tab and both 피드백 and 로그인
+reachable from the drawer/toolbar. Zero console errors/warnings, zero
+failed network requests, zero image errors, across every viewport
+checked.
+
+**Files changed:** `frontend/components/InfoSection.tsx`,
+`frontend/app/globals.css`, this file.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (visual de-boxing confirmed via screenshot,
+real disclosure-toggle and drawer-navigation interactions, overflow
+and console/network checks at every viewport) all passed with zero
+console errors and zero failed requests. Per this project's standing
+process, no commit/push was made -- left staged for the user to review
+and commit.
+
+**Remaining risk:** the 320px deck-row-head wrap noted above is
+cosmetic and limited to a synthetic long-named test deck already
+present in the dev database before this phase; real deck names are
+unlikely to reach that length, and the underlying flex layout is
+unchanged from before this phase. No other risk identified specific to
+this phase's changes.
+
+**Next phase candidates:** none currently flagged. With Phase 155,
+every tab named in the original Phase 145 rebuild plan (Home, Reading,
+Vocab, Deck, Study, Analyze/Classify, and now Stats) has had at least
+one post-145 brand-alignment pass judged against the same "학습
+노트/기록장" standard. Future work in this area, if any, should start
+from a full cross-tab consistency pass rather than a single-tab
+correction, since the per-tab pinned-note/ledger/diary-sheet
+vocabulary has now converged closely enough across tabs that any
+remaining differences are more likely to be real inconsistencies than
+intentional per-tab variation.

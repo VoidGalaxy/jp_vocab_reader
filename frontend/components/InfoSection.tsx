@@ -41,6 +41,12 @@ function StudyLogHero() {
 // ---------------------------------------------------------------------------
 // TodayStudyMemo -- at most 3 numbers, large: 오늘 복습 / 최근 담은 단어 /
 // 어려운 단어. Deliberately not a 6+-cell stat grid.
+// Phase 155 -- was 3 rounded pill badges (.home-summary-chip), the exact
+// "dashboard metric pill" shape the brief calls out; each is now a small
+// pinned paper tag (.study-stamp-tag) instead -- same washi-tape-pinned
+// sticky-note family Home's/Vocab's/Deck's own pinned notes already
+// established, reused here rather than inventing a fourth "small tag"
+// language for the same idea.
 // ---------------------------------------------------------------------------
 function TodayStudyMemo({
   dueTodayCount,
@@ -55,18 +61,18 @@ function TodayStudyMemo({
     <section className="study-log-entry today-study-memo">
       <h3 className="records-log-title">오늘 학습</h3>
       <div className="records-today-row">
-        <span className="home-summary-chip">
-          <ClockIcon className="home-summary-chip-icon" />
+        <span className="study-stamp-tag">
+          <ClockIcon className="study-stamp-tag-icon" />
           <span>오늘 복습</span>
           <strong>{dueTodayCount}</strong>
         </span>
-        <span className="home-summary-chip">
-          <BookmarkIcon className="home-summary-chip-icon" />
+        <span className="study-stamp-tag">
+          <BookmarkIcon className="study-stamp-tag-icon" />
           <span>최근 담은 단어</span>
           <strong>{recentCount}</strong>
         </span>
-        <span className="home-summary-chip">
-          <PencilIcon className="home-summary-chip-icon" />
+        <span className="study-stamp-tag">
+          <PencilIcon className="study-stamp-tag-icon" />
           <span>어려운 단어</span>
           <strong>{hardCount}</strong>
         </span>
@@ -79,6 +85,14 @@ function TodayStudyMemo({
 // StudyTimeline -- short diary-style lines instead of another stat block,
 // so the same underlying numbers also read as "what happened", not just
 // counts.
+// Phase 155 -- each line used to be its own bordered/filled chip
+// (.study-log-journal-line), the exact same rounded-box shape as
+// TodayStudyMemo's stat pills right above it -- two different pieces of
+// content (numbers vs. sentences) reading as one repeated shape. Now one
+// continuous ruled-paper sheet (.study-diary-sheet, the same repeating-
+// line texture Reading/Vocab's own worksheet surfaces already use) with
+// each entry as a plain line divided by a hairline rule -- a real diary
+// page, not a second row of pill badges.
 // ---------------------------------------------------------------------------
 type JournalEntry = { icon: typeof ClockIcon; text: string };
 
@@ -89,10 +103,10 @@ function StudyTimeline({ entries }: { entries: JournalEntry[] }) {
   return (
     <section className="study-log-entry study-timeline">
       <h3 className="records-log-title">학습 일지</h3>
-      <div className="study-log-journal-list">
+      <div className="study-diary-sheet">
         {entries.map((entry, index) => (
-          <p className="study-log-journal-line" key={index}>
-            <entry.icon className="study-log-journal-icon" />
+          <p className="study-diary-line" key={index}>
+            <entry.icon className="study-diary-line-icon" />
             {entry.text}
           </p>
         ))}
@@ -106,6 +120,14 @@ function StudyTimeline({ entries }: { entries: JournalEntry[] }) {
 // progress bar, 오늘 복습 수, 모르는 단어 수), not a data-table row. Deeper
 // numbers (전체/아는/헷갈리는 단어) stay behind a small "자세히 보기"
 // disclosure.
+// Phase 155 -- was a stack of individually bordered/shadowed cards, each
+// carrying its own full dashboard-style progress bar -- a small ledger of
+// several decks read as a stack of separate admin widgets. Now one
+// continuous "서가 기록지" ledger (.records-deck-ledger): rows share one
+// surface, divided by a hairline rule instead of each having its own box
+// edge, and the progress indicator is a slim underline track (.records-
+// deck-progress-line) instead of a thick rounded dashboard bar. Same
+// numbers, same disclosure, same scan order.
 // ---------------------------------------------------------------------------
 function DeckProgressJournal({ deckStats }: { deckStats: DeckStats[] }) {
   if (deckStats.length === 0) {
@@ -114,14 +136,14 @@ function DeckProgressJournal({ deckStats }: { deckStats: DeckStats[] }) {
   return (
     <section className="study-log-entry deck-progress-journal">
       <h3 className="records-log-title">서가별 통계</h3>
-      <div className="records-deck-log">
+      <div className="records-deck-ledger">
         {deckStats.map((deck) => (
-          <div className="records-deck-row paper-corner" key={deck.deck_id}>
+          <div className="records-deck-ledger-row" key={deck.deck_id}>
             <div className="records-deck-row-head">
               <strong>{deck.deck_name}</strong>
               <span>{Math.round(deck.learned_rate * 100)}%</span>
             </div>
-            <div className="progress-bar records-deck-progress">
+            <div className="records-deck-progress-line">
               <div style={{ width: `${Math.round(deck.learned_rate * 100)}%` }} />
             </div>
             <div className="records-deck-row-primary-meta">
