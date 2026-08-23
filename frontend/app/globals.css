@@ -1909,17 +1909,6 @@ button {
   opacity: 0.35;
 }
 
-/* Phase 41: shared-deck grid cards each carry .card-stack-surface, but in a
-   multi-column (or, on mobile, single-column) repeating list, N cards each
-   growing their own little "stack of 3" reads as N boxes-on-boxes instead
-   of one shelf -- the grid already has its own single shelf-ledge line
-   (.shared-deck-grid::before/::after) to carry that "resting on a surface"
-   read, so the per-card ghost layers are dropped here specifically. Detail
-   panel/hero cards elsewhere keep the effect untouched. */
-.shared-deck-grid .card-stack-surface::before,
-.shared-deck-grid .card-stack-surface::after {
-  content: none;
-}
 
 /* index-card-shell -- base "this is an index card" treatment (thin border,
    small radius, soft shadow) reused wherever a single word/deck/word-panel
@@ -7140,15 +7129,15 @@ input.reading-vocab-sticker-toggle:checked {
     transform: rotate(-0.6deg);
   }
 
-  /* Non-grouped fallback grid (no recommended/mine/other split -- e.g. a
+  /* Non-grouped fallback row (no recommended/mine/other split -- e.g. a
      handful of decks with no JLPT levels) gets the same compartment
      treatment as a single shelf, so it never sits bare against the wood.
-     Phase 88 -- same plank-grain texture as .shelf-section above; no
-     bookend here since .shared-deck-grid already spends both its own
-     ::before/::after slots on the shelf-ledge line below. */
-  /* Phase 128 -- same treatment as .shelf-section above (real wood photo +
-     light wash), so the ungrouped fallback compartment matches. */
-  .shared-library-scene .desk-surface-section > .shared-deck-grid {
+     Phase 158 -- renamed from .shared-deck-grid: the item model inside is
+     no longer a card grid (see .book-spine below), but this outer
+     compartment -- the actual shelf surface the spines stand on -- is a
+     legitimate layout anchor already, not something the Phase 157 audit
+     flagged, so it's kept. */
+  .shared-library-scene .desk-surface-section > .book-shelf-row {
     padding: 14px 16px 22px;
     border-radius: 4px 16px 16px 16px;
     background-color: var(--panel-bg);
@@ -7161,28 +7150,6 @@ input.reading-vocab-sticker-toggle:checked {
     box-shadow: 0 10px 22px rgba(37, 23, 10, 0.16);
   }
 
-  /* Phase 88 -- caps how wide a shelf card can stretch to fill its row.
-     .shared-deck-grid's base rule (further below) uses minmax(148px, 1fr)
-     as of Phase 147, which still lets a lone deck in a sparse shelf
-     balloon to the compartment's full width; a fixed upper bound keeps
-     every card close to its normal book-cover proportions regardless of
-     how many decks are on the shelf. Phase 152 -- widened the upper bound
-     (was 176px) now that the cover itself is a short flat band instead of
-     a tall illustration: real screenshots against this project's own
-     seed data (6 non-JLPT shared decks, one ungrouped shelf) showed
-     `auto-fit` leaving a large bare-wood gap to the right of the last
-     card whenever the row didn't divide evenly -- a card capped at 176px
-     just isn't wide enough to close that gap on its own. 176 -> 210 lets
-     a sparse row's cards absorb more of the leftover space before
-     `auto-fit` gives up and leaves it bare, without the cards reading as
-     oversized (still well short of the 335-420px "big card" sizes this
-     project has already rejected twice). A real bookshelf holds many
-     small books per shelf, not 2-3 wide ones, so this is a ceiling, not a
-     target -- a fully-stocked shelf still packs at ~150-190px per book. */
-  .shared-library-scene .shared-deck-grid {
-    grid-template-columns: repeat(auto-fit, minmax(148px, 210px));
-  }
-
   /* Loading/error/empty states keep the existing AppEmptyState look but
      get the same light compartment backing so they don't sit directly on
      the dark wood with no surface under them. */
@@ -7191,21 +7158,6 @@ input.reading-vocab-sticker-toggle:checked {
     padding: 24px 16px;
     border-radius: 16px;
     background: var(--panel-bg);
-  }
-
-  /* Small booklet tilt (1-2deg, alternating) on resting cards -- straightens
-     on hover/selection via the existing higher-specificity hover rules
-     below, which already set their own untilted transform. */
-  .shared-deck-grid > .shared-deck-card:not(.selected-shared-deck-card):nth-child(3n + 1) {
-    transform: rotate(-1.2deg);
-  }
-
-  .shared-deck-grid > .shared-deck-card:not(.selected-shared-deck-card):nth-child(3n + 2) {
-    transform: rotate(1deg);
-  }
-
-  .shared-deck-grid > .shared-deck-card:not(.selected-shared-deck-card):nth-child(3n + 3) {
-    transform: rotate(-0.6deg);
   }
 
   /* A faint ledge echoing the shelf grid's own bottom ledge, but along the
@@ -7342,26 +7294,41 @@ input.reading-vocab-sticker-toggle:checked {
   color: var(--screen-accent, var(--accent));
 }
 
-.shared-deck-grid {
+/* book-shelf-row / book-spine -- Phase 158 (Shared Deck Real Bookshelf
+   Reconstruction). Was .shared-deck-grid/.shared-deck-card: a CSS Grid of
+   uniform rounded-rectangle cards, each carrying a short flat-color "cover
+   band" on top (Phase 152's own correction of an even earlier photographed-
+   cover version) then title/meta/description/a button footer below --
+   still fundamentally a card grid wearing book-flavored decoration, which
+   is exactly what Phase 157's audit named as the tab's one remaining
+   "existing web-app structure" failure. Discarded outright, not reskinned:
+   .book-shelf-row is a packed flex row (not a grid -- auto-fit/auto-fill
+   grid tracks stretch to fill remaining row width, which is what made a
+   sparse row of cards look like empty admin grid cells; fixed-width flex
+   items instead just stop, leaving plain shelf surface to their right, the
+   same silhouette a lightly-stocked real shelf has), and each deck is a
+   standing .book-spine: the full tone color (the same JLPT ramp / 내가
+   공유함 / 공유 덱 palette the old cover band used) fills the whole spine,
+   not just a cap band, title is the spine's own printed label instead of
+   text pushed below a cover graphic, and there is at most one action (a
+   pull-tab fixed to the spine's base -- see .book-spine-pulltab below)
+   instead of a card footer that could hold up to 3 buttons. No per-item
+   tilt: real shelved books stand straight, packed tight against their
+   neighbors -- the old card grid's alternating rotate() suited loose
+   scattered cards, not upright spines. */
+.book-shelf-row {
   position: relative;
-  display: grid;
-  /* Phase 147 -- was minmax(280px, 1fr), sized around a full-height solid-
-     color cover band with a 3-button footer that needed room to stay on
-     one line. The new mini book-cover treatment (see .brand-deck-cover
-     below) is meant to read as a shelf of small books, not a grid of
-     wide cards, so this shrinks to fit far more per row; the owner
-     footer's buttons are allowed to wrap onto a second line at this width
-     (row-actions already wraps -- see .row-actions), which keeps every
-     touch target intact without forcing the card back to its old width. */
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 3px;
   padding-bottom: 18px;
 }
 
 /* Shelf ledge -- a thin wood-toned line plus a soft shadow under the row
-   of book-cover cards, so the grid reads as books resting on a shelf
-   rather than cards floating on plain background. */
-.shared-deck-grid::before {
+   of spines, so the row reads as books resting on a shelf rather than
+   floating on plain background. */
+.book-shelf-row::before {
   content: "";
   position: absolute;
   left: 2%;
@@ -7379,7 +7346,7 @@ input.reading-vocab-sticker-toggle:checked {
   opacity: 0.6;
 }
 
-.shared-deck-grid::after {
+.book-shelf-row::after {
   content: "";
   position: absolute;
   left: 2%;
@@ -7390,28 +7357,26 @@ input.reading-vocab-sticker-toggle:checked {
   pointer-events: none;
 }
 
-.shared-deck-card {
-  display: grid;
-  gap: 6px;
-  align-content: start;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--panel-bg);
-  /* Phase 147 -- was 16px, sized for a much larger card. Shrunk to 12px so
-     a whole row of these reads as small books close together on a shelf
-     rather than spaced-out cards; .brand-deck-cover's own -12px negative
-     margin below matches this exactly so the cover still bleeds flush to
-     the card's edges. */
-  padding: 12px;
-  /* A soft inner shadow along the left edge reads as a book spine/gutter
-     next to the cover band -- small addition to the existing drop shadow,
-     no new element. */
+.book-spine {
+  position: relative;
+  flex: 0 0 96px;
+  display: flex;
+  flex-direction: column;
+  height: 196px;
+  overflow: hidden;
+  border-radius: 3px 8px 8px 3px;
+  /* A darker gutter down the left edge and a lighter catch along the
+     right -- the same two-sided light cue a real embossed spine has when
+     several stand flush against their neighbors -- plus a soft cast
+     shadow onto the next spine so the row reads as separate standing
+     objects touching each other, not one flat painted strip. */
   box-shadow:
-    inset 3px 0 6px -4px rgba(60, 45, 20, 0.35),
-    0 8px 20px rgba(120, 98, 40, 0.05);
+    inset 3px 0 5px -3px rgba(0, 0, 0, 0.32),
+    inset -1px 0 0 rgba(255, 255, 255, 0.12),
+    2px 4px 8px rgba(37, 23, 10, 0.28);
   transition:
-    box-shadow var(--motion-fast) var(--ease-soft),
-    transform var(--motion-fast) var(--ease-soft);
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
 }
 
 /* Casual Sticker Reader (Phase 59) -- the detail panel is a notebook page
@@ -7487,252 +7452,234 @@ input.reading-vocab-sticker-toggle:checked {
   width: 46px;
 }
 
-.shared-deck-card:hover {
+.book-spine:hover {
   box-shadow:
-    inset 3px 0 6px -4px rgba(60, 45, 20, 0.35),
-    0 12px 26px rgba(120, 98, 40, 0.09);
-  transform: translateY(-2px);
+    inset 3px 0 5px -3px rgba(0, 0, 0, 0.32),
+    inset -1px 0 0 rgba(255, 255, 255, 0.12),
+    2px 8px 14px rgba(37, 23, 10, 0.34);
+  transform: translateY(-4px);
 }
 
-/* Phase 72 -- the cover band's folded page-corner (.brand-deck-cover::after,
-   above) brightens on hover, like light catching the lifted corner of a
-   book cover. Paired with the card's own lift/shadow, not a replacement
-   for it; scoped to this hover so a resting card's fold stays quiet. */
-.shared-deck-card:hover .brand-deck-cover::after {
-  border-color: transparent rgba(255, 255, 255, 0.5) transparent transparent;
-}
-
-/* Phase 41: lighter edge/lift specifically for cards repeating in the shelf
-   grid (.shared-deck-detail below keeps the full-weight card treatment --
-   it's the one full-width panel on screen, not a repeated tile). Same
-   shadow recipe, lower alpha, so a row/column of these doesn't compound
-   into a stack of heavy boxes; the cover band + shelf ledge still carry the
-   "shelf of books" read. Excludes .selected-shared-deck-card so its
-   existing primary-color highlight (a functional "this one's open" cue,
-   not decoration) keeps its full-strength border/ring untouched -- a plain
-   .shared-deck-card selector here would otherwise outrank that single-class
-   rule on specificity and silently override it. */
-.shared-deck-grid > .shared-deck-card:not(.selected-shared-deck-card) {
-  border-color: var(--paper-border);
+/* The open spine's "pulled off the shelf" cue -- lifts clear of the row
+   (the row's own align-items: flex-end keeps every other spine grounded on
+   the shelf ledge, so this reads as one book actually coming up out of the
+   row, not a shared hover effect) plus a light ring, the same functional
+   "this one's open" cue .selected-shared-deck-card used to carry via a
+   border/shadow on a flat card. */
+.book-spine-selected {
+  transform: translateY(-14px);
   box-shadow:
-    inset 3px 0 5px -4px rgba(60, 45, 20, 0.22),
-    0 6px 14px rgba(120, 98, 40, 0.05);
+    inset 3px 0 5px -3px rgba(0, 0, 0, 0.32),
+    inset -1px 0 0 rgba(255, 255, 255, 0.12),
+    0 0 0 2px var(--primary),
+    2px 14px 22px rgba(37, 23, 10, 0.38);
 }
 
-.shared-deck-grid > .shared-deck-card:not(.selected-shared-deck-card):hover {
-  box-shadow:
-    inset 3px 0 5px -4px rgba(60, 45, 20, 0.22),
-    0 9px 18px rgba(120, 98, 40, 0.08);
-  transform: translateY(-1px);
+.book-spine-selected:hover {
+  transform: translateY(-14px);
 }
 
-/* Phase 152 -- Deck Cover Simplification / Bookshelf Density Correction.
-   Phase 147's deck-cute-cover-tile-atlas.webp cover (a tall 3:5 portrait
-   illustration -- florals, washi tape, a big blank oval "label plate"
-   baked into the art) looked right in isolation, but a real 1280
-   screenshot showed the actual problem: every live field this card needs
-   (title, JLPT/unpublished badge, word count, imported badge,
-   description, action buttons) had nowhere to go on that illustration --
-   the art's own blank label plate went completely unused, and all real
-   text got pushed below the tall cover instead, making a "148-176px
-   book" balloon to 500-600px tall per card. The atlas is dropped
-   entirely here, not weakened -- this is now a short flat-color band (a
-   "spine cap", not a full illustrated front cover), the same per-tone/
-   level colors the JLPT badge ramp already established elsewhere on this
-   screen, so the cover is background color-coding, not a second
-   competing illustration. Every live field now lives in the label area
-   directly below it, which is the actual point of this phase: the cover
-   stops being the card's dominant subject so the deck's own information
-   can be. */
-.brand-deck-cover {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin: -12px -12px 0;
-  height: 34px;
-  padding: 0 10px;
-  overflow: hidden;
-  border-radius: 12px 12px 0 0;
-  background-color: var(--tone-ink-brown);
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1);
-}
-
-/* A thin light catch along the band's left edge, like a book spine's
-   rounded fold catching the light -- kept from Phase 75's original
-   "book-edge highlight" idea, just on the new flat band instead of a
-   photographed cover. */
-.brand-deck-cover::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 5px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.3), transparent);
-  pointer-events: none;
-}
-
-/* Folded page-corner -- a small triangle notched into the top-right of the
-   band, like a dog-eared book cover. */
-.brand-deck-cover::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 0 12px 12px 0;
-  border-color: transparent rgba(255, 255, 255, 0.26) transparent transparent;
-  transition: border-color var(--motion-fast) var(--ease-soft);
-}
-
-/* Icon+label -- now sits inline in the flat-color band itself (was a
-   separately-backed dark plate pinned over a busy photo, needed there
-   for guaranteed contrast against 5 very different cover-art colors).
-   The band's own tone is deep enough at every variant below for plain
-   white text, so the extra plate/background is dropped -- one less
-   layer, and the label reads as the band's own printed text instead of
-   a sticker stuck on top of it. */
-.brand-deck-cover-tag {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  color: #fff9ec;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
-}
-
-.brand-deck-cover-icon {
-  flex: 0 0 auto;
-  width: 11px;
-  height: 11px;
-}
-
-/* Tone/level modifiers -- flat colors only now (no background-image/
-   background-size to redeclare), so the Phase 147 cascade bug this
-   section used to work around (the JLPT badge tag elsewhere on the card
-   reusing these exact bare "jlpt-level-n5".."jlpt-level-n1" class names,
-   and its own `background` shorthand rule silently resetting this cover's
-   background-image to none) can no longer happen -- there's no
-   background-image here left to reset. The compound `.brand-deck-cover.
-   jlpt-level-n5` selectors are kept (rather than simplified to the bare
-   class) purely so this cover's flat color still wins over the badge's
-   own `background` shorthand regardless of source order, same defensive
-   reasoning as before, now just for background-color instead of image.
-   Colors are the exact same N5-N1 ramp .jlpt-level-n5..n1 already use
-   further below on this file (one warm ramp, not a second palette) --
-   "내가 공유함"/"공유 덱" get their own two tones from the same family. */
-.brand-deck-cover.jlpt-level-n5 {
+/* jlpt-level-n5..n1 (compound, matches the bare tag's own ramp elsewhere on
+   this file) fill the *entire* spine now, not a 34px cap band -- a real
+   book's cover color is its whole visible face, not a strip along the top.
+   Same exact hex ramp as .jlpt-level-n5..n1/the old .brand-deck-cover
+   modifiers (one warm N5->N1 ramp, not a second palette); book-spine-tone-
+   mine/-shared cover the two non-JLPT cases. Compound selector kept for
+   the same defensive reason the old .brand-deck-cover.jlpt-level-n5 used
+   it: so this always wins over the small sticker tag inside reusing the
+   bare .jlpt-level-n5 class for an unrelated small badge elsewhere. */
+.book-spine.jlpt-level-n5 {
   background-color: #a98a5c;
 }
 
-.brand-deck-cover.jlpt-level-n4 {
+.book-spine.jlpt-level-n4 {
   background-color: #c17d4a;
 }
 
-.brand-deck-cover.jlpt-level-n3 {
+.book-spine.jlpt-level-n3 {
   background-color: #c17550;
 }
 
-.brand-deck-cover.jlpt-level-n2 {
+.book-spine.jlpt-level-n2 {
   background-color: #b85c35;
 }
 
-.brand-deck-cover.jlpt-level-n1 {
+.book-spine.jlpt-level-n1 {
   background-color: #8f4324;
 }
 
-.brand-deck-cover-mine {
+.book-spine-tone-mine {
   background-color: #5f7a5c;
 }
 
-.brand-deck-cover-shared {
+.book-spine-tone-shared {
   background-color: #8a6a3f;
 }
 
-.shared-deck-meta-row {
+/* book-spine-face -- the button holding stickers/title/count/chevron; this
+   IS the old "상세 보기" action, just the entire spine face instead of a
+   separate labeled button, so opening a book is "tap the book" rather
+   than "find its one small button." flex: 1 1 auto so it fills whatever
+   height .book-spine-pulltab (fixed height, below) doesn't take. */
+.book-spine-face {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 0;
+  width: 100%;
+  padding: 9px 7px 6px;
+  border: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 40%);
+  color: #fff9ec;
+  text-align: left;
+  cursor: pointer;
+}
+
+.book-spine-face:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.book-spine-stickers {
   display: flex;
   flex-wrap: wrap;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.book-spine-sticker {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: -2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 249, 236, 0.92);
+  color: var(--primary-dark);
+  font-size: 9.5px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
-.selected-shared-deck-card {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px rgba(var(--primary-rgb), 0.12);
+.book-spine-sticker-muted {
+  background: rgba(37, 23, 10, 0.32);
+  color: #fff9ec;
 }
 
-/* Small pin marker (same round-dot language as Home/Vocab's sticky-note
-   pins) on top of the open card's cover -- ".card-stack-surface" (already
-   applied to every card) guarantees position:relative here, so this just
-   needs its own absolute placement. */
-.shared-deck-pin {
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  z-index: 3;
-  width: 9px;
-  height: 9px;
+/* The spine's own printed label -- clamped rather than letting a very long
+   deck title push the spine's height around (every spine in a row shares
+   one fixed height, see .book-spine above, so the row stays a level shelf
+   line regardless of title length). */
+.book-spine-label {
+  flex: 1 1 auto;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  color: #fff9ec;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.32;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.book-spine-face-footer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.book-spine-count {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: rgba(255, 249, 236, 0.85);
+  font-size: 9.5px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A small filled dot instead of the old dashed "가져옴" pill -- there's no
+   room on a 96px spine for a wordy status pill next to the count, and the
+   dot still reads clearly once you know the vocabulary (every other tab's
+   own small stat dots -- .analyze-tally-stat::before, .records-level-bar --
+   already use plain color dots for "state at a glance"). title attribute
+   on the wrapping element carries the same "가져온 날짜: ..." detail the
+   old badge's title used to. */
+.book-spine-owned-mark {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.25);
-  transform: translateX(-50%);
+  background: #7fbd97;
+  box-shadow: 0 0 0 1.5px rgba(255, 249, 236, 0.6);
 }
 
-.shared-deck-card h3,
+.book-spine-face-chevron {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  color: rgba(255, 249, 236, 0.75);
+  transition: transform var(--motion-fast) var(--ease-soft);
+}
+
+.book-spine-face-chevron-open {
+  transform: rotate(90deg);
+}
+
+/* book-spine-pulltab -- the spine's one primary action (import/re-import/
+   open), fixed to its base like a small label glued to the bottom of the
+   book. A perforated top edge (dashed border) reads as "tear here",
+   reinforcing this is a distinct pull-tab, not a second content region of
+   the spine itself. Text wraps to 2 lines rather than truncating -- every
+   label this renders ("내 노트에 담기", "학습 목록 추가", "다시
+   가져오기") needs to stay fully legible per this phase's own "라벨이
+   너무 작아 action을 찾기 어려우면 실패" requirement, not ellipsized. */
+.book-spine-pulltab {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 5px 7px;
+  border: 0;
+  border-top: 1.5px dashed rgba(255, 249, 236, 0.5);
+  background: rgba(0, 0, 0, 0.16);
+  color: #fff9ec;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-soft);
+}
+
+.book-spine-pulltab:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.book-spine-pulltab:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.book-spine-pulltab-icon {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+}
+
 .shared-deck-detail h3 {
   margin: 0 0 4px;
   color: var(--text);
   font-size: 16px;
-}
-
-/* Clamp to 2 lines so a long non-JLPT deck title ("내가 공유한 덱" cards
-   don't share the JLPT cards' short "N5 추천 어휘" naming) doesn't add a
-   second, independent source of card-height variance on top of the
-   description clamp below. Phase 147 -- font-size dropped from the shared
-   16px (still used by .shared-deck-detail h3) to 12px here specifically,
-   so the shelf card's title reads as a small book-label under the cover
-   instead of a heading competing with the cover art for attention; the
-   opened detail panel keeps the original larger heading untouched. */
-.shared-deck-card h3 {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  font-size: 12px;
-}
-
-/* Phase 147 -- demotes the shelf card's meta row (word-count/imported/JLPT
-   badges) and description to match the smaller book-cover/title above --
-   same badges the opened detail panel uses at their original size, scoped
-   down only inside the shelf card so this doesn't touch the detail
-   header. */
-.shared-deck-card .shared-deck-word-count-badge,
-.shared-deck-card .shared-deck-imported-badge,
-.shared-deck-card .shared-deck-status-badge {
-  padding: 2px 7px;
-  font-size: 10px;
-}
-
-.shared-deck-card .jlpt-level-tag {
-  padding: 1px 7px;
-  font-size: 10px;
-}
-
-.shared-deck-card .shared-deck-description {
-  font-size: 11px;
 }
 
 /* Now composed on top of .info-strip (icon + quiet caption row) instead of
@@ -9541,14 +9488,12 @@ input.reading-vocab-sticker-toggle:checked {
     padding: 14px;
   }
 
-  /* Phase 147 -- .shared-deck-card removed from the shared 14px mobile
-     padding list above: the base (all-viewport) rule now already sets
-     12px to match the shrunk shelf-card size, which is smaller than this
-     block's 14px, so leaving it in would have grown the card back up
-     specifically at this breakpoint. Mobile still renders the grid
-     single-column (see .shared-deck-grid below), so the 12px base value
-     only affects the card's own inner spacing here, not how many fit per
-     row. */
+  /* Phase 147 -- the old .shared-deck-card was never added to the shared
+     14px mobile padding list above (its own smaller base padding suited
+     the shrunk shelf-card size better at this breakpoint too). Phase 158
+     replaced that card entirely with .book-spine (see .book-shelf-row's
+     own mobile override further below), which never joined this shared
+     list either, for the same reason. */
 
   /* Top padding stays a touch taller than the shared 14px above so
      .shared-deck-detail-tape (added after this rule, so it wins) still has
@@ -9614,30 +9559,26 @@ input.reading-vocab-sticker-toggle:checked {
     font-size: 11px;
   }
 
-  /* Phase 147 -- was a single forced column (1fr). At the new 3:5 book-
-     cover ratio a single full-width mobile card makes the cover balloon
-     to ~500-600px tall (card width * 5/3), which reads as one oversized
-     portrait image per row rather than the "many small books" shelf this
-     phase is going for -- arguably a worse miss of the brief's intent
-     than the "cards too small" risk it explicitly asks to check for.
-     auto-fill with a minmax lower bound (see the exact px value and its
-     own comment just below) fits two book-covers per row at every mobile
-     width this phase tests (390/375/320), keeping each cover close to its
-     intended small size while .shared-deck-card's own width: 100% mobile
-     override (further below) still just means "100% of this grid cell",
-     not "100% of the page" -- so cards size to the cell, not the
-     viewport. */
-  .shared-deck-grid {
-    /* 110px (not 128px) specifically so 320px-wide viewports still get two
-       columns -- .shared-deck-grid's own available width at 320px body
-       width measures ~248px (page/detail padding eats more of the
-       viewport proportionally at the smallest width this phase tests),
-       and 2*128px+gap would no longer fit there while 2*110px+gap does;
-       390/375px already had comfortable room for two 128px+ columns
-       before this adjustment and still do at 110px. */
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 10px;
+  /* Phase 158 -- was a single forced column (1fr) sized around a much
+     older cover ratio; already fixed once (Phase 147) to a 2-column card
+     grid. Book spines keep that same "2 mini books per row" answer the
+     brief itself suggests, just via flex-basis on the new .book-spine
+     instead of a grid track -- shelf/book silhouette must survive down to
+     320px, not degrade into a single-column card list, so this is a
+     resize of the same item, not a layout swap. */
+  .book-shelf-row {
+    gap: 8px;
     padding-bottom: 0;
+  }
+
+  .book-spine {
+    flex: 0 1 calc(50% - 4px);
+    height: 158px;
+    border-radius: 4px 10px 10px 4px;
+  }
+
+  .book-spine-label {
+    font-size: 13px;
   }
 
   .shared-deck-section .hero-card,
@@ -9647,7 +9588,6 @@ input.reading-vocab-sticker-toggle:checked {
     max-width: calc(100vw - 40px);
   }
 
-  .shared-deck-section .shared-deck-card,
   .shared-deck-section .shared-deck-detail > *,
   .shared-deck-section .result-heading,
   .shared-deck-section .shared-detail-columns,
@@ -9670,19 +9610,13 @@ input.reading-vocab-sticker-toggle:checked {
   }
 
   /* The desktop shelf-ledge line reads as "books resting on a shelf" under
-     a horizontal row of cards -- stacked single-column on mobile there's
-     no row to sit under, so it's just a stray line under the last card.
-     Dropped rather than shown compressed. */
-  .shared-deck-grid::before,
-  .shared-deck-grid::after {
+     a packed row of spines -- wrapped into a 2-column grid on mobile
+     there's no single row to sit under, so it's just a stray line under
+     the last row. Dropped rather than shown compressed. */
+  .book-shelf-row::before,
+  .book-shelf-row::after {
     display: none;
   }
-
-  /* Phase 147 -- .shared-deck-card's mobile padding is now the same 12px
-     as its base (all-viewport) rule (no separate mobile override left, see
-     above), which already matches .brand-deck-cover's own base -12px
-     margin, so this mobile-only override is no longer needed and was
-     removed rather than left pointing at a stale -14px value. */
 
   .shared-detail-columns {
     grid-template-columns: 1fr;
@@ -10038,6 +9972,19 @@ input.reading-vocab-sticker-toggle:checked {
 
   .study-cta-button-primary:hover {
     transform: translateY(-2px);
+  }
+
+  /* Phase 157 audit -- .study-hero-secondary-link ("원문 읽기"/"어휘 노트
+     보기") had no width rule of its own, so the app-wide mobile
+     `button { width: 100% }` rule was the one actually winning --
+     confirmed via a real screenshot showing both as two stacked
+     full-width bars directly under the primary CTA, the exact "quiet
+     action이 admin bar가 되지 않도록" regression already fixed on every
+     other tab's equivalent links (Reading/Analyze/Deck). Opts back out to
+     natural content width, matching `.classify-quiet-link`/.reader-
+     start-cta's own established fix. */
+  .study-hero-secondary-link {
+    width: auto;
   }
 
   /* Phase 153 -- was a dashed-border "ticket" look, its own separate

@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  AppEmptyState,
-  BrandDeckCover,
-  BrandSectionBadge,
-} from "./BrandElements";
+import { AppEmptyState, BrandSectionBadge } from "./BrandElements";
 import { ShioriMark, ShioriStamp } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
 import {
   BookIcon,
+  BookmarkIcon,
   BookshelfIcon,
   CardFileIcon,
+  ChevronRightIcon,
   RotateIcon,
   SearchIcon,
   ShieldIcon,
@@ -266,11 +264,27 @@ export function SharedDeckSection({
     onImportDeck(deck.id);
   }
 
-  function renderDeckCard(deck: SharedDeckSummary) {
+  // ---------------------------------------------------------------------
+  // renderBookSpine -- Phase 158. Was renderDeckCard: an <article> laid out
+  // as cover-band-then-title-then-meta-then-a-footer-of-buttons -- a real
+  // card model, just with a book-flavored top strip. Discarded entirely,
+  // not reskinned. A deck is now a standing .book-spine: the whole tone
+  // color (JLPT ramp / 내가 공유함 / 공유 덱, the exact palette
+  // getDeckCoverProps already resolved) fills the spine itself rather than
+  // a thin cap band, title is the spine's own printed label (clamped, not
+  // pushed below a cover image), level/unpublished/owned are small
+  // stickers on the spine face, and there is at most one action -- a
+  // pull-tab fixed to the spine's base -- instead of a card footer that
+  // could hold up to 3 buttons. Owner-only manage actions (공유 취소/다시
+  // 공유하기) are dropped from the spine entirely and now live only in the
+  // opened detail panel (unchanged there) -- a real shelf book isn't
+  // managed while it's still standing closed on the shelf, you pull it out
+  // first, which is exactly what clicking the spine's face already does.
+  // ---------------------------------------------------------------------
+  function renderBookSpine(deck: SharedDeckSummary) {
     const isSelected = selectedDeckId === deck.id;
     const isImporting = importingDeckId === deck.id;
     const isImported = importedDeckId === deck.id;
-    const isUnpublishing = unpublishingDeckId === deck.id;
     const level = getJlptLevel(deck.title);
     const totalWordCount = deck.vocab_count + deck.custom_term_count;
     const alreadyImported = Boolean(deck.imported_at) || isImported;
@@ -279,7 +293,6 @@ export function SharedDeckSection({
     // the same button just opens the deck's word list instead.
     const isSubscribedMode = deck.mode === "subscribed";
     const published = isDeckPublished(deck);
-    const canManageDeck = canManageSharedDecks && deck.is_owner;
     // Once unpublished, the only reason this button should still appear is
     // to let an already-subscribed user open their own word list -- never
     // as a new-import CTA (see docs/architecture/shared-lexeme-progress-storage.md
@@ -287,145 +300,104 @@ export function SharedDeckSection({
     const showActionButton =
       !deck.is_owner && (published || (isSubscribedMode && alreadyImported));
     // Phase 107 -- once a subscribed-mode deck is already in the user's
-    // 학습 목록, "상세 보기" and the action button below both end up
+    // 학습 목록, the spine's face and the pull-tab below would both end up
     // calling the exact same onSelectDeck(deck.id) (see the 열기 branch
     // below), which itself already toggles open/closed via
     // loadSharedDeckDetail's "select the same id again -> close" logic (see
-    // docs/design/DESIGN.md Phase 107). Two differently-labeled buttons
-    // doing the identical thing read as a real duplicate, not just visual
-    // clutter, so "상세 보기" is suppressed in this one state only -- "열기"
-    // alone still opens/closes the same detail panel. Every other state
-    // (owner, newcomer, non-subscribed-mode) keeps "상세 보기"/"상세 닫기"
-    // unchanged, since there it's the only detail-opening action on the
-    // card.
+    // docs/design/DESIGN.md Phase 107). Two controls doing the identical
+    // thing read as a real duplicate, not just visual clutter, so the
+    // pull-tab is suppressed in this one state -- the spine face alone
+    // still opens/closes the same detail panel. Every other state (owner,
+    // newcomer, non-subscribed-mode) keeps both.
     const hasDuplicateOpenAction =
       !deck.is_owner && isSubscribedMode && alreadyImported;
+    const { tone } = getDeckCoverProps(deck, level);
+    const toneClass = level
+      ? `jlpt-level-${level.toLowerCase()}`
+      : `book-spine-tone-${tone}`;
+
     return (
-      <article
+      <div
         key={deck.id}
-        className={
-          isSelected
-            ? "shared-deck-card selected-shared-deck-card card-stack-surface"
-            : "shared-deck-card card-stack-surface"
-        }
+        className={`book-spine ${toneClass}${isSelected ? " book-spine-selected" : ""}`}
       >
-        {isSelected ? <span className="shared-deck-pin" aria-hidden="true" /> : null}
-        <BrandDeckCover {...getDeckCoverProps(deck, level)} />
-        <div>
-          <div className="shared-deck-title-row">
-            <h3>{getDisplayTitle(deck, level)}</h3>
-            {level ? <JlptLevelTag level={level} /> : null}
-            {!published ? <UnpublishedBadge /> : null}
-          </div>
-          <div className="shared-deck-meta-row">
-            <span className="shared-deck-word-count-badge">
-              단어 {totalWordCount}개
-            </span>
+        <button
+          type="button"
+          className="book-spine-face"
+          onClick={() => onSelectDeck(deck.id)}
+          disabled={isLoadingDetail && isSelected}
+          aria-expanded={isSelected}
+          title={getDisplayTitle(deck, level)}
+        >
+          <span className="book-spine-stickers">
+            {level ? <span className="book-spine-sticker">{level}</span> : null}
+            {!published ? (
+              <span className="book-spine-sticker book-spine-sticker-muted">중단</span>
+            ) : null}
+          </span>
+          <span className="book-spine-label">{getDisplayTitle(deck, level)}</span>
+          <span className="book-spine-face-footer">
+            <span className="book-spine-count">{totalWordCount}개</span>
             {alreadyImported ? (
               <span
-                className="shared-deck-imported-badge"
+                className="book-spine-owned-mark"
+                aria-hidden="true"
                 title={
                   deck.imported_at
                     ? `가져온 날짜: ${formatDateTime(deck.imported_at)}`
-                    : undefined
+                    : "학습 목록에 있음"
                 }
-              >
-                {isSubscribedMode ? "학습 목록에 있음" : "가져옴"}
-                {deck.imported_at ? ` · ${formatDateTime(deck.imported_at)}` : ""}
-              </span>
+              />
             ) : null}
-          </div>
-          <p className="shared-deck-description">
-            {getDeckDescription(deck.description, level)}
-          </p>
-        </div>
-        {/* 등록일/작성자/가져간 횟수는 카드마다 항상 보이던 메타데이터였는데,
-            덱 이름/단어 수/설명/가져오기 버튼이 이 카드의 실제 주인공이라
-            "상세 보기"를 열었을 때만 보이도록 옮겼다 (아래 selectedDeck
-            상세 영역의 shared-deck-byline). */}
-        <div className="row-actions">
-          {!hasDuplicateOpenAction ? (
-            <button
-              type="button"
-              className="secondary-button compact-button"
-              onClick={() => onSelectDeck(deck.id)}
-              disabled={isLoadingDetail && isSelected}
-            >
-              {isLoadingDetail && isSelected
-                ? "불러오는 중..."
-                : isSelected
-                  ? "상세 닫기"
-                  : "상세 보기"}
-            </button>
-          ) : null}
-          {showActionButton ? (
-            <button
-              type="button"
-              className={
-                alreadyImported
-                  ? "secondary-button compact-button"
-                  : "compact-button"
+            <ChevronRightIcon
+              className={`book-spine-face-chevron${isSelected ? " book-spine-face-chevron-open" : ""}`}
+            />
+          </span>
+        </button>
+        {showActionButton && !hasDuplicateOpenAction ? (
+          <button
+            type="button"
+            className="book-spine-pulltab"
+            onClick={() => {
+              if (isSubscribedMode && alreadyImported) {
+                onSelectDeck(deck.id);
+                return;
               }
-              onClick={() => {
-                if (isSubscribedMode && alreadyImported) {
-                  onSelectDeck(deck.id);
-                  return;
-                }
-                handleImportClick(deck);
-              }}
-              disabled={isImporting}
-              title={
-                !isSubscribedMode && alreadyImported
-                  ? "이미 가져온 덱이에요. 다시 가져오면 확인 후 새로 추가돼요."
-                  : undefined
-              }
-            >
-              {isImporting ? (
-                "가져오는 중..."
-              ) : isSubscribedMode && alreadyImported ? (
-                <>
-                  <BookIcon className="button-icon" />열기
-                </>
-              ) : alreadyImported ? (
-                <>
-                  <RotateIcon className="button-icon" />
-                  다시 가져오기
-                </>
-              ) : isSubscribedMode ? (
-                <>
-                  <CardFileIcon className="button-icon" />학습 목록에 추가
-                </>
-              ) : (
-                <>
-                  <CardFileIcon className="button-icon" />내 노트에 가져오기
-                </>
-              )}
-            </button>
-          ) : null}
-          {canManageDeck && published ? (
-            <button
-              type="button"
-              className="danger-secondary-button compact-button"
-              onClick={() => onUnpublishDeck(deck.id)}
-              disabled={isUnpublishing}
-            >
-              {isUnpublishing ? "공유 취소 중..." : "공유 취소"}
-            </button>
-          ) : null}
-          {canManageDeck && !published && onRepublishSharedDeck ? (
-            <button
-              type="button"
-              className="secondary-button compact-button"
-              onClick={() => onRepublishSharedDeck(deck.id)}
-              disabled={republishingDeckId === deck.id}
-            >
-              {republishingDeckId === deck.id
-                ? "다시 공유하는 중..."
-                : "다시 공유하기"}
-            </button>
-          ) : null}
-        </div>
-      </article>
+              handleImportClick(deck);
+            }}
+            disabled={isImporting}
+            title={
+              !isSubscribedMode && alreadyImported
+                ? "이미 가져온 덱이에요. 다시 가져오면 확인 후 새로 추가돼요."
+                : undefined
+            }
+          >
+            {isImporting ? (
+              <span>가져오는 중</span>
+            ) : isSubscribedMode && alreadyImported ? (
+              <>
+                <BookmarkIcon className="book-spine-pulltab-icon" />
+                <span>열기</span>
+              </>
+            ) : alreadyImported ? (
+              <>
+                <RotateIcon className="book-spine-pulltab-icon" />
+                <span>다시 가져오기</span>
+              </>
+            ) : isSubscribedMode ? (
+              <>
+                <CardFileIcon className="book-spine-pulltab-icon" />
+                <span>학습 목록 추가</span>
+              </>
+            ) : (
+              <>
+                <CardFileIcon className="book-spine-pulltab-icon" />
+                <span>내 노트에 담기</span>
+              </>
+            )}
+          </button>
+        ) : null}
+      </div>
     );
   }
 
@@ -557,8 +529,8 @@ export function SharedDeckSection({
                   <BookshelfIcon className="shelf-section-icon" />
                   JLPT 추천 어휘 서가
                 </h3>
-                <div className="shared-deck-grid">
-                  {recommendedDecks.map(renderDeckCard)}
+                <div className="book-shelf-row">
+                  {recommendedDecks.map(renderBookSpine)}
                 </div>
               </div>
             ) : null}
@@ -568,7 +540,7 @@ export function SharedDeckSection({
                   <BookshelfIcon className="shelf-section-icon" />
                   내가 공유한 덱
                 </h3>
-                <div className="shared-deck-grid">{myDecks.map(renderDeckCard)}</div>
+                <div className="book-shelf-row">{myDecks.map(renderBookSpine)}</div>
               </div>
             ) : null}
             {otherDecks.length > 0 ? (
@@ -577,12 +549,12 @@ export function SharedDeckSection({
                   <BookshelfIcon className="shelf-section-icon" />
                   다른 학습자의 덱
                 </h3>
-                <div className="shared-deck-grid">{otherDecks.map(renderDeckCard)}</div>
+                <div className="book-shelf-row">{otherDecks.map(renderBookSpine)}</div>
               </div>
             ) : null}
           </>
         ) : (
-          <div className="shared-deck-grid">{sortedDecks.map(renderDeckCard)}</div>
+          <div className="book-shelf-row">{sortedDecks.map(renderBookSpine)}</div>
         )
       ) : messageTone === "error" ? (
         // Fetch genuinely failed -- shows a retry CTA instead of the
@@ -890,13 +862,24 @@ export function SharedDeckSection({
             </div>
           )}
 
+          {/* Phase 158 -- Phase 157's audit flagged this as a literal
+              duplicate of the top-right "닫기" link (same handler, same
+              label, same action). Rather than drop it outright -- a long
+              subscribed word list can run to hundreds of rows, and losing
+              the only reachable-without-scrolling-up close control would
+              be a real usability regression, not a cleanup -- it's
+              recopied as "책장으로 돌아가기" (same onCloseDetail handler,
+              unchanged), so it reads as this book's own closing action
+              (put it back on the shelf) rather than an identical second
+              copy of the header's quick dismiss. */}
           <div className="form-actions">
             <button
               type="button"
-              className="secondary-button"
+              className="secondary-button book-return-to-shelf-button"
               onClick={onCloseDetail}
             >
-              닫기
+              <BookshelfIcon className="button-icon" />
+              책장으로 돌아가기
             </button>
           </div>
         </section>

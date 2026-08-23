@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { BookIcon, FolderIcon, ShareIcon } from "./icons";
 import { ShioriCharacter, type ShioriSize, type ShioriVariant } from "./Shiori";
 
 // Small, reusable "brand illustration" pieces shared across the app --
@@ -105,48 +104,10 @@ export function AppEmptyState({
   );
 }
 
-export type DeckCoverTone = "recommended" | "mine" | "shared";
-
-const deckCoverLabels: Record<DeckCoverTone, string> = {
-  recommended: "추천 어휘",
-  mine: "내가 공유함",
-  shared: "공유 덱",
-};
-
-const deckCoverIcons: Record<DeckCoverTone, IconComponent> = {
-  recommended: BookIcon,
-  mine: ShareIcon,
-  shared: FolderIcon,
-};
-
-// Shared-deck card's "book cover" -- a real photographed cover (see
-// .brand-deck-cover in globals.css, Phase 128) rather than a thin color
-// band. `level` (N5..N1) drives the warm cover-tone ramp already
-// established for JLPT badges elsewhere; `tone` covers the two non-JLPT
-// cases (내가 공유함 / 공유 덱) and picks the icon. One place for the cover
-// visual so every deck card -- recommended or not -- reads as the same
-// shelf/book-cover system.
-export function BrandDeckCover({
-  tone,
-  level,
-}: {
-  tone: DeckCoverTone;
-  level?: string | null;
-}) {
-  const toneClass = level ? `jlpt-level-${level.toLowerCase()}` : `brand-deck-cover-${tone}`;
-  const Icon = deckCoverIcons[tone];
-  return (
-    <div className={`brand-deck-cover ${toneClass}`}>
-      {/* Phase 128 -- icon+label wrapped in their own small tag/plate
-          (previously laid out directly in the band's own flex row) so
-          they can sit as a legible overlay pinned to one corner of the
-          now much-taller photographed cover, instead of stretching across
-          it the way they did on the old thin ribbon. tone/level/Icon/label
-          resolution above is unchanged. */}
-      <span className="brand-deck-cover-tag">
-        <Icon className="brand-deck-cover-icon" />
-        <span>{deckCoverLabels[tone]}</span>
-      </span>
-    </div>
-  );
-}
+// Phase 158 -- BrandDeckCover (a "book cover" band/plate, see .brand-deck-
+// cover) was Shared Deck's old card-model cover treatment. Shared Deck no
+// longer renders any card -- deck items are now .book-spine elements built
+// directly in SharedDeckSection.tsx, which resolve their own tone class
+// inline rather than through a shared cover component. Removed rather than
+// left orphaned; confirmed via grep that nothing else in the app ever
+// imported BrandDeckCover/DeckCoverTone.

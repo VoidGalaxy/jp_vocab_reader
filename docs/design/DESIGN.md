@@ -5599,3 +5599,404 @@ here, if any, should revisit that judgment only from real usage data
 on how often Classify and Reading sessions chain together for the
 same text -- this phase, like Phase 154, found no such evidence in
 scope to gather.
+
+## Phase 157 -- Full Mockup Parity Re-audit / Scene-First Failure Scan
+
+Phase 157 is a no-code-by-default audit, not a rebuild: after Phase
+149-156's per-tab reconstruction passes, this phase re-judges the
+whole product against a stricter, explicitly weighted rubric (하지
+말 것 30% / 최종 장면 실루엣 40% / 실패 판정 기준 20% / 기능 보존
+10%) instead of build/overflow/console QA, which every prior phase
+had already passed without that passing translating into "looks like
+the mockup" in a real screenshot. Every required state (Home; Reading
+start/result+inspector; Study ready/active-reveal; Vocab
+empty/populated/detail; Shared Deck shelf/detail; Analyze
+intro/card-stage/result; Stats; Feedback modal) was captured via
+headless Chrome at 1280/1024/390/375/320, judged first on scene
+silhouette against a real screenshot, only then on function.
+
+**Calibration note (methodology, not a finding):** the first Home/
+Reading screenshots were captured at a 1400px viewport height to fit
+a whole page in one image, which made the wood-desk/grid-paper area
+below the hero content look like a large abandoned empty area --
+matching failure criterion #6 on first read. Re-captured at a
+realistic 800px laptop fold height, Home's book+note+sticky-note
+cluster fills the actual first viewport almost edge to edge with no
+excess bare wood, and Reading's open-book scene does the same. This
+was an artifact of the audit's own screenshot height, not a real
+silhouette failure -- recorded here so a future audit doesn't need to
+re-discover it.
+
+**Per-tab verdict table:**
+
+| Tab | Verdict | Why |
+|---|---|---|
+| Home | Match | Book is the dominant object at a realistic fold height; heading note physically overlaps its top edge; sticky-note shortcuts read as one cluster with the book via the bridging pen prop; no admin control row. |
+| Reading | Match | Start stage: open-book photo, textarea as a clearly layered "pasted sheet," small notched CTA. Result stage: token inspector renders as a real margin note on the book's right page (word/reading/뜻/4-way status/예문/저장 action), not a floating detail card; save dock sits on the memo-strip texture. Confirmed at both 1280 and 390 (mobile renders the inspector as a bottom sheet, an expected mobile pattern). |
+| Study | Needs Small Fix (fixed this phase) | Active review (board + flashcard + 4 rating stamps) is a strong Match at every width. Ready/empty state's quick-start tiles read as pinned notes reasonably well, but mobile's "원문 읽기"/"어휘 노트 보기" pair had no `width` rule of its own, so the app-wide `button{width:100%}` rule turned them into two stacked full-width admin bars directly under the primary CTA -- a real, screenshot-confirmed instance of failure criterion #8. Fixed in this phase (see below). Remaining P2 (not fixed): the quick-start tiles above the felt board sit on the plain page background, not the board itself -- only the empty-state note actually sits on green felt, so the top and bottom halves of the ready screen read as two materials, not one board scene. |
+| Vocab | Match | Physical index tabs (전체/모르는 단어/...) read as stable tabs at both 1280 and 390; populated list is scannable; the right-hand detail page opens as a pinned/paperclipped note sharing the same paper material as the empty-state placeholder it replaces, not a separate floating image. No collision between long labels and decoration observed. |
+| Shared Deck | Needs Rework (recorded as next-phase candidate, not fixed) | The wood-shelf photo frame around the deck grid is real and reads well at desktop, but the "books" inside it are flat, uniform-aspect-ratio rounded-corner cards with a thin flat-color header band -- shape-wise indistinguishable from a generic web app card grid sitting on a pretty photo background, which is a direct match for failure criterion #5 ("기존 앱 구조 + 예쁜 재료"). This is worse, not better, at mobile: the wood-shelf frame disappears entirely below 1024px, leaving a bare 2-column card grid with zero shelf/book cues at all. Deck detail (opened via "상세 보기") itself reads fine as a pinned notebook page. Fixing the card shape itself (spine-like proportions, standing/leaning perspective) is a real visual-design change to `.brand-deck-cover`/`.shared-deck-card`, not a 1-2 file correction -- left for a dedicated next phase per this phase's own no-large-rework rule. |
+| Analyze/Classify | Match | Re-verified Phase 156's card-making-desk work holds under this phase's stricter rubric: intro's first viewport shows the source slip, chip controls, stamp CTA, and card tray together with no textarea dominance; card stage keeps the 4-way decision grid as the clear lead object; result renders as a fanned card bundle, not a dashboard summary. |
+| Stats | Match (P2 noted) | Dashboard/pill/card feeling from before Phase 155 is confirmed gone in a fresh screenshot -- no rounded badges, no bordered per-item cards. Doesn't trigger any of the 10 explicit failure criteria. P2, not blocking: below the three pinned stamp tags at the very top, the rest of the page (diary sheet, deck ledger, word asides, policy note) is mostly flat text with hairline dividers and very little sticker/tag material, so it reads closer to "a plain, well-organized log page" than "a scene with real physical texture" -- thinner on scene character than Home/Reading/Study/Analyze, though not a dashboard regression. |
+| App Shell / Toolbar | Match | The toolbar stayed a thin, consistently-sized cream pill bar across every tab and viewport checked, including immersive scenes (Home, Reading's open book) -- it never grew heavier or more app-chrome-like relative to the scene beneath it. Mobile drawer opens via a clearly labeled hamburger (aria-label "메뉴 열기") and lists all 7 tabs plus feedback, confirmed reachable (re-verified in Phase 155/156's own QA, not re-tested fresh this phase since no toolbar code changed). |
+
+**P1 (blocking, real product-facing regression, fixed this phase):**
+- Study's mobile "원문 읽기"/"어휘 노트 보기" secondary links rendering
+  as two stacked full-width admin bars under the primary CTA (failure
+  criterion #8). Root cause: `.study-hero-secondary-link` set
+  `min-width: 0` but never `width: auto`, so nothing overrode the
+  app-wide mobile `button { width: 100% }` rule. Fixed with a single
+  `width: auto` rule inside the existing `max-width: 640px` block in
+  `globals.css`, matching the same fix pattern already applied to
+  every other tab's equivalent quiet links (`.classify-quiet-link`,
+  `.reader-start-cta`, etc.) -- confirmed via before/after screenshot
+  and a post-rebuild re-screenshot that the fix survives a real
+  production build, not just dev-server hot reload.
+
+**P2 (next-phase candidates, not fixed -- real structural work):**
+1. **Shared Deck card shape** -- the deck-shelf cards need an actual
+   book-spine silhouette (vertical proportions, standing/leaning
+   perspective, or some other real departure from a uniform rounded
+   rectangle), not just a colored header band on an otherwise generic
+   card. Needs a real visual redesign of `.brand-deck-cover`/
+   `.shared-deck-card`, ideally also addressing the mobile case where
+   the wood-shelf frame disappears entirely and the grid loses every
+   shelf cue.
+2. **Study ready-state board unity** -- extend whatever surface holds
+   the empty-state note (currently only the green felt board) to also
+   visually hold the quick-start tiles above it, so the whole ready
+   screen reads as one board scene instead of "tiles on the page
+   background, then a board below."
+3. **Stats scene texture** -- the log/ledger/aside sections below the
+   top stamp-tag row could use a bit more of the sticker/pinned-tag
+   material the rest of the app now uses by default, so the tab reads
+   less like a well-organized text page and more like the "학습
+   일지" scene it targets.
+
+**P3 (minor, cosmetic, not scene-blocking):**
+- Reading's "이전 작업 복원됨 · 확인" draft-restore banner is a plain
+  white rounded pill notice -- reads slightly like a generic system
+  notification bar next to the rest of the tab's paper-note material
+  language.
+- Shared Deck's detail panel has two "닫기" controls (a text link at
+  the panel's top-right and a full button at its bottom) -- redundant,
+  not confusing, but worth consolidating in a later pass.
+- The dead `.records-level-strip`/`.records-level-bar*` CSS in Stats
+  (confirmed unused in `InfoSection.tsx` back in Phase 155) is still
+  present -- harmless, but noted again since this audit re-touched the
+  same file.
+
+**Not touched, confirmed by design:** every tab's actual data/API
+wiring, classification/save/SRS logic, deck-progress calculation,
+localStorage draft persistence, and auth/storage layer -- this
+phase's only code change is the single `width: auto` CSS rule above.
+`git diff` on `globals.css` confirmed exactly one rule block added,
+nothing else touched.
+
+**Mobile/desktop cohesion:** with the Study fix applied, no tab
+reverts to a full-width control stack at 390/375/320 -- re-confirmed
+via a full 7-tab x 5-viewport sweep (`scrollWidth === clientWidth` at
+every combination). Scene identity survives the width drop on every
+tab except Shared Deck, where the wood-shelf frame's disappearance
+below 1024px makes the underlying "it's actually just a card grid"
+problem more visible, not less -- consistent with (not a new finding
+beyond) the desktop-level Deck verdict above.
+
+**Function/API/storage confirmation:** re-walked the representative
+functional paths required by this phase's brief -- Reading analyze
+(sample text -> `POST /analyze` -> token inspector opened via a real
+click), Study (start today's review -> reveal -> rating stamps
+visible and correctly laid out at both 1280 and 390), Vocab (deck
+selected via a real `change` event -> populated list -> row expanded
+via "펼치기" -> search input typed), Shared Deck (shelf ->
+"상세 보기" opened and closed a real detail panel), Analyze (full
+intro-to-result classify loop, reusing Phase 156's own verified flow),
+Stats load, Feedback modal open (real form fields present: 종류
+select, 내용 textarea, 제출/취소) and close (confirmed removed from
+DOM). No backend/API/schema/business-logic file was touched this
+phase.
+
+**Build/browser QA results:** `npm run build` clean (fresh `.next`,
+dev server stopped first). `git diff --check` clean. Full 7-tab x
+5-viewport sweep (1280/1024/390/375/320) confirmed zero
+`scrollWidth`/`clientWidth` mismatch at every one of the 35
+combinations, zero console errors/warnings, and zero failed
+requests/image errors across the entire audit session (one
+pre-existing, unrelated `/favicon.ico` 404 excluded, consistent with
+Phase 155/156's own finding that no favicon file exists anywhere in
+`public/`).
+
+**Overall verdict: redesign closeout is NOT yet possible.** Six of
+eight scenes (Home, Reading, Study, Vocab, Analyze, App Shell) are
+genuine Matches against this phase's stricter silhouette-first rubric,
+and Stats is a Match with only cosmetic texture notes. Shared Deck is
+the one tab that still reads as "existing web-app card grid + pretty
+wood photo" rather than an actual mini bookshelf, at every viewport --
+a real, unresolved instance of the exact failure mode this whole
+"casual cute" series has been correcting on every other tab since
+Phase 145. Closeout should wait for a dedicated Deck card-shape rework
+phase before this redesign effort is declared done.
+
+**Files changed:** `frontend/app/globals.css` (one rule block), this
+file.
+
+**Commit-readiness:** yes -- build and diff-check clean, the one
+fix applied is scoped, tested, and confirmed to survive a real
+production build; the no-code audit findings are documented for the
+next phase to act on rather than left implicit.
+
+**Remaining risk:** none identified from the one CSS fix made this
+phase (a single `width: auto` addition, same pattern used successfully
+many times before in this project). The Deck P1 finding is unresolved
+by design (explicitly deferred per this phase's own no-large-rework
+rule) and should not be read as a regression -- it is a re-confirmation
+of an existing condition dating back to Phase 152.
+
+**Next phase candidates (priority order):** (1) Shared Deck card-shape
+rework -- give the shelf cards an actual book-spine silhouette instead
+of a colored-band card, and restore some shelf cue at mobile widths
+where the wood frame currently disappears; (2) Study ready-state board
+unity -- extend the board surface to visually hold the quick-start
+tiles, not just the empty-state note; (3) Stats scene texture -- a
+lighter pass adding more sticker/pinned-tag material to the log/ledger
+sections below the top stamp row.
+
+## Phase 158 -- Shared Deck Real Bookshelf Reconstruction / No More Card Grid
+
+Phase 152 dropped `deck-cute-cover-tile-atlas.webp` (a tall, illustrated
+cover photo) for a short flat-color "spine cap" band, which fixed that
+phase's own oversized-card problem -- but Phase 157's audit named the
+result correctly: the cover changed, the structure never did. A deck
+was still `cover-band -> title -> meta -> description -> a footer of up
+to 3 buttons`, laid out in a CSS Grid of uniform rounded rectangles --
+a real card model wearing book-flavored paint. This phase discards that
+model outright rather than reskinning it again, per its own explicit
+instruction ("card grid model 자체 폐기", not "표지 수정").
+
+**Removed:**
+- **`.shared-deck-card`/`.shared-deck-grid`/`.selected-shared-deck-card`/
+  `.shared-deck-pin`** -- the entire card-grid item model: a bordered
+  rounded-rectangle `<article>`, a CSS Grid with `auto-fill`/`auto-fit`
+  tracks (which stretch to fill leftover row width -- the actual
+  mechanism that made a sparse row of decks look like empty admin grid
+  cells), and a round dot "selected" marker pinned to the card's cover.
+- **`BrandDeckCover` and all `.brand-deck-cover*` CSS** (the "spine cap"
+  band itself, `DeckCoverTone`, `deckCoverLabels`/`deckCoverIcons`) --
+  deleted, not left orphaned. Confirmed via grep this component had
+  exactly one call site in the whole app (the card render function just
+  removed); nothing else ever imported it.
+- **The per-card 3-button footer** (`상세 보기`/`상세 닫기`, the
+  import/re-import/open action, and -- for an owner's own deck --
+  `공유 취소`/`다시 공유하기`). Reduced to at most one action per shelf
+  item (see below); owner-only manage actions are dropped from the
+  shelf entirely and now live only in the already-existing detail panel
+  controls (unchanged there).
+- **Per-card alternating `rotate()` tilt** (Phase 88's "small booklet
+  tilt" on resting cards) -- suited loose scattered cards, not upright
+  standing spines, which read as broken/falling over when tilted at an
+  angle. Real shelved books stand straight, packed tight against their
+  neighbors; the new item has no per-item rotation at all.
+
+**New bookshelf scene silhouette:** `.book-shelf-row` (renamed from
+`.shared-deck-grid`) is a `display: flex; flex-wrap: wrap; align-items:
+flex-end` row, not a grid -- fixed-width items that simply stop and
+leave plain shelf surface to their right when a row is sparse, the same
+silhouette a lightly-stocked real shelf has, instead of grid tracks
+stretching to fill it. Each deck is a `.book-spine`: a narrow standing
+rectangle (96px x 196px at desktop) whose *entire* face is filled with
+the deck's tone color (the exact same JLPT N5-N1 ramp / 내가 공유함 /
+공유 덱 palette the old cover band used, now the whole spine's cover
+rather than a 34px cap), with an inset gutter-shadow on one edge and a
+light catch on the other so a packed row reads as separate standing
+objects touching each other. The outer wood cabinet/shelf compartment
+(`.shared-library-scene`, `.shelf-section`, the wood-photo backgrounds)
+was kept -- Phase 157's audit never flagged that outer scene, only the
+items floating on top of it, so it remains a legitimate layout anchor.
+
+**How the card model was discarded (not reskinned):** every deck field
+moved onto the spine itself instead of the label area below a cover
+image: `.book-spine-stickers` (level tag, unpublished status) sits at
+the spine's top as small light chips against the dark tone fill;
+`.book-spine-label` is the spine's own printed title, clamped to 5
+lines rather than pushed below a graphic; `.book-spine-face-footer`
+holds the word count plus a small "owned" dot instead of a wordy
+dashed-border pill (no room for one on a 96px spine); a chevron
+indicates the face opens something. The face itself -- not a separate
+"상세 보기" button -- is a real `<button>` that toggles the detail
+panel (`onSelectDeck`, unchanged handler), so opening a book is "tap
+the book," not "find its one small button" among several. At most one
+further action, `.book-spine-pulltab`, is fixed to the spine's base
+like a label glued on with a perforated (dashed) top edge -- import,
+re-import, or open, depending on state (see condition mapping below).
+Owner decks get no pull-tab at all: a real shelf book isn't managed
+while standing closed on the shelf, you pull it out first, which
+tapping the face already does -- unpublish/republish now live only in
+the opened detail panel, exactly where Phase 157's audit already found
+them (unchanged there).
+
+**Condition mapping, verified against the original render logic line by
+line before deleting it:** `showActionButton` (`!deck.is_owner &&
+(published || (isSubscribedMode && alreadyImported))`) and
+`hasDuplicateOpenAction` (`!deck.is_owner && isSubscribedMode &&
+alreadyImported`) are reused unchanged from the old `renderDeckCard`.
+The pull-tab renders when `showActionButton && !hasDuplicateOpenAction`
+-- in the `hasDuplicateOpenAction` case the old code already called the
+exact same `onSelectDeck(deck.id)` from both its "상세 보기" and "열기"
+buttons (confirmed by reading both `onClick`s side by side), so
+suppressing the now-redundant pull-tab and leaving only the face
+(itself `onSelectDeck`) reproduces the old two-controls-collapse-to-one
+behavior exactly, just relocated. Every other state (newcomer, legacy
+copied-mode re-import, subscribed-not-yet-imported) keeps both the face
+and a distinct pull-tab, matching the old two-button count.
+
+**Mobile bookshelf:** `.book-spine` switches to `flex: 0 1 calc(50% -
+4px)` at `max-width: 640px` (a real width resize of the same item, not
+a layout swap to a card list) -- 2 mini books per row, one of the
+brief's own explicitly endorsed mobile directions. Measured via
+`getBoundingClientRect()` at all three required widths: spines held a
+consistent 2-column width (155px/148px/120px at 390/375/320) with the
+tone fill, stickers, label, and pull-tab all still present and legible
+-- no degradation to a single-column card list at any width tested.
+
+**Header/detail panel:** left mostly as-is -- Phase 115/152 had already
+moved the header (`.shared-hero-card`) to an unboxed heading strip with
+small notched paper-tab actions, and the detail panel
+(`.shared-deck-detail`) was already an opened-notebook-page treatment
+(ruled paper, washi tape, folded corner); neither was named in Phase
+157's audit as a card-grid problem, so neither was restructured. One
+small cleanup taken up on the brief's own explicit invitation: the
+detail panel's bottom "닫기" button was a literal duplicate of the
+top-right "닫기" link (same handler, same label) -- rather than delete
+it (a long subscribed word list can run to hundreds of rows, and losing
+the only close control reachable without scrolling back up would be a
+real usability regression, not a cleanup), it's recopied as "책장으로
+돌아가기" with the same `onCloseDetail` handler, so it reads as this
+book's own closing action instead of an identical second copy.
+
+**Desktop (1280/1024) results:** confirmed via headless Chrome
+screenshot at both widths -- the first viewport is unambiguously a
+shelf of standing, tightly-packed, individually colored spines sitting
+on a real wood ledge inside the cabinet, not a grid of cards. A DOM
+query confirmed zero remaining `.shared-deck-card` elements. Tone-color
+mapping verified correct by cross-referencing each spine's color
+against its actual `deck.is_owner`/`mode` state (e.g. the one
+user-owned deck rendered in the "mine" green tone with no pull-tab, an
+imported subscribed-mode deck rendered brown with no pull-tab since its
+face alone already opens it). The selected spine's "pulled off the
+shelf" lift was confirmed as a real 14px `getBoundingClientRect()`
+delta, not just a CSS class toggle with no visible effect. `document.
+documentElement.scrollWidth === clientWidth` at both widths.
+
+**Mobile (390/375/320) results:** 2-column mini-book grid confirmed at
+all three widths via screenshot and measurement; spine tone fill,
+title, count, and pull-tab label all stayed legible down to 320px; the
+detail panel opened below the shelf with no overlap and its own
+selected-spine highlight ring visible in the shelf above it. Zero
+`scrollWidth`/`clientWidth` mismatch at any of the three widths.
+
+**Owner/newcomer/subscriber conditions confirmed unchanged:** re-used
+`showActionButton`/`hasDuplicateOpenAction`/`isDeckPublished`/
+`getJlptLevel`/`getDeckCoverProps` verbatim from the removed function --
+`git diff` on `SharedDeckSection.tsx` confirmed these helper functions
+and the `SharedDeckSectionProps` callback signatures are byte-identical
+to before this phase, changes scoped to the render output only.
+
+**Detail/search/filter/pagination/StatusSelect confirmed working via
+real interaction, not just present in the DOM:** opened a subscribed-
+mode fixture deck (QA84, 85 words) via a real face click; typed into
+the search input (a real `input` event, result count changed); clicked
+a status filter chip (real click, result count changed); clicked "더
+보기" pagination (80 -> 85 rows, exactly the fixture's real total);
+changed a `StatusSelect` dropdown via a real `change` event
+(`unknown -> known`) with zero console errors and zero failed
+requests, confirming the `PATCH`-triggering `onUpdateWordStatus` path
+still fires correctly through the new detail-panel shell (itself
+unchanged). Also drove a real import (`내 노트에 담기` pull-tab on a
+previously-not-imported deck) and confirmed, on a fresh page load
+afterward, that the deck correctly showed as already-imported
+(`다시 가져오기`) -- a genuine forward-progressing state change, left
+in place rather than reverted, matching this project's established
+precedent.
+
+**Function/API/shared-deck-policy/storage confirmation:** no backend,
+API route, schema, or shared-deck-policy file was touched. `git diff`
+confirmed `onImportDeck`/`onUnpublishDeck`/`onRepublishSharedDeck`/
+`onUpdateWordStatus`/`onSelectDeck`/`onCloseDetail`/`onRefresh` are all
+called with the exact same arguments as before, only from new JSX call
+sites. `toSharedDeckWordProgress`, the subscribed-word
+search/filter/pagination `useMemo`/`useState` logic, and the entire
+detail-panel word-list JSX are untouched line-for-line.
+
+**Build/browser QA results:** `npm run build` clean (fresh `.next`, no
+concurrent dev server). `git diff --check` clean. Verified via headless
+Chrome (Windows-native, CDP) against the running dev server and real
+backend at 1280/1024/390/375/320: Shared Deck tab load; list refresh;
+newcomer import (real click, real state change, re-verified after
+reload); subscriber detail open/close (real click, toggled both ways,
+confirmed via `aria-expanded`); subscribed word list search/filter/
+pagination/StatusSelect (all real interactions, described above);
+zero console errors/warnings, zero failed requests, zero image errors
+at every viewport (one pre-existing, unrelated `/favicon.ico` 404
+excluded, consistent with every prior phase's own finding). A follow-up
+full 7-tab x 5-viewport sweep confirmed zero regressions elsewhere in
+the app from the `BrandElements.tsx` cleanup (removing the now-unused
+`BrandDeckCover` export and its icon imports).
+
+**Failure-criteria pass/fail (this phase's own 10-point list):**
+1. Deck item is no longer a rounded-rectangle card -- **pass** (narrow
+   standing spine, sharper corners, full-tone fill).
+2. Cover/spine is not a top decoration -- **pass** (the tone color fills
+   the whole spine; it is the spine, not a cap on a separate card body).
+3. Title/meta/action don't read as card-internal UI -- **pass** (title
+   is the spine's own label; action is a base-mounted pull-tab, not a
+   footer button row).
+4. Shelf isn't a background with floating cards on top -- **pass** (flex
+   row of fixed-width standing items sitting on a shelf ledge; sparse
+   rows leave visible shelf surface rather than stretching to fill it).
+5. Mobile doesn't degrade to a card list -- **pass** (2-column mini-book
+   grid at 390/375/320, measured, not assumed).
+6. Spine/label isn't too small to find actions -- **pass** (pull-tab
+   text wraps to stay fully legible rather than truncating; touch target
+   spans the full spine width).
+7. Owner/newcomer/subscriber conditions unchanged -- **pass** (verified
+   via `git diff` on the reused condition variables).
+8. StatusSelect/search/filter/pagination unbroken -- **pass** (verified
+   via real interaction, not just DOM presence).
+9. No non-Shiori character/animal/person -- **pass** (no new character
+   assets introduced; the small dot/chevron/sticker elements are all
+   CSS, matching this phase's own "lightweight CSS/SVG decorative
+   elements 허용" allowance).
+10. No text baked into a raster asset -- **pass** (no new image assets
+    added at all; the old `deck-cute-cover-tile-atlas.webp` reference
+    was already removed in Phase 152 and stays removed).
+
+**Files changed:** `frontend/components/SharedDeckSection.tsx`,
+`frontend/components/BrandElements.tsx`, `frontend/app/globals.css`,
+this file.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (structural silhouette confirmed via screenshot
+and DOM/measurement checks, real interaction coverage for every
+required flow, condition/handler equivalence confirmed via diff) all
+passed with zero console errors and zero failed requests. Per this
+project's standing process, no commit/push was made -- left staged for
+the user to review and commit alongside Phase 157's own still-
+uncommitted changes.
+
+**Remaining risk:** the spine's fixed 196px (desktop) / 158px (mobile)
+height means a deck with an unusually long title relies entirely on the
+5-line clamp to stay within it -- verified against this project's own
+longest real fixture titles (the ~30-character QA/AIUX/Deploy/Stability
+timestamp-suffixed names) with no visible clipping (`scrollHeight ===
+clientHeight` confirmed via measurement, not just a screenshot glance),
+but an even longer real-world title could clamp more aggressively than
+ideal. No functional risk -- the full title is still available via the
+face's `title` attribute and the opened detail panel's own unclamped
+heading.
+
+**Next phase recommendation:** re-run a Phase-157-style scene-first
+audit specifically on Shared Deck once this lands, to confirm the new
+silhouette holds up under the same strict rubric it was built to pass.
+Otherwise, the three P2 items Phase 157 already queued (Study
+ready-state board unity, Stats scene texture) remain the next candidates
+in priority order once Deck's own re-audit closes out clean.
