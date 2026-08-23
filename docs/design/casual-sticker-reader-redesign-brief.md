@@ -1,5 +1,10 @@
 # Casual Sticker Reader redesign brief
 
+> **Phase 162 note:** this Phase 54 brief is retained as historical direction
+> and product truth. Future visual redesign work should use
+> `docs/design/V2_SCENE_REDESIGN_BIBLE.md` as the current authority when it
+> conflicts with this document's older implementation-order assumptions.
+
 Phase 54 restarts the UI redesign direction. Stop treating the recent work as small polish on the old boxed layout. The target direction is a broader redesign named **Casual Sticker Reader**.
 
 ## Direction
@@ -41,4 +46,3 @@ Phase 54 restarts the UI redesign direction. Stop treating the recent work as sm
 ## Phase 54 recommended scope
 
 Start with **design contract + App Shell/Home redesign**. Use the mockups as directional references, not pixel-perfect specs. Preserve existing state, callbacks, tab routing, auth, and data fetching. Prefer CSS and component composition changes over logic changes.
-

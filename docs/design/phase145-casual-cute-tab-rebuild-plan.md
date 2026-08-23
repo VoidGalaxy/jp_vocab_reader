@@ -1,5 +1,11 @@
 # Phase 145+ Casual Cute Tab Rebuild Plan
 
+> **Superseded by Phase 162:** this plan is useful for asset provenance and for
+> remembering the symptoms that triggered the cute/stationery direction. It is
+> no longer the implementation authority because it still assumed patching the
+> existing tab structures. Use `docs/design/V2_SCENE_REDESIGN_BIBLE.md` for new
+> scene-first redesign phases.
+
 Reference mockup:
 
 - `docs/design/mockups/phase145-casual-cute-mockup-board.png`

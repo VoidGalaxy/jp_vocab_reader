@@ -8,6 +8,14 @@ Reference boards: `docs/design/mockups/casual-sticker-reader-mobile.png`,
 `docs/design/mockups/casual-sticker-reader-desktop.png` (directional, not
 pixel specs).
 
+> **Phase 162 V2 reset:** for new visual redesign work, the current authority is
+> `docs/design/V2_SCENE_REDESIGN_BIBLE.md`. This file remains the durable phase
+> history and decision log, but older sections that recommend reusing
+> `panel-card`, `hero-card`, side widgets, filter panels, or card grids should
+> be treated as historical context unless the V2 bible explicitly keeps them.
+> The new rule is scene first, then functionality reattached -- not decorating
+> the existing app skeleton.
+
 ## Principles
 
 - **Casual personal reading notebook, not an admin dashboard.** No dense grids
@@ -6428,3 +6436,135 @@ step already recommended for Shared Deck (Phase 158) and Home
 (Phase 159). Otherwise the queue holds: Shared Deck card-shape rework
 (Phase 158's own next-step, still open), then Stats scene texture
 (the one remaining P2 from Phase 157's original audit).
+
+## Phase 162 -- V2 Scene Redesign Bible / Documentation Reset
+
+After Phase 158-161, the core product problem changed: several tabs had
+scene-like materials and some real structural wins, but the screenshots
+still often read as "old app skeleton plus cute stationery" rather than
+a newly designed app. The recurring failure was no longer a missing tape
+accent, weak shadow, or single bad button. It was the documentation and
+phase prompts continuing to normalize the old skeleton: toolbar -> title
+-> controls -> cards/lists -> side panel. This phase therefore stopped
+implementation and reset the documentation contract first.
+
+**New authority:** `docs/design/V2_SCENE_REDESIGN_BIBLE.md` is now the
+current visual redesign authority for future scene work. Its central
+rule is stricter than the original Phase 54 brief: do not reskin the
+existing tab UI. Design each tab as a new physical stationery scene, then
+reattach the existing behavior inside it. The document defines the target
+world (Japanese stationery desk, study planner, flat-lay notebook
+objects), the non-negotiables (preserve API/SRS/storage/auth/shared-deck
+policy; live text stays DOM text; Shiori is the only character), the
+tab-by-tab V2 silhouettes, the asset plan, the motion language, and the
+new implementation strategy (new V2 scene components are preferred when
+old DOM fights the scene).
+
+**V2 ratio-specific mockups generated:** the first two concept boards
+were removed after review because their internal panel ratios did not
+match the real implementation viewports; using them as asset/layout
+targets encouraged sparse desktop scenes. They were replaced with
+individual tab mockups under `docs/design/mockups/v2/`: desktop
+`v2-desktop-*-16x9.png` files and mobile `v2-mobile-*-9x16.png` files
+for Home, Reading, Vocab, Study, Shared Deck, Analyze/Classify, and
+Stats. These are not production UI images; they are first-read
+silhouette references at the actual target ratios. Their text-like marks
+are placeholders only. Future implementation must keep live UI copy in
+DOM and use the existing Shiori component set rather than copying any
+generated mascot detail.
+
+**Old documentation demoted, not deleted:** this file remains the durable
+phase history; `casual-sticker-reader-redesign-brief.md` remains useful
+for product truth and the original Casual Sticker Reader direction;
+`phase145-casual-cute-tab-rebuild-plan.md` remains useful for asset
+provenance and the symptoms that prompted the cute/stationery turn;
+`v4-reader-first-redesign-proposal.md` remains useful IA background; and
+`ui-guidelines.md` remains useful for copy, safety, Shiori placement, and
+legacy implementation details. But all of them are now historical or
+supporting references when they conflict with the V2 bible. In
+particular, old guidance that implies default reuse of `panel-card`,
+`hero-card`, side widgets, card grids, or filter panels must not override
+a scene-first reconstruction brief.
+
+**Deprecated patterns made explicit:** the V2 bible names the patterns
+that kept surviving across earlier phases: generic metric chips,
+separate right widget panels, filter/settings panels, card grids posing
+as shelves, toolbar/banner rows stacked above scene objects, image
+textures placed behind unchanged cards, and full-width mobile admin
+button stacks. Future implementation reports should start with which of
+these old structures were actually removed. If a reconstruction phase
+has only a tiny CSS diff and leaves the old skeleton visible, the report
+must treat that as a likely design failure rather than a successful
+polish.
+
+**Current tab targets recorded:** Home becomes one large green notebook
+hero cluster; Reading becomes one open book with input/reader/inspector/
+save flow belonging to the same object; Vocab becomes a physical index
+notebook; Study becomes a light felt board; Shared Deck becomes a mini
+bookshelf; Analyze/Classify becomes a card-making desk; Stats becomes a
+study logbook. App Shell should be judged last, after tab scenes are
+stable, so shell changes support the scenes rather than becoming another
+global frame exercise.
+
+**Files changed:** `docs/design/V2_SCENE_REDESIGN_BIBLE.md`,
+`docs/design/DESIGN.md`, `docs/design/casual-sticker-reader-redesign-
+brief.md`, `docs/design/phase145-casual-cute-tab-rebuild-plan.md`,
+`docs/design/ui-guidelines.md`, plus the ratio-specific V2 mockup set in
+`docs/design/mockups/v2/`.
+
+**Next phase recommendation:** begin V2 implementation with the weakest
+fresh screenshot, not with another global polish pass. Likely candidates
+are **Classify V2** (large empty grid-paper area and small card-making
+objects still make the scene weak) or **Vocab V2** (filter/index controls
+still risk reading as a management panel). The phase prompt should use
+the V2 bible's required four-part opening: new scene silhouette, old
+structure to discard, functional core to preserve, and needed material
+anchors.
+
+## Phase 163 -- V2 Implementation Asset Kit / Ratio-Specific Scene Bases
+
+Following the Phase 162 documentation reset, this phase generated production-
+oriented scene-base assets rather than more UI screenshots. The goal was to
+avoid the old failure mode where a single desktop-ish mockup or asset was
+cropped into mismatched viewports, leaving the app sparse on desktop or cramped
+on mobile.
+
+**Generated runtime kit:** `frontend/public/brand/decor/v2/` now contains
+fourteen WebP scene bases: desktop 16:9 and mobile 9:16 versions for Home,
+Reading, Vocab, Study, Shared Deck, Analyze/Classify, and Stats. The full list
+and application rules are recorded in
+`frontend/public/brand/decor/v2/ASSET_MANIFEST.md`. The assets are blank
+physical scenes: no UI copy, no Japanese vocabulary, no counts, no icons, no
+new mascot, and no Shiori baked into pixels. Shiori must continue to render
+through the existing Shiori component set.
+
+**Source preservation and performance:** generated PNG masters were copied to
+`docs/design/source-assets/v2-generated-png/` for provenance, then converted to
+runtime WebP files at quality 88. The public V2 kit is about 2.46MB total,
+instead of roughly 31MB of raw PNGs. This keeps the assets viable for actual
+implementation rather than another heavy design-only artifact.
+
+**Scene coverage:** Home has separate notebook hero scenes; Reading has open-
+book/page scenes; Vocab has broad index-tab notebook scenes; Study has light
+felt-board scenes; Shared Deck has dense bookshelf scenes; Classify has a card-
+making desk with source slip, stamp, and tray; Stats has logbook/ledger scenes.
+The Shared Deck desktop candidate was regenerated during this phase because an
+earlier attempt left too much empty wall space, directly contradicting the V2
+goal of avoiding sparse desktop compositions. The Study and Stats mobile
+candidates were also regenerated after spotting unsuitable artifacts/text-like
+marks.
+
+**Implementation warning:** these images are material anchors, not decoration
+to place behind unchanged `panel-card` or `hero-card` structures. Future V2
+phases must still begin by deleting the old tab silhouette, then reattaching
+existing behavior into the scene. If an implementation keeps the old dashboard,
+form, card grid, sidebar, or filter-panel skeleton and merely swaps the
+background image, it fails the V2 contract.
+
+**Code impact:** no runtime React/CSS was changed in this phase. It is an asset
+and documentation phase only.
+
+**Next phase recommendation:** start implementation with a one-tab V2 pilot
+using the new assets and the Phase 162 prompt structure. The likely candidates
+remain Classify V2 or Vocab V2, because they are the clearest tests of whether
+we can actually replace the old skeleton rather than decorate it.
