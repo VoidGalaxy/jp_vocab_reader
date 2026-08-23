@@ -2460,21 +2460,51 @@ button:focus-visible {
   background: var(--muted);
 }
 
-.classification-summary {
+/* classify-result-cards -- Phase 156. Was .classification-summary/
+   .final-summary: 4 plain rounded pills, the same generic-badge shape a
+   dashboard stat strip would use directly under a "완료" heading. Now a
+   small fanned stack of paper result cards -- the filled-in counterpart
+   of ClassifyCardTray's blank preview cards above the intro's CTA, so the
+   desk scene reads as slip -> blank card tray -> finished card bundle,
+   not form -> dashboard summary. */
+.classify-result-cards {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px 14px;
   margin-bottom: 14px;
 }
 
-.classification-summary span {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 7px 10px;
-  color: var(--text-secondary);
-  background: var(--panel-bg);
-  font-size: 13px;
+.classify-result-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 68px;
+  padding: 10px 12px;
+  border: 1px solid var(--paper-border);
+  border-radius: 6px 6px 6px 2px;
+  background: var(--paper-bg);
+  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.1);
+}
+
+.classify-result-card:nth-child(odd) {
+  transform: rotate(-2deg);
+}
+
+.classify-result-card:nth-child(even) {
+  transform: rotate(2deg);
+}
+
+.classify-result-card span {
+  color: var(--muted);
+  font-size: 11px;
   font-weight: 700;
+}
+
+.classify-result-card strong {
+  color: var(--text);
+  font-size: 18px;
 }
 
 /* classify-word-card / classify-result-summary (renamed from .classify-card
@@ -2502,12 +2532,32 @@ button:focus-visible {
 .classify-progress {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* classify-progress-marker -- Phase 156. Was plain right-aligned text
+   ("N / total") directly on .classify-progress -- functionally fine, but
+   this phase's brief asks for progress to read as a small work-in-
+   progress marker rather than a bare dashboard number. Wrapped in a
+   small pill tag (same .reading-deck-picker/.study-stamp-tag rounded-chip
+   family used elsewhere) with a card icon, so it reads as "카드 2/7"
+   sitting on the card rather than a stat readout. */
+.classify-progress-marker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--soft-bg);
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 700;
-  text-align: right;
+}
+
+.classify-progress-marker-icon {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
 }
 
 /* Wraps ClassifyWordPrimary (word/reading/meaning) so it can re-play
@@ -2645,10 +2695,6 @@ button:focus-visible {
   font-size: 22px;
 }
 
-.final-summary {
-  justify-content: center;
-}
-
 /* Phase 154 -- was the plain default gradient button (the app-wide teal),
    same color regardless of which tab it sits on. Every tab's own primary
    action is now colored with that tab's own --screen-accent (Reading's
@@ -2664,12 +2710,14 @@ button:focus-visible {
   filter: brightness(1.08);
 }
 
+/* Phase 156 -- dropped the bordered/filled panel-bg box: one more small
+   control row reading as a form field, right below the now-de-boxed
+   result cards. A plain checkbox line is enough; .classify-ledger-wrap's
+   own dashed "pull-tab" rule right below it already signals "opens a
+   folded record", so this doesn't need its own box to announce that. */
 .show-results-toggle {
   justify-self: start;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 9px 12px;
-  background: var(--panel-bg);
+  padding: 4px 2px;
 }
 
 .result-heading {
@@ -5775,33 +5823,17 @@ input.reading-vocab-sticker-toggle:checked {
   font-size: 13px;
 }
 
-/* classify-stage (renamed from .classify-hero-card) -- Quick Classify's
-   ClassifyStageIntro component, same hero-card recipe as
-   StudyQuickStartHero, deliberately NOT the reading tab's open-notebook
-   textarea form. A bare textarea+deck-picker+checkbox row still reads as
-   an analysis tool no matter the copy, so this wraps it in a stage: title
-   + description + Shiori stay visible the whole time (previously the
-   guide/illustration only showed while the textarea was still empty, so
-   typing collapsed the screen back into "just a textarea"). Was relying on
-   library-card-stage's duller stage-tone background for its fill --
-   .hero-card contributes no fill of its own -- so this read as a visibly
-   different, flatter card family than the other tabs' top hero card
-   (study-hero-card, home-hero-card). Same opaque-panel + accent-top-border
-   recipe as .study-hero-card now, so every tab's top card reads as the
-   same card system. */
-/* Phase 154 -- Analyze/Classify IA Reconstruction. .classify-stage was a
-   bordered/`background: panel-bg`/accent-top-border box (plus .hero-card's
-   border-radius/box-shadow, applied via a second className in
-   AnalyzeSection.tsx) -- kept that way on purpose in Phase 115 to match
-   .study-hero-card's "same card system" consistency. Every other tab's
-   equivalent top card (Study Phase 148, Home Phase 145, Vocab Phase 114,
-   Shared Deck Phase 115, Reading -- never had one) has since dropped that
-   exact boxed-panel language, which is what made this the last surviving
-   admin-form panel in the app instead of a still-consistent choice. Now
-   the same flat, unboxed heading-strip recipe every one of those uses
-   (dashed bottom rule, no fill/border/shadow of its own) -- title/Shiori/
-   textarea/footer read as page content leading into the card-making flow
-   below, not a form floating on top of it. */
+/* classify-stage / classify-desk -- Phase 156 (Analyze/Classify Hard
+   Rework 2). Phase 154 already dropped the boxed hero-card panel this
+   comment used to describe, but the screen underneath it was still built
+   around one big textarea+select+checkbox+CTA column -- an input-form
+   silhouette wearing unboxed clothes. This is a real silhouette change:
+   .classify-stage stays the flat, unboxed dashed-bottom heading strip
+   (title/Shiori read as page content, unchanged from Phase 154), but the
+   form below it is now .classify-desk-scene -- a small pinned source slip
+   + paper-chip controls + postmark CTA on one side, and a card tray on the
+   other, so a card-making desk is what actually fills the first viewport,
+   not a textarea. */
 .classify-stage {
   position: relative;
   display: grid;
@@ -5834,141 +5866,293 @@ input.reading-vocab-sticker-toggle:checked {
   font-size: 13px;
 }
 
-/* classify-paper-input (renamed from .classify-hero-form) -- the
-   ClassifyPaperInput component's "stage" variant. */
-.classify-paper-input {
+/* classify-desk-scene -- the ClassifyDeskIntro form itself: main desk
+   column (slip + chips + stamp CTA) beside the card tray at >=1024px,
+   single column (main, then tray) below that, the same "main surface +
+   side rail" split Reading/Stats/Analyze's own card stage already use at
+   this tier, applied here to the *intro* for the first time. */
+.classify-desk-scene {
   display: grid;
-  gap: 14px;
+  gap: 18px;
+  min-width: 0;
 }
 
-/* Phase 154 -- was a dashed-border tinted textarea, one step removed from
-   a plain form field. Now the same "work sheet" material Reading's start
-   textarea established (Phase 150): a real recessed-paper surface (flat
-   panel-bg, ruled-line texture, inset shadow), not a copy-paste of
-   Reading's own though -- a coral vertical margin rule (this tab's own
-   `--screen-accent`, the same rgba(193,105,74,...) accent Reading's own
-   detail-page margin rule uses, so the two tabs share a material without
-   being visually identical) marks this specifically as a ruled index-card
-   worksheet, not a page of continuous prose. */
-.classify-hero-textarea {
+.classify-desk-main {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .classify-desk-scene {
+    grid-template-columns: minmax(0, 1fr) minmax(200px, 260px);
+    align-items: start;
+    gap: 24px;
+  }
+}
+
+/* classify-source-slip -- Phase 156. Was .classify-hero-textarea: a
+   full-width, 140px-tall "work sheet" that dominated the first viewport --
+   the exact "textarea가 화면의 주인공" failure this phase's brief names.
+   Now a small source-material slip: capped width, 3 rows, its own tighter
+   ruled-line/inset-shadow surface (same recipe, smaller scale) plus a
+   torn washi-tape pin at the top edge (the same rgba(217,122,74,...) tape
+   Vocab/Home/Study/Stats' own pinned notes already use) -- reads as one
+   item pinned to the desk, not the input box the screen is organized
+   around. Same value/onChange wiring as before; only the chrome and size
+   changed. */
+.classify-source-slip-wrap {
+  position: relative;
+  max-width: 440px;
+  padding-top: 6px;
+  transform: rotate(-0.5deg);
+}
+
+.classify-source-slip-wrap::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 26px;
+  z-index: 1;
+  width: 34px;
+  height: 13px;
+  border: 1px solid rgba(217, 122, 74, 0.42);
+  background: rgba(217, 122, 74, 0.3);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.14);
+  transform: rotate(-3deg);
+  pointer-events: none;
+}
+
+.classify-source-slip-label {
+  display: block;
+  margin: 0 0 6px 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.classify-source-slip {
   box-sizing: border-box;
   width: 100%;
-  min-height: 140px;
-  padding: 16px 16px 16px 34px;
+  min-height: 76px;
+  padding: 14px 14px 14px 28px;
   border: none;
-  border-radius: 14px;
+  border-radius: 3px 12px 12px 12px;
   background-color: var(--panel-bg);
   background-image:
     linear-gradient(
       90deg,
-      transparent 22px,
-      rgba(193, 105, 74, 0.35) 22px,
-      rgba(193, 105, 74, 0.35) 23px,
-      transparent 23px
+      transparent 18px,
+      rgba(193, 105, 74, 0.35) 18px,
+      rgba(193, 105, 74, 0.35) 19px,
+      transparent 19px
     ),
     repeating-linear-gradient(
       180deg,
       rgba(61, 47, 20, 0.055) 0px,
       rgba(61, 47, 20, 0.055) 1px,
       transparent 1px,
-      transparent 30px
+      transparent 26px
     );
   box-shadow:
     inset 0 3px 8px rgba(37, 43, 30, 0.1),
     0 2px 6px rgba(37, 43, 30, 0.06);
   color: var(--text);
-  font-size: 15.5px;
-  line-height: 1.85;
+  font-size: 14.5px;
+  line-height: 1.75;
 }
 
-.classify-hero-textarea::placeholder {
+.classify-source-slip::placeholder {
   color: var(--muted);
   opacity: 0.68;
 }
 
-.classify-hero-textarea:focus {
+.classify-source-slip:focus {
   outline: none;
   box-shadow:
     inset 0 3px 8px rgba(37, 43, 30, 0.1),
     inset 0 0 0 1.5px var(--screen-accent, var(--primary));
 }
 
-/* One grouped action area (deck-select + checkbox + submit) instead of
-   controls floating on the left and the button hard-pushed to the far
-   right, so select/checkbox/button read as one row belonging together.
-   Phase 154 -- dropped the dashed top divider that used to separate this
-   from the textarea above inside their shared bordered card -- the
-   textarea is now its own distinct surface (see above), so a second rule
-   directly under it would have read as a redundant seam. */
-.classify-hero-footer {
+/* classify-desk-chip-row -- deck select + "완벽히 아는 단어도 표시" as two
+   small paper chips sitting on the desk, not a form-field row. The select
+   reuses .reading-deck-picker's own rounded-pill chip verbatim (see
+   below); .classify-desk-checkbox-chip gives the checkbox label the same
+   pill treatment so the two chips read as one family. */
+.classify-desk-chip-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 14px;
-}
-
-.classify-hero-cta-row {
-  flex: 1 1 auto;
-  align-items: center;
-  justify-content: flex-end;
   gap: 10px;
 }
 
-/* Phase 154 -- the stage-variant submit ("분류 카드 만들기") is now a small
-   notched bookmark tag instead of a full form-submit button -- the same
-   fixed-pixel `clip-path` notch family Reading's Phase 150 CTA
-   (.reader-bookmark-button) and every tab since established, colored with
-   Analyze's own coral --screen-accent so it reads as this tab's own
-   stationery action, not a borrowed one. Fixed-pixel (not percentage)
-   notch: Phase 150 found a percentage notch balloons into a huge arrow
-   once a button goes full-width on mobile -- width/min-width are
-   deliberately left unset here so the app-wide mobile
-   `button { width: 100% }` rule doesn't apply (a bare class selector
-   already beats the bare element selector regardless of source order);
-   the one exception is `.analyze-cta-row`'s own mobile
-   `align-items: stretch` (needed by the *other* variant's submit button,
-   `.reading-open-button`, untouched here) which can still stretch an
-   `align-items: stretch`-eligible child regardless of its own `width` --
-   see the dedicated mobile override further down this file. */
-.classify-bookmark-button {
+.classify-desk-checkbox-chip {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.classify-desk-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* classify-stamp-button -- Phase 156. Was .classify-bookmark-button, the
+   same notched-flag CTA every other tab's primary action uses. This
+   phase's brief specifically asks for a stamp/bookmark/action-tag read
+   here, stronger than the shared notch alone communicates once the rest
+   of the screen is a desk scene -- so the CTA now borrows the app's own
+   established "postmark" recipe instead (.shiori-stamp--labeled: dashed
+   border, rounded-pill shape, a few degrees of rotation), filled solid
+   with this tab's coral --screen-accent so it still reads unmistakably as
+   the one primary action, not just a decorative badge. width/min-width
+   are left at auto (a bare class selector already beats the app-wide
+   mobile `button { width: 100% }` element selector regardless of source
+   order) and .classify-desk-cta-row sets its own `align-items: center`
+   rather than reusing `.analyze-cta-row`, so there is no ancestor
+   `align-items: stretch` left to re-stretch it back to full width on
+   mobile -- confirmed via a real width measurement, not assumed. */
+.classify-stamp-button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   width: auto;
   min-width: 0;
-  padding: 12px 32px 12px 18px;
-  border: 0;
-  border-radius: 3px;
-  clip-path: polygon(
-    0 0,
-    calc(100% - 18px) 0,
-    100% 50%,
-    calc(100% - 18px) 100%,
-    0 100%
-  );
+  padding: 11px 22px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.65);
+  border-radius: 999px;
   background: var(--screen-accent, var(--primary));
   color: #fff;
   font-weight: 800;
-  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.18);
+  transform: rotate(-2deg);
   transition:
     transform var(--motion-fast) var(--ease-soft),
     box-shadow var(--motion-fast) var(--ease-soft);
 }
 
-.classify-bookmark-button:not(:disabled):hover {
-  transform: translateX(2px);
-  box-shadow: 0 8px 18px rgba(37, 43, 30, 0.2);
+.classify-stamp-button:not(:disabled):hover {
+  transform: rotate(0deg) translateY(-1px);
+  box-shadow: 0 8px 18px rgba(37, 43, 30, 0.22);
 }
 
-.classify-bookmark-button:not(:disabled):active {
-  transform: translateX(1px) scale(0.98);
+.classify-stamp-button:not(:disabled):active {
+  transform: rotate(-1deg) scale(0.97);
 }
 
-.classify-bookmark-button:disabled {
+.classify-stamp-button:disabled {
   background: #a89a80;
   color: #fff;
   cursor: not-allowed;
   box-shadow: none;
+  transform: none;
+}
+
+/* classify-card-tray -- Phase 156, new. A shallow paper tray sitting
+   beside (>=1024px) or below (narrower) the desk column: a small fanned
+   stack of blank paper-card shapes (no text/numbers -- purely decorative,
+   so it can never be mistaken for real analysis output) previews "this
+   slip is about to become word cards", plus the resumeable-draft
+   affordance, so the first viewport reads as a card-making desk even
+   before any text has been typed. */
+.classify-card-tray {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 16px;
+  border: 1px dashed var(--paper-border);
+  border-radius: 4px 16px 16px 16px;
+  background: var(--soft-bg);
+}
+
+@media (min-width: 1024px) {
+  .classify-card-tray {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+  }
+}
+
+.classify-card-tray-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.classify-card-tray-stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 62px;
+}
+
+.classify-card-tray-card {
+  position: absolute;
+  width: 42px;
+  height: 56px;
+  border: 1px solid var(--paper-border);
+  border-radius: 6px 6px 6px 2px;
+  background: var(--paper-bg);
+  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.12);
+}
+
+.classify-card-tray-card:nth-child(1) {
+  transform: rotate(-9deg) translateX(-15px);
+  z-index: 1;
+}
+
+.classify-card-tray-card:nth-child(2) {
+  z-index: 2;
+}
+
+.classify-card-tray-card:nth-child(3) {
+  transform: rotate(9deg) translateX(15px);
+  z-index: 1;
+}
+
+.classify-card-tray-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* classify-draft-chip -- Phase 156. Was a plain centered <p> status line
+   below the form. Now a small receipt-style slip inside the card tray
+   (left accent bar instead of a border box), so "이전 분류 이어하기"
+   reads as another item sitting on the tray, not a status paragraph
+   competing with the desk's one real CTA. */
+.classify-draft-chip {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 3px 10px 10px 3px;
+  background: var(--paper-bg);
+  border-left: 3px solid var(--screen-accent, var(--accent));
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.classify-draft-chip-icon {
+  width: 13px;
+  height: 13px;
+  margin-right: 4px;
+  color: var(--screen-accent, var(--muted));
+  vertical-align: -2px;
+}
+
+.classify-draft-chip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }
 
 /* Secondary actions ("이전 분류 이어하기", "삭제하고 새로 시작") -- a plain
@@ -9713,14 +9897,9 @@ input.reading-vocab-sticker-toggle:checked {
     padding: 10px;
   }
 
-  .classification-summary {
-    gap: 6px;
-  }
-
-  .classification-summary span {
-    flex: 1 1 calc(50% - 6px);
-    text-align: center;
-  }
+  /* Phase 156 -- .classification-summary/span (2-per-row pill override)
+     removed: replaced by .classify-result-cards, which already wraps
+     naturally via flex-wrap without needing a forced 50% basis. */
 
   .vocab-item-form {
     grid-template-columns: 1fr;
@@ -10015,19 +10194,16 @@ input.reading-vocab-sticker-toggle:checked {
     align-items: stretch;
   }
 
-  /* .analyze-cta-row's align-items: stretch above (needed by the *other*
-     input variant's .reading-open-button, untouched) stretches any
-     column-flex child whose own width computes to `auto` -- which
-     .classify-bookmark-button's `width: auto` (its own rule, overriding
-     the app-wide mobile `button { width: 100% }`) now is. Without this
-     align-self override the button would still end up full-width via
-     stretch even though no rule sets width: 100% on it directly --
-     confirmed via a real width measurement (362px, matching the row) on
-     a first attempt that only set width: auto without this. */
-  .classify-bookmark-button,
-  .classify-quiet-link {
-    align-self: flex-start;
-  }
+  /* Phase 156 -- .classify-bookmark-button (removed; see .classify-stamp-
+     button above, now inside its own .classify-desk-cta-row which sets
+     `align-items: center` directly rather than reusing .analyze-cta-row)
+     and .classify-quiet-link (now only ever rendered inside .classify-
+     draft-chip-actions, a plain row with no ancestor `align-items:
+     stretch`) no longer sit inside .analyze-cta-row at all, so neither
+     needs this align-self opt-out any more. .analyze-cta-row's own
+     remaining occupant, .reading-open-button (the compact "원문 수정"
+     editor's submit), is meant to stay full-width on mobile, so this
+     block is intentionally left with nothing to override. */
 
   .classify-stage-toolbar {
     justify-content: center;

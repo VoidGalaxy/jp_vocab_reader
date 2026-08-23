@@ -101,16 +101,14 @@ const classifyRatingButtons: Array<{
 ];
 
 // ---------------------------------------------------------------------------
-// ClassifyPaperInput -- the one text-entry form, reused by both the intro
-// stage (large, hero-styled, paper-note textarea) and the post-result
-// compact "원문 수정" editor (small, plain open-notebook form). A bare
-// textarea+deck-picker+checkbox reads as an analysis tool no matter the
-// copy around it, so the two variants exist so the *intro* screen never
-// looks like that -- variant="stage" is the only one a first-time visit
-// ever sees.
+// ClassifyCompactEditor -- the post-result "원문 수정" editor only. Phase 156
+// split this off of the old dual-variant ClassifyPaperInput: the intro
+// stage no longer shares this component at all (see ClassifyDeskIntro
+// below), so there is nothing left to branch on here -- a single plain
+// open-notebook form, same as the "maintenance action" it has always been
+// once a result exists.
 // ---------------------------------------------------------------------------
-type ClassifyPaperInputProps = {
-  variant: "stage" | "compact";
+type ClassifyCompactEditorProps = {
   text: string;
   decks: Deck[];
   selectedDeckId: string;
@@ -121,11 +119,9 @@ type ClassifyPaperInputProps = {
   onSelectedDeckChange: (deckId: string) => void;
   onIncludeKnownChange: (checked: boolean) => void;
   onAnalyze: (event: FormEvent<HTMLFormElement>) => void;
-  secondaryAction?: { label: string; onClick: () => void };
 };
 
-function ClassifyPaperInput({
-  variant,
+function ClassifyCompactEditor({
   text,
   decks,
   selectedDeckId,
@@ -136,43 +132,20 @@ function ClassifyPaperInput({
   onSelectedDeckChange,
   onIncludeKnownChange,
   onAnalyze,
-  secondaryAction,
-}: ClassifyPaperInputProps) {
-  const isStage = variant === "stage";
-  const submitButton = (
-    <button
-      type="submit"
-      className={isStage ? "classify-bookmark-button" : "reading-open-button"}
-      disabled={isAnalyzing}
-    >
-      {isAnalyzing ? (
-        "나누는 중..."
-      ) : (
-        <>
-          <SparkleIcon className="button-icon" />
-          {submitLabel}
-        </>
-      )}
-    </button>
-  );
-
+}: ClassifyCompactEditorProps) {
   return (
-    <form
-      className={isStage ? "classify-paper-input" : "analyze-form"}
-      onSubmit={onAnalyze}
-    >
+    <form className="analyze-form" onSubmit={onAnalyze}>
       <label htmlFor="source-text" className="sr-only-label">
         원문
       </label>
       <textarea
         id="source-text"
-        className={isStage ? "classify-hero-textarea" : undefined}
         value={text}
         onChange={(event) => onTextChange(event.target.value)}
         placeholder="彼は怠惰であることを自覚していた。"
-        rows={isStage ? 4 : 6}
+        rows={6}
       />
-      <div className={isStage ? "classify-hero-footer" : "reading-input-footer"}>
+      <div className="reading-input-footer">
         <label className="reading-deck-picker">
           <CardFileIcon className="reading-deck-picker-icon" />
           <select
@@ -195,17 +168,17 @@ function ClassifyPaperInput({
           />
           완벽히 아는 단어도 표시
         </label>
-        <div className={isStage ? "analyze-cta-row classify-hero-cta-row" : "analyze-cta-row"}>
-          {submitButton}
-          {isStage && secondaryAction ? (
-            <button
-              type="button"
-              className="classify-quiet-link"
-              onClick={secondaryAction.onClick}
-            >
-              {secondaryAction.label}
-            </button>
-          ) : null}
+        <div className="analyze-cta-row">
+          <button type="submit" className="reading-open-button" disabled={isAnalyzing}>
+            {isAnalyzing ? (
+              "나누는 중..."
+            ) : (
+              <>
+                <SparkleIcon className="button-icon" />
+                {submitLabel}
+              </>
+            )}
+          </button>
         </div>
       </div>
     </form>
@@ -213,13 +186,157 @@ function ClassifyPaperInput({
 }
 
 // ---------------------------------------------------------------------------
-// ClassifyStageIntro -- the pre-analysis "stage/hero", not a bare form: a
-// small Shiori guide + title + description stay visible the whole time
-// (even while typing), the textarea reads as a paper note, and any
-// resumeable draft shows as a small secondary CTA + one status line, never
-// its own boxed panel competing with the main "분류 카드 만들기" CTA.
+// ClassifySourceSlip -- Phase 156. The original text entry was a full-width
+// "work sheet" textarea that dominated the first viewport (the exact
+// silhouette this phase's brief fails on). Now it's a small source-material
+// slip pinned to the desk: capped width, a few rows tall, a torn washi-tape
+// pin at its top edge -- reads as one item sitting on a work surface, not
+// the input box the screen is built around. Same value/onChange wiring as
+// before, no analysis/classification logic here.
 // ---------------------------------------------------------------------------
-type ClassifyStageIntroProps = {
+function ClassifySourceSlip({
+  text,
+  onTextChange,
+}: {
+  text: string;
+  onTextChange: (text: string) => void;
+}) {
+  return (
+    <div className="classify-source-slip-wrap">
+      <label htmlFor="source-text" className="classify-source-slip-label">
+        원문 slip
+      </label>
+      <textarea
+        id="source-text"
+        className="classify-source-slip"
+        value={text}
+        onChange={(event) => onTextChange(event.target.value)}
+        placeholder="彼は怠惰であることを自覚していた。"
+        rows={3}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ClassifyDeskControls -- deck select + "완벽히 아는 단어도 표시" toggle,
+// now two small paper chips sitting beside the source slip instead of a
+// form-field row (same <select>/checkbox element and onChange wiring as
+// before this phase). Reuses Reading's own .reading-deck-picker chip
+// treatment rather than inventing a second "small paper tag" recipe.
+// ---------------------------------------------------------------------------
+function ClassifyDeskControls({
+  decks,
+  selectedDeckId,
+  includeKnown,
+  onSelectedDeckChange,
+  onIncludeKnownChange,
+}: {
+  decks: Deck[];
+  selectedDeckId: string;
+  includeKnown: boolean;
+  onSelectedDeckChange: (deckId: string) => void;
+  onIncludeKnownChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="classify-desk-chip-row">
+      <label className="reading-deck-picker">
+        <CardFileIcon className="reading-deck-picker-icon" />
+        <select
+          value={selectedDeckId}
+          onChange={(event) => onSelectedDeckChange(event.target.value)}
+          aria-label="분석/저장 덱"
+        >
+          {decks.map((deck) => (
+            <option key={deck.id} value={String(deck.id)}>
+              {deck.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="checkbox-field classify-desk-checkbox-chip">
+        <input
+          type="checkbox"
+          checked={includeKnown}
+          onChange={(event) => onIncludeKnownChange(event.target.checked)}
+        />
+        완벽히 아는 단어도 표시
+      </label>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ClassifyCardTray -- Phase 156. New: a small decorative blank-card fan (no
+// text, no numbers -- purely a stack-of-paper shape) previewing "this slip
+// is about to become word cards", so the first viewport reads as a
+// card-making desk before analysis has even run. Deliberately not a real
+// preview of results (that would risk reading as fake analysis output) --
+// just paper shapes. Also holds the resumeable-draft affordance, since a
+// saved-in-progress session is another item on this tray, not a status
+// paragraph below the form.
+// ---------------------------------------------------------------------------
+function ClassifyCardTray({
+  pendingDraft,
+  onRestoreDraft,
+  onDiscardDraft,
+}: {
+  pendingDraft: ClassificationDraftSummary | null;
+  onRestoreDraft: () => void;
+  onDiscardDraft: () => void;
+}) {
+  return (
+    <aside className="classify-card-tray">
+      <p className="classify-card-tray-label">카드 트레이</p>
+      <div className="classify-card-tray-stack" aria-hidden="true">
+        <span className="classify-card-tray-card" />
+        <span className="classify-card-tray-card" />
+        <span className="classify-card-tray-card" />
+      </div>
+      <p className="classify-card-tray-hint">
+        원문을 나누면 이 자리에 단어 카드가 한 장씩 쌓여요.
+      </p>
+
+      {pendingDraft ? (
+        <div className="classify-draft-chip">
+          <ClockIcon className="classify-draft-chip-icon" />
+          <span>
+            이전 분류 저장:{" "}
+            {new Date(pendingDraft.saved_at).toLocaleString("ko-KR", {
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+          <div className="classify-draft-chip-actions">
+            <button type="button" className="classify-quiet-link" onClick={onRestoreDraft}>
+              이어하기
+            </button>
+            <button type="button" className="classify-quiet-link" onClick={onDiscardDraft}>
+              삭제하고 새로 시작
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </aside>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ClassifyDeskIntro -- Phase 156 (Analyze/Classify Hard Rework 2). Replaces
+// ClassifyStageIntro: Phase 154 already dropped the boxed hero-card panel,
+// but the screen was still built around one big textarea+select+checkbox+
+// CTA column -- an input form silhouette, just an unboxed one. This is a
+// real silhouette change, not more polish on the same skeleton: the source
+// text is a small pinned slip (ClassifySourceSlip), deck/checkbox are paper
+// chips (ClassifyDeskControls), the "분류 카드 만들기" CTA is a rotated
+// postmark-style stamp button (same dashed-pill rotation language
+// .shiori-stamp already established, not a plain form-submit bar), and a
+// card tray (ClassifyCardTray) sits beside/below it so a card-making desk
+// is visible in the very first viewport, before any text is even typed.
+// ---------------------------------------------------------------------------
+type ClassifyDeskIntroProps = {
   text: string;
   decks: Deck[];
   selectedDeckId: string;
@@ -234,7 +351,7 @@ type ClassifyStageIntroProps = {
   onDiscardDraft: () => void;
 };
 
-function ClassifyStageIntro({
+function ClassifyDeskIntro({
   text,
   decks,
   selectedDeckId,
@@ -247,75 +364,54 @@ function ClassifyStageIntro({
   onAnalyze,
   onRestoreDraft,
   onDiscardDraft,
-}: ClassifyStageIntroProps) {
+}: ClassifyDeskIntroProps) {
   return (
-    // Phase 154 -- Analyze/Classify IA Reconstruction. Phase 115 kept this
-    // as a bordered/shadowed .hero-card specifically to match
-    // .study-hero-card's "same card system across tabs" consistency --
-    // but every one of those other tabs (Study included, Phase 148) has
-    // since dropped its own boxed hero card for an unboxed heading strip,
-    // making this the last surviving admin-form panel in the app.
-    // Restructured on Reading's Phase 150 open-worksheet language instead:
-    // a plain heading (Shiori inline, not a separate boxed companion slot),
-    // a differentiated "work sheet" textarea (own ruled/inset-shadow
-    // surface, coral-accented -- not a copy-paste of Reading's ink-green
-    // one), and a small notched bookmark CTA instead of a full-width
-    // form-submit button. See globals.css for the actual surface rules.
-    <section className="classify-stage">
+    <section className="classify-stage classify-desk">
       <div className="classify-hero-header">
         <span className="shiori-glow shiori-companion--section classify-hero-companion">
           <ShioriCharacter variant="classify" size="md" />
         </span>
         <div>
-          <span className="reading-input-eyebrow">빠른 분류</span>
-          <h2>단어를 빠르게 나눠볼까요?</h2>
-          <p>원문에서 뽑은 단어를 카드처럼 넘기며 정리해요.</p>
+          <span className="reading-input-eyebrow">읽은 원문에서 카드 만들기</span>
+          <h2>단어 카드를 만들어볼까요?</h2>
+          <p>원문 slip을 올리면 단어가 카드로 한 장씩 나뉘어요.</p>
         </div>
       </div>
 
-      <ClassifyPaperInput
-        variant="stage"
-        text={text}
-        decks={decks}
-        selectedDeckId={selectedDeckId}
-        includeKnown={includeKnown}
-        isAnalyzing={isAnalyzing}
-        submitLabel="분류 카드 만들기"
-        onTextChange={onTextChange}
-        onSelectedDeckChange={onSelectedDeckChange}
-        onIncludeKnownChange={onIncludeKnownChange}
-        onAnalyze={onAnalyze}
-        secondaryAction={
-          pendingDraft
-            ? { label: "이전 분류 이어하기", onClick: onRestoreDraft }
-            : undefined
-        }
-      />
+      <form className="classify-desk-scene" onSubmit={onAnalyze}>
+        <div className="classify-desk-main">
+          <ClassifySourceSlip text={text} onTextChange={onTextChange} />
+          <ClassifyDeskControls
+            decks={decks}
+            selectedDeckId={selectedDeckId}
+            includeKnown={includeKnown}
+            onSelectedDeckChange={onSelectedDeckChange}
+            onIncludeKnownChange={onIncludeKnownChange}
+          />
+          <div className="classify-desk-cta-row">
+            <button type="submit" className="classify-stamp-button" disabled={isAnalyzing}>
+              {isAnalyzing ? (
+                "나누는 중..."
+              ) : (
+                <>
+                  <SparkleIcon className="button-icon" />
+                  분류 카드 만들기
+                </>
+              )}
+            </button>
+          </div>
+          <p className="muted-text copyright-note">
+            <ShieldIcon className="copyright-note-icon" />
+            <span>원문 전체는 서버에 저장하지 않아요.</span>
+          </p>
+        </div>
 
-      {pendingDraft ? (
-        <p className="draft-status">
-          이전 분류 저장:{" "}
-          {new Date(pendingDraft.saved_at).toLocaleString("ko-KR", {
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}{" "}
-          ·{" "}
-          <button
-            type="button"
-            className="classify-quiet-link"
-            onClick={onDiscardDraft}
-          >
-            삭제하고 새로 시작
-          </button>
-        </p>
-      ) : null}
-
-      <p className="muted-text copyright-note">
-        <ShieldIcon className="copyright-note-icon" />
-        <span>원문 전체는 서버에 저장하지 않아요.</span>
-      </p>
+        <ClassifyCardTray
+          pendingDraft={pendingDraft}
+          onRestoreDraft={onRestoreDraft}
+          onDiscardDraft={onDiscardDraft}
+        />
+      </form>
     </section>
   );
 }
@@ -539,7 +635,8 @@ function ClassifyCardStage({
 
         <div className="classify-word-card card-stack-surface">
           <div className="classify-progress">
-            <span>
+            <span className="classify-progress-marker">
+              <CardFileIcon className="classify-progress-marker-icon" />
               {currentCardIndex + 1} / {totalCount}
             </span>
           </div>
@@ -607,15 +704,36 @@ function ClassifyResultSummary({
   onGoToVocab,
 }: ClassifyResultSummaryProps) {
   return (
+    // Phase 156 -- was a plain pill row (.classification-summary) reading
+    // as a dashboard stat strip right under a "완료" heading. Now a small
+    // fanned stack of result cards (.classify-result-cards), the same
+    // "paper card" shape ClassifyCardTray previews before analysis --
+    // this is the real, filled-in version of that earlier blank preview,
+    // so the desk scene reads as slip -> blank card tray -> finished card
+    // bundle, not form -> dashboard summary. Copy now frames the save
+    // action as putting a finished card bundle into the notebook, not a
+    // generic "저장" submit.
     <div className="classify-result-summary">
       <ShioriStamp variant="success" label="완료" />
-      <h3>단어 나누기를 마쳤어요.</h3>
+      <h3>단어 카드 묶음을 다 만들었어요.</h3>
       <CoverageSummary stats={coverageStats} />
-      <div className="classification-summary final-summary">
-        <span>{statusLabels.known} {knownCount}개</span>
-        <span>{statusLabels.uncertain} {uncertainCount}개</span>
-        <span>{statusLabels.unknown} {unknownCount}개</span>
-        <span>건너뛴 단어 {skippedCount}개</span>
+      <div className="classify-result-cards">
+        <span className="classify-result-card">
+          <span>{statusLabels.known}</span>
+          <strong>{knownCount}개</strong>
+        </span>
+        <span className="classify-result-card">
+          <span>{statusLabels.uncertain}</span>
+          <strong>{uncertainCount}개</strong>
+        </span>
+        <span className="classify-result-card">
+          <span>{statusLabels.unknown}</span>
+          <strong>{unknownCount}개</strong>
+        </span>
+        <span className="classify-result-card">
+          <span>건너뛴 단어</span>
+          <strong>{skippedCount}개</strong>
+        </span>
       </div>
       <button
         type="button"
@@ -624,7 +742,7 @@ function ClassifyResultSummary({
         disabled={isSaving || !selectedDeckId}
         title={!selectedDeckId ? "저장할 덱을 선택해 주세요." : undefined}
       >
-        {isSaving ? "저장 중..." : "모르는 단어 노트에 담기"}
+        {isSaving ? "저장 중..." : "카드 묶음 노트에 붙이기"}
       </button>
       <p className="muted-text">저장하면 임시 저장은 삭제돼요.</p>
       <div className="study-actions">
@@ -710,7 +828,7 @@ export function AnalyzeSection({
   return (
     <section className="tab-panel analyze-panel" aria-live="polite">
       {!hasResult ? (
-        <ClassifyStageIntro
+        <ClassifyDeskIntro
           text={text}
           decks={decks}
           selectedDeckId={selectedDeckId}
@@ -743,8 +861,7 @@ export function AnalyzeSection({
           </button>
 
           {isInputExpanded ? (
-            <ClassifyPaperInput
-              variant="compact"
+            <ClassifyCompactEditor
               text={text}
               decks={decks}
               selectedDeckId={selectedDeckId}

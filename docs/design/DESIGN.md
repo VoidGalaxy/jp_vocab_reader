@@ -5386,3 +5386,216 @@ correction, since the per-tab pinned-note/ledger/diary-sheet
 vocabulary has now converged closely enough across tabs that any
 remaining differences are more likely to be real inconsistencies than
 intentional per-tab variation.
+
+## Phase 156 -- Analyze/Classify Hard Rework 2 / Card-Making Desk Scene
+
+Phase 154 dropped Analyze/Classify's boxed hero-card panel, but this
+phase's own brief judged that pass incomplete: the screen underneath
+the unboxed heading was still built around one big textarea, a deck
+select, a checkbox, and a CTA -- an input-form silhouette wearing
+unboxed clothes, not the "카드 만들기 작업대" the mockup world calls
+for. Where Phase 154 asked "what boxes should be removed," this phase
+asked "what scene should the first viewport actually read as," with an
+explicit, screenshot-checkable failure list (input-form first
+impression, textarea as the visual lead, a generic control row, no
+card/stamp/desk element visible above the fold, decoration bolted onto
+Phase 154's structure instead of a real silhouette change). That list,
+not a removal checklist, is what this pass was judged against.
+
+**Removed:**
+- **The dual-variant `ClassifyPaperInput` component** -- the intro
+  stage and the post-result "원문 수정" compact editor shared one
+  function branching on `variant`. Split into `ClassifyCompactEditor`
+  (compact-only, unchanged behavior) and a set of new desk components
+  (below); the intro no longer shares any markup with the compact
+  editor, since they no longer need to look related.
+- **`.classify-hero-textarea`** -- a full-width, 140px-tall "work
+  sheet" that dominated the first viewport regardless of Phase 154's
+  unboxed heading above it. This was the actual "textarea가 화면의
+  주인공" failure the brief names, independent of whether it had a
+  border around it.
+- **`.classify-hero-footer`/`.classify-hero-cta-row`** -- the grouped
+  deck-select + checkbox + submit row that read as a form's action bar
+  no matter how the submit button itself was styled.
+- **`.classify-bookmark-button`** -- Phase 154's notched-flag CTA,
+  functionally fine but not distinct enough from a plain submit button
+  once the rest of the screen was still form-shaped around it.
+  Replaced with a stamp-shaped CTA (below) now that the surrounding
+  scene actually needs one.
+- **`.draft-status`'s plain centered `<p>`** for the resumeable-draft
+  status line + inline discard link -- read as a status paragraph
+  competing with the form above it, not part of any scene.
+- **`.classification-summary`/`.final-summary`** -- 4 plain rounded
+  pills directly under the "완료" heading, the same generic-badge
+  shape a dashboard stat strip would use.
+- **`.show-results-toggle`'s bordered/filled box** -- one more small
+  control reading as a form field, immediately below the now-de-boxed
+  result cards.
+
+**New card-making desk silhouette:** the intro (`ClassifyDeskIntro`)
+is now `.classify-desk-scene`: a main column (source slip -> paper
+chips -> stamp CTA) beside a card tray at `>=1024px` (stacked, main
+then tray, below that), the same "main surface + side rail" split
+Reading/Stats/Analyze's own card stage already use elsewhere, applied
+here to the *intro* for the first time. The textarea is capped at
+`max-width: 440px`, 3 rows, with its own tighter ruled-line/inset-
+shadow surface and a torn washi-tape pin (`ClassifySourceSlip` /
+`.classify-source-slip`) -- one item pinned to the desk, not the
+screen's organizing input box. Deck select + "완벽히 아는 단어도 표시"
+are two small paper chips (`ClassifyDeskControls`): the select reuses
+`.reading-deck-picker`'s existing rounded-pill chip verbatim, and a
+new `.classify-desk-checkbox-chip` gives the checkbox label the same
+treatment. The CTA (`.classify-stamp-button`) borrows the app's own
+established "postmark" recipe (`.shiori-stamp--labeled`'s dashed
+border + rotation) instead of the shared notch-flag family, filled
+solid with Analyze's coral `--screen-accent` so it still reads
+unmistakably as the one primary action. A new `ClassifyCardTray`
+(`.classify-card-tray`) sits beside/below the main column: a small
+fanned stack of three blank paper-card shapes (`.classify-card-tray-
+card`, no text/numbers -- purely decorative, so it can never read as
+fake analysis output) previewing "this slip becomes word cards," plus
+the resumeable-draft affordance now as a receipt-style
+`.classify-draft-chip` (left accent bar, not a status paragraph) with
+"이어하기"/"삭제하고 새로 시작" as its own action row. All of this is
+visible in the very first viewport, before any text has even been
+typed.
+
+**Intro/start stage reconstruction:** same underlying
+`text`/`selectedDeckId`/`includeKnown`/`pendingDraft` state and the
+same `onTextChange`/`onSelectedDeckChange`/`onIncludeKnownChange`/
+`onAnalyze`/`onRestoreDraft`/`onDiscardDraft` callbacks as before this
+phase -- only the JSX structure and class names changed. The submit is
+still a real `<form onSubmit={onAnalyze}>` around the whole desk scene
+(including the tray, whose two buttons are explicitly `type="button"`
+so they can't accidentally submit); `handleAnalyze` in `page.tsx`
+reads only `event.preventDefault()` plus component state, never form
+field DOM values, so moving the fields around the page freely was
+confirmed safe before restructuring, not assumed.
+
+**Card stage reconstruction:** deliberately minimal -- Phase 112's
+mobile decision-grid-above-the-fold protection (the `order` rules
+moving `.classify-actions` ahead of `.classify-word-card-secondary`
+below 640px) was explicitly left untouched, confirmed via `git diff`
+showing zero lines changed in that media-query block. The one change:
+`.classify-progress`'s bare "N / total" text is now
+`.classify-progress-marker`, a small rounded chip (same pill-tag
+family as `.reading-deck-picker`) with a card icon, so progress reads
+as a small work-in-progress marker on the card rather than a bare
+number -- everything else (the flashcard-tier `.classify-word-card`,
+the 4-way `.classify-actions` grid, the sticky `.analyze-work-aside`
+tally rail) was already judged not-generic enough to need
+reconstruction and was left alone.
+
+**Result summary reconstruction:** `ClassifyResultSummary`'s heading
+copy changed from "단어 나누기를 마쳤어요." to "단어 카드 묶음을 다
+만들었어요."; the 4 status pills are now `.classify-result-cards` --
+small fanned paper cards (label + bold count), the filled-in
+counterpart of `ClassifyCardTray`'s blank preview cards, so the desk
+scene reads as slip -> blank card tray -> finished card bundle, not
+form -> dashboard summary. The save button's label changed from
+"모르는 단어 노트에 담기" to "카드 묶음 노트에 붙이기" -- copy only,
+same `onSaveSelected`/`disabled`/`title` wiring. "원문 읽기로
+이동"/"어휘 노트 보기" links are unchanged. The opt-in ledger
+(`.classify-ledger`, already a de-boxed "pull-tab" receipt-style table
+since an earlier phase) was left structurally alone; only its toggle
+checkbox lost its bordered/filled box.
+
+**Separate-tab IA judgment (re-recorded per this phase's brief):**
+**A -- keep Analyze/Classify as its own tab**, reaffirming Phase 154's
+same judgment. Nothing found this phase changes the underlying reasons
+(Reading is slow in-context exploration; Classify is fast out-of-
+context bulk triage -- genuinely different mental models, not two
+skins on one task). What this phase *does* strengthen is the
+Reading-connective copy/visual language the brief specifically asks
+for: the eyebrow above the intro heading changed from "빠른 분류" to
+"읽은 원문에서 카드 만들기" (explicitly naming Reading as the source of
+the material being turned into cards), and the subtitle now reads
+"원문 slip을 올리면 단어가 카드로 한 장씩 나뉘어요." -- both frame
+Classify as the next step after Reading, not a standalone analysis
+tool. No nav label change (still "분류" -- accurate, unambiguous). No
+merge implemented, per the brief's explicit instruction to record the
+IA judgment only.
+
+**Desktop (1280/1024) results:** confirmed via headless Chrome
+screenshot at both widths: the first viewport shows the source slip,
+two paper chips, the rotated stamp CTA, and the card tray with its
+fanned blank cards all above the fold, with no bordered form panel
+anywhere -- a card-making desk, not an input-form screen. The textarea
+is capped at 440px and visually secondary to the tray/stamp/heading
+around it. `document.documentElement.scrollWidth === clientWidth` at
+both widths (1265x1265 at the 1280 viewport request -- headless
+Chrome's own reported content width, not a mismatch; 1009x1009 at
+1024).
+
+**Mobile (390/375/320) results:** measured via `getBoundingClientRect`
+(not assumed): the stamp button measured 192px wide against a 362px/
+347px/292px container at 390/375/320 -- nowhere near the app-wide
+mobile `button { width: 100% }` full-bar width, confirmed because
+`.classify-desk-cta-row` sets its own `align-items: center` rather
+than reusing `.analyze-cta-row` (whose mobile `align-items: stretch`
+was the exact mechanism Phase 154 had to work around for the button
+this one replaces) -- there is no stretch-eligible ancestor left to
+re-stretch it. `.classify-desk-main`/`.classify-card-tray` bounding
+boxes confirmed non-overlapping at all three widths. The 4-way
+decision grid's bounding box was confirmed fully within the viewport
+at all three widths (`withinViewport: true`), and a real screenshot at
+320px shows it clear of any overlap, matching Phase 112's protection.
+The result summary flows as fanned result cards -> save stamp button
+-> quiet links, not a stacked admin form, at all three widths.
+
+**Function/API/storage confirmation:** `git diff` on
+`AnalyzeSection.tsx` (`+371/-267` lines) confirmed scoped to JSX
+structure, `className` changes, one component split
+(`ClassifyPaperInput` -> `ClassifyCompactEditor` + new desk
+components), and comments -- grepped the diff for
+`handleAnalyze`/`apiFetch`/`fetch(`/`localStorage`/
+`classifyMessageTone`/`computeCoverageStats` and found zero matches,
+confirming no business-logic call sites were touched. No backend,
+API route, schema, classification/save algorithm, or routing file was
+touched. `pendingDraft`/`onRestoreDraft`/`onDiscardDraft` props and
+their wiring are unchanged -- only where the resulting UI renders.
+
+**Build/browser QA results:** `npm run build` clean (fresh `.next`,
+no dev server running concurrently). `git diff --check` clean.
+Verified via headless Chrome (Windows-native, CDP) against the running
+dev server and real backend: Analyze tab load; sample text entered via
+a real input event (not just state injection); deck select changed to
+a real deck id; show-known toggle clicked and confirmed `checked`
+both ways; classify started via a real click on the stamp button (a
+genuine `POST /analyze` round trip, not a mocked response); card stage
+entered; 6 explicit rating clicks across all four action types
+(known/uncertain/unknown/skip) plus an auto-loop to completion (11
+total tokens); result summary reached and its 4 result cards, save-
+button label, and both next-step links confirmed; the opt-in ledger
+toggled open and confirmed 11 rendered rows; a real save issued
+(`완벽히 아는 단어 8개, 헷갈리는 단어 1개, 모르는 단어 1개를
+저장했습니다.`, matching the session's own classification exactly);
+previous-session resume confirmed genuine (not a hit-test) by reloading
+the page, confirming the draft chip survived the reload, clicking
+"이어하기", and landing back on the exact session state (a completed-
+but-unsaved classification from an earlier mobile test pass, correctly
+restored as the result summary rather than the card stage); discard
+confirmed via "삭제하고 새로 시작" removing the draft chip. Zero
+console errors/warnings, zero failed requests, zero image errors, at
+every viewport checked (1280/1024/390/375/320) -- one non-regression
+`404 /favicon.ico` request noted and excluded (no favicon file exists
+anywhere in `public/`; this is a pre-existing, app-wide characteristic
+unrelated to this phase's changes, not a new failure).
+
+**Remaining risk:** none identified specific to this phase's own
+changes. This session's QA performed one real save (10 words:
+8 완벽히 아는 단어, 1 헷갈리는 단어, 1 모르는 단어) to the dev user's
+default deck as part of verifying the end-to-end save flow -- left in
+place rather than reverted, matching this project's established
+precedent (Phase 147/148/152/153/154) of treating a real
+forward-progressing action as acceptable test state.
+
+**Next phase candidates:** none currently flagged. Every tab in the
+original Phase 145 rebuild plan has now had at least one post-145
+brand-alignment pass, and Analyze/Classify specifically has had two
+(Phase 154's structural de-boxing, this phase's silhouette rework),
+reaffirming the same separate-tab IA judgment both times. Future work
+here, if any, should revisit that judgment only from real usage data
+on how often Classify and Reading sessions chain together for the
+same text -- this phase, like Phase 154, found no such evidence in
+scope to gather.
