@@ -73,36 +73,24 @@ export function HomeDashboard({
   return (
     <section className="tab-panel home-dashboard home-scene" aria-live="polite">
       <div className="home-stage">
-        {/* Phase 145 -- Home Hard Reconstruction. The old .home-cover was a
-            tall portrait card: a full-bleed cloth *texture* (not a discrete
-            object) with title/CTA text painted directly onto it via a dark
-            legibility wash. The new phase145 asset is a real photographed
-            notebook *object* (closed, elastic strap + snap baked into the
-            photo itself, natural soft shadow, alpha-cut on transparent) --
-            landscape, ~1.67:1. Doing the math on that aspect ratio at real
-            mobile widths (title+subtitle+CTA+sample needs ~240px of
-            vertical room; a box locked to the image's own aspect ratio is
-            only ~170-210px tall at 320-390px wide) makes clear the old
-            "paint text onto the cover" technique can't carry over --
-            forcing it would mean either cropping the object (cutting off
-            the spine/snap the photo exists to show) or squeezing text
-            past the point of comfortable reading. Restructured instead:
-            .home-cover-heading (title/subtitle/CTA/sample, live text, dark
-            ink on the page's own background -- no wash needed since it's
-            no longer sitting on a photo) stacked above .home-cover-object
-            (the notebook photo itself, shown whole via `contain`, at its
-            own aspect ratio, with the sticky note and Shiori charm
-            attached to it). This reads as "a message, then a real notebook
-            sitting on the desk below it" rather than "text embossed on a
-            product photo" -- more legible, and closer to how the object
-            actually looks (a closed book has no room to print a whole
-            heading across its spine-to-snap width anyway).
-            .home-cover-strap (the separate SVG elastic band Phase 124
-            drew) is gone -- the new photo already has its own elastic
-            strap and snap physically in frame, so the CSS one would have
-            drawn a second, redundant strap. .home-cover-dots (pagination)
-            is gone per this phase's explicit instruction; nothing in this
-            layout was ever a paged carousel. */}
+        {/* Phase 151 -- Home Hero Scene Scale Correction. Phase 145 stacked
+            .home-cover-heading (title/CTA) directly above .home-cover-object
+            (the book, capped at a small 420px max-width) as two separate
+            rows -- a real screenshot at 1280 showed the book sitting alone,
+            small, with a huge gap of bare wood between it and the shortcut
+            column, and the heading reading as its own block rather than
+            attached to the book at all. This restructures .home-cover into
+            one physically overlapping cluster instead: the book grows much
+            larger (main hero object, not a small accent), and
+            .home-cover-heading becomes a paper note pinned across its own
+            top edge (negative margin-bottom pulls it down onto the book --
+            see globals.css), the same "note glued to a physical object"
+            language .home-cover-sticky already used for one small tag. The
+            old standalone .home-cover-sticky tag ("오늘도 책장을 열어요")
+            is removed rather than kept alongside the new heading note --
+            both were doing the same job (a note pinned to the book's top
+            edge) in the same spot, and keeping both would have stacked two
+            competing notes on top of each other. */}
         <div className="home-cover">
           <div className="home-cover-heading">
             <h2 className="home-cover-title">
@@ -130,15 +118,6 @@ export function HomeDashboard({
           </div>
 
           <div className="home-cover-object">
-            <span className="home-cover-sticky" aria-hidden="true">
-              <img
-                src="/brand/decor/washi-tape.svg"
-                alt=""
-                aria-hidden="true"
-                className="home-cover-sticky-tape"
-              />
-              오늘도 책장을 열어요
-            </span>
             <span className="home-cover-charm" aria-hidden="true">
               <ShioriCharacter variant="default" size="lg" />
             </span>

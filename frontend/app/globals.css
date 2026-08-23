@@ -1220,41 +1220,62 @@ button {
    matching the desktop mockup's taller side notes. */
 .home-stage {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
-/* Phase 145 -- Home Hard Reconstruction. .home-cover is no longer one
-   card-shaped surface -- it's a text heading stacked above a real
-   photographed notebook object (see HomeDashboard.tsx's own comment for
-   the full reasoning: the new object photo's own aspect ratio doesn't
-   leave room to paint a heading across it the way the old full-bleed
-   texture did). No background/border/shadow at this outer level -- it's
-   two children on the page's/wood's own surface, not a box of its own. */
+/* Phase 151 -- Home Hero Scene Scale Correction. Phase 145's .home-cover
+   stacked the heading and the book as two separate rows with real gap
+   between them (a `display:grid; gap:18px` column) -- a real screenshot at
+   1280 showed that gap reading as "text, then a small unrelated book
+   further down," not one object. .home-cover is now a plain block-flow
+   container instead of a grid: .home-cover-heading is a real paper note
+   (background/shadow/rotation, see below) that a negative margin-bottom
+   pulls down to physically overlap the book's own top edge, so the two
+   read as one glued cluster -- text pinned to the book, not text above the
+   book. Still no card/border around the *outer* .home-cover itself (that
+   would be the "boxed hero panel" this project's rules explicitly ban);
+   only the small heading note has its own surface, same family as every
+   other pinned-note/sticky-tag element elsewhere in the app. */
 .home-cover {
   position: relative;
-  display: grid;
-  gap: 18px;
 }
 
+/* The heading is now a physical note object, not bare text on the page --
+   pinned across the book's top edge via the negative margin-bottom below.
+   z-index puts it above .home-cover-object in the paint order (source
+   order alone would put the book, which comes second in the DOM, on top
+   of the note where they overlap). Asymmetric radius (echoes the app's
+   established index-card/sticky-note corner language) + a slight
+   rotation + a soft shadow read as "a note resting on top of the book,"
+   not a second bordered card competing with it. */
 .home-cover-heading {
+  position: relative;
+  z-index: 2;
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  max-width: 360px;
+  margin: 0 0 -34px;
+  padding: 16px 18px 40px;
+  border-radius: 3px 18px 3px 18px;
+  background: var(--panel-bg);
+  box-shadow: 0 10px 22px rgba(37, 43, 30, 0.16);
+  transform: rotate(-1deg);
 }
 
 .home-cover-title {
   margin: 0;
   color: var(--text);
-  font-size: 23px;
+  font-size: 21px;
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.32;
 }
 
 .home-cover-subtitle {
   margin: 0;
   max-width: 40ch;
   color: var(--muted);
-  font-size: 13.5px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .home-cover-cta {
@@ -1295,17 +1316,22 @@ button {
 }
 
 /* The notebook itself -- a real photographed object (elastic strap, snap,
-   and its own natural soft shadow all baked into the photo, confirmed via
-   a white/wood-background composite test before this was applied), shown
-   at its own aspect ratio via `contain` rather than cropped to fill an
-   arbitrary box. No CSS box-shadow added on top -- the photo's own shadow
-   is the grounding cue; stacking a second CSS shadow under it would only
-   double it, the same call every other photographed object in this app
-   (Phase 131 desk props, Phase 132 flashcard stack) already made. */
+   and its own natural soft shadow all baked into the photo). Phase 151 --
+   was capped at max-width:420px regardless of how much wider its own
+   layout column actually was (up to ~700px+ at 1280, see .home-stage's
+   1.55fr column below), leaving the book small and isolated with a large
+   band of bare wood beside it. Raised to a real hero size at every tier
+   (see the >=1024px override further down for the largest size) so the
+   book actually fills the space its own column reserves for it, instead
+   of floating inside unused room. Shown at its own aspect ratio via
+   `contain` rather than cropped. No CSS box-shadow added on top -- the
+   photo's own shadow is the grounding cue. position:relative stays (the
+   Shiori charm below is still absolutely positioned against it). */
 .home-cover-object {
   position: relative;
+  z-index: 1;
   width: 100%;
-  max-width: 420px;
+  max-width: 480px;
   aspect-ratio: 1619 / 971;
   background-image: url("/brand/decor/phase145/home-cute-notebook-cover-object.webp");
   background-size: contain;
@@ -1313,54 +1339,8 @@ button {
   background-repeat: no-repeat;
 }
 
-.home-cover-sticky {
-  position: absolute;
-  top: -6px;
-  left: 4%;
-  z-index: 2;
-  padding: 9px 14px 7px;
-  border: 1px solid var(--paper-border);
-  border-radius: 3px;
-  background: var(--panel-bg);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.22);
-  transform: rotate(-4deg);
-}
-
-/* Phase 124 -- asset-kit bridge test (see docs/design/DESIGN.md). The old
-   .home-cover-pin (a plain CSS circle standing in for "something holding
-   this note down") is gone; this SVG washi-tape strip takes over that job
-   with an actual torn-edge, semi-transparent tape shape instead. Position
-   is absolute against .home-cover-sticky (already position:absolute
-   itself, so it's already a valid positioning context for this), overlapping
-   the note's top edge like real tape would.
-   pointer-events:none + aria-hidden -- decorative only, never a click
-   target, and .home-cover-sticky's own aria-hidden="true" already keeps
-   the whole note (including this) out of the accessibility tree. */
-.home-cover-sticky-tape {
-  position: absolute;
-  top: -11px;
-  left: 50%;
-  z-index: 3;
-  /* Explicit width AND height (not height:auto) -- found via QA that this
-     Chromium build doesn't reliably resolve an image element's intrinsic
-     aspect-ratio from an SVG source for height:auto sizing (even with
-     explicit width/height attributes on the SVG root), silently
-     collapsing the rendered box to a few px instead of failing to load.
-     Sized to washi-tape.svg's own 84:30 ratio at this width (46 * 30/84
-     ≈ 16.4, rounded). */
-  width: 46px;
-  height: 16px;
-  transform: translateX(-50%) rotate(-3deg);
-  pointer-events: none;
-}
-
-/* Shiori charm now sits on the notebook photo itself (.home-cover-object,
-   the new positioning context), not the outer .home-cover -- there's no
-   separate "spine" edge for her to rest against anymore, so she's placed
-   over the photo's own lower-right cover area instead. */
+/* Shiori charm sits on the notebook photo itself (.home-cover-object, the
+   positioning context). */
 .home-cover-charm {
   position: absolute;
   right: 4%;
@@ -1498,23 +1478,33 @@ button {
     box-shadow: none;
   }
 
-  /* Phase 118 -- desktop desk-scene composition for Home (see
+  /* Phase 151 -- desktop desk-scene composition for Home (see
      HomeDashboard.tsx's .home-stage/.home-cover/.home-stickers). Mirrors
      the desktop mockup's HOME DESK panel: notebook cover large and
-     left-anchored, three sticky-note shortcuts stacked beside it (not
-     below it), desk props scattered around both -- one scene, not a card
-     with a tile row under it. */
+     left-anchored, three sticky-note shortcuts stacked beside it, desk
+     props bridging the gap between them -- one dense scene, not a small
+     book floating next to a distant column with bare wood between.
+     align-items:stretch (was start) so .home-stickers -- naturally shorter
+     than the now-much-taller book column -- stretches to match its height
+     instead of sitting short at the top with empty space below it; see
+     .home-stickers' own justify-content:space-between below, which is what
+     actually spreads the three notes across that full height. Column ratio
+     tightened (was 1.55fr/0.9fr) and the gap between them shrunk (was
+     36px) now that the book itself is much larger and no longer leaves a
+     large aisle of bare wood before the sticky-note column even starts. */
   .home-stage {
     position: relative;
     z-index: 0;
-    grid-template-columns: minmax(0, 1.55fr) minmax(240px, 0.9fr);
-    align-items: start;
-    gap: 36px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.85fr);
+    align-items: stretch;
+    gap: 22px;
     padding: 14px 10px 44px;
   }
 
   .home-cover-heading {
-    max-width: 430px;
+    max-width: 460px;
+    margin-bottom: -72px;
+    padding: 22px 26px 58px;
   }
 
   .home-cover-title {
@@ -1528,12 +1518,13 @@ button {
   }
 
   .home-cover-object {
-    max-width: 380px;
+    max-width: 640px;
   }
 
   .home-stickers {
     flex-direction: column;
     align-items: stretch;
+    justify-content: space-between;
     gap: 18px;
     padding: 8px 0;
   }
@@ -1667,50 +1658,59 @@ button {
     background-repeat: no-repeat;
   }
 
-  /* 223x400 source -- tall leaf sprig, top-left of the cover, echoing the
-     old CSS plant's corner spot. */
+  /* Phase 151 -- every prop below is scaled up (roughly 1.5-1.7x) from its
+     Phase 133 size. At the old small scale, against a now much larger
+     book + sticky-note cluster, these read as stray specks lost in open
+     wood rather than real objects sitting on the desk -- the phase brief's
+     own "장식물이 너무 작게 흩어지지 않는가" QA question directly. Position
+     is still relative to the whole .home-stage box (this element spans
+     both columns via inset:0), so a 0-100% left offset can land the pen
+     prop in the *gap* between the book and sticky-note columns instead of
+     only at the book's own corners -- one prop now visually bridges the
+     two clusters instead of every prop orbiting the book alone. */
+
+  /* 223x400 source -- tall leaf sprig, top-left of the cover. */
   .home-desk-prop--leaf {
-    top: -38px;
-    left: -30px;
-    width: 58px;
-    height: 104px;
+    top: -12px;
+    left: -40px;
+    width: 92px;
+    height: 165px;
     transform: rotate(-7deg);
     background-image: url("/brand/decor/phase131/desk-prop-leaf.webp");
   }
 
-  /* 400x353 source -- washi tape roll, low-left near the sticky-note
-     column's own old "stationery" spot. */
+  /* 400x353 source -- washi tape roll, low-left of the book. */
   .home-desk-prop--tape {
-    left: -32px;
-    top: 336px;
-    width: 48px;
-    height: 42px;
+    left: -40px;
+    top: 420px;
+    width: 74px;
+    height: 65px;
     transform: rotate(-5deg);
     background-image: url("/brand/decor/phase131/desk-prop-washi-tape.webp");
   }
 
-  /* 400x378 source -- paperclip, resting just past the tape roll rather
-     than clipped onto a live sticky-note button (those are real controls,
-     not a surface a decorative layer should visually attach to). */
+  /* 400x378 source -- paperclip, resting just past the tape roll. */
   .home-desk-prop--paperclip {
-    left: -4px;
-    top: 372px;
-    width: 32px;
-    height: 30px;
+    left: 4px;
+    top: 468px;
+    width: 50px;
+    height: 47px;
     transform: rotate(14deg);
     background-image: url("/brand/decor/phase131/desk-prop-paperclip.webp");
   }
 
-  /* 184x400 source -- pen, right of the sticky-note column, bleeding into
-     the open wood the same way the old CSS bar did. The source photo is
-     already shot at a resting diagonal, so only a small extra rotation is
-     needed rather than the ~-30deg the old flat CSS bar required. */
+  /* 184x400 source -- pen, now positioned in the gap between the book and
+     sticky-note columns (left: a percentage of the whole stage, landing
+     roughly on the column boundary -- see .home-stage's 1.4fr/0.85fr split
+     above) rather than bleeding off the far right edge of the whole scene,
+     past the shortcuts entirely. This is the one prop actually bridging
+     the two clusters instead of decorating the book alone. */
   .home-desk-prop--pen {
-    top: 58%;
-    right: -18px;
-    width: 42px;
-    height: 91px;
-    transform: rotate(18deg);
+    top: 46%;
+    left: 61.5%;
+    width: 66px;
+    height: 143px;
+    transform: rotate(20deg);
     background-image: url("/brand/decor/phase131/desk-prop-pen.webp");
   }
 }

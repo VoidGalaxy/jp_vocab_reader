@@ -4563,3 +4563,157 @@ stay two equal primary tabs, per `phase145-casual-cute-tab-rebuild-
 plan.md`'s item 6) is the last unaddressed item from that plan; no
 further "casual cute" correction passes are currently flagged as
 needed on any tab.
+
+## Phase 151 -- Home Hero Scene Scale Correction / Full First-Viewport Reconstruction
+
+Phase 151 is a correction pass on Home's first viewport, not a new
+tab rebuild -- Phase 145 already established the right *ingredients*
+(a real photographed notebook object, bare icon+label shortcuts, no
+boxed cards), but a real 1280 screenshot showed them scattered too
+small and too far apart: the book capped at `max-width:420px` sitting
+alone inside a much wider (~700px+) grid column, a large band of bare
+wood between it and the shortcut column, and the heading text sitting
+in its own row above the book with a real gap rather than reading as
+attached to it.
+
+**Removed:**
+- **The book's `max-width:420px` cap** -- the actual root cause of
+  the empty-wood complaint. The book's own grid column was ~700px
+  wide at 1280 (a `1.55fr` share of the stage), so the old cap left
+  roughly 280-300px of pure bare wood between the book's right edge
+  and the sticky-note column, before the grid's own gap even started.
+- **`.home-cover`'s `display:grid; gap:18px` stacked-row layout** --
+  gone. The heading and the book were two independent rows with real
+  space between them; nothing physically connected "text" to "book."
+- **`.home-cover-sticky`** (the small standalone "오늘도 책장을
+  열어요" tag pinned to the book's corner, plus its washi-tape
+  accent) -- removed outright rather than kept alongside the new
+  heading note. Both were doing the same job (a note pinned to the
+  book's top edge) in the same spot; keeping both would have stacked
+  two competing notes on each other.
+- **The desk props' Phase 133 scale and edge-only placement** -- a
+  58-104px leaf, a 32-48px paperclip, etc., scattered only at the
+  book's own four corners, reading as stray specks against the much
+  larger scene rather than real objects on the desk.
+
+**New hero cluster structure:** `.home-cover-heading` is now a real
+paper note (`var(--panel-bg)` background, soft shadow, a slight
+rotation, the same asymmetric-corner language every other pinned
+note/index-card in the app already uses) instead of bare text. A
+negative `margin-bottom` (`-34px` mobile, `-72px` desktop) pulls it
+down to physically overlap the book's own top edge -- `.home-cover`
+dropped `display:grid` entirely (plain block flow) specifically so
+this margin-based overlap works predictably, rather than fighting
+CSS Grid's own track-sizing rules for negative margins. `z-index`
+puts the note above the book in paint order (DOM order alone would
+have painted the book, which comes second, on top of the note where
+they overlap). This is literally the phase brief's own first
+suggested direction -- "제목/CTA를 책 위 종이 라벨/스티커 묶음처럼
+배치" -- implemented with an existing, established material (a
+pinned note) rather than trying to paint live text directly onto the
+photographed fabric cover, which risked real contrast problems for
+`var(--muted)` subtitle text against a medium-sage-green photo.
+
+**Book scale + column balance (desktop, >=1024px):** `.home-cover-
+object`'s max-width raised from 420px to 640px (was capped well
+under its own column's real width); `.home-stage`'s column ratio
+tightened from `1.55fr/0.9fr` to `1.4fr/0.85fr` and its gap shrunk
+from 36px to 22px, closing most of the remaining aisle between the
+book and the shortcut column. `.home-stage` switched from
+`align-items: start` to `stretch`, and `.home-stickers` gained
+`justify-content: space-between` -- the three sticky notes, naturally
+shorter than the now much taller book+note cluster, now stretch and
+distribute across that full column height instead of clumping at the
+top with dead space below them (visible in the pre-Phase screenshot:
+stickers stopped around the column's 40% mark while the book column
+ran to 100%).
+
+**Desk props:** all four (leaf/tape/paperclip/pen) scaled up roughly
+1.5-1.7x. The pen prop moved from `right: -18px` (bleeding off the
+far right edge of the *entire* scene, past the shortcut column
+entirely) to `left: 61.5%` (roughly the book/shortcut column
+boundary, since `.home-desk-props` spans the whole stage via
+`inset:0`) -- it's now the one prop that visually bridges the two
+clusters instead of every prop orbiting the book alone. The leaf
+prop's position was tuned twice: an initial `top:-54px` (matching its
+larger new size) put it 3-40px into the desktop toolbar's own box
+(caught via `getBoundingClientRect()` on both elements, not
+eyeballing), pulled back to `top:-12px` so it clears the toolbar with
+a few px to spare, confirmed via a clipped 1:1 screenshot of that
+exact corner.
+
+**Not touched, by design:** the desktop toolbar itself (`.app-
+toolbar--minimal`'s translucent-strip treatment), routing/tab
+callbacks (`onStartReading`/`onTryWithSample`/`onGoToVocab`/
+`onStartTodayReview`/`onGoToSharedDecks`/`onOpenAccount` all still
+wired to the same buttons, unchanged), the account-modal-on-review-
+click behavior for the dev user (`isDevUser ? onOpenAccount :
+onStartTodayReview}`, pre-existing, re-verified working), Shiori
+usage (`ShioriCharacter variant="default"` on the book,
+`variant="review"` on the shortcut -- no new variant, no new
+character), and no pagination dots were reintroduced.
+
+Verified via headless Chrome (Windows-native, CDP) against a local
+sqlite dev database (`backend/vocab.db`, the dev-mode auto-user):
+
+- **Desktop (1280/1024):** book confirmed as the dominant object in
+  both screenshot and by measurement (640px wide at 1280, was
+  420px); heading note visually overlaps the book's top-left corner
+  (physical cluster, not two separate rows); sticky notes now
+  stretch across the same height as the book column; desk props
+  read as real objects at this scale, with the enlarged pen bridging
+  the book/shortcut gap; leaf/toolbar clearance re-confirmed via
+  `getBoundingClientRect()` after the position fix. Zero
+  `scrollWidth`/`clientWidth` mismatch, zero console errors/warnings,
+  zero failed requests at either width.
+- **Functional loop (1280):** CTA click navigated to Reading (heading
+  "원문으로 읽고 바로 노트에 담기"); sample link filled the reading
+  textarea with the exact `SAMPLE_TEXT`; 단어장 shortcut navigated to
+  Vocab (heading "내 단어장"); 덱 shortcut navigated to Shared Deck
+  (heading "덱 책장"); 복습 shortcut correctly opened the account
+  panel instead of navigating (`account-menu-panel` appeared in the
+  DOM), matching the pre-existing dev-user-only behavior, not a
+  regression; toolbar 피드백/로그인 buttons and the mobile drawer
+  trigger (aria-label "메뉴 열기") all confirmed present and
+  functional.
+- **Mobile (390/375/320):** zero overflow mismatch at all three
+  widths; book/heading/CTA read as one continuous cluster with no
+  visible seam; shortcut row sits directly under the book, not a
+  detached card strip; the CTA stayed a rounded pill at its normal
+  content width (unchanged from before this phase -- Home's CTA was
+  never affected by the admin-bar problem Reading's Phase 150 CTA
+  had, since it already used the same family of pill button
+  throughout).
+
+`npm run build` clean (dev server stopped and `.next` removed first,
+per this project's WSL/Windows build-vs-dev conflict note), `git diff
+--check` clean.
+
+**Files changed:** `frontend/components/HomeDashboard.tsx`,
+`frontend/app/globals.css`, this file.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (structural composition confirmed via both
+screenshot and precise measurement, full functional loop re-verified
+including the dev-user account-panel edge case, toolbar/drawer
+reachability) all passed with zero console errors and zero failed
+requests.
+
+**Remaining risk:** the heading note's negative-margin overlap
+amount (`-34px`/`-72px`) was tuned against the specific title/
+subtitle copy currently in `HomeDashboard.tsx` ("오늘도 한 문장, 한
+단어." + one subtitle line) -- meaningfully longer copy in either
+line would grow the note's natural height and could push the overlap
+either too shallow (barely touching the book) or, if the note's own
+`padding-bottom` isn't also adjusted, too deep into the book's own
+visible cover art. Not a concern for the current copy (verified at
+all five required widths), but worth re-checking if the heading copy
+ever changes. The four desk props' new positions were tuned at the
+four required viewports only, not the full range between them.
+
+**Next phase candidates:** Phase 150's own deferred item (Reading/
+Classify IA decision, `phase145-casual-cute-tab-rebuild-plan.md`
+item 6) remains the last open item from that plan. No further "casual
+cute" correction passes are currently flagged as needed on any tab --
+Vocab (149), Reading (150), and Home (151) have each had a full
+first-viewport correction pass.
