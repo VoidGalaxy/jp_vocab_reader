@@ -4330,6 +4330,33 @@ select {
   .reader-start-page textarea {
     min-height: 260px;
     font-size: 18px;
+    /* Phase 150 -- below 1024px this textarea's photographed paper is the
+       *only* page surface on screen (.reader-start-scene has no photo of
+       its own there), so it reads fine as "this is a page". At 1024px+ it
+       now sits on top of .reader-start-scene's own open-book-spread photo
+       (added Phase 126) -- both were the same photographed paper family,
+       which is exactly the "textarea blends into the book" the phase
+       brief flags. Switched to a flatter, lighter, ruled surface with its
+       own inset shadow instead: a real material difference (matte pasted
+       sheet vs. the busier photo grain around it), not just a slightly
+       different photo crop. */
+    background-color: var(--panel-bg);
+    background-image: repeating-linear-gradient(
+      180deg,
+      rgba(61, 47, 20, 0.06) 0px,
+      rgba(61, 47, 20, 0.06) 1px,
+      transparent 1px,
+      transparent 34px
+    );
+    box-shadow:
+      inset 0 3px 10px rgba(37, 43, 30, 0.12),
+      0 2px 6px rgba(37, 43, 30, 0.08);
+  }
+
+  .reader-start-page textarea:focus {
+    box-shadow:
+      inset 0 3px 10px rgba(37, 43, 30, 0.12),
+      inset 0 0 0 1.5px var(--screen-accent, var(--primary));
   }
 }
 
@@ -4374,22 +4401,90 @@ select {
   transform: rotate(-2deg) translateY(-1px);
 }
 
-/* Footer: deck picker stays the same quiet underline-only control
-   (.reading-deck-picker, unchanged/reused) it always was; the analyze
-   button is the one full-width decisive action, matching Home's cover CTA
-   weight -- "붙여넣기 -> 분석 시작" reads as one clear flow, not a button
-   cluster, at every width. */
+/* Phase 150 -- Reading Full Surface Correction. The analyze CTA used to
+   be a full-width decisive bar (`width: 100%`, matching Home's cover CTA
+   weight) -- against a real screenshot, that read as a long grey admin
+   action bar cutting across the open book's center, not a stationery
+   action sitting on the page. The footer is now a plain row: the deck
+   picker (a small paper tag, see .reading-deck-picker below) on one side,
+   a small notched bookmark CTA on the other -- neither stretches, so
+   nothing crosses the book. flex-wrap so a very narrow viewport drops the
+   CTA to its own line instead of forcing an overflow. */
 .reader-start-footer {
-  display: grid;
-  gap: 10px;
-  justify-items: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
 }
 
+/* .reader-bookmark-button -- shared small notched CTA for Reading's own
+   "원문 펼치기"/save/review actions (.reader-start-cta, .reading-open-
+   button, .save-dock-primary-button, .reading-summary-cta-ready below),
+   replacing the generic app-wide teal gradient button with a shape/color
+   that reads as this screen's own stationery action instead of a
+   borrowed admin control. Colored with --screen-accent (Reading's own
+   ink-green, see .reading-panel above) rather than the generic --primary,
+   so it doesn't compete with Vocab's ink-brown or Study's teal for "which
+   screen is this." The right-side notch is the same clip-path language
+   Vocab's .vocab-bookmark-action already established (Phase 149) -- one
+   consistent "bookmark tag" family across tabs, not a new shape invented
+   per screen. clip-path uses a fixed-pixel notch (calc(100% - 18px), not
+   a percentage point) so the shape stays a small flag at any width --
+   Phase 149 found a percentage notch balloons into a huge arrow once a
+   button goes full-width on mobile. width/min-width are deliberately
+   *not* set here -- each call site's own existing width rule (mobile
+   full-bar vs desktop auto, already tuned per button) keeps working
+   unmodified; this class only supplies shape/color. */
+.reader-bookmark-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 32px 12px 18px;
+  border: 0;
+  border-radius: 3px;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 18px) 0,
+    100% 50%,
+    calc(100% - 18px) 100%,
+    0 100%
+  );
+  background: var(--screen-accent, var(--primary));
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
+  transition:
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
+}
+
+.reader-bookmark-button:not(:disabled):hover {
+  transform: translateX(2px);
+  box-shadow: 0 8px 18px rgba(37, 43, 30, 0.2);
+}
+
+.reader-bookmark-button:not(:disabled):active {
+  transform: translateX(1px) scale(0.98);
+}
+
+.reader-bookmark-button:disabled {
+  background: #a89a80;
+  color: #fff;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* .reader-start-cta is now sized/positioned by .reader-bookmark-button
+   above -- this just opts it out of the app-wide mobile
+   `button { width: 100% }` touch-target rule (a bare class selector beats
+   the bare element selector regardless of source order) explicitly, per
+   this phase's own mobile requirement, rather than relying on it as a
+   side effect of omitting width elsewhere. */
 .reader-start-cta {
-  width: 100%;
-  padding: 15px 20px;
-  border-radius: 999px;
-  font-size: 15.5px;
+  width: auto;
+  min-width: 0;
+  font-size: 15px;
 }
 
 .reader-start-copyright {
@@ -4467,11 +4562,20 @@ select {
   gap: 10px;
 }
 
+/* Phase 150 -- was an underline-only field (no fill, a bottom rule only).
+   Against a real screenshot that still read as "a form field sitting on
+   the page", not a label -- given a small rounded soft-bg pill instead so
+   it reads as a small paper/bookmark tag next to the CTA, matching this
+   phase's stationery-tag language elsewhere (.reader-bookmark-button). */
 .reading-deck-picker {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
+  max-width: 100%;
+  padding: 7px 8px 7px 12px;
+  border-radius: 999px;
+  background: var(--soft-bg);
   color: var(--text-secondary);
 }
 
@@ -4485,11 +4589,10 @@ select {
 .reading-deck-picker select {
   min-width: 0;
   width: auto;
-  max-width: 200px;
+  max-width: 160px;
   border: none;
-  border-bottom: 1px solid var(--border-strong);
   border-radius: 0;
-  padding: 4px 20px 4px 2px;
+  padding: 0 16px 0 0;
   background: transparent;
   font-weight: 700;
 }
@@ -5233,15 +5336,13 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 
-/* Save Dock -- a slim shelf-like strip (count + one primary CTA on the same
-   line) sitting right under the reader page. A dashed top rule, no fill of
-   its own -- echoes the notebook-ring spine's dash rhythm so it reads as a
-   shelf attached under the reader page, not a fourth admin panel stacked
-   below it. Phase 114 removed .reader-workspace's own backdrop tint behind
-   it (see globals.css Phase 114 note above .reader-workspace); since that
-   tint was already a near-imperceptible step off .page's own board color,
-   this strip's contrast was always carried by the dashed rule and spacing,
-   not the backdrop, so nothing here needed to change. */
+/* Save Dock -- sits right under the reader page. A dashed top rule, no
+   fill of its own -- echoes the notebook-ring spine's dash rhythm so it
+   reads as a shelf attached under the reader page, not a fourth admin
+   panel stacked below it. Phase 114 removed .reader-workspace's own
+   backdrop tint behind it; Phase 150 gave the count row its own memo-
+   strip surface (below) so the dock as a whole no longer needs its own
+   fill to read as a distinct object. */
 .reading-action-dock {
   display: grid;
   gap: 10px;
@@ -5254,11 +5355,43 @@ input.reading-vocab-sticker-toggle:checked {
   box-shadow: none;
 }
 
-/* Casual Sticker Reader (Phase 65) -- count + primary action share one row
-   on wide screens instead of each stacking on its own full-width line, so
-   the dock reads as a slim shelf strip attached under the reader page
-   rather than a stacked mini-form. Stays a stacked column below 1024px
-   (phones/tablets), unchanged from before this Phase. */
+/* Phase 150 -- reading-selected-memo-strip.webp (frontend/public/brand/
+   decor/phase145/, reserved by Phase 145's own rebuild plan for exactly
+   this spot: "선택한 단어는 loose memo strip 위에") is the real object
+   here, not decoration behind it -- its torn-paper shape and taped
+   corners are what make this row read as "a loose memo strip", not the
+   live text sitting on top of it. Percentage padding (not a fixed px
+   value) keeps the live count/badges clear of the image's own tape/ring-
+   hole art at any container width, the same "don't depend on a fixed
+   crop" fix Phase 149 already applied to Vocab's index tabs.
+   background-size: 100% 100% deliberately stretches non-uniformly rather
+   than cropping -- the source is a very long, mostly-blank strip (~13%
+   decorated at each end), so a full stretch keeps both taped ends
+   visible at any width instead of `cover` cropping one off.
+   background-color is the flat paper tone as a fallback if the image
+   fails to load. */
+.save-dock-memo-strip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 72px;
+  padding: 14px 13%;
+  background-color: var(--soft-bg);
+  background-image: url("/brand/decor/phase145/reading-selected-memo-strip.webp");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+@media (min-width: 1024px) {
+  .save-dock-memo-strip {
+    min-height: 84px;
+  }
+}
+
+/* Casual Sticker Reader (Phase 65) -- the primary CTA/idle-hint's own row,
+   now separate from the memo strip above (Phase 150). Stays a stacked
+   column below 1024px (phones/tablets), unchanged from before this
+   Phase. */
 .save-tray-shelf-row {
   display: grid;
   gap: 10px;
@@ -10253,6 +10386,27 @@ input.reading-vocab-sticker-toggle:checked {
   color: var(--text);
   font-size: 19px;
   line-height: 2;
+}
+
+/* Phase 150 -- at 1024px+ .reader-paper itself is transparent (its own
+   rule below sets background:none) so .reader-desk-scene's open-book
+   photo shows straight through, with nothing marking where the actual
+   original text lives versus the rest of the busy photographed page. A
+   soft, mostly-opaque wash behind just the text column gives the words
+   their own clearly-lighter reading surface -- "원문 텍스트는 항상 가장
+   읽기 쉬운 표면에" -- without drawing a hard-edged card outline (no
+   border, a very soft shadow only) that would read as a floating panel
+   competing with the photo underneath it. Mobile/tablet (<1024px)
+   already have their own single ruled-paper photo with nothing competing
+   underneath, so this stays desktop-only. */
+@media (min-width: 1024px) {
+  .reader-text {
+    max-width: 780px;
+    padding: 22px 28px;
+    border-radius: 16px;
+    background: rgba(253, 249, 238, 0.72);
+    box-shadow: inset 0 1px 2px rgba(37, 43, 30, 0.06);
+  }
 }
 
 .reader-line {

@@ -124,13 +124,20 @@ function ReaderSaveDock({
 
   return (
     <section className="reading-action-dock" aria-label="저장 바구니">
-      {/* Casual Sticker Reader (Phase 65) -- count + primary action share one
-          "shelf" row on wide screens (≥1024px, see .save-tray-shelf-row in
-          globals.css) instead of each sitting on its own full-width line,
-          so this dock reads as a slim strip attached to the reader page
-          rather than a stacked mini-form. Stays stacked on narrower
-          viewports, unchanged from before. */}
-      <div className="save-tray-shelf-row">
+      {/* Phase 150 -- the count row used to share a plain flex line with the
+          primary button (Phase 65's .save-tray-shelf-row), sitting directly
+          on the same page background as everything else in Reading, with
+          nothing marking it as its own object. It now sits on
+          reading-selected-memo-strip.webp -- a loose torn-paper strip with
+          taped corners and ring holes (frontend/public/brand/decor/
+          phase145/), reserved since Phase 145's own rebuild plan named this
+          exact spot ("선택한 단어는 loose memo strip 위에"). The image
+          determines this element's shape/identity (a strip, not a bar); the
+          real count/badges are still live DOM text laid over its blank
+          center -- percentage padding (see .save-dock-memo-strip) keeps
+          them clear of the tape/holes at any width, unlike a fixed-pixel
+          crop. */}
+      <div className="save-dock-memo-strip">
         <div className="save-dock-count">
           <FolderIcon className="save-dock-icon" />
           <span>
@@ -138,11 +145,19 @@ function ReaderSaveDock({
           </span>
           <span className="save-dock-saveable-chip">저장 가능 {summary.saveableCount}개</span>
         </div>
+      </div>
 
+      {/* Casual Sticker Reader (Phase 65) -- the primary action's own row,
+          separated from the memo strip above. Phase 150 -- the button is
+          now a small notched bookmark tag (.reader-bookmark-button, same
+          screen-accent-colored family as .reader-start-cta) instead of a
+          full gradient CTA, so save/idle states both read as a stationery
+          action, not an admin control-panel button. */}
+      <div className="save-tray-shelf-row">
         {selectedCount > 0 ? (
           <button
             type="button"
-            className="save-dock-primary-button"
+            className="save-dock-primary-button reader-bookmark-button"
             onClick={onSaveSelected}
             disabled={isSavingBatch}
           >
@@ -184,7 +199,7 @@ function ReaderSaveDock({
         {hasRecentlySaved ? (
           <button
             type="button"
-            className="reading-summary-cta-button reading-summary-cta-ready"
+            className="reading-summary-cta-button reading-summary-cta-ready reader-bookmark-button"
             onClick={onStartStudyFromSaved}
           >
             <CardsIcon className="button-icon" />
@@ -403,7 +418,7 @@ function ReaderStartScene({
           )}
           <button
             type="submit"
-            className="reader-start-cta"
+            className="reader-start-cta reader-bookmark-button"
             disabled={isAnalyzing || !selectedDeckId || !text.trim()}
           >
             {isAnalyzing ? (
@@ -657,7 +672,7 @@ export function ReadingTab({
                   )}
                   <button
                     type="submit"
-                    className="reading-open-button"
+                    className="reading-open-button reader-bookmark-button"
                     disabled={isAnalyzing || !selectedDeckId || !text.trim()}
                   >
                     {isAnalyzing ? (

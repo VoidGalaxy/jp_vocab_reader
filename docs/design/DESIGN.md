@@ -4367,3 +4367,199 @@ radius wasn't asked for.
 **Next phase candidates:** Phase 150 (Reading Selected Strip
 Visibility), continuing the rebuild plan's suggested order now that
 this correction phase is resolved.
+
+## Phase 150 -- Reading Full Surface Correction / Open Book Interaction Reconstruction
+
+Phase 150 covers the whole Reading tab in one correction pass -- the
+start screen and the result screen's controls together, not "fix the
+one button." Real 1280/390 screenshots of the pre-Phase state showed
+three concrete problems: the analyze CTA (`.reader-start-cta`) was a
+full-`width:100%` gradient pill stretching across the entire open
+book, reading as an admin action bar cutting the page in half; the
+pre-analyze textarea and the post-analyze reader text both sat
+directly on `open-book-spread-web.webp`/used the *same*
+`paper-page-texture-web.webp` family the book itself used, so input
+surface, reader surface, and book background all read as one
+undifferentiated beige; and the result screen's "선택한 단어"/저장
+가능" count row sat as plain text on the bare page background with
+nothing marking it as its own object, right next to a second full
+`width:100%` "원문 펼치기" button on the collapsed re-edit form.
+
+**Removed/replaced (listed first, per the phase brief's own
+requirement):**
+- **`.reader-start-cta`'s `width: 100%; border-radius: 999px` full-bar
+  shape** -- gone. `.reader-start-footer` changed from a
+  `justify-items: stretch` grid to a plain flex row (deck picker on
+  one side, CTA on the other, neither stretching), and the CTA itself
+  is now sized by a new shared `.reader-bookmark-button` class: a
+  small notched flag (fixed-pixel `clip-path`, not a percentage
+  point -- see below), colored with Reading's own `--screen-accent`
+  ink-green instead of the app's generic teal `--primary` gradient, so
+  it reads as this book's own stationery action instead of a borrowed
+  admin control. The same class was applied to `.reading-open-button`
+  (the result screen's own "원문 펼치기", previously already
+  `flex: 0 0 auto` but still the same generic teal gradient) so
+  start and result use the identical CTA language.
+- **The textarea/book-background collision at >=1024px** --
+  `.reader-start-page textarea` used to paint the exact same
+  `paper-page-texture-web.webp` the surrounding `.reader-start-scene`
+  paints via `open-book-spread-web.webp` -- two photos from the same
+  paper family, nearly indistinguishable in a real screenshot. At
+  1024px+ only (below that, the textarea's photo is the *only* page
+  surface on screen, so it was left alone there), the textarea now
+  uses a flat `var(--panel-bg)` fill, a repeating-linear-gradient
+  ruled-line texture of its own, and an inset shadow -- a real
+  material difference (matte pasted sheet vs. the busier photo grain
+  around it), not just a different crop of the same photo.
+- **The save-dock count row's plain-text-on-bare-page look** -- gone.
+  `.save-dock-count` no longer shares `.save-tray-shelf-row` with the
+  primary button; it now sits alone inside a new
+  `.save-dock-memo-strip`, and the primary save button/`"바로 복습"`
+  CTA both moved to the same `.reader-bookmark-button` family as the
+  analyze CTA (a small notched tag, not a full gradient button).
+
+**New start-screen structure:** title/subtitle unchanged (Phase 121
+already had these right); the form footer is a plain row holding a
+small rounded paper-tag deck picker (`.reading-deck-picker`, was a
+bare underline field, now a `soft-bg` pill so it reads as a label
+rather than a form control) and the small notched analyze CTA,
+neither full-width; the textarea itself keeps its "IS the page"
+identity below 1024px and becomes a distinctly lighter, ruled,
+inset-shadowed "pasted sheet" at 1024px+, clearly layered above (not
+blended into) the book photo behind it.
+
+**New result-screen controls structure:** the reader text
+(`.reader-text`) gets a soft, mostly-opaque `rgba(253,249,238,0.72)`
+wash + very light inset shadow behind it at 1024px+ only (mobile/
+tablet already have a single uncontested photo texture with nothing
+competing underneath) -- no border, no hard card edge, just enough
+lift that the original-text column is unambiguously "the most
+legible surface on the page" per the brief's own requirement, without
+reading as a second floating panel next to the photo. Below it, the
+save dock is now two visually distinct pieces: `.save-dock-memo-strip`
+(the count/badges, on `reading-selected-memo-strip.webp`) and, in its
+own row below, the primary save button or the idle Shiori hint --
+followed by the unchanged post-save message and the
+`.reading-summary-cta-ready`/`.reading-summary-link-button` pair
+(the review CTA now also a notched bookmark tag; the vocab-note link
+stays a plain underlined text link, untouched).
+
+**`reading-selected-memo-strip.webp` (the actual asset determining
+this phase's biggest layout change):** committed in Phase 145 and
+explicitly reserved by that phase's own rebuild plan for exactly this
+spot ("선택한 단어는 loose memo strip 위에"), but never wired up until
+now. `.save-dock-memo-strip` uses it as a real `background-image`,
+`background-size: 100% 100%` (a deliberate non-uniform stretch, not
+`cover` -- the source is a very long, ~13%-decorated-at-each-end
+strip, and `cover` would crop one taped end off at most container
+aspect ratios), with **percentage** padding (`14px 13%`) reserving
+room for the live count/badge text -- the same "don't depend on a
+fixed-pixel crop" lesson Phase 149 already learned the hard way on
+Vocab's index tabs, applied proactively here instead of being
+discovered as a bug. Because the image's own blank center is large
+and the content it holds is a single short line, this is much lower-
+risk than Phase 146's sprite ever was: no per-item position math,
+generous clearance at every width tested.
+
+**Fixed-pixel bookmark notch, not a percentage one:** `.reader-
+bookmark-button`'s `clip-path` uses `calc(100% - 18px)` for its notch
+point rather than a percentage (Vocab's Phase 149 equivalent used
+`88%`). Phase 149 found a percentage notch balloons into a huge arrow
+once a button goes full-width on mobile; this phase applied that fix
+from the start rather than re-discovering it, which is why
+`.save-dock-primary-button` (still intentionally full-width on
+mobile, unchanged from before this phase) renders correctly as a
+wide bar with a small, constant-size flag cut, not a giant triangle.
+`.reader-bookmark-button` deliberately does not set `width` itself --
+each call site's own existing width rule (mobile full-bar for the
+save button, `width: auto` for the analyze/review CTAs) keeps working
+unmodified; `.reader-start-cta` gained an explicit `width: auto` (it
+had none before, since it used to always be 100%) so it opts out of
+the app-wide mobile `button { width: 100% }` rule -- verified via
+`getBoundingClientRect()` at 390/375/320, not assumed: 152px wide at
+every mobile width tested, never full-bar.
+
+**Not touched, by design:** `TokenDetailSheet.tsx` (per the brief),
+`ReaderMode.tsx` (no `.tsx` edits at all -- every fix here is a CSS
+selector or class-name change on markup `ReaderMode.tsx` already
+emits), `ReadingVocabPanel.tsx` (the Phase 89/91 candidate-tray
+horizontal-strip structure, quick-select, search/filter -- zero edits),
+the Phase 122 inspector spine/binding (`.reader-inspector-rail::after`,
+`.reader-spine-clip`, `.reader-inspector-tabs`), and every `/analyze`
+request/response shape, token-classification policy, unknown/uncertain
+auto-save behavior, and known/unclassified local-only policy.
+
+Verified via headless Chrome (Windows-native, CDP) against a local
+sqlite dev database (`backend/vocab.db`, the dev-mode auto-user), with
+`localStorage.clear()` before each fresh-state check so no stale
+reading-session draft could mask a real regression:
+
+- **Desktop (1280/1024):** old admin-bar CTA confirmed gone both by
+  screenshot and by measurement (`.reader-start-cta` 152px wide inside
+  a 1106px-wide footer, not full-width); textarea vs. book-photo
+  layering confirmed via computed style (`background-color:
+  rgb(253,249,238)` + a real inset `box-shadow`, distinct from the
+  scene's own photo); start and result screens both read as the same
+  open-book world; save-dock memo strip renders correctly with the
+  live count/badges clear of its taped corners at both widths; full
+  functional loop re-verified end to end: sample fill -> deck select
+  (4 real decks listed) -> analyze -> 13 tokens rendered -> token click
+  -> inspector opens -> classify "모름" -> real `200` `/vocab-items`
+  auto-save request -> candidate tray open -> quick-select "모르는
+  단어 선택" (13 selected) -> "선택한 단어 저장" -> real save response
+  ("12개를 저장했습니다, 이미 저장된 단어 1개는 건너뛰었습니다") ->
+  review CTA appears, now a green notched tag (confirmed via computed
+  `clip-path` and `background-color: rgb(63,107,74)`, the ink-green
+  `--screen-accent`). Zero `scrollWidth`/`clientWidth` mismatch, zero
+  console errors/warnings, zero failed requests at either width.
+- **Mobile (390/375/320):** zero overflow mismatch at all three widths
+  across start, result, and inspector-open states; CTA/deck-picker/
+  sample-sticker/textarea confirmed non-overlapping via
+  `getBoundingClientRect()` intersection checks, not just a visual
+  read; the analyze CTA measured 152px wide at every one of the three
+  widths (the explicit mobile-width-guard requirement) -- an initial
+  eyeballed read of a scaled-down full-page screenshot looked like it
+  might still be full-width, but a precise clipped re-screenshot of
+  just that region at 1:1 scale confirmed the measurement was correct
+  and the visual impression was a misjudgment of the small preview
+  image, not a real bug; token-click opens the bottom sheet inspector
+  with the reader text's top still at `y: 163` (well above the sheet,
+  matching Phase 94's untouched 42vh cap -- several lines of original
+  text stay legible above it); zero console errors, zero failed
+  requests.
+
+`npm run build` clean (dev server stopped and `.next` removed first,
+per this project's WSL/Windows build-vs-dev conflict note), `git diff
+--check` clean.
+
+**Files changed:** `frontend/components/ReadingTab.tsx`,
+`frontend/app/globals.css`, this file.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (structural-removal confirmation via both
+screenshot and precise measurement, full functional loop re-verified
+including auto-save/quick-select/batch-save/review-CTA, mobile
+non-overlap and inspector-visibility checks) all passed with zero
+console errors and zero failed requests.
+
+**Remaining risk:** `.save-dock-memo-strip`'s `background-size: 100%
+100%` non-uniform stretch was only checked at the four required
+viewport widths, not the full range in between -- the source image's
+taped corners could look mildly distorted at an untested intermediate
+width, though the risk is low given the corners are organic torn/tape
+shapes (not geometric ones sensitive to aspect distortion) and the
+technique already reads correctly at every width actually tested.
+`.reading-summary-cta-ready`'s pre-existing `flex: 2 1 240px` sizing
+inside `.reading-summary-next-actions` was left as-is (unrelated to
+this phase's named targets) -- it now also carries
+`.reader-bookmark-button`'s box-shadow, which a later cascade rule
+(`.reading-summary-cta-ready`'s own accent-ring `box-shadow`) still
+overrides at rest, so the ring shows at rest and the lift-shadow only
+appears on hover; a cosmetic layering quirk, not a functional one.
+
+**Next phase candidates:** Phase 150's own original rebuild-plan slot
+(Reading/Classify IA decision -- whether Reading and Classify should
+stay two equal primary tabs, per `phase145-casual-cute-tab-rebuild-
+plan.md`'s item 6) is the last unaddressed item from that plan; no
+further "casual cute" correction passes are currently flagged as
+needed on any tab.
