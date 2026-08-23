@@ -4032,6 +4032,58 @@ select {
   font-size: 20px;
 }
 
+/* Phase 153 -- .study-board-note replaces .study-card/.hero-card for the
+   ready ("학습할 단어를 불러오세요") and empty ("오늘은 복습할 단어가
+   없어요" etc.) states only -- the active review flashcard and the
+   completion receipt keep the full .study-card treatment untouched
+   (explicitly protected by this phase's brief). A real screenshot showed
+   the old 640px-wide, 28px-padded, bordered-and-shadowed flashcard shell
+   used for what's really a one- or two-line guidance message, reading as
+   a big stiff white box resting on the mint board rather than a small
+   note pinned to it. No border (a soft shadow + asymmetric corner radius
+   carries the "paper cutout" read instead, same family as the quick-start
+   tiles' own de-boxing below), a slight rotation, and a real width cap
+   sized to the actual short copy it holds instead of matching the active
+   card's own much larger footprint. */
+.study-board-note {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  width: min(360px, 92%);
+  margin: 0 auto;
+  padding: 22px 22px 20px;
+  border-radius: 4px 18px 18px 18px;
+  background: var(--panel-bg);
+  box-shadow: 0 10px 22px rgba(120, 98, 40, 0.16);
+  transform: rotate(-1deg);
+}
+
+/* A small torn washi-tape strip pinning the note's top edge to the board
+   -- same rgba(217,122,74,...) accent this "casual cute" series already
+   reuses everywhere a note needs to look physically attached to a
+   surface (Home's pinned notes, Vocab's page guide), not a new motif
+   invented for this one spot. */
+.study-board-note::before {
+  content: "";
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  z-index: 1;
+  width: 40px;
+  height: 15px;
+  border: 1px solid rgba(217, 122, 74, 0.42);
+  background: rgba(217, 122, 74, 0.3);
+  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.14);
+  transform: translateX(-50%) rotate(-3deg);
+  pointer-events: none;
+}
+
+.study-board-note .shiori-empty-illustration {
+  margin-bottom: 2px;
+}
+
 .study-ready-card {
   justify-items: center;
   text-align: center;
@@ -5775,86 +5827,137 @@ input.reading-vocab-sticker-toggle:checked {
 /* Phase 148 -- was a single bordered/shadowed tray (a soft gradient fill
    behind all 4 tiles) that read as one dashboard widget choosing a study
    mode, not "학습 도구" resting on the board below. The tray chrome is
-   dropped entirely (no border/background/shadow on the grid itself); each
-   tile becomes its own small pinned memo tab instead, matching the
-   mockup's 4 colored-pin note tabs above the flashcard. */
+   dropped entirely (no border/background/shadow on the grid itself).
+   Phase 153 -- Phase 148's own per-tile "pinned memo tab" treatment
+   (thin border, tiny 9px dot, +-1.5deg rotation) still read as "4
+   aligned button cards with a decoration" in a real screenshot, not
+   pinned notes -- the crisp ruled border and near-straight row were the
+   dominant signal, not the small dot. Kept the same 4-up grid (the
+   mockup's own quick-start row is 4 roughly-equal notes, not one huge
+   tile plus 3 small ones), but every tile below is now a *borderless*
+   paper cutout (shadow only, no ruled edge), a visibly bigger 3D-ish pin,
+   a real per-tile vertical stagger (not just rotation) so the row breaks
+   its own alignment, and an asymmetric corner radius that differs per
+   tile instead of one shared shape. */
+/* Phase 153 follow-up -- an equal 4-column grid still reads as "4 aligned
+   cards" no matter how each tile is decorated, since every tile is
+   forced to the exact same track width regardless of its own label
+   length. Switched to flex so each tile's width follows its own content
+   (real screenshot confirmed "새 단어 학습"/"덱별 학습"/"어려운 단어
+   복습" now render at 3 visibly different widths, not one shared
+   column), which is what actually breaks the "grid" read -- the
+   per-tile rotation/stagger/pin below were already in place but couldn't
+   overcome four identical-width boxes on their own. */
 .study-cta-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 18px 14px;
+  padding: 10px 2px 2px;
   border: none;
   border-radius: 0;
   background: none;
   box-shadow: none;
 }
 
-/* Each tile is its own light paper tab with a small colored "pin" dot
-   (::before) at its top edge and a slight per-tile rotation -- the same
-   "several hand-placed small paper pieces" language this series already
-   uses for Vocab's index tabs (Phase 146) and Deck's cover tag (Phase
-   147), applied here with plain CSS (dot + tilt) since the mockup's tabs
-   have no photographed texture of their own to crop from, just flat
-   color. Colors are purely decorative pin markers, not a new semantic
-   layer -- they don't reuse the rating buttons' result colors, so
-   nothing here could be mistaken for review-result meaning. */
+/* Each tile is its own unbordered paper cutout pinned to the board -- a
+   soft shadow (not a ruled border) carries the "physical object" read,
+   the same "no crisp box edge" call this series already made for Home's
+   pinned notes and Reading's memo strip. */
 .study-cta-button {
   position: relative;
   display: grid;
-  gap: 2px;
+  flex: 0 1 auto;
+  gap: 3px;
   justify-items: center;
+  min-width: 108px;
   min-height: 60px;
-  padding: 14px 10px 10px;
-  border: 1px solid var(--border);
-  border-radius: 4px 4px 10px 10px;
+  padding: 15px 16px 11px;
+  border: none;
+  border-radius: 4px 16px 16px 16px;
   color: var(--text-secondary);
   background: var(--panel-bg);
-  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.1);
+  box-shadow:
+    0 7px 14px rgba(120, 98, 40, 0.16),
+    0 1px 0 rgba(255, 255, 255, 0.5) inset;
   text-align: center;
-  transform: rotate(-1.5deg);
+  transform: rotate(-4deg) translateY(5px);
 }
 
+/* A real pin, not a flat dot -- a small radial highlight so it reads as a
+   round-headed pin catching light, not a color swatch. Sized up (was
+   9x9px) so it's an actual focal mark, not something a "4 equal button
+   cards" read could drown out. */
 .study-cta-button::before {
   content: "";
   position: absolute;
-  top: -5px;
+  top: -7px;
   left: 50%;
   z-index: 1;
-  width: 9px;
-  height: 9px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 2px 3px rgba(37, 43, 30, 0.3);
+  background: radial-gradient(
+    circle at 34% 30%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.95) 12%,
+    var(--primary) 46%,
+    var(--primary) 100%
+  );
+  box-shadow: 0 3px 4px rgba(37, 43, 30, 0.32);
   transform: translateX(-50%);
 }
 
 .study-cta-button:nth-child(2) {
-  transform: rotate(1.2deg);
+  border-radius: 16px 4px 16px 16px;
+  transform: rotate(4deg) translateY(-8px);
 }
 
 .study-cta-button:nth-child(2)::before {
-  background: var(--sand-amber);
+  background: radial-gradient(
+    circle at 34% 30%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.95) 12%,
+    var(--sand-amber) 46%,
+    var(--sand-amber) 100%
+  );
 }
 
 .study-cta-button:nth-child(3) {
-  transform: rotate(-1deg);
+  border-radius: 16px 16px 4px 16px;
+  transform: rotate(-3.5deg) translateY(9px);
 }
 
 .study-cta-button:nth-child(3)::before {
-  background: var(--rose);
+  background: radial-gradient(
+    circle at 34% 30%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.95) 12%,
+    var(--rose) 46%,
+    var(--rose) 100%
+  );
 }
 
 .study-cta-button:nth-child(4) {
-  transform: rotate(1.6deg);
+  border-radius: 16px 16px 16px 4px;
+  transform: rotate(5deg) translateY(-3px);
 }
 
 .study-cta-button:nth-child(4)::before {
-  background: var(--accent);
+  background: radial-gradient(
+    circle at 34% 30%,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.95) 12%,
+    var(--accent) 46%,
+    var(--accent) 100%
+  );
 }
 
 .study-cta-button:hover {
   transform: rotate(0deg) translateY(-2px);
-  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.14);
+  box-shadow:
+    0 10px 18px rgba(120, 98, 40, 0.2),
+    0 1px 0 rgba(255, 255, 255, 0.5) inset;
 }
 
 .study-cta-label {
@@ -5875,15 +5978,30 @@ input.reading-vocab-sticker-toggle:checked {
 /* "오늘 복습 시작" is the one action the tab wants the learner to take --
    filled in the primary color so it outranks the other three quick-start
    tiles instead of sitting as an equal-weight tab. */
+/* Phase 153 -- kept the tallest/most-padded tile of the four (was already
+   the case) but the size difference alone got lost once every tile lost
+   its crisp border -- min-height/padding now push it visibly further
+   past the other three so "이 것이 가장 중요한 액션" still reads at a
+   glance, per this phase's explicit "primary action은 여전히 명확해야"
+   requirement. */
 .study-cta-button-primary {
+  min-height: 70px;
+  padding: 19px 10px 14px;
   color: #ffffff;
   background: linear-gradient(180deg, #3d7885 0%, var(--primary) 100%);
-  border-color: transparent;
-  box-shadow: 0 8px 18px rgba(61, 120, 133, 0.24);
+  box-shadow:
+    0 10px 20px rgba(61, 120, 133, 0.28),
+    0 1px 0 rgba(255, 255, 255, 0.25) inset;
 }
 
 .study-cta-button-primary::before {
-  background: #ffffff;
+  background: radial-gradient(
+    circle at 34% 30%,
+    #ffffff 0%,
+    #ffffff 12%,
+    rgba(255, 255, 255, 0.75) 46%,
+    rgba(255, 255, 255, 0.75) 100%
+  );
 }
 
 .study-cta-button-primary:hover {
@@ -9502,10 +9620,14 @@ input.reading-vocab-sticker-toggle:checked {
      primary "오늘 복습 시작" tile now spans its own full-width row (still the
      one loud action), and the outer tray chrome (border/gradient fill/
      shadow) is dropped so the other three sit as their own small quiet
-     ticket-style choices below it instead of compartments in a shared box. */
+     ticket-style choices below it instead of compartments in a shared box.
+     Phase 153 -- .study-cta-grid's base rule is now `display: flex` (was
+     grid, see above), so this no longer sets grid-template-columns --
+     flex-wrap on the base rule already wraps the 3 secondary tiles onto
+     their own row under the full-width primary one; only gap/sizing needs
+     restating here. */
   .study-cta-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 10px;
     padding: 0;
     border: none;
     background: none;
@@ -9513,22 +9635,36 @@ input.reading-vocab-sticker-toggle:checked {
   }
 
   .study-cta-button-primary {
-    grid-column: 1 / -1;
+    flex: 1 1 100%;
     min-height: 50px;
+    /* A rotated tile works for the 3 small notes below, but a rotated
+       full-width bar reads as visibly crooked/broken rather than "a note
+       at an angle" -- primary opts back out to dead level here, still
+       distinguished from the other three by its own fill/size alone. */
+    transform: none;
   }
 
+  .study-cta-button-primary:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Phase 153 -- was a dashed-border "ticket" look, its own separate
+     paper language from the desktop tiles' pinned-note treatment (and
+     still boxy enough to read as "3 small button cards"). Now the same
+     borderless-cutout-plus-pin family as desktop, just smaller -- one
+     consistent "pinned memo" identity at every width, not two different
+     de-boxing techniques depending on viewport. flex:1 1 0 (not desktop's
+     content-based auto width) keeps the 3 secondary tiles equal-width and
+     guaranteed to fit one row regardless of label length ("어려운 단어
+     복습" is nearly twice "덱별 학습"'s length) -- there's no spare row
+     width at phone size to let them size organically the way desktop's
+     wide board allows. */
   .study-cta-button:not(.study-cta-button-primary) {
-    /* Grid items default to min-width:auto (their min-content size), which
-       ignores the 3-column track's own minmax(0, 1fr) minimum -- at narrow
-       widths the label text's min-content forced each tile past its 1fr
-       share, overflowing the row. min-width:0 lets the tile actually shrink
-       to the track and wrap its label instead. */
+    flex: 1 1 0;
     min-width: 0;
     min-height: 44px;
-    padding: 8px 4px;
-    border: 1px dashed var(--border);
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.4);
+    padding: 10px 6px 8px;
+    background: var(--panel-bg);
   }
 
   .study-cta-button:not(.study-cta-button-primary) .study-cta-label {

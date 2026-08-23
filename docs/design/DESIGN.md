@@ -4887,3 +4887,137 @@ open item from that plan. Vocab (149), Reading (150), Home (151), and
 Deck (152) have each now had a full first-viewport/density correction
 pass -- Study (148) is the only remaining "casual cute" tab that
 hasn't had a post-145 correction pass, though none has been requested.
+
+## Phase 153 -- Study Box Removal 2 / Board Note Reconstruction
+
+Phase 153 is a second correction pass on Study, not a new rebuild:
+Phase 148 already fixed the dark-board problem and gave the quick-start
+tiles a "pinned memo tab" treatment (a colored dot + slight rotation on
+an otherwise still-bordered box), but a real 1280 screenshot showed
+that treatment wasn't different enough from a plain button row -- the
+four tiles still shared one crisp `border: 1px solid`, sat in an equal
+4-column grid, and rotated only 1-1.5deg, so the dominant signal
+remained "4 aligned cards," not "several notes pinned to a board." The
+ready/empty states had the same underlying issue at a different scale:
+both reused the active review flashcard's full `.study-card.hero-card`
+shell (640px wide, 28px padding, bordered, shadowed) for what's really
+a one- or two-line guidance message.
+
+**Removed:**
+- **`.study-cta-button`'s bordered-box identity** -- the `border: 1px
+  solid var(--border)` ruled edge is gone (a shadow now carries the
+  "paper cutout" read, no ruled line), and so is the equal 4-column
+  `display: grid` that forced every tile to the same track width
+  regardless of its own label length.
+- **`.study-card`/`.hero-card` on the ready and empty states** -- both
+  used to carry the exact same 640px-wide bordered flashcard shell the
+  active review card uses. Neither state needs that footprint for a
+  one-line message, and reusing it was the direct cause of the "큰 흰
+  안내 박스" complaint.
+- **Mobile's separate dashed-border "ticket" treatment** for the 3
+  secondary quick-start tiles (`border: 1px dashed`, its own distinct
+  paper language from the desktop tiles) -- replaced with the same
+  borderless-cutout-plus-pin family desktop now uses, so there's one
+  consistent "pinned memo" identity at every width instead of two.
+
+**New quick-start structure:** `.study-cta-grid` switched from
+`display: grid` (equal `1fr` columns) to `display: flex; flex-wrap:
+wrap` so each tile's width now follows its own content -- confirmed via
+screenshot that "새 단어 학습"/"어려운 단어 복습"/"덱별 학습" render at
+three visibly different widths instead of one shared column, which
+turned out to be the actual thing breaking the "grid" read (the
+existing per-tile rotation/pin dot alone couldn't overcome four
+identical-width boxes). Each secondary tile also got: a bigger, more
+3D "pin" (13px with a radial-gradient highlight, was a flat 9px dot), a
+real per-tile vertical stagger via `translateY` (not rotation alone, so
+the row visibly breaks its own straight line -- -8px/+9px/-3px across
+the three), wider rotation range (2.5-5deg, was 1-1.6deg), and an
+asymmetric corner radius that differs per tile. The primary "오늘 복습
+시작" tile grew its own min-height/padding further (70px, was implicit
+~60px) so it still visibly outranks the other three now that the
+shared border stopped doing part of that job. Mobile keeps Phase 82's
+existing full-width primary row + 3-across secondary row structure
+(equal-width via `flex: 1 1 0`, not desktop's content-based sizing --
+there's no spare row width at phone size to size tiles organically
+without risking overflow on the longest label), just restyled with the
+same pin/rotation family as desktop instead of the old dashed border.
+
+**New empty-state structure:** a new `.study-board-note` class replaces
+`.study-card.hero-card` for the ready and empty `AppEmptyState`
+instances only (`StudySection.tsx`'s active-review and completion-
+receipt cards are untouched, still `.study-card`/`.complete-card`). It's
+a small (`width: min(360px, 92%)`), unbordered, slightly rotated
+(-1deg) paper note with a washi-tape strip pinning its top edge (the
+same `rgba(217,122,74,...)` accent this series already reuses for every
+other "note attached to a surface" moment -- Home's pinned notes,
+Vocab's page guide -- not a new motif). `Shiori`'s `moodSize` dropped
+from `md`/`lg` to `sm` on both states to match the smaller note.
+
+**Active review / rating stamp protection:** confirmed via `git diff`
+that the only two className changes anywhere in `StudySection.tsx` are
+the ready/empty `AppEmptyState` calls noted above -- zero lines touched
+in the active-review branch, the rating-button map, or any `onReview`/
+`onShowAnswer`/`onStart`/`onQuickStart` handler. `.rating-button`/
+`.study-rating-grid`/`.study-card-stack`/`.study-card-backing-sheet`
+CSS is also completely untouched (confirmed via `git diff` on
+`globals.css`, scoped entirely to `.study-cta-*`/`.study-board-note`/
+the new mobile override). A full real review session was driven
+end-to-end via CDP click automation to confirm this held in practice,
+not just in the diff: started "오늘 복습" (18 due) -> revealed and
+rated "보통" through all remaining cards (`中` -> `響い` -> `体` ->
+`猫` -> ..., confirmed by reading the actual surface text after each
+rating, not just counting clicks) -> reached the completion receipt
+with correct stats (`다시 0개 · 어려움 0개 · 보통 15개 · 쉬움 0개 ·
+총 학습 15개`) -> "한 번 더 복습" correctly returned to the quick-start
+hero. Phase 110's mobile rating-grid-above-the-fold protection was
+re-verified with real `getBoundingClientRect()` measurements (not
+assumed): the grid's bottom edge sat at 662.6px/662.6px/624.6px against
+viewport heights 844/812/640 at 390/375/320 respectively -- inside the
+fold at all three, same as before this phase.
+
+Verified via headless Chrome (Windows-native, CDP) against a local
+sqlite dev database (`backend/vocab.db`, the dev-mode auto-user):
+
+- **Desktop (1280/1024):** the four quick-start tiles now read as
+  scattered pinned notes (varied width/rotation/vertical offset/corner
+  radius), not an aligned button row; the ready/empty note reads as a
+  small board-pinned slip, not a large white card; the active review
+  card and completion receipt are pixel-identical to before this phase
+  (confirmed by screenshot comparison). Zero `scrollWidth`/
+  `clientWidth` mismatch, zero console errors/warnings, zero failed
+  requests.
+- **Mobile (390/375/320):** zero overflow mismatch at all three widths,
+  across ready and answer-reveal states; quick-start primary stays one
+  clear full-width action, the three secondary tiles read as a small
+  pinned cluster (not a stacked button bar); rating grid confirmed
+  inside the fold at all three widths via real measurement (see above);
+  empty-state note stays compact, nowhere near "화면 절반."
+
+`npm run build` clean (dev server stopped and `.next` removed first,
+per this project's WSL/Windows build-vs-dev conflict note), `git diff
+--check` clean.
+
+**Files changed:** `frontend/components/StudySection.tsx`,
+`frontend/app/globals.css`, this file.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (structural de-boxing confirmed via screenshot,
+a real end-to-end 15-card review session including reveal/rate/advance/
+complete/restart, Phase 110's fold protection re-measured, rating-stamp
+protection confirmed both by diff and by the session actually
+completing correctly) all passed with zero console errors and zero
+failed requests.
+
+**Remaining risk:** none identified specific to this phase's own
+changes. This session's QA completed one real 15-card review session
+on the shared dev database (all rated "보통") as part of verifying the
+end-to-end flow -- a genuine, non-destructive SRS state change, left in
+place rather than reverted, matching this project's established
+precedent (Phase 147/148/152) of treating a real forward-progressing
+action as acceptable test state rather than something to roll back.
+
+**Next phase candidates:** Phase 150's Reading/Classify IA decision
+(`phase145-casual-cute-tab-rebuild-plan.md` item 6) remains the only
+open item from that plan. Every tab in the "casual cute" series (Home,
+Reading, Vocab, Deck, Study) has now had at least one post-145
+correction pass.

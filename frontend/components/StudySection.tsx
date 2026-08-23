@@ -484,17 +484,23 @@ export function StudySection({
           docs/design/DESIGN.md). Active/complete additionally sit inside
           .study-card-stack, which layers 2 real backing-sheet elements
           behind the current card so review reads as flipping through a
-          pile of cards, not a single card centered on a page. Ready/empty
-          keep a single flat .study-card shell (no backing sheets -- there's
-          no pile to show yet), so they stay part of the same board world
-          per Phase 66's brief without pretending to be a stack. */}
+          pile of cards, not a single card centered on a page.
+          Phase 153 -- ready/empty no longer share .study-card/.hero-card
+          (the full 640px-wide, 28px-padded, bordered flashcard shell) --
+          a real screenshot showed that shell used for a one-line "학습할
+          단어를 불러오세요" guidance message reading as a big stiff white
+          box sitting on the board, not a note pinned to it. .study-board-
+          note (globals.css) is a small, rotated, unbordered paper note
+          instead -- still part of the same board world, just sized for
+          what it actually says instead of borrowing the active card's
+          full flashcard footprint. */}
       <div className="study-board-scene">
       {!hasStarted && !currentItem && !isComplete ? (
         <div className="study-card-stack-stage">
           <AppEmptyState
             mood="review"
-            moodSize="md"
-            className="study-card hero-card study-ready-card"
+            moodSize="sm"
+            className="study-board-note study-ready-card"
             title="학습할 단어를 불러오세요"
             description="덱과 학습 모드를 선택한 뒤 복습을 시작할 수 있어요."
           />
@@ -505,8 +511,8 @@ export function StudySection({
         <div className="study-card-stack-stage">
           <AppEmptyState
             mood="empty"
-            moodSize="lg"
-            className="study-card hero-card study-ready-card"
+            moodSize="sm"
+            className="study-board-note study-ready-card"
             title={emptyMessages[studyMode]}
             description={emptySecondaryMessages[studyMode]}
           >
