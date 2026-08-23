@@ -6660,15 +6660,21 @@ input.reading-vocab-sticker-toggle:checked {
      as of Phase 147, which still lets a lone deck in a sparse shelf
      balloon to the compartment's full width; a fixed upper bound keeps
      every card close to its normal book-cover proportions regardless of
-     how many decks are on the shelf, so a 1-2 deck row sits at a
-     believable size next to the new plank texture/bookend filling the
-     rest of the compartment instead of one oversized tile. Phase 147
-     shrank both ends of the range (was 280-340px) to match the new small
-     book-cover treatment -- a real bookshelf holds many small books per
-     shelf, not 2-3 wide ones. Matches both .shelf-section's grid and the
-     ungrouped fallback grid (same selector reaches both). */
+     how many decks are on the shelf. Phase 152 -- widened the upper bound
+     (was 176px) now that the cover itself is a short flat band instead of
+     a tall illustration: real screenshots against this project's own
+     seed data (6 non-JLPT shared decks, one ungrouped shelf) showed
+     `auto-fit` leaving a large bare-wood gap to the right of the last
+     card whenever the row didn't divide evenly -- a card capped at 176px
+     just isn't wide enough to close that gap on its own. 176 -> 210 lets
+     a sparse row's cards absorb more of the leftover space before
+     `auto-fit` gives up and leaves it bare, without the cards reading as
+     oversized (still well short of the 335-420px "big card" sizes this
+     project has already rejected twice). A real bookshelf holds many
+     small books per shelf, not 2-3 wide ones, so this is a ceiling, not a
+     target -- a fully-stocked shelf still packs at ~150-190px per book. */
   .shared-library-scene .shared-deck-grid {
-    grid-template-columns: repeat(auto-fit, minmax(148px, 176px));
+    grid-template-columns: repeat(auto-fit, minmax(148px, 210px));
   }
 
   /* Loading/error/empty states keep the existing AppEmptyState look but
@@ -6735,6 +6741,70 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 10px;
   padding: 4px 2px 16px;
   border-bottom: 1px dashed var(--paper-border);
+}
+
+/* Phase 152 -- "어휘 노트 보기"/"새로고침" used to be a plain
+   .secondary-button/.ghost-button pair, i.e. the exact same full boxed
+   button chrome as every generic web-app action in the app -- against
+   this phase's own "웹 알림 바/boxed CTA처럼 보이면 실패" instruction,
+   demoted to small notched paper-tab actions instead, same fixed-pixel
+   clip-path-notch family Reading's Phase 150 CTAs established
+   (.reader-bookmark-button) and Vocab's Phase 149 bookmark tags before
+   that -- one consistent "bookmark/paper action" language reused across
+   tabs rather than a new shape invented per screen each time. Deck's own
+   screen accent (--tone-dusty-blue, see .shared-deck-section below)
+   colors the primary one; the ghost variant stays unfilled for the
+   secondary refresh action. */
+.shared-deck-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.shared-deck-tab-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  min-width: 0;
+  padding: 10px 26px 10px 16px;
+  border: 0;
+  border-radius: 3px;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 16px) 0,
+    100% 50%,
+    calc(100% - 16px) 100%,
+    0 100%
+  );
+  background: var(--screen-accent, var(--primary));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 5px 12px rgba(37, 43, 30, 0.14);
+}
+
+.shared-deck-tab-action:not(:disabled):hover {
+  transform: translateX(2px);
+  box-shadow: 0 7px 16px rgba(37, 43, 30, 0.18);
+}
+
+.shared-deck-tab-action:disabled {
+  background: #a89a80;
+  color: #fff;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.shared-deck-tab-action-ghost {
+  background: var(--soft-bg);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.shared-deck-tab-action-ghost:not(:disabled):hover {
+  box-shadow: none;
 }
 
 /* One "shelf" of cards under a small heading -- a display-only grouping of
@@ -6950,40 +7020,43 @@ input.reading-vocab-sticker-toggle:checked {
   transform: translateY(-1px);
 }
 
-/* Phase 147 -- was a real photographed cover atlas (shared-deck-cover-set-
-   candidate-web.webp, 5 covers) filling the same box this fills now, but
-   at a much larger card size (335:405, ~0.83:1, close to square) that
-   made the whole shelf-grid read as big color-blocked cards rather than
-   small books. Replaced with deck-cute-cover-tile-atlas.webp -- a 2-row,
-   5-column atlas of 10 small cute cover crops (see ASSET_MANIFEST.md) --
-   at a taller 3:5 portrait ratio that reads as an actual small book cover
-   standing on a shelf next to its neighbors, matching the mockup board's
-   Deck panel. `background-color` per tone/level modifier below is a
-   same-family flat-color fallback if the atlas ever fails to load.
-   `aspect-ratio`/`background-size` are the shared crop geometry every
-   modifier's `background-position` below picks a cell from -- standard
-   N-cell sprite math (atlas is 1536x1024px, 5 cols x 2 rows, so each cell
-   is exactly 1/5 the atlas width and 1/2 its height): background-size is
-   500% 200% (5x/2x the box), and a cell at column c (0-4), row r (0-1)
-   sits at background-position (c/4)*100% (r/1)*100%. */
+/* Phase 152 -- Deck Cover Simplification / Bookshelf Density Correction.
+   Phase 147's deck-cute-cover-tile-atlas.webp cover (a tall 3:5 portrait
+   illustration -- florals, washi tape, a big blank oval "label plate"
+   baked into the art) looked right in isolation, but a real 1280
+   screenshot showed the actual problem: every live field this card needs
+   (title, JLPT/unpublished badge, word count, imported badge,
+   description, action buttons) had nowhere to go on that illustration --
+   the art's own blank label plate went completely unused, and all real
+   text got pushed below the tall cover instead, making a "148-176px
+   book" balloon to 500-600px tall per card. The atlas is dropped
+   entirely here, not weakened -- this is now a short flat-color band (a
+   "spine cap", not a full illustrated front cover), the same per-tone/
+   level colors the JLPT badge ramp already established elsewhere on this
+   screen, so the cover is background color-coding, not a second
+   competing illustration. Every live field now lives in the label area
+   directly below it, which is the actual point of this phase: the cover
+   stops being the card's dominant subject so the deck's own information
+   can be. */
 .brand-deck-cover {
   position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   margin: -12px -12px 0;
-  aspect-ratio: 3 / 5;
+  height: 34px;
+  padding: 0 10px;
   overflow: hidden;
   border-radius: 12px 12px 0 0;
-  background-image: url("/brand/decor/phase145/deck-cute-cover-tile-atlas.webp");
-  background-repeat: no-repeat;
-  background-size: 500% 200%;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+  background-color: var(--tone-ink-brown);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1);
 }
 
-/* Phase 75 -- a thin light catch along the cover band's left edge, like a
-   book spine's rounded fold catching the light -- the "book-edge
-   highlight" the brief asks for, applied uniformly (not a per-card random
-   accent) so a whole shelf of these still reads as one calm row, not
-   individually decorated tiles. Contained by the cover's own
-   overflow:hidden, so it can never bleed past the band. */
+/* A thin light catch along the band's left edge, like a book spine's
+   rounded fold catching the light -- kept from Phase 75's original
+   "book-edge highlight" idea, just on the new flat band instead of a
+   photographed cover. */
 .brand-deck-cover::before {
   content: "";
   position: absolute;
@@ -6991,12 +7064,12 @@ input.reading-vocab-sticker-toggle:checked {
   bottom: 0;
   left: 0;
   width: 5px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.32), transparent);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.3), transparent);
   pointer-events: none;
 }
 
 /* Folded page-corner -- a small triangle notched into the top-right of the
-   cover band, like a dog-eared book cover. */
+   band, like a dog-eared book cover. */
 .brand-deck-cover::after {
   content: "";
   position: absolute;
@@ -7005,128 +7078,81 @@ input.reading-vocab-sticker-toggle:checked {
   width: 0;
   height: 0;
   border-style: solid;
-  border-width: 0 16px 16px 0;
-  border-color: transparent rgba(255, 255, 255, 0.28) transparent transparent;
+  border-width: 0 12px 12px 0;
+  border-color: transparent rgba(255, 255, 255, 0.26) transparent transparent;
   transition: border-color var(--motion-fast) var(--ease-soft);
 }
 
-/* Icon+label tag -- Phase 128. Previously laid out directly in the cover
-   band's own flex row (a thin ribbon with nowhere else for it to go); now
-   a small pinned plate over one corner of the photographed cover, since
-   the photo itself (not this label) is the cover's dominant surface.
-   Solid dark backing (not just a text-shadow) because the atlas's 5 cover
-   colors range from pale cream to dark blue -- a fixed-contrast plate
-   reads reliably over any of them, where white text + shadow alone would
-   not have on the cream cover. */
+/* Icon+label -- now sits inline in the flat-color band itself (was a
+   separately-backed dark plate pinned over a busy photo, needed there
+   for guaranteed contrast against 5 very different cover-art colors).
+   The band's own tone is deep enough at every variant below for plain
+   white text, so the extra plate/background is dropped -- one less
+   layer, and the label reads as the band's own printed text instead of
+   a sticker stuck on top of it. */
 .brand-deck-cover-tag {
-  position: absolute;
-  left: 7px;
-  bottom: 7px;
+  position: relative;
   z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  /* Phase 147 -- shrunk (was 4px 10px 3px / 11px / 13px icon) to match the
-     cover's own much smaller footprint at the new denser grid size; still
-     a small pinned mark, not a panel, so it stays legible rather than
-     dominating a book cover that may now be under 150px wide. */
-  padding: 3px 7px 2px;
-  border-radius: 999px;
-  background: rgba(28, 22, 12, 0.62);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
-  color: #ffffff;
-  font-size: 9px;
+  min-width: 0;
+  color: #fff9ec;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
 }
 
 .brand-deck-cover-icon {
   flex: 0 0 auto;
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 }
 
-/* Tone/level modifiers -- each picks one cell out of the shared 10-cover
-   (5 col x 2 row) atlas via `background-position` (the shared base rule
-   above already sets `background-size: 500% 200%` so each cell exactly
-   fills the cover box). For an evenly-spaced N-cell sprite this reduces to
-   the simple `column / (columns - 1) * 100%` / `row / (rows - 1) * 100%`
-   form rather than the general per-pixel formula (5 cols -> 0/25/50/75/
-   100%, 2 rows -> 0/100%), confirmed by screenshot afterward.
-   `background-color` is a flat same-family fallback sampled from each
-   chosen tile's fabric if the atlas fails to load. N5..N1 walk left-to-
-   right across the atlas's top row (green -> cream -> coral -> blue ->
-   purple) so the ramp still reads as one ordered sequence like the old
-   gradient did, just with real cover art instead of flat color; "내가
-   공유함"/"공유 덱" each get their own distinct bottom-row tile (mint,
-   gold) rather than reusing a top-row JLPT tile, since the new atlas has
-   enough spare cells (10 total, only 7 needed) to give every tone its own
-   cover instead of borrowing one.
-
-   Bug found while implementing this phase: the JLPT badge tag elsewhere on
-   this same card (.jlpt-level-tag, further below) reuses these exact
-   bare "jlpt-level-n5".."jlpt-level-n1" class names for its own coloring,
-   and its rule (`.jlpt-level-n5 { background: #a98a5c; }`) uses the
-   `background` shorthand -- which resets background-image to `none` for
-   any element carrying that class, including this cover (BrandDeckCover
-   puts both `brand-deck-cover` and `jlpt-level-n5` on the same div). That
-   bare single-class selector has the same (0,1,0) specificity as this
-   file's base `.brand-deck-cover { background-image: url(...); }` rule,
-   so without deciding a winner explicitly here, whichever rule happens to
-   come later in the file wins the cascade for the background-image
-   property specifically (verified via computed style: it was losing,
-   silently rendering flat fallback color only, even before this phase's
-   atlas swap -- the exact same collision would have broken the old
-   Phase 128 photo atlas too). Fixed by having this compound selector
-   (0,2,0) redeclare background-image itself, which now unconditionally
-   outranks the bare badge selector regardless of source order. The same
-   shorthand-reset collision affects every other `background-*` longhand
-   too (confirmed via computed style: background-size was also silently
-   falling back to `auto`), so this redeclares every longhand the base
-   rule sets, not just background-image. */
-.brand-deck-cover.jlpt-level-n5,
-.brand-deck-cover.jlpt-level-n4,
-.brand-deck-cover.jlpt-level-n3,
-.brand-deck-cover.jlpt-level-n2,
-.brand-deck-cover.jlpt-level-n1 {
-  background-image: url("/brand/decor/phase145/deck-cute-cover-tile-atlas.webp");
-  background-repeat: no-repeat;
-  background-size: 500% 200%;
-}
-
+/* Tone/level modifiers -- flat colors only now (no background-image/
+   background-size to redeclare), so the Phase 147 cascade bug this
+   section used to work around (the JLPT badge tag elsewhere on the card
+   reusing these exact bare "jlpt-level-n5".."jlpt-level-n1" class names,
+   and its own `background` shorthand rule silently resetting this cover's
+   background-image to none) can no longer happen -- there's no
+   background-image here left to reset. The compound `.brand-deck-cover.
+   jlpt-level-n5` selectors are kept (rather than simplified to the bare
+   class) purely so this cover's flat color still wins over the badge's
+   own `background` shorthand regardless of source order, same defensive
+   reasoning as before, now just for background-color instead of image.
+   Colors are the exact same N5-N1 ramp .jlpt-level-n5..n1 already use
+   further below on this file (one warm ramp, not a second palette) --
+   "내가 공유함"/"공유 덱" get their own two tones from the same family. */
 .brand-deck-cover.jlpt-level-n5 {
-  background-color: #83844f;
-  background-position: 0% 0%;
+  background-color: #a98a5c;
 }
 
 .brand-deck-cover.jlpt-level-n4 {
-  background-color: #e9ae57;
-  background-position: 25% 0%;
+  background-color: #c17d4a;
 }
 
 .brand-deck-cover.jlpt-level-n3 {
-  background-color: #ba4b2e;
-  background-position: 50% 0%;
+  background-color: #c17550;
 }
 
 .brand-deck-cover.jlpt-level-n2 {
-  background-color: #8a9ab9;
-  background-position: 75% 0%;
+  background-color: #b85c35;
 }
 
 .brand-deck-cover.jlpt-level-n1 {
-  background-color: #c8a8c1;
-  background-position: 100% 0%;
+  background-color: #8f4324;
 }
 
 .brand-deck-cover-mine {
-  background-color: #89a086;
-  background-position: 50% 100%;
+  background-color: #5f7a5c;
 }
 
 .brand-deck-cover-shared {
-  background-color: #e3b557;
-  background-position: 75% 100%;
+  background-color: #8a6a3f;
 }
 
 .shared-deck-meta-row {

@@ -468,13 +468,13 @@ export function SharedDeckSection({
             보조로 가져와 활용하세요.
           </p>
         </div>
-        <div className="landing-hero-actions">
-          <button type="button" className="secondary-button" onClick={onGoToVocab}>
+        <div className="shared-deck-header-actions">
+          <button type="button" className="shared-deck-tab-action" onClick={onGoToVocab}>
             <CardFileIcon className="button-icon" />어휘 노트 보기
           </button>
           <button
             type="button"
-            className="ghost-button"
+            className="shared-deck-tab-action shared-deck-tab-action-ghost"
             onClick={onRefresh}
             disabled={isLoading}
           >
@@ -482,14 +482,14 @@ export function SharedDeckSection({
             {isLoading ? "불러오는 중..." : "새로고침"}
           </button>
         </div>
-        <p className="info-strip">
+        <p className="info-strip info-strip-quiet">
           <ShieldIcon className="info-strip-icon" />
           가져온 덱은 학습 목록에 바로 추가돼요. 원문 전체는 들어가지 않아요.
         </p>
       </section>
 
       {hasJlptDeck ? (
-        <p className="info-strip shared-deck-disclaimer">
+        <p className="info-strip info-strip-quiet shared-deck-disclaimer">
           <ShieldIcon className="info-strip-icon" />
           JLPT 추천 어휘 덱은 학습 참고용 비공식 목록이며, 공개 학습 자료와
           내부 사전 데이터를 바탕으로 구성했습니다.

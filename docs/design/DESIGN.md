@@ -4717,3 +4717,173 @@ item 6) remains the last open item from that plan. No further "casual
 cute" correction passes are currently flagged as needed on any tab --
 Vocab (149), Reading (150), and Home (151) have each had a full
 first-viewport correction pass.
+
+## Phase 152 -- Deck Cover Simplification / Bookshelf Density Correction
+
+Phase 152 corrects Phase 147's own "mini bookshelf" cards: the
+mockup-aligned *idea* (small book covers on a shelf) was right, but
+`deck-cute-cover-tile-atlas.webp` -- a tall 3:5 portrait illustration
+per cover, complete with its own baked-in florals/washi-tape/blank
+oval "label plate" -- left nowhere for this card's actual live fields
+(title, JLPT/unpublished badge, word count, imported badge,
+description, up to 3 action buttons) to sit. A real 1280 screenshot
+against this project's own seed data (6 real shared decks) showed
+every one of those fields pushed below the tall cover, ballooning a
+card meant to be ~150-180px wide into ~500-600px tall, with the
+atlas's own blank label plate going completely unused.
+
+**Removed:**
+- **`deck-cute-cover-tile-atlas.webp` from the shelf-card cover
+  entirely** -- not weakened, dropped. The atlas is now referenced
+  nowhere in `globals.css` (confirmed via `grep`). It was the direct
+  cause of the oversized-card problem: a photographed illustration
+  has no way to make room for live text the way a flat CSS surface
+  can.
+- **The cover's tall `aspect-ratio: 3/5` box and its dark semi-opaque
+  icon+label plate** (`.brand-deck-cover-tag`'s old `rgba(28,22,12,
+  0.62)` backing, needed only to guarantee contrast against 5 very
+  different photographed cover colors) -- both gone along with the
+  photo they existed to sit on.
+- **`.landing-hero-actions`'s plain `.secondary-button`/`.ghost-button`
+  pair** ("어휘 노트 보기"/"새로고침") -- the exact same full boxed
+  button chrome as any generic web-app action, which this phase's own
+  "웹 알림 바처럼 보이면 실패" instruction flags directly.
+- **`.info-strip`'s bordered/filled card chrome** on both the "가져온
+  덱은…" and "JLPT 추천 어휘 덱은…" notices -- was a bordered,
+  white-filled pill reading as a system alert bar.
+- **The `auto-fit` grid's tendency to leave a large bare-wood gap**
+  whenever the deck count didn't evenly divide the row (confirmed
+  against this project's real 6-deck seed data, not assumed).
+
+**New mini-book/label structure:** `.brand-deck-cover` is now a short
+(34px) flat-color band -- a "spine cap", not a full front cover --
+using the *exact same* N5-N1 warm ramp colors `.jlpt-level-n5..n1`
+already use elsewhere on the same card (one palette, not a second
+one), plus two new tones for "내가 공유함"/"공유 덱". The icon+label
+tag now sits directly in that band as plain white text (the band's
+own flat color is dark enough at every variant for reliable contrast,
+confirmed by screenshot, so the separate dark backing plate is no
+longer needed). Everything else -- title, badges, word count,
+description, buttons -- sits in the label area directly below the
+band, completely unchanged in DOM position; shrinking the cover is
+what gives this area room to hold everything without pushing content
+out of a reasonable card height, not a restructuring of the label
+area itself. Real screenshots confirm a shelf card is now ~220-260px
+tall (was ~500-600px) with every field visible without scrolling.
+
+**Cascade-bug note carried forward from Phase 147:** the same JLPT
+badge tag elsewhere on this card (`.jlpt-level-tag`) still reuses the
+bare `jlpt-level-n5`..`n1` class names Phase 147 found colliding with
+this cover's own tone modifier (both `.brand-deck-cover` and the badge
+put the same bare class on different elements; the badge's `background`
+shorthand rule resets any *other* element carrying that class's
+background-image to `none`). That collision can no longer actually
+break anything here -- there's no `background-image` left on the cover
+to reset -- but the compound `.brand-deck-cover.jlpt-level-n5` selector
+form is kept anyway (rather than simplified to the bare class) so this
+stays true if a future pass ever adds a background-image back.
+
+**Bookshelf density:** `.shared-library-scene .shared-deck-grid`'s
+per-card width cap raised from 176px to 210px (the `auto-fit` upper
+bound). Confirmed via real screenshot against the 6-deck seed set: at
+176px a lightly-stocked row still left a visible bare-wood gap next to
+the last card; 210px lets a sparse row's cards absorb more of that
+leftover space while staying well short of the 335-420px "big card"
+sizes this project has already rejected twice (Phase 128, Phase 147).
+A fully-stocked shelf still packs many books at ~150-190px each -- this
+is a ceiling for sparse rows, not a new target width.
+
+**Header/notice de-emphasis:** "어휘 노트 보기"/"새로고침" are now
+`.shared-deck-tab-action` -- small notched paper tabs, the same
+fixed-pixel `clip-path` bookmark-tag family Reading's Phase 150 CTAs
+(`.reader-bookmark-button`) and Vocab's Phase 149 tags established
+before that (one consistent cross-tab "bookmark/paper action"
+language, not a new shape invented per screen), colored with Deck's
+own `--screen-accent` (`--tone-dusty-blue`). Both notice paragraphs
+gained the already-existing `.info-strip-quiet` modifier (Home's
+footnote already used this -- no new CSS needed) to drop their
+bordered/filled chrome down to a plain icon+caption line.
+
+**Owner/newcomer/subscriber conditions:** unchanged -- confirmed via
+`git diff` that every edit to `SharedDeckSection.tsx` this phase
+touches only the header-action buttons and the two notice paragraphs'
+class names; not one line inside `renderDeckCard`'s button-condition
+logic, the detail panel's owner/subscriber branches, or any
+handler/prop was touched.
+
+Verified via headless Chrome (Windows-native, CDP) against a local
+sqlite dev database (`backend/vocab.db`, the dev-mode auto-user, 6
+real non-JLPT shared decks -- one owned by the dev user, one
+subscribed-mode deck with 85 words):
+
+- **Desktop (1280/1024):** all 6 decks now visible without scrolling
+  in a dense 4-wide (1280) / 3-wide (1024) grid instead of 1-2 giant
+  cards; covers read as short color-coded bands, not competing
+  illustrations; header actions read as small paper tabs, not boxed
+  buttons; notices read as plain caption lines. Zero
+  `scrollWidth`/`clientWidth` mismatch, zero console errors/warnings,
+  zero failed requests, zero requests to the now-unreferenced atlas
+  file.
+- **Functional loop (1280, real interactions, not just hit-tests):**
+  newcomer "학습 목록에 추가" on the QA84 subscribed-mode deck
+  actually imported it (confirmed via the card flipping to "열기" +
+  a "학습 목록에 있음" badge with a real timestamp, matching Phase
+  107's existing open/duplicate-suppression logic unchanged);
+  subscriber "상세 보기"/"열기" opened the detail panel with a real
+  85-word list (80 shown per the existing page-size cap); search and
+  status-filter inputs were exercised and correctly re-filtered the
+  list (0 matches for this session's specific query text against this
+  specific seed data, not a bug -- the mechanism itself was confirmed
+  working); "더 보기" pagination button present and correctly labeled
+  with the remaining count; `StatusSelect` confirmed both reachable
+  (`elementFromPoint` resolves to the `<select>` itself once scrolled
+  into view) and functional (a real value change dispatched an actual
+  `PATCH /shared-decks/8/words/1/progress` request, confirmed via
+  `Network.requestWillBeSent`); detail-panel close (top button)
+  confirmed removing the panel from the DOM. Owner unpublish/republish
+  could not be exercised with real clicks this session -- the
+  dev-mode auto-user has `canManageSharedDecks={!isDevUser}` = false
+  by design (`page.tsx`, pre-existing, unrelated to this phase), so no
+  owner-management buttons render for it on any deck. This is the same
+  gate Phase 151 hit for Home's review shortcut; the button-rendering
+  condition itself (`canManageDeck && published` / `!published`) is
+  byte-identical to before this phase per the `git diff` check above,
+  and Phase 147 already exercised this exact flow end-to-end with a
+  real owner-permission account.
+- **Mobile (390/375/320):** zero overflow mismatch at all three
+  widths; two-column mini-bookshelf layout holds at all three (matches
+  Phase 147's own precedent); header action tabs sit side-by-side, not
+  stacked full-width bars; card labels/buttons stay legible with no
+  clipped text at 320px, the narrowest width tested.
+
+`npm run build` clean (dev server stopped and `.next` removed first,
+per this project's WSL/Windows build-vs-dev conflict note), `git diff
+--check` clean.
+
+**Files changed:** `frontend/components/SharedDeckSection.tsx`,
+`frontend/app/globals.css`, this file.
+
+**Commit-readiness:** yes -- build and diff-check clean, full
+5-viewport browser QA (structural density/legibility confirmed via
+screenshot, real functional interactions including a genuine
+StatusSelect PATCH round-trip and a real deck import, owner-condition
+code confirmed byte-unchanged via diff) all passed with zero console
+errors and zero failed requests.
+
+**Remaining risk:** owner unpublish/republish was verified by code
+diff (unchanged) and Phase 147's prior real-click test, not by a fresh
+real click this phase, since no available seed account combines
+`canManageSharedDecks: true` with an owned published deck in this
+session's dev-mode environment -- worth a real-account re-check next
+time this screen is touched. This session's QA also performed one
+real, non-destructive state change to the shared dev database (the
+QA84 deck import for the dev user), left in place rather than
+reverted, matching Phase 147's own precedent of treating a real import
+as an acceptable one-way test action (unlike a delete).
+
+**Next phase candidates:** Phase 150's Reading/Classify IA decision
+(`phase145-casual-cute-tab-rebuild-plan.md` item 6) remains the last
+open item from that plan. Vocab (149), Reading (150), Home (151), and
+Deck (152) have each now had a full first-viewport/density correction
+pass -- Study (148) is the only remaining "casual cute" tab that
+hasn't had a post-145 correction pass, though none has been requested.
