@@ -140,7 +140,11 @@ function ClassifyPaperInput({
 }: ClassifyPaperInputProps) {
   const isStage = variant === "stage";
   const submitButton = (
-    <button type="submit" className="reading-open-button" disabled={isAnalyzing}>
+    <button
+      type="submit"
+      className={isStage ? "classify-bookmark-button" : "reading-open-button"}
+      disabled={isAnalyzing}
+    >
       {isAnalyzing ? (
         "나누는 중..."
       ) : (
@@ -196,7 +200,7 @@ function ClassifyPaperInput({
           {isStage && secondaryAction ? (
             <button
               type="button"
-              className="ghost-button compact-button"
+              className="classify-quiet-link"
               onClick={secondaryAction.onClick}
             >
               {secondaryAction.label}
@@ -245,21 +249,22 @@ function ClassifyStageIntro({
   onDiscardDraft,
 }: ClassifyStageIntroProps) {
   return (
-    // Phase 115 investigated this card against the phase brief's Replace/
-    // Keep/Defer test and judged Keep, not Replace: .hero-card's
-    // border-radius/box-shadow are live and deliberate here (matching
-    // .study-hero-card's card system on purpose, per the comment on
-    // .classify-stage in globals.css), and Analyze has no dedicated mockup
-    // board to justify overriding that established cross-tab consistency.
-    // .library-card-stage was dropped as dead-code cleanup only -- its
-    // striped background is already fully overridden by .classify-stage's
-    // own later, opaque `background: panel-bg` (same class of no-op the
-    // Phase 114 reader-paper cleanup found), so removing the name changes
-    // nothing visible.
-    <section className="classify-stage hero-card">
+    // Phase 154 -- Analyze/Classify IA Reconstruction. Phase 115 kept this
+    // as a bordered/shadowed .hero-card specifically to match
+    // .study-hero-card's "same card system across tabs" consistency --
+    // but every one of those other tabs (Study included, Phase 148) has
+    // since dropped its own boxed hero card for an unboxed heading strip,
+    // making this the last surviving admin-form panel in the app.
+    // Restructured on Reading's Phase 150 open-worksheet language instead:
+    // a plain heading (Shiori inline, not a separate boxed companion slot),
+    // a differentiated "work sheet" textarea (own ruled/inset-shadow
+    // surface, coral-accented -- not a copy-paste of Reading's ink-green
+    // one), and a small notched bookmark CTA instead of a full-width
+    // form-submit button. See globals.css for the actual surface rules.
+    <section className="classify-stage">
       <div className="classify-hero-header">
         <span className="shiori-glow shiori-companion--section classify-hero-companion">
-          <ShioriCharacter variant="classify" size="lg" />
+          <ShioriCharacter variant="classify" size="md" />
         </span>
         <div>
           <span className="reading-input-eyebrow">빠른 분류</span>
@@ -299,7 +304,7 @@ function ClassifyStageIntro({
           ·{" "}
           <button
             type="button"
-            className="ghost-button compact-button"
+            className="classify-quiet-link"
             onClick={onDiscardDraft}
           >
             삭제하고 새로 시작
@@ -614,6 +619,7 @@ function ClassifyResultSummary({
       </div>
       <button
         type="button"
+        className="classify-save-button"
         onClick={onSaveSelected}
         disabled={isSaving || !selectedDeckId}
         title={!selectedDeckId ? "저장할 덱을 선택해 주세요." : undefined}
@@ -730,7 +736,7 @@ export function AnalyzeSection({
 
           <button
             type="button"
-            className="ghost-button compact-button"
+            className="ghost-button compact-button classify-source-toggle"
             onClick={() => setIsInputExpanded((value) => !value)}
           >
             {isInputExpanded ? "원문 접기" : "원문 수정"}

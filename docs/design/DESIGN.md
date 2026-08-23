@@ -5021,3 +5021,190 @@ action as acceptable test state rather than something to roll back.
 open item from that plan. Every tab in the "casual cute" series (Home,
 Reading, Vocab, Deck, Study) has now had at least one post-145
 correction pass.
+
+## Phase 154 -- Analyze/Classify IA Reconstruction / Reading-to-Card Flow Redesign
+
+Phase 154 is exactly the item Phase 150 deferred and Phase 153's own
+closing note flagged as the last open item from `phase145-casual-cute-
+tab-rebuild-plan.md`: Analyze/Classify's intro stage was the sole
+remaining boxed hero-panel in the entire app. Phase 115 investigated
+this exact element and deliberately judged Keep (not Replace) -- but
+specifically *because* it matched `.study-hero-card`'s "same card
+system" cross-tab consistency at the time. Every one of those other
+tabs (Study itself, Phase 148; Home, Phase 145; Vocab, Phase 114;
+Shared Deck, Phase 115 same-day) has since dropped its own version of
+that exact boxed panel, so the thing Phase 115's Keep judgment was
+protecting no longer exists to protect -- confirming, not overriding,
+that decision's own stated condition.
+
+**IA judgment (required by this phase's brief): A -- keep Analyze/
+Classify as a separate tab.** Reading and Classify serve genuinely
+different mental models, not two skins on the same task: Reading is
+slow, in-context, word-by-word exploration while reading actual prose;
+Classify is fast, out-of-context, bulk triage of every word in a text
+at once, useful specifically *before* deciding whether the text is
+worth reading closely, or for processing several texts' vocabulary
+back-to-back. Collapsing them would also be a real architecture
+change, not a visual one -- Analyze's chunked-session/draft-autosave/
+card-index state model and Reading's token-click-in-place model are
+different enough that merging them is a dedicated future phase's scope
+on its own, which this phase's brief explicitly rules out doing here
+("탭 삭제/라우팅 변경은... 후속 phase가 필요합니다"). What this phase
+*does* do instead -- and what actually addresses the "왜 두 탭이 따로
+있어야 하는지" doubt in the user feedback -- is make the two tabs
+share one visual/copy language (open-worksheet textarea, notched
+bookmark CTA, quiet text-link secondary actions, matching accent-color
+convention) so the *reason* to keep them separate reads as "two related
+tools," not "one coherent tab and one forgotten admin form." No nav
+label change was made: "분류" already accurately names what this
+screen does differently from "읽기." Revisit toward Option B (long-
+term absorption into Reading) only if real usage data shows most
+Classify sessions are immediately followed by opening the same text in
+Reading anyway -- this phase found no such evidence, since it wasn't
+in scope to gather it.
+
+**Removed:**
+- **`.classify-stage`'s `hero-card` class and its own `border`/
+  `background: panel-bg` rules** -- the bordered, opaque, accent-topped
+  panel that made the intro stage read as a standalone form. Replaced
+  with the same unboxed dashed-bottom heading-strip recipe every other
+  tab's top card now uses.
+- **The dashed-border tinted textarea** (`border: 1.5px dashed;
+  background: var(--surface-stage)`) -- one step removed from a plain
+  form field. Replaced with a real "work sheet" surface (see below).
+- **The stage-variant submit's identity as `.reading-open-button`** --
+  a full form-submit button, functionally fine but visually generic
+  (the exact same class Reading's own *secondary* re-analyze form
+  uses). Replaced with a dedicated small notched CTA.
+- **`.ghost-button.compact-button` on the secondary "이전 분류
+  이어하기"/"삭제하고 새로 시작" actions** -- both bordered outline
+  buttons, competing for attention with the one real CTA next to them.
+  Replaced with a plain underlined text link.
+- **A real mobile bug, not just a visual preference:** the post-result
+  "원문 수정" toggle and the card-stage toolbar's "읽기 탭에서 보기"/
+  "지금까지 저장" links had no `width` rule of their own, so the
+  app-wide mobile `button { width: 100% }` rule was the one actually
+  winning -- confirmed via a real screenshot showing all three as
+  full-width stacked bars at 390px, the exact "quiet action이 admin
+  bar가 되지 않도록" regression this phase's brief explicitly warns
+  against. Not a hypothetical: this was live in the app before this
+  phase touched it.
+
+**New intro/start stage:** modeled directly on Reading's Phase 150
+`.reader-start-scene` language, not copy-pasted from it. The heading
+(Shiori guide + eyebrow + title + subtitle) sits as plain page content,
+no card boundary. The textarea is a real recessed "work sheet" --
+`var(--panel-bg)` fill, a repeating ruled-line texture, an inset
+shadow -- plus one deliberate difference from Reading's own start
+textarea: a coral vertical margin rule (`rgba(193, 105, 74, ...)`, this
+tab's own `--screen-accent`) marking it specifically as a ruled index-
+card worksheet, not a page of continuous prose. This is also literally
+the same `rgba(193, 105, 74, ...)` accent Reading's Phase 150 detail-
+page margin rule uses -- one shared material vocabulary across both
+tabs, applied to different content, which is the actual "Reading와
+이어지는" connective tissue this phase's brief asks for. The submit
+("분류 카드 만들기") is now `.classify-bookmark-button`, the same
+fixed-pixel-notch `clip-path` bookmark-tag family Reading's `.reader-
+bookmark-button` (Phase 150), Vocab's `.vocab-bookmark-action` (Phase
+149), Deck's `.shared-deck-tab-action` (Phase 152), and every tab since
+has used -- colored with Analyze's own coral accent rather than a
+borrowed one. "이전 분류 이어하기"/"삭제하고 새로 시작" are now
+`.classify-quiet-link`, a plain underlined text link (same family as
+Home's `.home-cover-sample`).
+
+**Classify card stage:** deliberately *not* restructured -- this is
+the one screen state the brief explicitly protects (Phase 112's mobile
+decision-grid-clear-of-the-fold fix), and it was already the least
+boxy-feeling part of Analyze before this phase (a real flashcard-tier
+card, matching Study's own protected active-review card, with a live
+sticky tally rail at `>=1024px`). Only the toolbar above it (the two
+quiet links) got the same mobile-width fix described above. `git diff`
+confirms zero lines touched inside `ClassifyWordPrimary`,
+`ClassifyWordSecondary`, `ClassifyActionGrid`, or any of their CSS
+(`.classify-word-card`, `.classify-actions`, `.rating-classify-*`, the
+Phase 110/112 mobile `order` rules).
+
+**Result summary:** left structurally as-is (coverage chips, count
+pills, one primary save action, two de-boxed link actions below it) --
+already matches Study's own protected completion-receipt card, and the
+brief explicitly allows keeping Phase 104's de-boxed link hierarchy.
+One small cross-tab consistency fix: the save button ("모르는 단어
+노트에 담기") was the app's generic default teal gradient regardless
+of which tab it sat on; now `.classify-save-button` uses this tab's
+own coral `--screen-accent`, matching how every other tab's primary
+action is now colored with its own accent rather than one shared
+generic color.
+
+Verified via headless Chrome (Windows-native, CDP) against a local
+sqlite dev database (`backend/vocab.db`, the dev-mode auto-user),
+including a run against the actual production build (`next build` +
+`next start`, not just the dev server) for the final viewport sweep:
+
+- **Desktop (1280/1024):** the large white form panel is confirmed
+  gone from both the DOM (no `hero-card`/bordered-panel classes) and
+  the screenshot; the intro reads as an open worksheet leading into the
+  card-making flow, not an admin form; the card stage and result
+  summary are visually unchanged from before this phase (confirmed by
+  screenshot comparison). Zero `scrollWidth`/`clientWidth` mismatch,
+  zero console errors/warnings, zero failed requests.
+- **Functional loop (1280, real interactions):** deck select confirmed
+  (4 real decks); show-known checkbox toggled; sample text submitted a
+  real `/analyze` request and rendered a 13-token card stack; 5 cards
+  classified across all four decision types (아는/헷갈리는/모르는/
+  건너뛰기) with the live tally updating correctly after each
+  (`완벽히 아는 단어 2 · 헷갈리는 단어 1 · 모르는 단어 1 · 건너뜀 1`,
+  exactly matching); a full 13-card session was driven to the result
+  summary, which correctly showed all coverage/count numbers; "모르는
+  단어 노트에 담기" issued a real save (confirmed via the success
+  message reporting the actual saved counts) and correctly reset back
+  to the intro stage (existing behavior, unchanged); "이전 분류
+  이어하기" was verified as a genuine resume, not just a hit-test --
+  created a draft, reloaded the page, confirmed `.draft-status`
+  appeared, clicked the link, and landed back on card 2/7 exactly where
+  the earlier session left off.
+- **Mobile (390/375/320):** zero overflow mismatch at all three widths;
+  the intro CTA and secondary link both measured via
+  `getBoundingClientRect()` at their real content width (195px/111px),
+  not the 362px/347px/292px full-row width they measured before the
+  fix; the card-stage toolbar and "원문 수정" toggle likewise confirmed
+  small pills, not stacked bars, via the same before/after
+  measurement; Phase 112's decision-grid fold clearance re-confirmed
+  (grid top well within the viewport at all three widths; no fixed
+  bottom-nav element exists in the current app shell at all, so the
+  original "hidden behind a fixed nav" failure mode Phase 111/112 fixed
+  can no longer occur structurally, independent of this phase's own
+  changes).
+
+`npm run build` clean, `git diff --check` clean. `git diff` on
+`AnalyzeSection.tsx` confirmed scoped entirely to `className`
+changes/one new `className` prop/comments -- zero lines touched in any
+`onClick`/`onChange`/`onSubmit` handler wiring, confirmed by grepping
+the diff for handler names and finding no matches.
+
+**Files changed:** `frontend/components/AnalyzeSection.tsx`,
+`frontend/app/globals.css`, this file.
+
+**Commit-readiness:** yes -- build (both `next build` and a real
+`next start` production-server QA pass) and diff-check clean, full
+5-viewport browser QA (structural de-boxing confirmed via screenshot
+and DOM query, a real mobile-width regression found and fixed with
+before/after measurement rather than assumed, full functional loop
+including draft persistence-and-resume across a page reload) all
+passed with zero console errors and zero failed requests.
+
+**Remaining risk:** none identified specific to this phase's own
+changes. This session's QA performed one real save (13 words, all
+"완벽히 아는 단어") to the dev user's default deck as part of verifying
+the end-to-end save flow -- a genuine, non-destructive state change,
+left in place rather than reverted, matching this project's
+established precedent (Phase 147/148/152/153) of treating a real
+forward-progressing action as acceptable test state.
+
+**Next phase candidates:** none currently flagged from the Phase
+145 rebuild plan -- every item on it (Home, Reading, Vocab, Deck,
+Study, and now Analyze/Classify) has had at least one post-145
+correction pass, and the plan's own remaining open item (Reading/
+Classify IA) has now been explicitly judged (Option A, this phase).
+Future work in this area, if any, should start from real usage data on
+how often Classify and Reading sessions chain together for the same
+text, not from a code-only investigation.

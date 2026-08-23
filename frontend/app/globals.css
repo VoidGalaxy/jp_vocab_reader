@@ -2623,6 +2623,21 @@ button:focus-visible {
   justify-content: center;
 }
 
+/* Phase 154 -- was the plain default gradient button (the app-wide teal),
+   same color regardless of which tab it sits on. Every tab's own primary
+   action is now colored with that tab's own --screen-accent (Reading's
+   ink-green, Study's teal, Home's ink-green...) instead of one shared
+   generic color -- this brings Analyze's save action in line with that,
+   using its own coral accent. */
+.classify-save-button {
+  background: var(--screen-accent, var(--primary));
+}
+
+.classify-save-button:not(:disabled):hover {
+  background: var(--screen-accent, var(--primary));
+  filter: brightness(1.08);
+}
+
 .show-results-toggle {
   justify-self: start;
   border: 1px solid var(--border);
@@ -5748,13 +5763,25 @@ input.reading-vocab-sticker-toggle:checked {
    (study-hero-card, home-hero-card). Same opaque-panel + accent-top-border
    recipe as .study-hero-card now, so every tab's top card reads as the
    same card system. */
+/* Phase 154 -- Analyze/Classify IA Reconstruction. .classify-stage was a
+   bordered/`background: panel-bg`/accent-top-border box (plus .hero-card's
+   border-radius/box-shadow, applied via a second className in
+   AnalyzeSection.tsx) -- kept that way on purpose in Phase 115 to match
+   .study-hero-card's "same card system" consistency. Every other tab's
+   equivalent top card (Study Phase 148, Home Phase 145, Vocab Phase 114,
+   Shared Deck Phase 115, Reading -- never had one) has since dropped that
+   exact boxed-panel language, which is what made this the last surviving
+   admin-form panel in the app instead of a still-consistent choice. Now
+   the same flat, unboxed heading-strip recipe every one of those uses
+   (dashed bottom rule, no fill/border/shadow of its own) -- title/Shiori/
+   textarea/footer read as page content leading into the card-making flow
+   below, not a form floating on top of it. */
 .classify-stage {
+  position: relative;
   display: grid;
-  gap: 16px;
-  padding: 24px;
-  border: 1px solid var(--border);
-  border-top: 2px solid var(--screen-accent, var(--accent));
-  background: var(--panel-bg);
+  gap: 14px;
+  padding: 4px 2px 18px;
+  border-bottom: 1px dashed var(--paper-border);
 }
 
 .classify-hero-header {
@@ -5785,43 +5812,164 @@ input.reading-vocab-sticker-toggle:checked {
    ClassifyPaperInput component's "stage" variant. */
 .classify-paper-input {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
-/* Textarea styled as a loose paper note (dashed border, tinted, capped
-   height) instead of a full bordered business-form input box. Shorter
-   min-height + slightly muted text color than the base textarea rule so it
-   reads as a lighter-weight scratch note sitting under the Shiori
-   header/CTA, not a form field competing with them. */
+/* Phase 154 -- was a dashed-border tinted textarea, one step removed from
+   a plain form field. Now the same "work sheet" material Reading's start
+   textarea established (Phase 150): a real recessed-paper surface (flat
+   panel-bg, ruled-line texture, inset shadow), not a copy-paste of
+   Reading's own though -- a coral vertical margin rule (this tab's own
+   `--screen-accent`, the same rgba(193,105,74,...) accent Reading's own
+   detail-page margin rule uses, so the two tabs share a material without
+   being visually identical) marks this specifically as a ruled index-card
+   worksheet, not a page of continuous prose. */
 .classify-hero-textarea {
-  min-height: 128px;
-  border: 1.5px dashed var(--border-strong);
-  border-radius: 12px;
-  color: var(--text-secondary);
-  background: var(--surface-stage);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 140px;
+  padding: 16px 16px 16px 34px;
+  border: none;
+  border-radius: 14px;
+  background-color: var(--panel-bg);
+  background-image:
+    linear-gradient(
+      90deg,
+      transparent 22px,
+      rgba(193, 105, 74, 0.35) 22px,
+      rgba(193, 105, 74, 0.35) 23px,
+      transparent 23px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(61, 47, 20, 0.055) 0px,
+      rgba(61, 47, 20, 0.055) 1px,
+      transparent 1px,
+      transparent 30px
+    );
+  box-shadow:
+    inset 0 3px 8px rgba(37, 43, 30, 0.1),
+    0 2px 6px rgba(37, 43, 30, 0.06);
+  color: var(--text);
+  font-size: 15.5px;
+  line-height: 1.85;
+}
+
+.classify-hero-textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.68;
+}
+
+.classify-hero-textarea:focus {
+  outline: none;
+  box-shadow:
+    inset 0 3px 8px rgba(37, 43, 30, 0.1),
+    inset 0 0 0 1.5px var(--screen-accent, var(--primary));
 }
 
 /* One grouped action area (deck-select + checkbox + submit) instead of
    controls floating on the left and the button hard-pushed to the far
-   right -- the dashed top divider + padding separates it from the
-   textarea above, so select/checkbox/button read as one row belonging
-   together rather than two independently-aligned pieces. */
+   right, so select/checkbox/button read as one row belonging together.
+   Phase 154 -- dropped the dashed top divider that used to separate this
+   from the textarea above inside their shared bordered card -- the
+   textarea is now its own distinct surface (see above), so a second rule
+   directly under it would have read as a redundant seam. */
 .classify-hero-footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  padding-top: 12px;
-  border-top: 1px dashed var(--border);
+  gap: 10px 14px;
 }
 
 .classify-hero-cta-row {
   flex: 1 1 auto;
+  align-items: center;
   justify-content: flex-end;
+  gap: 10px;
 }
 
-.classify-hero-cta-row .reading-open-button {
-  min-width: 180px;
+/* Phase 154 -- the stage-variant submit ("분류 카드 만들기") is now a small
+   notched bookmark tag instead of a full form-submit button -- the same
+   fixed-pixel `clip-path` notch family Reading's Phase 150 CTA
+   (.reader-bookmark-button) and every tab since established, colored with
+   Analyze's own coral --screen-accent so it reads as this tab's own
+   stationery action, not a borrowed one. Fixed-pixel (not percentage)
+   notch: Phase 150 found a percentage notch balloons into a huge arrow
+   once a button goes full-width on mobile -- width/min-width are
+   deliberately left unset here so the app-wide mobile
+   `button { width: 100% }` rule doesn't apply (a bare class selector
+   already beats the bare element selector regardless of source order);
+   the one exception is `.analyze-cta-row`'s own mobile
+   `align-items: stretch` (needed by the *other* variant's submit button,
+   `.reading-open-button`, untouched here) which can still stretch an
+   `align-items: stretch`-eligible child regardless of its own `width` --
+   see the dedicated mobile override further down this file. */
+.classify-bookmark-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  min-width: 0;
+  padding: 12px 32px 12px 18px;
+  border: 0;
+  border-radius: 3px;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 18px) 0,
+    100% 50%,
+    calc(100% - 18px) 100%,
+    0 100%
+  );
+  background: var(--screen-accent, var(--primary));
+  color: #fff;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
+  transition:
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
+}
+
+.classify-bookmark-button:not(:disabled):hover {
+  transform: translateX(2px);
+  box-shadow: 0 8px 18px rgba(37, 43, 30, 0.2);
+}
+
+.classify-bookmark-button:not(:disabled):active {
+  transform: translateX(1px) scale(0.98);
+}
+
+.classify-bookmark-button:disabled {
+  background: #a89a80;
+  color: #fff;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Secondary actions ("이전 분류 이어하기", "삭제하고 새로 시작") -- a plain
+   underlined text link (same family as Home's .home-cover-sample/
+   Reading's .reading-summary-link-button), never a bordered/filled
+   button, so neither ever competes with the one real CTA. */
+.classify-quiet-link {
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 2px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border);
+  box-shadow: none;
+}
+
+.classify-quiet-link:not(:disabled):hover {
+  color: var(--text-secondary);
+  text-decoration-color: var(--border-strong);
+  box-shadow: none;
+  transform: none;
 }
 
 /* Phase 148 -- was a single bordered/shadowed tray (a soft gradient fill
@@ -9802,9 +9950,38 @@ input.reading-vocab-sticker-toggle:checked {
     align-items: stretch;
   }
 
+  /* .analyze-cta-row's align-items: stretch above (needed by the *other*
+     input variant's .reading-open-button, untouched) stretches any
+     column-flex child whose own width computes to `auto` -- which
+     .classify-bookmark-button's `width: auto` (its own rule, overriding
+     the app-wide mobile `button { width: 100% }`) now is. Without this
+     align-self override the button would still end up full-width via
+     stretch even though no rule sets width: 100% on it directly --
+     confirmed via a real width measurement (362px, matching the row) on
+     a first attempt that only set width: auto without this. */
+  .classify-bookmark-button,
+  .classify-quiet-link {
+    align-self: flex-start;
+  }
+
   .classify-stage-toolbar {
     justify-content: center;
     flex-wrap: wrap;
+  }
+
+  /* Phase 154 -- both toolbar links ("읽기 탭에서 보기"/"지금까지 저장")
+     and the post-result "원문 수정"/"원문 접기" toggle are quiet
+     .ghost-button.compact-button instances with no width rule of their
+     own, so the app-wide mobile `button { width: 100% }` rule (an
+     unopposed element selector) was the one actually winning -- confirmed
+     via a real screenshot showing both as full-width stacked bars, the
+     exact "quiet action이 admin bar가 되지 않도록" regression this
+     phase's brief explicitly calls out. Both opt back out to their
+     natural content width here. */
+  .classify-stage-toolbar button,
+  .classify-source-toggle {
+    width: auto;
+    min-width: 0;
   }
 }
 
