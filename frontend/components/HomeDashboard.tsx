@@ -17,27 +17,32 @@ type HomeDashboardProps = {
   // (refreshUserScopedData) -- no new API call.
   sharedDeckCount: number;
   onGoToSharedDecks: () => void;
-  // Reused only for a light one-word peek in the 단어장 sticker's hint line
-  // (desktop only, see .home-sticker-hint) -- no separate "최근 담은 단어"
-  // section on Home. Same /vocab-items?sort=created_desc read the 기록 탭
-  // already makes, no new API call.
+  // Reused only for a light one-word peek in the 단어장 shortcut's hint line
+  // (desktop only, see .home-scene-v2-shortcut-hint) -- no separate "최근
+  // 담은 단어" section on Home. Same /vocab-items?sort=created_desc read the
+  // 기록 탭 already makes, no new API call.
   recentWords: VocabItem[];
 };
 
-// Phase 159 (Home v2 Scene Rebuild) -- every prior Home pass (118's card
-// chrome removal, 151's scale/overlap correction) still left the shortcuts
-// as their own grid column beside the book: `.home-stage { grid-template-
-// columns: 1.4fr 0.85fr }`, book on one side, three sticky notes stacked on
-// the other. Fixing the book's size and the note's overlap never fixed
-// that underlying shape -- two independent tracks read as two clusters (a
-// "hero text panel" and a "shortcut column") no matter how tightly they
-// were packed, which is exactly what this phase's brief names as the
-// remaining failure. There is no grid here any more: `.home-hero-cluster`
-// is a single relatively-positioned object sized to the book photo itself,
-// and the three shortcuts are `.home-shortcut-tab` elements absolutely
-// positioned along the book's own bottom edge, overlapping it like tabs
-// tucked under a notebook lying on a desk -- physically part of the same
-// object the title note sits on top of, not a second surface beside it.
+// Phase 168 (Home V2 Full Scene Replacement) -- Phase 159 fixed the
+// shortcuts reading as a second cluster beside the book, but the book
+// itself was still a CSS-drawn cutout (.home-cover-object, a transparent
+// PNG at max-width:760px) sitting inside a centered column, which is
+// exactly the "hero card in the middle of a wide empty wood board" shape
+// the V2 bible names as a failure -- the desktop screenshot still read as
+// an app hero panel with a photo behind it, not a desk. This pass throws
+// out that whole object/column model: `.home-scene-v2-frame` is now a
+// single full-bleed <picture> of the real V2 desk photograph (mobile
+// notebook-with-torn-note-and-sticky-tabs shot below 1024px, desktop
+// notebook-cover-on-a-full-desk shot at/above it), sized to the photo's
+// own aspect ratio at 100% of the available width instead of capped at a
+// fixed px hero size -- so the scene itself fills the first viewport
+// however wide the page box is, rather than leaving wood on either side
+// of a narrow centered card. Every live piece (title note, CTA, three
+// shortcuts, Shiori, privacy line) is absolutely positioned as a percent
+// of that same photo, calibrated per breakpoint against where that
+// specific photo actually has paper/cover/tab room -- not a shared layout
+// reused across two differently-composed images.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -68,142 +73,120 @@ export function HomeDashboard({
     sharedDeckCount > 0 ? "다른 덱도 둘러보기" : "나만의 학습 덱 만들기";
 
   return (
-    <section className="tab-panel home-dashboard home-scene" aria-live="polite">
-      <div className="home-hero">
-        {/* Phase 159 -- home-hero-cluster is the one hero object: sized to
-            the book photo itself (.home-cover-object drives the box's
-            width), not a grid column. The title note still overlaps the
-            book's top edge (Phase 151's technique, unchanged), and the
-            three shortcuts (.home-shortcut-tabs, new) are absolutely
-            positioned along the book's own bottom edge instead of living in
-            a sibling grid track -- see globals.css for how each piece is
-            actually pinned. Everything in this cluster shares one
-            positioning context, which is what makes it read as a single
-            object instead of two. */}
-        <div className="home-hero-cluster">
-          <div className="home-cover-note">
-            <h2 className="home-cover-title">
-              오늘도 한 문장,
-              <br />한 단어.
-            </h2>
-            <p className="home-cover-subtitle">
-              모르는 단어를 눌러두면, 읽으면서 단어장이 자연스럽게 쌓여요.
-            </p>
-            <button
-              type="button"
-              className="home-cover-cta"
-              onClick={onStartReading}
-            >
-              <SparkleIcon className="button-icon" />
-              원문 읽기 시작 →
-            </button>
-            <button
-              type="button"
-              className="home-cover-sample"
-              onClick={onTryWithSample}
-            >
-              샘플로 체험
-            </button>
-          </div>
+    <section className="tab-panel home-dashboard home-scene-v2" aria-live="polite">
+      <div className="home-scene-v2-frame">
+        {/* Two separate photographs, not one crop of the other -- the
+            mobile shot already has a torn paper note and three sticky
+            tabs built into the composition, the desktop shot is a plain
+            cover with room fanned out beside it. <picture> means only the
+            breakpoint-matched file is ever requested. */}
+        <picture className="home-scene-v2-media">
+          <source
+            media="(min-width: 1024px)"
+            srcSet="/brand/decor/v2/v2-home-notebook-desktop-16x9.webp"
+          />
+          <img
+            className="home-scene-v2-media-img"
+            src="/brand/decor/v2/v2-home-notebook-mobile-9x16.webp"
+            alt=""
+            draggable={false}
+          />
+        </picture>
 
-          <div className="home-cover-object">
-            <span className="home-cover-charm" aria-hidden="true">
-              <ShioriCharacter variant="default" size="lg" />
-            </span>
-          </div>
-
-          {/* Phase 159 -- was .home-stickers, a full sibling grid column
-              beside the book (three tall sticky-note cards stacked on
-              their own track). Discarded, not resized: these are now
-              .home-shortcut-tab elements pinned along the book's bottom
-              edge, each overlapping it by a few px like a tab tucked
-              under a notebook lying on a desk -- part of the book object
-              itself, not a second surface next to it. Same three
-              onClick handlers, same dev-user account-panel branch on
-              복습, unchanged. */}
-          <div className="home-shortcut-tabs" role="group" aria-label="바로가기">
-            <button
-              type="button"
-              className="home-shortcut-tab home-shortcut-tab--vocab"
-              onClick={onGoToVocab}
-            >
-              <span className="home-shortcut-tab-icon">
-                <CardFileIcon />
-              </span>
-              <span className="home-shortcut-tab-text">
-                <span className="home-shortcut-tab-label">단어장</span>
-                <span className="home-shortcut-tab-hint">{vocabHint}</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              className="home-shortcut-tab home-shortcut-tab--review"
-              onClick={isDevUser ? onOpenAccount : onStartTodayReview}
-            >
-              <span className="home-shortcut-tab-icon home-shortcut-tab-icon--character">
-                <ShioriCharacter variant="review" size="sm" />
-              </span>
-              <span className="home-shortcut-tab-text">
-                <span className="home-shortcut-tab-label">복습</span>
-                <span className="home-shortcut-tab-hint">{reviewHint}</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              className="home-shortcut-tab home-shortcut-tab--decks"
-              onClick={onGoToSharedDecks}
-            >
-              <span className="home-shortcut-tab-icon">
-                <BookshelfIcon />
-              </span>
-              <span className="home-shortcut-tab-text">
-                <span className="home-shortcut-tab-label">덱</span>
-                <span className="home-shortcut-tab-hint">{decksHint}</span>
-              </span>
-            </button>
-          </div>
-
-          {/* Phase 133/139/151's photographed desk-prop cutouts (leaf,
-              washi tape, paperclip, pen), repositioned for Phase 159: with
-              the sticky-note column gone, there is no second cluster left
-              to bridge -- each prop now anchors a different edge of the
-              single hero cluster instead (leaf pins the title note's
-              corner, tape+paperclip weight the book's lower-left corner,
-              pen tucks between two shortcut tabs). display:none below
-              1024px in globals.css, unchanged -- mobile keeps the cover as
-              the sole subject. background-image (not <img src>) inside the
-              >=1024px block only, so mobile fetches zero bytes for any of
-              the four (see the Phase 139 note this comment used to carry,
-              still accurate, just condensed here since the full history is
-              already in DESIGN.md). */}
-          <div className="home-desk-props" aria-hidden="true">
-            <span
-              aria-hidden="true"
-              className="home-desk-prop home-desk-prop--leaf"
-            />
-            <span
-              aria-hidden="true"
-              className="home-desk-prop home-desk-prop--tape"
-            />
-            <span
-              aria-hidden="true"
-              className="home-desk-prop home-desk-prop--paperclip"
-            />
-            <span
-              aria-hidden="true"
-              className="home-desk-prop home-desk-prop--pen"
-            />
-          </div>
+        {/* Mobile: sits directly on the photographed torn-paper note (no
+            card chrome of its own). Desktop: the same photo has no paper
+            in that spot, so the >=1024px CSS gives this its own small
+            paper-note surface -- see globals.css. */}
+        <div className="home-scene-v2-note">
+          <h2 className="home-scene-v2-title">
+            오늘도 한 문장,
+            <br />한 단어.
+          </h2>
+          <p className="home-scene-v2-subtitle">
+            모르는 단어를 눌러두면, 읽으면서 단어장이 자연스럽게 쌓여요.
+          </p>
+          <button
+            type="button"
+            className="home-scene-v2-sample"
+            onClick={onTryWithSample}
+          >
+            샘플로 체험
+          </button>
         </div>
 
-        {/* Phase 159 -- was a page-level footer sitting well below the
-            whole .home-stage box. Brief requires this stay close enough to
-            read as a small desk label, not a footer outside the scene --
-            now sits tight under the cluster with its own small "note"
-            treatment (see .home-footnote in globals.css) instead of the
-            generic full-width info-strip spacing. */}
-        <p className="info-strip info-strip-quiet home-footnote">
-          <ShieldIcon className="info-strip-icon" />
+        {/* The primary CTA, pressed onto the notebook cover itself as an
+            ink-stamped tag (same fixed-notch shape family the rest of the
+            app already uses for stamps/bookmarks -- .classify-stamp-
+            button, .reader-bookmark-button -- plus a dashed inset ring and
+            a resting rotation), not a centered pill floating on the
+            photo. */}
+        <button
+          type="button"
+          className="home-scene-v2-stamp"
+          onClick={onStartReading}
+        >
+          <SparkleIcon className="button-icon" />
+          <span>원문 읽기 시작</span>
+        </button>
+
+        {/* Three shortcuts read as sticky notes tucked into the
+            notebook's own edge (top edge on mobile, where the photo
+            already shows three tab tips poking out; lower-right edge on
+            desktop, fanned across the cover) -- one cluster attached to
+            the book, not a separate row/column beside it. Same three
+            handlers as before, dev-user account-panel branch on 복습
+            unchanged. */}
+        <div className="home-scene-v2-shortcuts" role="group" aria-label="바로가기">
+          <button
+            type="button"
+            className="home-scene-v2-shortcut home-scene-v2-shortcut--vocab"
+            onClick={onGoToVocab}
+          >
+            <span className="home-scene-v2-shortcut-icon">
+              <CardFileIcon />
+            </span>
+            <span className="home-scene-v2-shortcut-text">
+              <span className="home-scene-v2-shortcut-label">단어장</span>
+              <span className="home-scene-v2-shortcut-hint">{vocabHint}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-scene-v2-shortcut home-scene-v2-shortcut--review"
+            onClick={isDevUser ? onOpenAccount : onStartTodayReview}
+          >
+            <span className="home-scene-v2-shortcut-icon home-scene-v2-shortcut-icon--character">
+              <ShioriCharacter variant="review" size="sm" />
+            </span>
+            <span className="home-scene-v2-shortcut-text">
+              <span className="home-scene-v2-shortcut-label">복습</span>
+              <span className="home-scene-v2-shortcut-hint">{reviewHint}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-scene-v2-shortcut home-scene-v2-shortcut--decks"
+            onClick={onGoToSharedDecks}
+          >
+            <span className="home-scene-v2-shortcut-icon">
+              <BookshelfIcon />
+            </span>
+            <span className="home-scene-v2-shortcut-text">
+              <span className="home-scene-v2-shortcut-label">덱</span>
+              <span className="home-scene-v2-shortcut-hint">{decksHint}</span>
+            </span>
+          </button>
+        </div>
+
+        {/* A small resting point on the desk, not a second illustration
+            competing with the notebook -- default variant, unchanged
+            component/art. */}
+        <span className="home-scene-v2-charm" aria-hidden="true">
+          <ShioriCharacter variant="default" size="md" />
+        </span>
+
+        <p className="home-scene-v2-privacy">
+          <ShieldIcon className="home-scene-v2-privacy-icon" />
           원문 전체는 서버에 저장하지 않아요.
         </p>
       </div>
