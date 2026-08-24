@@ -342,14 +342,17 @@ export function TokenDetailSheet({
   const label = token.surface || token.base_form;
 
   if (presentation === "pinned") {
-    // Desktop desk-scene: a persistent word-inspector sheet pinned beside
-    // the reader page (see .reader-inspector-rail / .bookmark-inspector-pinned
-    // in globals.css) -- not a dialog, nothing to trap focus in or dismiss
-    // via Escape-as-close. aria-live announces the swapped-in word to
-    // screen reader users who never move focus off the reader text itself.
+    // Phase 169 -- Desktop open-book scene: the word note pinned directly
+    // onto the book's right page (see .reading-page--right in
+    // ReaderMode.tsx), not a bordered panel-card floating beside it. No
+    // card chrome of its own (.reading-pinned-note is close to unstyled --
+    // the page pane's own padding/scroll already does the work); not a
+    // dialog, nothing to trap focus in or dismiss via Escape-as-close.
+    // aria-live announces the swapped-in word to screen reader users who
+    // never move focus off the reader text itself.
     return (
       <div
-        className="bookmark-inspector bookmark-inspector-pinned word-index-inspector paper-corner card-stack-surface"
+        className="reading-pinned-note"
         aria-label={`${label} 단어 정보`}
         aria-live="polite"
       >
@@ -358,10 +361,22 @@ export function TokenDetailSheet({
     );
   }
 
+  // Phase 169 -- mobile/tablet: a small floating note anchored to the
+  // bottom of the book scene (.reading-inspector-float), not a full-screen
+  // or near-full-height bottom sheet -- capped well under half the frame's
+  // height (see globals.css) so the original text stays visible above and
+  // around it instead of being pushed out or covered. The catcher behind it
+  // stays transparent (no dark scrim), same reasoning Phase 94 already
+  // established: dimming the reader text behind a "glance at the meaning"
+  // card fights the whole point of keeping it visible.
   return (
-    <div className="token-sheet-overlay" role="presentation" onClick={onClose}>
+    <div
+      className="reading-inspector-float-overlay"
+      role="presentation"
+      onClick={onClose}
+    >
       <div
-        className="bookmark-inspector word-index-inspector paper-corner card-stack-surface"
+        className="reading-inspector-float"
         role="dialog"
         aria-modal="true"
         aria-label={`${label} 단어 정보`}

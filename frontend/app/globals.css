@@ -200,6 +200,580 @@
   gap: 14px;
 }
 
+/* ==========================================================================
+   Phase 169 (Reading V2 Full Scene Reconstruction) -- Phases 119-122/150
+   built up a real "open book" illusion out of CSS/photo layers
+   (.reader-desk-scene's phase126 open-book-spread background, .reader-paper's
+   own separate paper-page-texture photo, .reader-start-scene reusing the
+   same photo again for the pre-analyze screen) stacked under an unrelated
+   DOM shape: a form card, then a reader card, a flat save-dock strip, and an
+   admin-style candidate drawer below it, each still reading as its own
+   panel once you looked past the shared wallpaper. This block replaces all
+   of that with one real photographed V2 open-book scene
+   (.reading-scene-v2-frame, a single full-bleed <picture> sized to the
+   photo's own aspect ratio -- a two-page desktop spread, a single-page
+   mobile shot, never one cropped from the other) and positions every live
+   piece -- source slip, reader text, pinned word note, save memo, candidate
+   tab -- as a % of that same frame. .reading-page is the one page-pane
+   primitive everything else composes from: an absolutely-positioned,
+   internally-scrolling box matching one ruled page's extent, so the book's
+   own aspect ratio never has to stretch to fit a long source text or a long
+   example sentence. */
+.reading-scene-v2-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: var(--screen-accent, var(--muted));
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.reading-scene-v2-eyebrow .shiori-mark {
+  width: 18px;
+  height: 18px;
+}
+
+.reading-scene-v2 {
+  position: relative;
+}
+
+.reading-scene-v2-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 941 / 1672;
+  isolation: isolate;
+}
+
+.reading-scene-v2-media {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.reading-scene-v2-media-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+@media (min-width: 1024px) {
+  .reading-scene-v2-frame {
+    aspect-ratio: 1672 / 941;
+  }
+
+  .reading-scene-v2-media-img {
+    border-radius: 26px;
+  }
+}
+
+/* One page pane = one physical page's worth of live content. Mobile: the
+   V2 photo shows a single page (plus a sliver of its neighbor, already
+   baked into the shot), so --left becomes that whole page and --right stays
+   unmounted. Desktop: the photo is a real two-page ruled spread, so --left/
+   --right are that book's two pages side by side. overflow-y:auto (not the
+   whole document scrolling) keeps the frame's own aspect ratio intact
+   regardless of source-text length. */
+.reading-page {
+  position: absolute;
+  z-index: 1;
+  left: 8%;
+  top: 6%;
+  width: 84%;
+  height: 84%;
+  overflow-y: auto;
+  padding: 3.5% 4%;
+}
+
+.reading-page--start {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.reading-page--right {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .reading-page--left {
+    left: 8%;
+    top: 8%;
+    width: 39%;
+    height: 82%;
+  }
+
+  .reading-page--right {
+    display: block;
+    left: 53%;
+    top: 8%;
+    width: 39%;
+    height: 82%;
+  }
+}
+
+/* Idle placeholder for the opposite page before any word is selected (or,
+   pre-analyze, before there's a reader page at all) -- a blank-note
+   Shiori guide standing in so the book scene never shows a lopsided single
+   page with dead space beside it. */
+.reading-page-idle {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  text-align: center;
+}
+
+.reading-page-idle .shiori-asset-img {
+  animation: shiori-idle-float 7s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------------
+   Reading source slip -- ReadingSourceSlip.tsx. One physical paper slip
+   resting on the page (torn-paper card, off the page's own ruled-line
+   material so the two layers stay visually distinct -- the exact "textarea
+   blends into the book" failure this phase was asked to fix), not a
+   bordered form card. Same component/markup for the first-visit blank page
+   and the collapsed re-edit tray (.reading-page-reedit-slip just adds a
+   dashed divider under it so it doesn't visually fuse with the reader text
+   below once a result exists).
+   --------------------------------------------------------------------- */
+.reading-page-reedit-slip {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--paper-border);
+}
+
+.reading-slip-form {
+  display: grid;
+  gap: 10px;
+}
+
+.reading-slip {
+  position: relative;
+  border-radius: 3px 16px 3px 16px;
+  background: rgba(253, 249, 238, 0.95);
+  box-shadow: 0 10px 22px rgba(37, 43, 30, 0.14);
+  padding: 16px 16px 14px;
+  transform: rotate(-0.5deg);
+}
+
+.reading-slip textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 130px;
+  border: none;
+  background: transparent;
+  resize: vertical;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.reading-slip textarea:focus {
+  outline: none;
+}
+
+.reading-slip textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+/* Small taped sticker pinned to the slip's corner (same quiet-link language
+   as Home's .home-cover-sample), not a boxed guide card. Only rendered
+   before any text exists, so it never competes with the user's own pasted
+   text once there is any. */
+.reading-slip-sample {
+  position: absolute;
+  top: -13px;
+  right: 14px;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 5px 12px;
+  border: 1px dashed rgba(217, 122, 74, 0.45);
+  border-radius: 999px;
+  color: var(--screen-accent, var(--accent));
+  background: rgba(217, 122, 74, 0.16);
+  font-size: 11.5px;
+  font-weight: 700;
+  box-shadow: none;
+  transform: rotate(-2deg);
+}
+
+.reading-slip-sample:not(:disabled):hover {
+  background: rgba(217, 122, 74, 0.24);
+  box-shadow: none;
+  transform: rotate(-2deg) translateY(-1px);
+}
+
+.reading-slip-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+}
+
+.reading-slip-cta {
+  width: auto;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.reading-slip-copyright {
+  margin-top: -2px;
+}
+
+@media (min-width: 1024px) {
+  .reading-slip textarea {
+    min-height: 210px;
+    font-size: 16px;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Progress/options page marker -- shrunk from a full toolbar row (title +
+   progress bar + percent + "옵션 열기") to one small pill, the "page
+   marker/bookmark tag" the brief asks for. Same options popover content as
+   before (display toggles, legend, nav, session management), just anchored
+   to this much smaller trigger instead of a dedicated row above the text.
+   --------------------------------------------------------------------- */
+.reading-progress-tag-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.reading-progress-tag {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  gap: 5px;
+  padding: 5px 10px 5px 8px;
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--screen-accent, var(--primary-dark));
+  font-size: 11.5px;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.16);
+}
+
+.reading-progress-tag .shiori-mark {
+  width: 14px;
+  height: 14px;
+}
+
+.reading-progress-tag-icon {
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
+  transition: transform var(--motion-fast) var(--ease-soft);
+}
+
+.reading-progress-tag-icon-open {
+  transform: rotate(180deg);
+}
+
+.reading-progress-tag-wrap .reader-mode-toggles {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  min-width: 220px;
+  max-width: min(300px, calc(100vw - 48px));
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  box-shadow: 0 14px 30px rgba(120, 98, 40, 0.12);
+  animation: app-slide-up var(--motion-fast) var(--ease-soft) both;
+}
+
+/* ---------------------------------------------------------------------
+   Word note shells -- TokenDetailSheet.tsx. TokenDetailContent's own
+   interior (word/reading/meaning/status stamps/meta/example/actions,
+   .token-note-*) is unchanged from Phase 120; only the outer shell changes
+   here. Pinned (desktop): the note sits directly on the book's right page,
+   no card chrome of its own -- .reading-page--right's padding/scroll
+   already does the work. Modal (mobile/tablet): a small floating note
+   anchored to the bottom of the frame, capped well under half its height
+   so the original text stays visible above/around it instead of being
+   pushed out or covered -- the overlay behind it stays transparent (no
+   dark scrim), same "keep reading while you glance at the meaning" reasoning
+   Phase 94 already established for the old sheet.
+   --------------------------------------------------------------------- */
+.reading-pinned-note {
+  position: relative;
+}
+
+.reading-inspector-float-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 4% calc(4% + env(safe-area-inset-bottom));
+  animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
+}
+
+.reading-inspector-float {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: 50%;
+  overflow-y: auto;
+  border-radius: 18px 18px 6px 6px;
+  padding: 18px 16px 16px;
+  background-color: var(--panel-bg);
+  box-shadow: 0 -10px 26px rgba(120, 98, 40, 0.3);
+  animation: app-slide-up var(--motion-base) var(--ease-soft) both;
+  scrollbar-width: thin;
+}
+
+.reading-inspector-float::-webkit-scrollbar {
+  width: 8px;
+}
+
+.reading-inspector-float::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.reading-inspector-float::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------
+   Save memo -- a small receipt-like tag pinned to the scene, not a docked
+   admin bar under the book. Absolutely positioned within the frame itself
+   (not inside a scrolling .reading-page), so it stays reachable regardless
+   of how far the reader has scrolled the source text.
+   --------------------------------------------------------------------- */
+.reading-save-memo {
+  position: absolute;
+  z-index: 3;
+  right: 3%;
+  bottom: 3%;
+  width: min(210px, 42%);
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 3px 14px 14px 3px;
+  background: rgba(253, 249, 238, 0.96);
+  box-shadow: 0 10px 22px rgba(120, 98, 40, 0.2);
+  font-size: 11px;
+}
+
+@media (min-width: 1024px) {
+  .reading-save-memo {
+    width: 210px;
+  }
+}
+
+.reading-save-memo-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.reading-save-memo-count strong {
+  color: var(--screen-accent, var(--primary-dark));
+  font-size: 13px;
+}
+
+.reading-save-memo-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--screen-accent, var(--accent));
+}
+
+.reading-save-memo-saveable {
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reading-save-memo-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.reading-save-memo-message {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.reading-save-memo-message--success {
+  color: var(--success);
+}
+
+.reading-save-memo-message--error {
+  color: var(--danger);
+}
+
+.reading-save-memo-message--info {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.reading-save-memo-button {
+  width: 100%;
+  justify-content: center;
+  padding: 8px 14px;
+  font-size: 12px;
+}
+
+.reading-save-memo-study {
+  background: var(--tone-ink-green);
+}
+
+.reading-save-memo-link {
+  justify-self: start;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  box-shadow: none;
+}
+
+.reading-save-memo-link:not(:disabled):hover {
+  color: var(--screen-accent, var(--accent));
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ---------------------------------------------------------------------
+   Candidate tab/panel -- ReadingVocabPanel.tsx. A physical pull-tab
+   clipped to the book's outer edge (the pink hue echoes the mobile V2
+   photo's own sticky bookmark tab in that exact spot), not an admin-drawer
+   handle spanning the page width. Opening it slides a panel out from the
+   same edge; every control/list class inside the panel below the header
+   (.reading-vocab-controls through .reading-vocab-sticker-*) is unchanged
+   from before this phase.
+   --------------------------------------------------------------------- */
+.reading-candidate-tab {
+  position: absolute;
+  z-index: 4;
+  right: 0;
+  top: 30%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  gap: 3px;
+  padding: 10px 7px;
+  border-radius: 10px 0 0 10px;
+  background: #f3c7d6;
+  color: #7a3b4b;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: -4px 4px 10px rgba(120, 98, 40, 0.18);
+  transition:
+    transform var(--motion-fast) var(--ease-soft),
+    background-color var(--motion-fast) var(--ease-soft);
+}
+
+.reading-candidate-tab:not(:disabled):hover {
+  transform: translateX(-2px);
+  box-shadow: -6px 5px 14px rgba(120, 98, 40, 0.24);
+}
+
+.reading-candidate-tab-open {
+  background: #eab0c3;
+}
+
+.reading-candidate-tab-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.reading-candidate-panel {
+  position: absolute;
+  z-index: 4;
+  right: 3%;
+  top: 6%;
+  bottom: 6%;
+  width: min(320px, 82%);
+  overflow-y: auto;
+  padding: 14px 14px 16px;
+  border-radius: 14px;
+  background: rgba(253, 249, 238, 0.98);
+  box-shadow: 0 14px 30px rgba(120, 98, 40, 0.26);
+  animation: app-slide-up var(--motion-fast) var(--ease-soft) both;
+}
+
+@media (min-width: 1024px) {
+  .reading-candidate-panel {
+    width: min(340px, 42%);
+  }
+}
+
+.reading-candidate-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.reading-candidate-panel-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.reading-candidate-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--soft-bg);
+  box-shadow: none;
+}
+
+.reading-candidate-panel-close-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--muted);
+}
+
 .analyze-panel {
   --screen-accent: var(--tone-coral);
   --screen-accent-soft: #f7e9e2;
@@ -4386,260 +4960,6 @@ select {
   transform: none;
 }
 
-/* Open-page input area -- once a reading result exists, this becomes the
-   compact "원문 수정" editor under the reader, and stays deliberately
-   un-boxed there (reader/action-dock/candidate-drawer below already read as
-   three distinct card weights; a 4th bordered rectangle here would be one
-   too many). Before any result exists, ReaderStartScene (its own
-   .reader-start-scene rules further below) owns the whole first-visit
-   screen instead -- this class is Reading's collapsed post-analysis
-   re-edit tray only now (plus Analyze's own unrelated "원문" card, which
-   also reuses .reading-input-open/-header/-title). */
-.reading-input-open {
-  display: grid;
-  gap: 12px;
-  padding: 4px 2px 18px;
-  border-bottom: 1px dashed var(--paper-border);
-}
-
-/* Once a text is open, the page should lead with the reading paper instead
-   of the edit form. The form remains available as a quiet manuscript tray
-   below the reader so behavior and recovery paths stay unchanged. */
-.reading-panel--has-result .reading-input-open {
-  order: 2;
-  padding: 14px 16px;
-  border: 1px dashed var(--paper-border);
-  border-radius: 18px;
-  background:
-    linear-gradient(90deg, rgba(47, 100, 112, 0.08), transparent 32px),
-    rgba(255, 252, 242, 0.62);
-}
-
-.reading-panel--has-result .reader-workspace {
-  order: 1;
-}
-
-.reading-panel--has-result .reading-input-open textarea {
-  min-height: 92px;
-  font-size: 15px;
-  line-height: 1.65;
-}
-
-/* .reading-note-sheet -- wraps the collapsed post-analysis tray's textarea.
-   Undecorated (no tape/accent) -- only the old .reader-start-card variant
-   (removed in Phase 121) ever added washi-tape corners here; this plain
-   version is now the only one. */
-.reading-note-sheet {
-  position: relative;
-}
-
-/* Phase 121 -- reader-start-scene: the pre-analyze screen. Previously
-   .reader-start-card was its own bordered/shadowed form card (26px
-   radius, ring-spine binding, a whole AppEmptyState guide block) -- warmer
-   than a bare form, but still structurally "card with a header, a field,
-   and a footer". This reuses the exact open-book language Phase 119 built
-   for the analyzed result (.reader-desk-scene's border/shadow/paper
-   background) instead: bare on mobile (title/textarea sit straight on the
-   page, like .reader-text does once a result exists), the same bordered
-   paper surface at >=1024px. Arriving at Reading and finishing an
-   analysis now read as the same notebook throughout, not two unrelated
-   card systems. */
-.reader-start-scene {
-  position: relative;
-  display: grid;
-  gap: 14px;
-  padding: 4px 2px 18px;
-}
-
-@media (min-width: 1024px) {
-  /* Phase 126 -- same open-book-spread photo as .reader-desk-scene, so
-     arriving at Reading and finishing an analysis sit on the literal same
-     photographed notebook, not a flat-fill wrapper that only *becomes* a
-     photo once a result exists. */
-  .reader-start-scene {
-    gap: 20px;
-    padding: 30px;
-    border: 1px solid var(--paper-border);
-    border-top: 2px solid var(--screen-accent, var(--accent));
-    border-radius: 20px;
-    background-color: var(--paper-bg);
-    background-image: url("/brand/decor/phase126/open-book-spread-web.webp");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    box-shadow: 0 16px 36px var(--paper-shadow);
-  }
-}
-
-.reader-start-heading {
-  display: grid;
-  gap: 4px;
-}
-
-.reader-start-title {
-  margin: 0;
-  color: var(--text);
-  max-width: 560px;
-  font-size: clamp(22px, 3.4vw, 30px);
-  font-weight: 800;
-  line-height: 1.3;
-}
-
-.reader-start-subtitle {
-  margin: 0;
-  max-width: 480px;
-  color: var(--muted);
-  font-size: 13.5px;
-}
-
-.reader-start-form {
-  display: grid;
-  gap: 14px;
-}
-
-/* The textarea itself IS the page -- ruled-line texture matching
-   .reader-text's notebook paper, no boxed field border, generous reading-
-   sized type -- "원문을 붙인 종이", not a form control. */
-.reader-start-page {
-  position: relative;
-}
-
-/* Phase 126 -- real photographed ruled-paper texture instead of the fake
-   repeating-gradient ruled lines, so the blank input page is the same
-   material as the reader/start-scene photo elsewhere in Reading.
-   background-color is the old gradient's base tone, kept as a fallback if
-   the image fails to load. */
-.reader-start-page textarea {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 220px;
-  border: none;
-  border-radius: 12px;
-  padding: 20px;
-  background-color: var(--paper-bg);
-  background-image: url("/brand/decor/phase126/paper-page-texture-web.webp");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  color: var(--text);
-  font-size: 17px;
-  line-height: 2;
-}
-
-/* Phase 137 -- no ::placeholder rule existed here before; the browser's own
-   default rendered this sample line nearly as dark/heavy as real typed
-   text (per Phase 136's audit), so an empty page read as "already has a
-   sentence on it" rather than "waiting for one". var(--muted) (the app's
-   existing de-emphasized-text token, already used for hint copy elsewhere)
-   plus a touch of extra opacity on top is enough to read as a light guide
-   line without going so faint it stops looking legible. Scoped to this one
-   textarea's own ::placeholder only -- .reading-note-sheet's re-edit
-   textarea (post-analysis manuscript tray) shares the same placeholder
-   string but is untouched, and real typed/sample-loaded text (the
-   textarea's own `color` above) is a completely separate rule, never
-   touched by this one. */
-.reader-start-page textarea::placeholder {
-  color: var(--muted);
-  opacity: 0.68;
-}
-
-.reader-start-page textarea:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 1.5px var(--screen-accent, var(--primary));
-}
-
-@media (min-width: 1024px) {
-  .reader-start-page textarea {
-    min-height: 260px;
-    font-size: 18px;
-    /* Phase 150 -- below 1024px this textarea's photographed paper is the
-       *only* page surface on screen (.reader-start-scene has no photo of
-       its own there), so it reads fine as "this is a page". At 1024px+ it
-       now sits on top of .reader-start-scene's own open-book-spread photo
-       (added Phase 126) -- both were the same photographed paper family,
-       which is exactly the "textarea blends into the book" the phase
-       brief flags. Switched to a flatter, lighter, ruled surface with its
-       own inset shadow instead: a real material difference (matte pasted
-       sheet vs. the busier photo grain around it), not just a slightly
-       different photo crop. */
-    background-color: var(--panel-bg);
-    background-image: repeating-linear-gradient(
-      180deg,
-      rgba(61, 47, 20, 0.06) 0px,
-      rgba(61, 47, 20, 0.06) 1px,
-      transparent 1px,
-      transparent 34px
-    );
-    box-shadow:
-      inset 0 3px 10px rgba(37, 43, 30, 0.12),
-      0 2px 6px rgba(37, 43, 30, 0.08);
-  }
-
-  .reader-start-page textarea:focus {
-    box-shadow:
-      inset 0 3px 10px rgba(37, 43, 30, 0.12),
-      inset 0 0 0 1.5px var(--screen-accent, var(--primary));
-  }
-}
-
-/* Sample CTA -- a small taped sticker pinned to the page's corner (same
-   quiet-link language as Home's .home-cover-sample), not a boxed guide
-   card with its own illustration/headline. Only rendered before any text
-   exists (see ReadingTab.tsx), so it never competes with the user's own
-   pasted text once there is any. width/min-height explicit -- otherwise
-   the app-wide mobile button{width:100%} touch-target rule stretches this
-   into a full-width bar instead of a small corner sticker (same fix
-   .token-note-action-chip needed in Phase 120). */
-.reader-start-sample-link {
-  position: absolute;
-  /* Negative top -- sits just above the textarea's own top edge (like a
-     tape flag clipped to the page), not inset inside its text content
-     area. Placeholder text reflows at different widths per viewport, so
-     an inset position (the first cut, top:10px) could collide with the
-     placeholder's wrapped first line at some widths (seen at 390px) even
-     though it never collides with the user's own real typed text (the
-     sticker is unmounted once text.trim() is truthy). This is
-     width-independent. */
-  top: -14px;
-  right: 14px;
-  flex: 0 0 auto;
-  width: auto;
-  min-width: 0;
-  min-height: 0;
-  padding: 5px 12px;
-  border: 1px dashed rgba(217, 122, 74, 0.45);
-  border-radius: 999px;
-  color: var(--screen-accent, var(--accent));
-  background: rgba(217, 122, 74, 0.16);
-  font-size: 12px;
-  font-weight: 700;
-  box-shadow: none;
-  transform: rotate(-2deg);
-}
-
-.reader-start-sample-link:not(:disabled):hover {
-  background: rgba(217, 122, 74, 0.24);
-  box-shadow: none;
-  transform: rotate(-2deg) translateY(-1px);
-}
-
-/* Phase 150 -- Reading Full Surface Correction. The analyze CTA used to
-   be a full-width decisive bar (`width: 100%`, matching Home's cover CTA
-   weight) -- against a real screenshot, that read as a long grey admin
-   action bar cutting across the open book's center, not a stationery
-   action sitting on the page. The footer is now a plain row: the deck
-   picker (a small paper tag, see .reading-deck-picker below) on one side,
-   a small notched bookmark CTA on the other -- neither stretches, so
-   nothing crosses the book. flex-wrap so a very narrow viewport drops the
-   CTA to its own line instead of forcing an overflow. */
-.reader-start-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 14px;
-}
-
 /* .reader-bookmark-button -- shared small notched CTA for Reading's own
    "원문 펼치기"/save/review actions (.reader-start-cta, .reading-open-
    button, .save-dock-primary-button, .reading-summary-cta-ready below),
@@ -4697,51 +5017,6 @@ select {
   box-shadow: none;
 }
 
-/* .reader-start-cta is now sized/positioned by .reader-bookmark-button
-   above -- this just opts it out of the app-wide mobile
-   `button { width: 100% }` touch-target rule (a bare class selector beats
-   the bare element selector regardless of source order) explicitly, per
-   this phase's own mobile requirement, rather than relying on it as a
-   side effect of omitting width elsewhere. */
-.reader-start-cta {
-  width: auto;
-  min-width: 0;
-  font-size: 15px;
-}
-
-.reader-start-copyright {
-  margin-top: -2px;
-}
-
-.reading-input-open-header {
-  display: grid;
-  gap: 2px;
-}
-
-.reading-input-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--screen-accent, var(--muted));
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-}
-
-.reading-input-eyebrow .shiori-mark {
-  width: 18px;
-  height: 18px;
-}
-
-.reading-input-open-title {
-  margin: 0;
-  color: var(--text);
-  max-width: 560px;
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.35;
-}
-
 .sr-only-label {
   position: absolute;
   width: 1px;
@@ -4752,36 +5027,6 @@ select {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-.reading-input-open .analyze-form {
-  border: none;
-  box-shadow: none;
-  padding: 0;
-  background: transparent;
-}
-
-.reading-input-open textarea {
-  border: none;
-  border-bottom: 2px solid var(--border-strong);
-  border-radius: 0;
-  padding: 10px 2px 16px;
-  background: transparent;
-  font-size: 18px;
-  line-height: 1.9;
-}
-
-.reading-input-open textarea:focus {
-  border-bottom-color: var(--screen-accent, var(--primary));
-  outline: none;
-}
-
-.reading-input-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
 }
 
 /* Phase 150 -- was an underline-only field (no fill, a bottom rule only).
@@ -4839,16 +5084,6 @@ select {
   font-size: 13px;
 }
 
-.reading-open-button {
-  flex: 0 0 auto;
-}
-
-.reading-input-open .copyright-note {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
 .reading-storage-warning {
   margin: 0;
   font-size: 12px;
@@ -4895,68 +5130,6 @@ select {
   justify-self: start;
 }
 
-/* Candidate Drawer (also carries the .candidate-drawer semantic co-class,
-   see ReadingVocabPanel.tsx) -- the 4th and lightest treatment in the
-   reading tab's box hierarchy (hero reader > flat save-dock > this drawer
-   pull). Closed state has no card chrome at all, just a flush row that
-   reads as a drawer handle; opening it reveals content below a hairline
-   rule instead of inside a bordered box, so the "어휘 후보" list never
-   competes with the reader for visual weight.
-
-   Phase 101 -- pulled the handle itself down another notch (thinner
-   hairline, smaller icon/chevron, regular instead of bold weight, tighter
-   padding) so it reads as a quiet list handle sitting under the save dock,
-   not a second panel heading of comparable weight to "어휘 노트 보기"
-   above it. Open/close behavior and the label text are unchanged. */
-.reading-vocab-drawer {
-  border-top: 1px dashed var(--paper-border);
-}
-
-.reading-vocab-drawer-open {
-  padding-bottom: 4px;
-}
-
-.reading-vocab-drawer-pull {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 6px;
-  border-radius: 8px;
-  color: var(--muted);
-  background: transparent;
-  box-shadow: none;
-  font-size: 11.5px;
-  font-weight: 600;
-  text-align: left;
-  transition: background-color var(--motion-fast) var(--ease-soft);
-}
-
-.reading-vocab-drawer-pull:not(:disabled):hover {
-  color: var(--text);
-  background: var(--soft-bg);
-  box-shadow: none;
-  transform: none;
-}
-
-.reading-vocab-drawer-pull-icon {
-  flex: 0 0 auto;
-  width: 12px;
-  height: 12px;
-  color: var(--screen-accent, var(--muted));
-}
-
-.reading-vocab-drawer-pull-label {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.reading-vocab-drawer-body {
-  display: grid;
-  gap: 12px;
-  padding: 0 4px 6px;
-}
-
 .reading-vocab-drawer-hint {
   margin: 0;
   color: var(--muted);
@@ -4972,14 +5145,6 @@ select {
 
 .reading-vocab-collapse-icon-collapsed {
   transform: rotate(-90deg);
-}
-
-/* Phase 101 -- shrink just the candidate-tray pull's own chevron; the base
-   .reading-vocab-collapse-icon class above is shared with VocabSection.tsx's
-   "더보기" toggle, which is out of scope here. */
-.reading-vocab-drawer-pull .reading-vocab-collapse-icon {
-  width: 12px;
-  height: 12px;
 }
 
 /* Casual Sticker Reader (Phase 56) -- search/filters/quick-select read as
@@ -5558,269 +5723,12 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 
-/* Save Dock -- sits right under the reader page. A dashed top rule, no
-   fill of its own -- echoes the notebook-ring spine's dash rhythm so it
-   reads as a shelf attached under the reader page, not a fourth admin
-   panel stacked below it. Phase 114 removed .reader-workspace's own
-   backdrop tint behind it; Phase 150 gave the count row its own memo-
-   strip surface (below) so the dock as a whole no longer needs its own
-   fill to read as a distinct object. */
-.reading-action-dock {
-  display: grid;
-  gap: 10px;
-  margin-top: 4px;
-  padding: 14px 4px 4px;
-  border: none;
-  border-top: 2px dashed var(--paper-border);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-/* Phase 150 -- reading-selected-memo-strip.webp (frontend/public/brand/
-   decor/phase145/, reserved by Phase 145's own rebuild plan for exactly
-   this spot: "선택한 단어는 loose memo strip 위에") is the real object
-   here, not decoration behind it -- its torn-paper shape and taped
-   corners are what make this row read as "a loose memo strip", not the
-   live text sitting on top of it. Percentage padding (not a fixed px
-   value) keeps the live count/badges clear of the image's own tape/ring-
-   hole art at any container width, the same "don't depend on a fixed
-   crop" fix Phase 149 already applied to Vocab's index tabs.
-   background-size: 100% 100% deliberately stretches non-uniformly rather
-   than cropping -- the source is a very long, mostly-blank strip (~13%
-   decorated at each end), so a full stretch keeps both taped ends
-   visible at any width instead of `cover` cropping one off.
-   background-color is the flat paper tone as a fallback if the image
-   fails to load. */
-.save-dock-memo-strip {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: 72px;
-  padding: 14px 13%;
-  background-color: var(--soft-bg);
-  background-image: url("/brand/decor/phase145/reading-selected-memo-strip.webp");
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-}
-
-@media (min-width: 1024px) {
-  .save-dock-memo-strip {
-    min-height: 84px;
-  }
-}
-
-/* Casual Sticker Reader (Phase 65) -- the primary CTA/idle-hint's own row,
-   now separate from the memo strip above (Phase 150). Stays a stacked
-   column below 1024px (phones/tablets), unchanged from before this
-   Phase. */
-.save-tray-shelf-row {
-  display: grid;
-  gap: 10px;
-}
-
-@media (min-width: 1024px) {
-  .save-tray-shelf-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-  }
-
-  .save-tray-shelf-row .save-dock-primary-button {
-    width: auto;
-  }
-
-  .save-tray-shelf-row .save-dock-idle-hint {
-    flex: 1 1 auto;
-  }
-}
-
-.save-dock-count {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.save-dock-count strong {
-  color: var(--screen-accent, var(--primary-dark));
-  font-size: 16px;
-}
-
-/* The count itself as a small filled badge (not just bold text) so "담은
-   단어가 0개일 때 vs N개일 때" reads as a different shape, not just a
-   different number. */
-.save-dock-count-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--screen-accent-soft, var(--soft-bg));
-}
-
-.save-dock-saveable-chip {
-  padding: 2px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--soft-bg);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.save-dock-icon {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  color: var(--screen-accent, var(--accent));
-}
-
-.save-dock-primary-button {
-  width: 100%;
-}
-
-/* Idle state (nothing in the basket yet) -- swaps the full-width primary
-   save button for a quiet one-line hint, so the dock doesn't sit there as
-   a big disabled button before there's anything to save. */
-.save-dock-idle-hint {
-  margin: 0;
-  font-size: 12.5px;
-}
-
-.save-tray-header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.save-tray-count-badge {
-  flex: 0 0 auto;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: var(--screen-accent-soft, var(--soft-bg));
-  color: var(--screen-accent, var(--primary-dark));
-  font-size: 12px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.save-tray-primary-button {
-  width: 100%;
-}
-
-.reading-summary-hint {
-  margin: 8px 0 0;
-  font-size: 13px;
-}
-
-/* Save-success next steps ("저장한 단어로 바로 학습" / "단어장 보기") --
-   set apart from the save buttons above so the natural next action reads
-   clearly once saving is done. */
-.reading-summary-next-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-
-.reading-summary-cta-button {
-  flex: 1 1 200px;
-}
-
-/* Post-save state: the study CTA is the one obvious next step, so it takes
-   more of the row than the vocab-note link beside it and gets a soft accent
-   ring to lift it off the dock's own panel fill. */
-.reading-summary-cta-ready {
-  flex: 2 1 240px;
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.16);
-}
-
-/* Phase 102 -- "어휘 노트 보기" leaves the reading tab entirely (it's a jump
-   to another tab, not a step in the reading -> save -> review loop), so it
-   shouldn't compete with the actual save/study buttons for button-shaped
-   attention at any viewport, not just on the compact mobile sheet the way
-   Phase 100's inspector actions were. Demoted from a bordered
-   ghost/secondary button to a plain underlined text action -- same
-   callback, same position, no chrome. Width stays intrinsic (not the
-   stretched full-width every plain <button> gets at 640px) so it reads as
-   a link sitting next to (or under) the real CTA, never as a second
-   stacked action bar. */
-.reading-summary-link-button {
-  flex: 0 0 auto;
-  width: auto;
-  min-width: 0;
-  min-height: 0;
-  border: none;
-  border-radius: 0;
-  padding: 6px 2px;
-  color: var(--muted);
-  background: transparent;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  box-shadow: none;
-}
-
-.reading-summary-link-button:not(:disabled):hover {
-  color: var(--screen-accent, var(--accent));
-  background: transparent;
-  box-shadow: none;
-  transform: none;
-}
-
-/* Phase 93 -- before this, a single button here (the common case: nothing
-   saved yet, only "어휘 노트 보기" showing) stretched via flex-grow to the
-   full 944px reader-paper width on desktop, reading as another full-width
-   admin action bar rather than a shelf-strip link. Caps growth instead of
-   removing it entirely -- once a second button appears (post-save) they
-   still share the row side by side, same as before. Desktop-only: mobile
-   keeps the app-wide `button { width: 100% }` touch-target rule.
-   Phase 93 follow-up -- scoped with the `.reading-action-dock` ancestor
-   (not just the bare class) so this wins on specificity alone: it no
-   longer matters whether this block sits before or after the plain
-   `.reading-summary-cta-button`/`.reading-summary-cta-ready` rules above,
-   since a same-specificity same-media-query ordering dependency was
-   flagged as fragile. */
-@media (min-width: 1024px) {
-  .reading-action-dock .reading-summary-next-actions {
-    justify-content: flex-start;
-  }
-
-  .reading-action-dock .reading-summary-cta-button {
-    flex: 0 1 260px;
-  }
-
-  .reading-action-dock .reading-summary-cta-ready {
-    flex: 0 1 300px;
-  }
-}
-
-.reading-summary-message {
-  margin: 0;
-}
-
 /* Save-success gets Shiori's small ShioriStamp instead of the generic
    .message::before checkmark -- reused on both the reading save-success
-   message and the deck-import success message. Swaps the icon rather than
-   showing both. */
+   message and the deck-import success message (SharedDeckSection.tsx).
+   Swaps the icon rather than showing both. */
 .message-stamped::before {
   display: none;
-}
-
-.reading-summary-message-stamp {
-  margin-top: -3px;
 }
 
 .stats-panel {
@@ -10507,452 +10415,26 @@ input.reading-vocab-sticker-toggle:checked {
 
 /* Reader mode */
 
-/* Phase 114 -- demoted from a bordered/shadowed "stage" box (with a dashed
-   ring-spine down the left edge binding its contents into one card) to a
-   plain layout container. Against the mockup, the reader page is the desk
-   scene's own artifact, not a panel sitting on top of it -- wrapping it
-   (plus the save dock and candidate tray) in a second card read as "a card
-   inside the board" and duplicated the paper texture .page already
-   provides underneath. ReaderPaper/ReaderSaveDock/CandidateDrawer each
-   already carry their own distinct material (page, dashed shelf strip,
-   sticker-tray drawer), so gap alone is enough to read them as three
-   related desk objects without an enclosing box or a connecting spine
-   line. See DESIGN.md Phase 114. */
-.reader-workspace {
-  position: relative;
-  display: grid;
-  gap: 20px;
-}
-
-@media (min-width: 1024px) {
-  /* Phase 119 -- tighter than the 20px mobile gap so the save dock/
-     candidate tray read as a shelf attached under the open book rather
-     than a separate block floating a full section-gap below it. */
-  .reader-workspace {
-    gap: 12px;
-  }
-}
-
-/* Casual Sticker Reader (Phase 65) -- reader-desk-scene: the reader page
-   (.reader-paper) and the pinned word inspector (.reader-inspector-rail)
-   share one desk surface. Below 1024px this is a plain block (single
-   column, unchanged from before this Phase); at 1024px+ it becomes a real
-   2-column grid, so the inspector is a permanent part of the same scene
-   instead of something that floats on top of it. Keep this breakpoint in
-   sync with ReaderMode.tsx's isDesktopPinned matchMedia query and with
-   .reader-inspector-rail/.bookmark-inspector-pinned below. */
-.reader-desk-scene {
-  position: relative;
-  min-width: 0;
-}
-
-/* Phase 119 -- at 1024px+ this is now the one shared "open book" card: the
-   reader page and the pinned inspector used to be two separate bordered/
-   shadowed cards sitting side by side with a visible gap between them,
-   which read as "two panels" rather than the mockup's single open-book
-   spread. The border/shadow/radius/paper background that used to live on
-   .reader-paper moves up to this shared wrapper instead (gap dropped to 0
-   so nothing shows through the seam); .reader-paper keeps only its own
-   rounded left corners (so its ruled-line background still clips cleanly)
-   and .reader-inspector-rail grows a left border standing in for the
-   book's center fold -- see both below. */
-@media (min-width: 1024px) {
-  /* Phase 126 -- a real photographed open-book two-page spread (ruled
-     lines, deckled page edges, its own soft center crease) replaces the
-     flat var(--paper-bg) fill, so this reads as an actual open notebook
-     the reader/inspector content sits on top of, not a card with a paper-
-     colored background. background-color is the old flat fill, kept as a
-     fallback if the image fails to load. */
-  .reader-desk-scene {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
-    align-items: stretch;
-    gap: 0;
-    border: 1px solid var(--paper-border);
-    border-top: 2px solid var(--screen-accent, var(--accent));
-    border-radius: 20px;
-    background-color: var(--paper-bg);
-    background-image: url("/brand/decor/phase126/open-book-spread-web.webp");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    box-shadow: 0 16px 36px var(--paper-shadow);
-  }
-}
-
-/* Phase 74 -- Reading's own desk prop layer, same recipe as Home's
-   (Phase 73: pure CSS shapes on plain spans, no new images), but lighter
-   and without the plant/cup -- this is a focused work surface, not a
-   welcome scene, so just a pen, a clip, and a small paper scrap. Offsets
-   stay within .page's own side padding (30px at this tier) so bleeding
-   past .reader-desk-scene's own box can never cause real horizontal
-   overflow. display:none below 1024px; .reader-paper/.reader-inspector-
-   rail already carry their own tape-corner decoration, so these sit at
-   the scene's *outer* edges rather than layering onto those corners. */
-.reader-desk-props {
-  display: none;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-@media (min-width: 1024px) {
-  .reader-desk-props {
-    display: block;
-  }
-}
-
-.reader-desk-prop {
-  position: absolute;
-  display: block;
-}
-
-.reader-desk-prop--pen {
-  bottom: 6px;
-  left: -18px;
-  width: 70px;
-  height: 10px;
-  transform: rotate(-28deg);
-}
-
-.reader-desk-prop--pen::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    var(--tone-ink-brown) 0%,
-    var(--tone-ink-brown) 78%,
-    #d9b46a 78%,
-    #d9b46a 100%
-  );
-  box-shadow: 0 3px 6px rgba(37, 43, 30, 0.18);
-}
-
-/* A small paperclip: two nested rounded-rectangle rings (border only, no
-   fill) so the "clip" reads as wire, not a solid sticker. */
-.reader-desk-prop--clip {
-  top: 10px;
-  left: -16px;
-  width: 18px;
-  height: 28px;
-}
-
-.reader-desk-prop--clip::before,
-.reader-desk-prop--clip::after {
-  content: "";
-  position: absolute;
-  border: 2.5px solid var(--tone-dusty-blue);
-  border-radius: 8px;
-}
-
-.reader-desk-prop--clip::before {
-  inset: 0;
-}
-
-.reader-desk-prop--clip::after {
-  top: 5px;
-  right: 3px;
-  bottom: 8px;
-  left: 3px;
-  border-color: var(--tone-dusty-blue);
-}
-
-.reader-desk-prop--scrap {
-  bottom: 4px;
-  right: -14px;
-  width: 24px;
-  height: 17px;
-  background: var(--panel-bg);
-  border: 1px solid var(--paper-border);
-  transform: rotate(-7deg);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-}
-
-/* reader-inspector-rail -- hidden below 1024px (mobile/tablet keep the
-   existing tap-to-open bottom sheet instead, rendered outside this scene
-   entirely). At 1024px+ it's a sticky column that holds either the idle
-   guide or the pinned word card, so scrolling the reader page keeps the
-   inspector in view the way a note pinned to an open notebook page would. */
-.reader-inspector-rail {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .reader-inspector-rail {
-    display: block;
-    position: sticky;
-    top: 24px;
-    /* Phase 119 -- was align-self: start (the column's own box only as
-       tall as its content). Stretched to the shared row height instead so
-       the spine below runs the merged book's full height even when the
-       pinned card itself is short -- CSS Grid resolves a sticky item's
-       scroll-containing-block from its *grid area* regardless of
-       align-self, so this is a background/visual change only and doesn't
-       touch how far the card travels while sticking. */
-    align-self: stretch;
-    /* Phase 122 -- z-index:1 makes this its own stacking context, so the
-       ::before/::after spine layers below (both z-index:-1, confined to
-       this context) paint as one unit above .reader-paper's plain
-       background where they bleed leftward across the column boundary,
-       without needing to fight reader-desk-props (z-index:0) for
-       priority. */
-    z-index: 1;
-    /* No padding-left here -- the spine graphics below live entirely in
-       negative-offset space (left:-26px / -1.5px on the pseudo-elements),
-       taken out of flow, so they need no room reserved in the rail's own
-       box. Content clearance from the spine is .bookmark-inspector-pinned/
-       .reader-inspector-idle's own left padding instead (see both further
-       down), since those are the boxes that actually need to keep their
-       real content clear of it. */
-  }
-
-  /* Phase 122 built a CSS gutter shadow here (wide gradient band standing
-     in for the page valley) -- Phase 126 removed it. .reader-desk-scene's
-     background is now a real photographed open-book spread with its own
-     center crease baked in; that crease doesn't land at this exact column
-     boundary (the grid is an asymmetric ~1fr/300-340px split, not the
-     photo's symmetric 50/50 page split), so keeping a second CSS-drawn
-     "gutter" at the real boundary would have read as two conflicting
-     seams instead of one. The stitch-tick column (::after) and the brass
-     spine-clip below still stay -- both are small, discrete binding
-     hardware, not a big background band, so they layer over the photo
-     fine regardless of where its own crease falls. */
-
-  /* The stitches: a narrow repeating tick column pinned exactly on the
-     page boundary, like a notebook's ring/stitch line seen edge-on.
-     Confined to a 3px strip (not the wider ::before band) so it reads as
-     a distinct thread, not a blur. */
-  .reader-inspector-rail::after {
-    content: "";
-    position: absolute;
-    top: 18px;
-    bottom: 18px;
-    left: -1.5px;
-    width: 3px;
-    z-index: -1;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      180deg,
-      rgba(110, 91, 47, 0.4) 0,
-      rgba(110, 91, 47, 0.4) 3px,
-      transparent 3px,
-      transparent 21px
-    );
-  }
-}
-
-/* Phase 74 -- small cascading index-tabs along the rail's outer edge,
-   echoing the mockup's tabbed-folder look on the pinned inspector. A
-   sibling span (see ReaderMode.tsx), not a pseudo-element on
-   TokenDetailSheet's own div -- that element already stacks
-   bookmark-inspector/paper-corner/card-stack-surface, all contesting the
-   same ::before/::after slots (see Phase 73's postmortem on this exact
-   failure mode), so this renders identically for the pinned card and the
-   idle guide alike instead of fighting for one of their pseudo-elements.
-   .reader-inspector-rail's own position:sticky already provides the
-   positioning context. box-shadow (not extra spans) draws the 2nd/3rd
-   tabs -- one element, three colors, no extra DOM. */
-.reader-inspector-tabs {
-  position: absolute;
-  top: 36px;
-  right: -6px;
-  z-index: 1;
-  width: 10px;
-  height: 22px;
-  background: var(--accent);
-  border-radius: 4px 0 0 4px;
-  box-shadow:
-    0 34px 0 0 var(--sage-green),
-    0 68px 0 0 var(--tone-dusty-blue);
-  pointer-events: none;
-}
-
-/* Phase 122 -- small brass paper-fastener straddling the spine near the
-   top, the one "binding hardware" detail from the brief's list that reads
-   better as an actual small object than another gradient layer on
-   .reader-inspector-rail's own ::before/::after (both already spoken for
-   above). A round brad, not a clip -- flat circular head with an off-
-   center highlight (radial-gradient) and a darker rim (the same recipe
-   .reader-desk-prop--pen already uses for a metal/painted-wood read), plus
-   a tiny center rivet dot. Centered exactly on the page boundary
-   (left:-7px against a 14px width) so it visually pins both pages
-   together. display:none below 1024px -- .reader-inspector-rail itself is
-   already hidden there, but this stays explicit for clarity. */
-.reader-spine-clip {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .reader-spine-clip {
-    display: block;
-    position: absolute;
-    top: -9px;
-    left: -7px;
-    z-index: 2;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background:
-      radial-gradient(
-        circle at 35% 30%,
-        rgba(255, 244, 214, 0.9) 0%,
-        rgba(255, 244, 214, 0.9) 8%,
-        transparent 40%
-      ),
-      radial-gradient(
-        circle at center,
-        var(--tone-ink-brown) 0%,
-        var(--tone-ink-brown) 22%,
-        #b98a44 24%,
-        #b98a44 100%
-      );
-    box-shadow: 0 2px 3px rgba(37, 43, 30, 0.3);
-    pointer-events: none;
-  }
-}
-
-/* reader-inspector-idle -- a blank-note placeholder standing in for the
-   pinned inspector before any word is selected, so the desk scene never
-   shows a lopsided single reader column with empty space beside it. Only
-   ever visible at 1024px+ (its parent .reader-inspector-rail is display:
-   none below that), so no separate mobile rule is needed here. */
-.reader-inspector-idle {
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  min-height: 220px;
-  padding: 28px 22px;
-  border: 1.5px dashed var(--paper-border);
-  border-radius: 16px;
-  background: var(--soft-bg);
-  text-align: center;
-}
-
-/* Phase 72 -- idle bob for the idle-state guide's Shiori (see
-   shiori-idle-float above). This is the one moment on Reading where
-   Shiori sits still for a while waiting on the user, so it's a good spot
-   for the "still here" loop. */
-.reader-inspector-idle .shiori-asset-img {
-  animation: shiori-idle-float 7s ease-in-out infinite;
-}
-
-/* reader-paper -- the reader canvas itself (renamed from .reader-mode,
-   which now only prefixes the mode's own header/toggle sub-parts below).
-   Phase 119 -- previously its own bordered/shadowed/tape-cornered card,
-   which on mobile boxed the original text inside a panel the mockup never
-   shows (there the text sits straight on the page), and on desktop made it
-   one of two separate floating cards beside the inspector instead of the
-   mockup's single open-book spread. Both problems share one fix: drop
-   this element's own border/shadow/radius/tape entirely. Below 1024px
-   there is nothing else taking over that chrome -- the text is just on
-   the page. At 1024px+, .reader-desk-scene below grows the shared "open
-   book" card instead, so this page and .reader-inspector-rail read as one
-   bound surface rather than two cards with a gap. The faint ruled lines
-   stay at every size -- notebook-paper texture, not card chrome. */
-/* Phase 126 -- below 1024px (no shared desk-scene photo behind this yet,
-   see .reader-desk-scene's >=1024px-only background-image) a real
-   photographed ruled-paper texture replaces the old repeating-linear-
-   gradient fake ruled lines. background-color is the old gradient's base
-   tone, kept as a fallback if the image fails to load. At >=1024px this
-   goes fully transparent instead (see override below) -- .reader-desk-
-   scene's own open-book-spread photo already shows through both grid
-   columns, so painting a second, differently-patterned paper texture here
-   too would just be two textures fighting in the same box. */
-.reader-paper {
-  position: relative;
-  padding: 30px;
-  background-color: var(--paper-bg);
-  background-image: url("/brand/decor/phase126/paper-page-texture-web.webp");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-@media (min-width: 1024px) {
-  .reader-paper {
-    background: none;
-  }
-}
-
-/* Phase 93 -- single-line toolbar replacing the old title+hint row /
-   progress+bookmark row / legend row stack (measured 274px tall on mobile
-   375 before the first line of Japanese text, well over half the visible
-   reader page). Title, thin progress bar, and the existing "옵션" toggle
-   now share one row; everything else that used to be always-visible moved
-   into that same options popover below (.reader-mode-toggles). */
-.reader-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-/* Phase 119 -- replaces the old plain "읽기 모드" text heading with
-   Shiori's small bookmark mark, echoing the mockup's mascot riding the
-   progress bar. The text label still exists (sr-only-label, see
-   ReaderMode.tsx) for screen readers/heading structure. */
-.reader-toolbar-mark {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-}
-
-.reader-toolbar-progress {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.reader-toolbar-percent {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
+/* Phase 169 -- .reader-workspace/.reader-desk-scene/.reader-desk-props(+pen/
+   clip/scrap)/.reader-inspector-rail(+tabs/spine-clip)/.reader-paper/
+   .reader-toolbar(+mark/progress/percent) removed: that whole family built
+   an "open book" illusion out of CSS/photo layers (most visibly
+   .reader-desk-scene's phase126 open-book-spread background) around a DOM
+   shape (reader card > flat save-dock > admin candidate drawer) that never
+   actually matched a real book. Replaced by .reading-scene-v2-frame's
+   single real V2 photo plus the .reading-page pane pair -- see the Phase
+   169 block near the top of this file (search "Phase 169"). */
 .reader-mode-hint {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
 }
 
-/* Reader-first layout: the focus/JLPT display toggles now open as a small
-   popover anchored under the "옵션 열기" button instead of sitting inline
-   in the reader header at all times -- one compact affordance instead of
-   two persistent checkboxes competing with the reader paper's own title. */
-.reader-mode-options-wrap {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.reader-mode-options-wrap .reader-mode-toggles {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 20;
-  flex-direction: column;
-  flex-wrap: nowrap;
-  min-width: 220px;
-  /* Phase 93 -- this popover picked up the hint/token-count/legend/bookmark
-     rows that used to be their own always-visible strip, so it needs a cap:
-     without one, a right:0-anchored absolute box can grow past the left
-     edge of narrow viewports (its content isn't otherwise width-limited)
-     and create page-level horizontal overflow. */
-  max-width: min(300px, calc(100vw - 48px));
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel-bg);
-  box-shadow: 0 14px 30px rgba(120, 98, 40, 0.12);
-  animation: app-slide-up var(--motion-fast) var(--ease-soft) both;
-}
-
+/* Phase 169 -- the popover's own trigger/anchor is now
+   .reading-progress-tag-wrap (see the Phase 169 block near the top of this
+   file), which replaced .reader-mode-options-wrap's "옵션 열기" button.
+   Everything below this point (.reader-mode-toggles through
+   .reading-jlpt-toggle) is the popover's unchanged content. */
 .reader-mode-toggles {
   display: flex;
   flex-wrap: wrap;
@@ -11005,44 +10487,6 @@ input.reading-vocab-sticker-toggle:checked {
   font-size: 12px;
 }
 
-.reader-progress-bar {
-  width: 100%;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--border);
-}
-
-/* Warm accent-to-primary gradient (was flat --primary) -- ties the one
-   real "result" indicator on this screen to the same bookmark-orange
-   accent used elsewhere in the reading surface (reader-workspace's dashed
-   spine, the hero bookmark ribbon), instead of reading as a generic
-   loading/upload bar. Thicker (was 4px) so it reads as a deliberate
-   progress ribbon, not a hairline. A small round bead rides its trailing
-   edge -- the same "tassel charm" language as Shiori's bookmark design,
-   without needing the character art itself on something this small. Track
-   no longer clips (overflow removed) so the bead can sit half outside it. */
-.reader-progress-bar-fill {
-  position: relative;
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--accent), var(--screen-accent, var(--primary)));
-  transition: width var(--motion-base) var(--ease-soft);
-}
-
-.reader-progress-bar-fill::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  right: -1px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--screen-accent, var(--primary));
-  border: 2px solid var(--paper-bg);
-  transform: translate(50%, -50%);
-  box-shadow: 0 2px 5px rgba(37, 43, 30, 0.22);
-}
-
 .reader-progress-actions {
   display: flex;
   flex-wrap: wrap;
@@ -11053,35 +10497,30 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 6px;
 }
 
+/* Phase 169 -- lives directly inside .reading-page--left now (the book's
+   own page pane already constrains width/scroll), so this no longer needs
+   its own max-width/centering the way it did sitting inside a much wider
+   .reader-paper. The soft translucent wash behind the words (>=1024px
+   only) is unchanged from Phase 150's original reasoning: the ruled photo
+   shows straight through the pane's own transparent padding, so the text
+   still wants its own clearly-lighter reading surface, not a hard-edged
+   card. */
 .reader-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-width: 740px;
-  margin: 0 auto;
   color: var(--text);
-  font-size: 19px;
-  line-height: 2;
+  font-size: 15.5px;
+  line-height: 1.9;
 }
 
-/* Phase 150 -- at 1024px+ .reader-paper itself is transparent (its own
-   rule below sets background:none) so .reader-desk-scene's open-book
-   photo shows straight through, with nothing marking where the actual
-   original text lives versus the rest of the busy photographed page. A
-   soft, mostly-opaque wash behind just the text column gives the words
-   their own clearly-lighter reading surface -- "원문 텍스트는 항상 가장
-   읽기 쉬운 표면에" -- without drawing a hard-edged card outline (no
-   border, a very soft shadow only) that would read as a floating panel
-   competing with the photo underneath it. Mobile/tablet (<1024px)
-   already have their own single ruled-paper photo with nothing competing
-   underneath, so this stays desktop-only. */
 @media (min-width: 1024px) {
   .reader-text {
-    max-width: 780px;
-    padding: 22px 28px;
-    border-radius: 16px;
-    background: rgba(253, 249, 238, 0.72);
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(253, 249, 238, 0.65);
     box-shadow: inset 0 1px 2px rgba(37, 43, 30, 0.06);
+    font-size: 15px;
   }
 }
 
@@ -11489,97 +10928,12 @@ input.reading-vocab-sticker-toggle:checked {
   border-radius: 3px;
 }
 
-.token-sheet-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  /* Phase 94 -- was a warm near-black rgba(37,43,30,0.4) scrim. At this
-     tier the sheet is a short compact peek (see .bookmark-inspector's
-     max-height below), not a full-screen dialog, so dimming the reader
-     text behind it fought the "keep reading while you glance at the
-     meaning" goal -- the reader text stayed technically visible but hard
-     to actually read through a 40% black wash. Transparent instead,
-     matching what the >=641px docked-panel tier already used (this rule
-     is that tier's fallback default, not a separate declaration). The
-     sheet's own border-top accent/shadow/slide-up motion still make it
-     read as a focused surface without needing a scrim underneath it. */
-  background: transparent;
-  /* Phase 119 -- side/bottom inset so the sheet reads as a floating sticky
-     note lifted off the page (matching the mockup's Inspector board), not
-     an edge-to-edge admin bottom sheet. Overridden by the >=641px docked
-     panel below, which positions itself differently. */
-  padding: 0 12px calc(12px + env(safe-area-inset-bottom));
-  animation: app-fade-in var(--motion-fast) var(--ease-soft) both;
-}
-
-/* bookmark-inspector (renamed from .token-sheet) -- Casual Sticker Reader:
-   a small sticky note pinned beside the reader page, not a bordered
-   dev-tools panel. The pin dot (::before) is the same accent-dot language
-   as Home's .home-notebook-pin. Phase 120 renamed this card's inner part
-   classes to .token-note-* (see below) -- .token-sheet-close/-close-icon
-   and .token-sheet-overlay/-fold-divider are the only .token-sheet-*
-   names still in use here. Phase 119 -- full
-   rounded corners + a real border (was top-only radius/accent, relying on
-   .token-sheet-overlay's now-removed edge-to-edge width) so the mobile
-   peek reads as a lifted note card, not a docked panel. */
-.bookmark-inspector {
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
-  overflow-y: auto;
-  border: 1px solid var(--paper-border);
-  border-top: 2px solid var(--screen-accent, var(--accent));
-  border-radius: 18px;
-  padding: 24px 20px 20px;
-  /* Phase 126 -- the flat var(--panel-bg) fill read as a plain UI card;
-     the same photographed ruled-paper texture .reader-paper/.reader-
-     start-page use now backs this note too, so it reads as a page torn
-     from the same notebook instead of an unrelated white panel.
-     background-color is the old flat fill, kept as a fallback if the
-     image fails to load. */
-  background-color: var(--panel-bg);
-  background-image: url("/brand/decor/phase126/paper-page-texture-web.webp");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  box-shadow: 0 -8px 30px rgba(120, 98, 40, 0.22);
-  animation: app-slide-up var(--motion-base) var(--ease-soft) both;
-  /* A thin, quiet scrollbar instead of the OS-default thick one -- on
-     platforms with always-visible scrollbars this was eating into the
-     20px padding and making the panel feel tighter than it actually is. */
-  scrollbar-width: thin;
-}
-
-.bookmark-inspector::before {
-  content: "";
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  z-index: 1;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.25);
-  transform: translateX(-50%);
-}
-
-.bookmark-inspector::-webkit-scrollbar {
-  width: 8px;
-}
-
-.bookmark-inspector::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: var(--border-strong);
-}
-
-.bookmark-inspector::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* Phase 169 -- .token-sheet-overlay/.bookmark-inspector(+pin-dot/scrollbar)
+   removed: replaced by .reading-inspector-float-overlay/.reading-
+   inspector-float (mobile floating note) and .reading-pinned-note (desktop
+   right-page note, effectively unstyled -- .reading-page--right's own
+   padding/scroll does the work), both defined in the Phase 169 block near
+   the top of this file. */
 
 /* Phase 120 -- Reading Inspector Interior Reconstruction. Replaces the old
    .token-sheet-header/-title-group/-bookmark-icon/-word/-reading/-position-

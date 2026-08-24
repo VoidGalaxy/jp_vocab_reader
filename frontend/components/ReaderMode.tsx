@@ -5,8 +5,11 @@ import type { TokenStatus, TokenWithStatus } from "./types";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet } from "./TokenDetailSheet";
 import { ShioriGuideCard, ShioriMark } from "./Shiori";
+import { ReadingSourceSlip } from "./ReadingSourceSlip";
+import type { ReadingSourceSlipProps } from "./ReadingSourceSlip";
 import { buildReaderLayout, getNavigableTokenIndexes } from "./readerLayout";
 import { getTokenGroupKey } from "./coverageUtils";
+import { ChevronDownIcon } from "./icons";
 
 // Reading-progress percentage is derived from how far the reader has
 // scrolled through the .reader-text container relative to the viewport,
@@ -98,6 +101,16 @@ type ReaderModeProps = {
   isTextCollapsed: boolean;
   onToggleTextCollapsed: () => void;
   onResetSession: () => void;
+  // Phase 169 -- the re-edit source slip (same component/markup Reading's
+  // no-result state renders directly, see ReadingSourceSlip.tsx) now lives
+  // inside this component's own left page pane, above the reader text,
+  // instead of a separate .reading-input-open card ReadingTab used to
+  // render below the whole reader workspace. showSlip mirrors ReadingTab's
+  // existing `!isTextCollapsed` visibility rule; slipProps is the exact
+  // prop bag ReadingTab already builds for its own no-result render of the
+  // same component, just threaded one level deeper.
+  showSlip: boolean;
+  slipProps: ReadingSourceSlipProps;
 };
 
 export function ReaderMode({
@@ -126,6 +139,8 @@ export function ReaderMode({
   isTextCollapsed,
   onToggleTextCollapsed,
   onResetSession,
+  showSlip,
+  slipProps,
 }: ReaderModeProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   // Which literal rendered occurrence was clicked, when known -- a repeated
@@ -147,8 +162,9 @@ export function ReaderMode({
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   // Casual Sticker Reader (Phase 65) -- true 2-column "desk scene" (reader
   // page + pinned word inspector) only kicks in at the same breakpoint as
-  // .reader-desk-scene's grid in globals.css (1024px); keep both in sync if
-  // this value ever changes. Starts false (matches SSR/first paint) and is
+  // .reading-page--right's own display:none override in globals.css
+  // (1024px); keep both in sync if this value ever changes. Starts false
+  // (matches SSR/first paint) and is
   // only actually read once a token is selected, which never happens before
   // this effect has had a chance to run once mounted -- so there is no
   // hydration mismatch to worry about here.
@@ -535,227 +551,192 @@ export function ReaderMode({
       }
     : null;
 
+  const optionsPopover = isOptionsOpen ? (
+    <div className="reader-mode-toggles">
+      <p className="reader-mode-hint">모르는 단어를 눌러보세요.</p>
+      {/* 3 clearly separated groups (dashed divider + small label, same
+          recipe the manage row already used) instead of one long
+          undifferentiated stack -- easier to scan than a single flat list. */}
+      <div className="reader-mode-toggles-section">
+        <span className="reader-mode-toggles-section-label">표시</span>
+        <label className="checkbox-field reading-focus-toggle">
+          <input
+            type="checkbox"
+            checked={focusMode}
+            onChange={(event) => setFocusMode(event.target.checked)}
+          />
+          모르는/헷갈리는 단어만 강조
+        </label>
+        <label className="checkbox-field reading-jlpt-toggle">
+          <input
+            type="checkbox"
+            checked={showJlptTags}
+            onChange={(event) => setShowJlptTags(event.target.checked)}
+          />
+          JLPT 태그 표시
+        </label>
+        <div className="reader-legend-strip">
+          <span className="reader-legend-strip-label">색상</span>
+          <span className="reader-legend-strip-item">
+            <span className="legend-swatch token-chip-known" />
+            아는
+          </span>
+          <span className="reader-legend-strip-item">
+            <span className="legend-swatch token-chip-uncertain" />
+            헷갈림
+          </span>
+          <span className="reader-legend-strip-item">
+            <span className="legend-swatch token-chip-unknown" />
+            모름
+          </span>
+          <span className="reader-legend-strip-item">
+            <span className="legend-swatch token-chip-unclassified" />
+            미분류
+          </span>
+        </div>
+      </div>
+      <div className="reader-mode-toggles-section">
+        <span className="reader-mode-toggles-section-label">이동</span>
+        {navPosition !== -1 ? (
+          <p className="reader-progress-token-count">
+            {navPosition + 1} / {navigableIndexes.length} 단어 확인 중
+          </p>
+        ) : null}
+        <div className="reader-progress-actions">
+          {bookmarkButtonLabel ? (
+            <button type="button" className="ghost-button compact-button" onClick={scrollToBookmark}>
+              {bookmarkButtonLabel}
+            </button>
+          ) : null}
+          <button type="button" className="ghost-button compact-button" onClick={scrollToTop}>
+            맨 위로
+          </button>
+        </div>
+      </div>
+      <div className="reader-mode-toggles-section">
+        <span className="reader-mode-toggles-section-label">원문 관리</span>
+        <button type="button" className="ghost-button compact-button" onClick={onToggleTextCollapsed}>
+          {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
+        </button>
+        <button type="button" className="ghost-button compact-button" onClick={onResetSession}>
+          새 원문
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <>
-      {isSessionRestored ? (
-        <span className="reading-restored-chip">
-          이전 작업 복원됨
-          <button
-            type="button"
-            className="reading-restored-chip-dismiss"
-            onClick={onDismissRestoredNotice}
-          >
-            확인
-          </button>
-        </span>
-      ) : null}
-      {/* reader-desk-scene: the reader page and the pinned word inspector
-          share one desk surface (grid, ≥1024px -- see globals.css). Below
-          that breakpoint this is just a plain block, so .reader-paper
-          stacks exactly as it did before this Phase. */}
-      <div className="reader-desk-scene">
-      {/* Phase 114 -- .hero-card/.card-stack-surface dropped: .reader-paper
-          already redeclares its own border/radius/shadow/tape-corner
-          pseudo-elements later in globals.css, so both classes were fully
-          shadowed (dead weight, not a visible effect) -- this is cleanup,
-          not a visual change. See DESIGN.md Phase 114. */}
-      <div className="reader-paper">
-      {/* Phase 93 -- "원문 우선" reader toolbar. Previously three always-on
-          rows (title+hint, progress+bookmark actions, legend) stood between
-          the reader-paper's top edge and the first line of Japanese text --
-          measured at 274px on mobile 375, well over half the visible page.
-          Collapsed here into one slim line (title + progress bar + percent
-          + the existing "옵션" toggle); the hint/token-count/legend/
-          bookmark actions all move into the same options popover the
-          focus/JLPT toggles already used, rather than gaining a second
-          disclosure mechanism. isOptionsOpen is the same existing state --
-          nothing new is being introduced, just regrouped. */}
-      <div className="reader-toolbar">
-        <span className="reader-toolbar-mark" aria-hidden="true">
-          <ShioriMark variant="reading" />
-        </span>
-        <span className="sr-only-label">읽기 모드</span>
-        <div className="reader-toolbar-progress">
-          <div
-            className="reader-progress-bar"
-            role="progressbar"
-            aria-label="읽기 진행률"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={progressPercent}
-          >
-            <div
-              className="reader-progress-bar-fill"
-              style={{ width: `${progressPercent}%` }}
-            />
+      {/* Phase 169 -- reading-page--left is the book's left page on desktop
+          (grid, ≥1024px -- see globals.css) and the single visible page on
+          mobile (the mobile V2 photo shows one page plus a sliver of the
+          other, already baked into the shot). Everything that used to live
+          in .reader-desk-scene/.reader-paper/.reader-toolbar now lives here
+          as ordinary scrollable page content instead of a bordered card
+          layered on a wallpaper photo. */}
+      <div className="reading-page reading-page--left">
+        {isSessionRestored ? (
+          <span className="reading-restored-chip">
+            이전 작업 복원됨
+            <button
+              type="button"
+              className="reading-restored-chip-dismiss"
+              onClick={onDismissRestoredNotice}
+            >
+              확인
+            </button>
+          </span>
+        ) : null}
+
+        {showSlip ? (
+          <div className="reading-page-reedit-slip">
+            <ReadingSourceSlip {...slipProps} />
           </div>
-          <span className="reader-toolbar-percent">{progressPercent}%</span>
-        </div>
-        <div className="reader-mode-options-wrap">
+        ) : null}
+
+        {/* Phase 169 -- was a full-width toolbar row (title/progress bar/
+            percent/"옵션 열기") sitting between the page edge and the first
+            line of text. Shrunk to the small page-marker/bookmark-tag the
+            brief asks for: one pill showing the read percentage, which is
+            also the trigger for the exact same options popover (display
+            toggles, legend, nav, session management) this always had --
+            content unchanged, just a much smaller trigger and no dedicated
+            progress-bar row above the text. */}
+        <div className="reading-progress-tag-wrap">
           <button
             type="button"
-            className="ghost-button compact-button"
+            className="reading-progress-tag"
             onClick={() => setIsOptionsOpen((value) => !value)}
             aria-expanded={isOptionsOpen}
+            aria-label={`읽기 진행률 ${progressPercent}%, 옵션 ${isOptionsOpen ? "닫기" : "열기"}`}
           >
-            {isOptionsOpen ? "옵션 닫기" : "옵션 열기"}
+            <ShioriMark variant="reading" />
+            <span className="sr-only-label">읽기 모드</span>
+            {progressPercent}%
+            <ChevronDownIcon
+              className={`reading-progress-tag-icon${isOptionsOpen ? " reading-progress-tag-icon-open" : ""}`}
+            />
           </button>
-          {isOptionsOpen ? (
-            <div className="reader-mode-toggles">
-              <p className="reader-mode-hint">모르는 단어를 눌러보세요.</p>
-              {/* 3 clearly separated groups (dashed divider + small label,
-                  same recipe the manage row already used) instead of one
-                  long undifferentiated stack -- easier to scan than a
-                  single flat list once the legend moved out to its own
-                  always-visible strip below. */}
-              <div className="reader-mode-toggles-section">
-                <span className="reader-mode-toggles-section-label">표시</span>
-                <label className="checkbox-field reading-focus-toggle">
-                  <input
-                    type="checkbox"
-                    checked={focusMode}
-                    onChange={(event) => setFocusMode(event.target.checked)}
-                  />
-                  모르는/헷갈리는 단어만 강조
-                </label>
-                <label className="checkbox-field reading-jlpt-toggle">
-                  <input
-                    type="checkbox"
-                    checked={showJlptTags}
-                    onChange={(event) => setShowJlptTags(event.target.checked)}
-                  />
-                  JLPT 태그 표시
-                </label>
-                <div className="reader-legend-strip">
-                  <span className="reader-legend-strip-label">색상</span>
-                  <span className="reader-legend-strip-item">
-                    <span className="legend-swatch token-chip-known" />
-                    아는
-                  </span>
-                  <span className="reader-legend-strip-item">
-                    <span className="legend-swatch token-chip-uncertain" />
-                    헷갈림
-                  </span>
-                  <span className="reader-legend-strip-item">
-                    <span className="legend-swatch token-chip-unknown" />
-                    모름
-                  </span>
-                  <span className="reader-legend-strip-item">
-                    <span className="legend-swatch token-chip-unclassified" />
-                    미분류
-                  </span>
-                </div>
-              </div>
-              <div className="reader-mode-toggles-section">
-                <span className="reader-mode-toggles-section-label">이동</span>
-                {navPosition !== -1 ? (
-                  <p className="reader-progress-token-count">
-                    {navPosition + 1} / {navigableIndexes.length} 단어 확인 중
-                  </p>
-                ) : null}
-                <div className="reader-progress-actions">
-                  {bookmarkButtonLabel ? (
-                    <button
-                      type="button"
-                      className="ghost-button compact-button"
-                      onClick={scrollToBookmark}
-                    >
-                      {bookmarkButtonLabel}
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="ghost-button compact-button"
-                    onClick={scrollToTop}
-                  >
-                    맨 위로
-                  </button>
-                </div>
-              </div>
-              <div className="reader-mode-toggles-section">
-                <span className="reader-mode-toggles-section-label">원문 관리</span>
-                <button
-                  type="button"
-                  className="ghost-button compact-button"
-                  onClick={onToggleTextCollapsed}
-                >
-                  {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
-                </button>
-                <button
-                  type="button"
-                  className="ghost-button compact-button"
-                  onClick={onResetSession}
-                >
-                  새 원문
-                </button>
-              </div>
+          {optionsPopover}
+        </div>
+
+        <div className="reader-text" ref={readerTextRef}>
+          {layout.lines.map((line, lineIndex) => (
+            <p className="reader-line" key={`line-${lineIndex}`}>
+              {line.length > 0
+                ? line.map((segment) =>
+                    segment.type === "token" ? (
+                      <TokenChip
+                        key={segment.key}
+                        token={tokens[segment.tokenIndex]}
+                        tokenIndex={segment.tokenIndex}
+                        segmentKey={segment.key}
+                        isActive={activeIndex === segment.tokenIndex}
+                        focusMode={focusMode}
+                        showJlptTags={showJlptTags}
+                        onSelect={() => selectToken(segment.tokenIndex, segment.key)}
+                      />
+                    ) : (
+                      <span key={segment.key}>{segment.content}</span>
+                    ),
+                  )
+                : " "}
+            </p>
+          ))}
+        </div>
+        {layout.unmatchedTokenIndexes.length > 0 ? (
+          <div className="reader-unmatched-row">
+            <span className="reader-unmatched-label">
+              원문 위치를 찾지 못한 단어
+            </span>
+            <div className="reader-unmatched-chips">
+              {layout.unmatchedTokenIndexes.map((tokenIndex) => (
+                <TokenChip
+                  key={`unmatched-${tokenIndex}`}
+                  token={tokens[tokenIndex]}
+                  tokenIndex={tokenIndex}
+                  isActive={activeIndex === tokenIndex}
+                  focusMode={focusMode}
+                  showJlptTags={showJlptTags}
+                  onSelect={() => selectToken(tokenIndex)}
+                />
+              ))}
             </div>
-          ) : null}
-        </div>
-      </div>
-      {/* Phase 119 -- the color legend moved into the options popover's
-          "표시" group (see reader-mode-toggles-section above), alongside
-          the toggles it explains. Reading's own success metric this phase
-          is "원문이 화면의 주인공" -- an always-visible legend row was one
-          more chip-strip between the reader toolbar and the first line of
-          text, which the mockup's focus reader never shows at all. */}
-      <div className="reader-text" ref={readerTextRef}>
-        {layout.lines.map((line, lineIndex) => (
-          <p className="reader-line" key={`line-${lineIndex}`}>
-            {line.length > 0
-              ? line.map((segment) =>
-                  segment.type === "token" ? (
-                    <TokenChip
-                      key={segment.key}
-                      token={tokens[segment.tokenIndex]}
-                      tokenIndex={segment.tokenIndex}
-                      segmentKey={segment.key}
-                      isActive={activeIndex === segment.tokenIndex}
-                      focusMode={focusMode}
-                      showJlptTags={showJlptTags}
-                      onSelect={() => selectToken(segment.tokenIndex, segment.key)}
-                    />
-                  ) : (
-                    <span key={segment.key}>{segment.content}</span>
-                  ),
-                )
-              : " "}
-          </p>
-        ))}
-      </div>
-      {layout.unmatchedTokenIndexes.length > 0 ? (
-        <div className="reader-unmatched-row">
-          <span className="reader-unmatched-label">
-            원문 위치를 찾지 못한 단어
-          </span>
-          <div className="reader-unmatched-chips">
-            {layout.unmatchedTokenIndexes.map((tokenIndex) => (
-              <TokenChip
-                key={`unmatched-${tokenIndex}`}
-                token={tokens[tokenIndex]}
-                tokenIndex={tokenIndex}
-                isActive={activeIndex === tokenIndex}
-                focusMode={focusMode}
-                showJlptTags={showJlptTags}
-                onSelect={() => selectToken(tokenIndex)}
-              />
-            ))}
           </div>
-        </div>
-      ) : null}
+        ) : null}
       </div>
 
-      {/* Desktop-only pinned word inspector -- always mounted (an idle
-          Shiori guide when nothing is selected, or the same word card the
-          mobile sheet shows) so it reads as a permanent fixture of the desk
-          scene rather than something that only pops in once a word is
-          tapped. Hidden below the 1024px breakpoint; mobile keeps its
-          existing tap-to-open bottom sheet, rendered separately below. */}
-      <div className="reader-inspector-rail">
+      {/* Desktop-only opposite page: always mounted (an idle Shiori guide
+          when nothing is selected, or the pinned word note) so the book
+          never shows a lopsided single page with empty space beside it.
+          Hidden below 1024px via .reading-page--right's own display:none
+          (see globals.css); mobile instead gets the floating card TokenDetailSheet
+          renders itself in its "modal" presentation, further down. */}
+      <div className="reading-page reading-page--right">
         {tokenDetailProps && isDesktopPinned ? (
           <TokenDetailSheet presentation="pinned" {...tokenDetailProps} />
         ) : (
-          <div className="reader-inspector-idle">
+          <div className="reading-page-idle">
             <ShioriGuideCard
               variant="reading"
               size="md"
@@ -763,42 +744,6 @@ export function ReaderMode({
             />
           </div>
         )}
-        {/* Phase 74 -- small cascading index-tabs along the rail's outer
-            edge, echoing the mockup's tabbed-folder look on the pinned
-            inspector. A sibling of the pinned/idle content (not a child of
-            TokenDetailSheet) so it renders identically for both branches
-            without needing to touch TokenDetailSheet.tsx -- that component's
-            own outer div already stacks bookmark-inspector/paper-corner/
-            card-stack-surface, all contesting the same ::before/::after
-            slots, so adding a 4th contender there risked the exact silent
-            cascade collision Phase 73's postmortem covers. */}
-        <span className="reader-inspector-tabs" aria-hidden="true" />
-        {/* Phase 122 -- spine/binding polish. .reader-inspector-rail's own
-            ::before/::after (globals.css) draw the gutter shadow, fold
-            highlight, and stitch marks; this is the one physical "binding
-            hardware" detail that needs a real element rather than a
-            pseudo-element slot (both of the rail's own are already spoken
-            for) -- a small brass paper-fastener straddling the spine near
-            the top, echoing "small clipped tape/marker at spine" from the
-            brief. pointer-events:none + aria-hidden like every other desk
-            decoration; purely cosmetic, never the only carrier of
-            information. */}
-        <span className="reader-spine-clip" aria-hidden="true" />
-      </div>
-
-      {/* Phase 74 -- desk prop layer: a pen, a paperclip, and a small paper
-          scrap around the reader/inspector, same pure-CSS-shape recipe as
-          Home's desk-prop layer (Phase 73) but deliberately lighter and
-          without the plant/cup -- this is a focused work surface, not a
-          welcome scene. Rendered last (not first) so it paints on top of
-          .reader-paper/.reader-inspector-rail wherever it overlaps their
-          corners (see Phase 73's DESIGN.md note on why paint order matters
-          here). pointer-events:none + aria-hidden, >=1024px only. */}
-      <div className="reader-desk-props" aria-hidden="true">
-        <span className="reader-desk-prop reader-desk-prop--pen" />
-        <span className="reader-desk-prop reader-desk-prop--clip" />
-        <span className="reader-desk-prop reader-desk-prop--scrap" />
-      </div>
       </div>
 
       {tokenDetailProps && !isDesktopPinned ? (

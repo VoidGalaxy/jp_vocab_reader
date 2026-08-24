@@ -15,8 +15,8 @@ import type {
 import {
   CardFileIcon,
   CheckCircleIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
+  CloseIcon,
   SearchIcon,
 } from "./icons";
 import { getDisplayMeaning, statusLabels } from "./shared";
@@ -107,30 +107,37 @@ export function ReadingVocabPanel({
   );
 
   return (
-    <section
-      className={`candidate-drawer reading-vocab-drawer${isCollapsed ? "" : " reading-vocab-drawer-open"}`}
-    >
+    <>
+      {/* Phase 169 -- a physical pull-tab clipped to the book's outer edge
+          (echoing the mobile V2 photo's own sticky bookmark tab, see
+          globals.css), not an admin-drawer handle row spanning the page
+          width. Opening it slides a panel out from the same edge
+          (.reading-candidate-panel) -- still an overlay attached to the
+          scene, never a separate section below the fold. */}
       <button
         type="button"
-        className="reading-vocab-drawer-pull"
+        className={`reading-candidate-tab${isCollapsed ? "" : " reading-candidate-tab-open"}`}
         onClick={() => setIsCollapsed((value) => !value)}
         aria-expanded={!isCollapsed}
       >
-        <CardFileIcon className="reading-vocab-drawer-pull-icon" />
-        {/* Counts here stay list-scoped only. The basket total and the
-            saveable total belong to the save dock above, which owns saving --
-            repeating them here made two rows of near-identical chips. */}
-        <span className="reading-vocab-drawer-pull-label">
-          단어 스티커 트레이 · {entries.length}개
-        </span>
-        <ChevronDownIcon
-          className={`reading-vocab-collapse-icon${
-            isCollapsed ? " reading-vocab-collapse-icon-collapsed" : ""
-          }`}
-        />
+        <CardFileIcon className="reading-candidate-tab-icon" />
+        {entries.length}
       </button>
       {isCollapsed ? null : (
-        <div className="reading-vocab-drawer-body">
+        <div className="reading-candidate-panel">
+      <div className="reading-candidate-panel-header">
+        <span className="reading-candidate-panel-title">
+          단어 스티커 트레이 · {entries.length}개
+        </span>
+        <button
+          type="button"
+          className="reading-candidate-panel-close"
+          onClick={() => setIsCollapsed(true)}
+          aria-label="단어 목록 닫기"
+        >
+          <CloseIcon className="reading-candidate-panel-close-icon" />
+        </button>
+      </div>
       <p className="reading-vocab-drawer-hint">
         단어를 누르면 원문 위치로 이동해요. 여러 단어를 한번에 저장하려면
         체크박스로 선택하세요.
@@ -309,6 +316,6 @@ export function ReadingVocabPanel({
       )}
         </div>
       )}
-    </section>
+    </>
   );
 }
