@@ -186,15 +186,21 @@ function ClassifyCompactEditor({
 }
 
 // ---------------------------------------------------------------------------
-// ClassifySourceSlip -- Phase 156. The original text entry was a full-width
-// "work sheet" textarea that dominated the first viewport (the exact
-// silhouette this phase's brief fails on). Now it's a small source-material
-// slip pinned to the desk: capped width, a few rows tall, a torn washi-tape
-// pin at its top edge -- reads as one item sitting on a work surface, not
-// the input box the screen is built around. Same value/onChange wiring as
-// before, no analysis/classification logic here.
+// ClassifyDeskV2 -- Phase 165 (V2 scene reconstruction pilot). Replaces the
+// Phase 156 ClassifyDeskIntro, which was still a CSS-drawn approximation of
+// a desk (a plain textarea box + chip row + button, arranged in a grid).
+// This version puts the real `v2-classify-card-desk-*` photo underneath as
+// a layout anchor -- source slip, stamp CTA, and card tray are positioned
+// against the actual paper/stamp/tray objects in the photo, not decoration
+// behind an unchanged form. Every live element below (ClassifySourceSlipV2,
+// ClassifyDeskChipRowV2, the stamp <button>, ClassifyCardTrayV2) is an
+// absolutely-positioned sibling inside .classify-v2-scene, positioned
+// independently per breakpoint (mobile 9:16 photo vs desktop 16:9 photo are
+// two different compositions, not a crop of one image) rather than nested
+// in a shared DOM order that would force the same relative placement on
+// both.
 // ---------------------------------------------------------------------------
-function ClassifySourceSlip({
+function ClassifySourceSlipV2({
   text,
   onTextChange,
 }: {
@@ -202,13 +208,13 @@ function ClassifySourceSlip({
   onTextChange: (text: string) => void;
 }) {
   return (
-    <div className="classify-source-slip-wrap">
-      <label htmlFor="source-text" className="classify-source-slip-label">
+    <div className="classify-v2-slip-zone">
+      <label htmlFor="source-text" className="classify-v2-slip-label">
         원문 slip
       </label>
       <textarea
         id="source-text"
-        className="classify-source-slip"
+        className="classify-v2-slip-textarea"
         value={text}
         onChange={(event) => onTextChange(event.target.value)}
         placeholder="彼は怠惰であることを自覚していた。"
@@ -218,14 +224,11 @@ function ClassifySourceSlip({
   );
 }
 
-// ---------------------------------------------------------------------------
-// ClassifyDeskControls -- deck select + "완벽히 아는 단어도 표시" toggle,
-// now two small paper chips sitting beside the source slip instead of a
-// form-field row (same <select>/checkbox element and onChange wiring as
-// before this phase). Reuses Reading's own .reading-deck-picker chip
-// treatment rather than inventing a second "small paper tag" recipe.
-// ---------------------------------------------------------------------------
-function ClassifyDeskControls({
+// Deck select + "완벽히 아는 단어도 표시" toggle as two small paper chips.
+// Positioned as its own absolutely-placed sibling (not nested inside the
+// slip zone) so CSS can move the whole row to a different part of the
+// photo on mobile vs desktop without touching the DOM.
+function ClassifyDeskChipRowV2({
   decks,
   selectedDeckId,
   includeKnown,
@@ -239,9 +242,9 @@ function ClassifyDeskControls({
   onIncludeKnownChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="classify-desk-chip-row">
-      <label className="reading-deck-picker">
-        <CardFileIcon className="reading-deck-picker-icon" />
+    <div className="classify-v2-chip-row">
+      <label className="classify-v2-chip">
+        <CardFileIcon className="classify-v2-chip-icon" />
         <select
           value={selectedDeckId}
           onChange={(event) => onSelectedDeckChange(event.target.value)}
@@ -254,7 +257,7 @@ function ClassifyDeskControls({
           ))}
         </select>
       </label>
-      <label className="checkbox-field classify-desk-checkbox-chip">
+      <label className="checkbox-field classify-v2-chip classify-v2-chip-checkbox">
         <input
           type="checkbox"
           checked={includeKnown}
@@ -266,17 +269,11 @@ function ClassifyDeskControls({
   );
 }
 
-// ---------------------------------------------------------------------------
-// ClassifyCardTray -- Phase 156. New: a small decorative blank-card fan (no
-// text, no numbers -- purely a stack-of-paper shape) previewing "this slip
-// is about to become word cards", so the first viewport reads as a
-// card-making desk before analysis has even run. Deliberately not a real
-// preview of results (that would risk reading as fake analysis output) --
-// just paper shapes. Also holds the resumeable-draft affordance, since a
-// saved-in-progress session is another item on this tray, not a status
-// paragraph below the form.
-// ---------------------------------------------------------------------------
-function ClassifyCardTray({
+// The card tray zone now sits on top of the photographed card stack itself
+// -- no more decorative CSS card fan (the photo already shows real cards).
+// It only carries the resumeable-draft receipt, since that's the one real
+// piece of state this zone needs to show before analysis has run.
+function ClassifyCardTrayV2({
   pendingDraft,
   onRestoreDraft,
   onDiscardDraft,
@@ -286,19 +283,12 @@ function ClassifyCardTray({
   onDiscardDraft: () => void;
 }) {
   return (
-    <aside className="classify-card-tray">
-      <p className="classify-card-tray-label">카드 트레이</p>
-      <div className="classify-card-tray-stack" aria-hidden="true">
-        <span className="classify-card-tray-card" />
-        <span className="classify-card-tray-card" />
-        <span className="classify-card-tray-card" />
-      </div>
-      <p className="classify-card-tray-hint">
-        원문을 나누면 이 자리에 단어 카드가 한 장씩 쌓여요.
+    <div className="classify-v2-tray-zone">
+      <p className="classify-v2-tray-hint">
+        원문을 나누면 이 카드함에 단어 카드가 한 장씩 쌓여요.
       </p>
-
       {pendingDraft ? (
-        <div className="classify-draft-chip">
+        <div className="classify-draft-chip classify-v2-draft-chip">
           <ClockIcon className="classify-draft-chip-icon" />
           <span>
             이전 분류 저장:{" "}
@@ -319,24 +309,11 @@ function ClassifyCardTray({
           </div>
         </div>
       ) : null}
-    </aside>
+    </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-// ClassifyDeskIntro -- Phase 156 (Analyze/Classify Hard Rework 2). Replaces
-// ClassifyStageIntro: Phase 154 already dropped the boxed hero-card panel,
-// but the screen was still built around one big textarea+select+checkbox+
-// CTA column -- an input form silhouette, just an unboxed one. This is a
-// real silhouette change, not more polish on the same skeleton: the source
-// text is a small pinned slip (ClassifySourceSlip), deck/checkbox are paper
-// chips (ClassifyDeskControls), the "분류 카드 만들기" CTA is a rotated
-// postmark-style stamp button (same dashed-pill rotation language
-// .shiori-stamp already established, not a plain form-submit bar), and a
-// card tray (ClassifyCardTray) sits beside/below it so a card-making desk
-// is visible in the very first viewport, before any text is even typed.
-// ---------------------------------------------------------------------------
-type ClassifyDeskIntroProps = {
+type ClassifyDeskV2Props = {
   text: string;
   decks: Deck[];
   selectedDeckId: string;
@@ -351,7 +328,7 @@ type ClassifyDeskIntroProps = {
   onDiscardDraft: () => void;
 };
 
-function ClassifyDeskIntro({
+function ClassifyDeskV2({
   text,
   decks,
   selectedDeckId,
@@ -364,54 +341,49 @@ function ClassifyDeskIntro({
   onAnalyze,
   onRestoreDraft,
   onDiscardDraft,
-}: ClassifyDeskIntroProps) {
+}: ClassifyDeskV2Props) {
   return (
-    <section className="classify-stage classify-desk">
-      <div className="classify-hero-header">
-        <span className="shiori-glow shiori-companion--section classify-hero-companion">
-          <ShioriCharacter variant="classify" size="md" />
+    <section className="classify-v2-root">
+      <div className="classify-v2-heading">
+        <span className="shiori-glow shiori-companion--section classify-v2-heading-companion">
+          <ShioriCharacter variant="classify" size="sm" />
         </span>
         <div>
           <span className="reading-input-eyebrow">읽은 원문에서 카드 만들기</span>
           <h2>단어 카드를 만들어볼까요?</h2>
-          <p>원문 slip을 올리면 단어가 카드로 한 장씩 나뉘어요.</p>
         </div>
       </div>
 
-      <form className="classify-desk-scene" onSubmit={onAnalyze}>
-        <div className="classify-desk-main">
-          <ClassifySourceSlip text={text} onTextChange={onTextChange} />
-          <ClassifyDeskControls
-            decks={decks}
-            selectedDeckId={selectedDeckId}
-            includeKnown={includeKnown}
-            onSelectedDeckChange={onSelectedDeckChange}
-            onIncludeKnownChange={onIncludeKnownChange}
-          />
-          <div className="classify-desk-cta-row">
-            <button type="submit" className="classify-stamp-button" disabled={isAnalyzing}>
-              {isAnalyzing ? (
-                "나누는 중..."
-              ) : (
-                <>
-                  <SparkleIcon className="button-icon" />
-                  분류 카드 만들기
-                </>
-              )}
-            </button>
-          </div>
-          <p className="muted-text copyright-note">
-            <ShieldIcon className="copyright-note-icon" />
-            <span>원문 전체는 서버에 저장하지 않아요.</span>
-          </p>
-        </div>
-
-        <ClassifyCardTray
+      <form className="classify-v2-scene" onSubmit={onAnalyze}>
+        <ClassifySourceSlipV2 text={text} onTextChange={onTextChange} />
+        <ClassifyDeskChipRowV2
+          decks={decks}
+          selectedDeckId={selectedDeckId}
+          includeKnown={includeKnown}
+          onSelectedDeckChange={onSelectedDeckChange}
+          onIncludeKnownChange={onIncludeKnownChange}
+        />
+        <button type="submit" className="classify-v2-stamp-button" disabled={isAnalyzing}>
+          {isAnalyzing ? (
+            "나누는 중..."
+          ) : (
+            <>
+              <SparkleIcon className="button-icon" />
+              분류 카드 만들기
+            </>
+          )}
+        </button>
+        <ClassifyCardTrayV2
           pendingDraft={pendingDraft}
           onRestoreDraft={onRestoreDraft}
           onDiscardDraft={onDiscardDraft}
         />
       </form>
+
+      <p className="muted-text copyright-note classify-v2-copyright">
+        <ShieldIcon className="copyright-note-icon" />
+        <span>원문 전체는 서버에 저장하지 않아요.</span>
+      </p>
     </section>
   );
 }
@@ -828,7 +800,7 @@ export function AnalyzeSection({
   return (
     <section className="tab-panel analyze-panel" aria-live="polite">
       {!hasResult ? (
-        <ClassifyDeskIntro
+        <ClassifyDeskV2
           text={text}
           decks={decks}
           selectedDeckId={selectedDeckId}

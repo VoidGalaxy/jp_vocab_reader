@@ -2511,11 +2511,11 @@ button:focus-visible {
 }
 
 .classify-result-card:nth-child(odd) {
-  transform: rotate(-2deg);
+  transform: rotate(-3deg) translateY(2px);
 }
 
 .classify-result-card:nth-child(even) {
-  transform: rotate(2deg);
+  transform: rotate(3deg) translateY(-2px);
 }
 
 .classify-result-card span {
@@ -2537,8 +2537,7 @@ button:focus-visible {
    already uses (Phase 115 -- .shared-hero-card dropped this same
    border-top-accent recipe when it was flattened out of a boxed card into
    an unboxed heading strip; see that class below). */
-.classify-word-card,
-.classify-result-summary {
+.classify-word-card {
   width: min(720px, 100%);
   display: grid;
   gap: 16px;
@@ -2549,6 +2548,26 @@ button:focus-visible {
   margin: 0 auto;
   background: var(--paper-bg);
   box-shadow: 0 16px 36px var(--paper-shadow);
+}
+
+/* classify-result-summary -- Phase 165. Was sharing .classify-word-card's
+   bordered/border-top-accent "admin panel" box verbatim -- exactly the
+   "result summary가 dashboard card처럼 보임" failure this phase's brief
+   names. Split into its own rule: no ruled border/accent stripe, an
+   asymmetric corner radius + slight rotation instead (the same "finished
+   index card" language .classify-result-card/.classify-draft-chip already
+   use), so the completed classification reads as one more physical card
+   sitting on the desk, not a stats panel. */
+.classify-result-summary {
+  width: min(640px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 26px 24px;
+  margin: 0 auto;
+  border-radius: 4px 22px 22px 22px;
+  background: var(--paper-bg);
+  box-shadow: 0 14px 30px var(--paper-shadow);
+  transform: rotate(-0.5deg);
 }
 
 .classify-progress {
@@ -5893,229 +5912,246 @@ input.reading-vocab-sticker-toggle:checked {
   font-size: 13px;
 }
 
-/* classify-stage / classify-desk -- Phase 156 (Analyze/Classify Hard
-   Rework 2). Phase 154 already dropped the boxed hero-card panel this
-   comment used to describe, but the screen underneath it was still built
-   around one big textarea+select+checkbox+CTA column -- an input-form
-   silhouette wearing unboxed clothes. This is a real silhouette change:
-   .classify-stage stays the flat, unboxed dashed-bottom heading strip
-   (title/Shiori read as page content, unchanged from Phase 154), but the
-   form below it is now .classify-desk-scene -- a small pinned source slip
-   + paper-chip controls + postmark CTA on one side, and a card tray on the
-   other, so a card-making desk is what actually fills the first viewport,
-   not a textarea. */
-.classify-stage {
+/* classify-v2-* -- Phase 165 (V2 scene reconstruction pilot). Replaces the
+   Phase 156 classify-desk-scene/classify-source-slip/classify-stamp-button/
+   classify-card-tray rules above (CSS-drawn approximations of a desk) with
+   a real photographed scene: .classify-v2-scene is an aspect-ratio box
+   whose background-image IS the card-making desk (source slip, stamp +
+   ink pad, and a real card tray already exist in the photo), and every
+   live control below is an absolutely-positioned sibling placed against
+   that photo's actual objects. Desktop (16:9) and mobile (9:16) are two
+   different photo compositions, not a crop of one image, so every zone's
+   position is redefined at the >=1024px breakpoint rather than reused.
+   Percentages were measured against the source photos directly. */
+.classify-v2-root {
   position: relative;
   display: grid;
-  gap: 14px;
+  gap: 10px;
   padding: 4px 2px 18px;
   border-bottom: 1px dashed var(--paper-border);
 }
 
-.classify-hero-header {
+.classify-v2-heading {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
-.classify-hero-companion {
+.classify-v2-heading-companion {
   flex: 0 0 auto;
 }
 
-.classify-hero-header h2 {
+.classify-v2-heading h2 {
   margin: 2px 0 0;
   color: var(--text);
-  font-size: 21px;
+  font-size: 19px;
   font-weight: 800;
 }
 
-.classify-hero-header p {
-  margin: 4px 0 0;
-  max-width: 46ch;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-/* classify-desk-scene -- the ClassifyDeskIntro form itself: main desk
-   column (slip + chips + stamp CTA) beside the card tray at >=1024px,
-   single column (main, then tray) below that, the same "main surface +
-   side rail" split Reading/Stats/Analyze's own card stage already use at
-   this tier, applied here to the *intro* for the first time. */
-.classify-desk-scene {
-  display: grid;
-  gap: 18px;
-  min-width: 0;
-}
-
-.classify-desk-main {
-  display: grid;
-  gap: 14px;
-  min-width: 0;
+/* The scene itself: mobile-first (9:16 photo) by default, desktop (16:9
+   photo) swapped in at >=1024px -- matching every other tab's existing
+   desktop-tier split, and satisfying the "16:9 never loads on mobile, 9:16
+   never loads on desktop" requirement via two disjoint background-image
+   rules rather than one asset cropped with object-position. */
+.classify-v2-scene {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 941 / 1672;
+  border-radius: 18px;
+  overflow: hidden;
+  background-color: var(--paper-bg);
+  background-image: url("/brand/decor/v2/v2-classify-card-desk-mobile-9x16.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 16px 36px var(--paper-shadow);
 }
 
 @media (min-width: 1024px) {
-  .classify-desk-scene {
-    grid-template-columns: minmax(0, 1fr) minmax(200px, 260px);
-    align-items: start;
-    gap: 24px;
+  .classify-v2-scene {
+    aspect-ratio: 1672 / 941;
+    background-image: url("/brand/decor/v2/v2-classify-card-desk-desktop-16x9.webp");
   }
 }
 
-/* classify-source-slip -- Phase 156. Was .classify-hero-textarea: a
-   full-width, 140px-tall "work sheet" that dominated the first viewport --
-   the exact "textarea가 화면의 주인공" failure this phase's brief names.
-   Now a small source-material slip: capped width, 3 rows, its own tighter
-   ruled-line/inset-shadow surface (same recipe, smaller scale) plus a
-   torn washi-tape pin at the top edge (the same rgba(217,122,74,...) tape
-   Vocab/Home/Study/Stats' own pinned notes already use) -- reads as one
-   item pinned to the desk, not the input box the screen is organized
-   around. Same value/onChange wiring as before; only the chrome and size
-   changed. */
-.classify-source-slip-wrap {
-  position: relative;
-  max-width: 440px;
-  padding-top: 6px;
-  transform: rotate(-0.5deg);
-}
-
-.classify-source-slip-wrap::before {
-  content: "";
+/* Source slip zone -- sits directly on the photographed lined paper (top
+   of the mobile photo, left third of the desktop photo). The textarea
+   itself is transparent (see below) so typed text reads as ink on that
+   same paper, not a white box floating over the photo. */
+.classify-v2-slip-zone {
   position: absolute;
-  top: -3px;
-  left: 26px;
-  z-index: 1;
-  width: 34px;
-  height: 13px;
-  border: 1px solid rgba(217, 122, 74, 0.42);
-  background: rgba(217, 122, 74, 0.3);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.14);
-  transform: rotate(-3deg);
-  pointer-events: none;
+  left: 9%;
+  top: 5%;
+  width: 78%;
+  height: 19%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.classify-source-slip-label {
-  display: block;
-  margin: 0 0 6px 2px;
+@media (min-width: 1024px) {
+  .classify-v2-slip-zone {
+    left: 6%;
+    top: 17%;
+    width: 29%;
+    height: 45%;
+    gap: 4px;
+  }
+}
+
+.classify-v2-slip-label {
+  margin: 0 0 0 4px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
 
-.classify-source-slip {
+.classify-v2-slip-textarea {
   box-sizing: border-box;
   width: 100%;
-  min-height: 76px;
-  padding: 14px 14px 14px 28px;
+  flex: 1;
+  min-height: 0;
+  padding: 2px 6px;
   border: none;
-  border-radius: 3px 12px 12px 12px;
-  background-color: var(--panel-bg);
-  background-image:
-    linear-gradient(
-      90deg,
-      transparent 18px,
-      rgba(193, 105, 74, 0.35) 18px,
-      rgba(193, 105, 74, 0.35) 19px,
-      transparent 19px
-    ),
-    repeating-linear-gradient(
-      180deg,
-      rgba(61, 47, 20, 0.055) 0px,
-      rgba(61, 47, 20, 0.055) 1px,
-      transparent 1px,
-      transparent 26px
-    );
-  box-shadow:
-    inset 0 3px 8px rgba(37, 43, 30, 0.1),
-    0 2px 6px rgba(37, 43, 30, 0.06);
-  color: var(--text);
-  font-size: 14.5px;
-  line-height: 1.75;
-}
-
-.classify-source-slip::placeholder {
-  color: var(--muted);
-  opacity: 0.68;
-}
-
-.classify-source-slip:focus {
-  outline: none;
-  box-shadow:
-    inset 0 3px 8px rgba(37, 43, 30, 0.1),
-    inset 0 0 0 1.5px var(--screen-accent, var(--primary));
-}
-
-/* classify-desk-chip-row -- deck select + "완벽히 아는 단어도 표시" as two
-   small paper chips sitting on the desk, not a form-field row. The select
-   reuses .reading-deck-picker's own rounded-pill chip verbatim (see
-   below); .classify-desk-checkbox-chip gives the checkbox label the same
-   pill treatment so the two chips read as one family. */
-.classify-desk-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-.classify-desk-checkbox-chip {
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: var(--soft-bg);
-  color: var(--text-secondary);
+  border-radius: 4px;
+  background: transparent;
+  color: #2c2013;
   font-size: 12.5px;
-  font-weight: 700;
+  line-height: 1.6;
+  resize: none;
 }
 
-.classify-desk-cta-row {
+@media (min-width: 1024px) {
+  .classify-v2-slip-textarea {
+    padding: 2px 10px;
+    font-size: 14px;
+    line-height: 1.85;
+  }
+}
+
+.classify-v2-slip-textarea::placeholder {
+  color: #7c6a52;
+  opacity: 0.75;
+}
+
+.classify-v2-slip-textarea:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px var(--screen-accent, var(--primary));
+  border-radius: 4px 12px 12px 4px;
+}
+
+/* Deck select + "완벽히 아는 단어도 표시" -- two small opaque paper chips
+   (not translucent -- they need to stay legible sitting on top of the
+   photo regardless of what's directly beneath them). Mobile groups them
+   with the stamp cluster (the coral scalloped label in that photo has
+   open blank space for exactly this); desktop tucks them under the source
+   slip instead, closer to "near the slip" per this phase's brief. */
+.classify-v2-chip-row {
+  position: absolute;
+  left: 14%;
+  top: 25%;
+  width: 72%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
 }
 
-/* classify-stamp-button -- Phase 156. Was .classify-bookmark-button, the
-   same notched-flag CTA every other tab's primary action uses. This
-   phase's brief specifically asks for a stamp/bookmark/action-tag read
-   here, stronger than the shared notch alone communicates once the rest
-   of the screen is a desk scene -- so the CTA now borrows the app's own
-   established "postmark" recipe instead (.shiori-stamp--labeled: dashed
-   border, rounded-pill shape, a few degrees of rotation), filled solid
-   with this tab's coral --screen-accent so it still reads unmistakably as
-   the one primary action, not just a decorative badge. width/min-width
-   are left at auto (a bare class selector already beats the app-wide
-   mobile `button { width: 100% }` element selector regardless of source
-   order) and .classify-desk-cta-row sets its own `align-items: center`
-   rather than reusing `.analyze-cta-row`, so there is no ancestor
-   `align-items: stretch` left to re-stretch it back to full width on
-   mobile -- confirmed via a real width measurement, not assumed. */
-.classify-stamp-button {
+@media (min-width: 1024px) {
+  .classify-v2-chip-row {
+    left: 6%;
+    top: 64%;
+    width: 30%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.classify-v2-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
+}
+
+.classify-v2-chip select {
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.classify-v2-chip-icon {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  color: var(--muted);
+}
+
+.classify-v2-chip-checkbox {
+  gap: 6px;
+}
+
+/* Stamp CTA -- positioned on the photo's own blank coral tag/label (both
+   compositions have one), styled as a solid postmark-style pill so
+   pressing it reads as stamping that tag, not submitting a form. A bare
+   class selector already beats the app-wide mobile `button { width: 100%
+   }` element selector regardless of source order, and this zone sets its
+   own centering, so nothing re-stretches it on mobile. */
+.classify-v2-stamp-button {
+  position: absolute;
+  left: 22%;
+  top: 55%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: auto;
   min-width: 0;
-  padding: 11px 22px;
+  padding: 12px 24px;
   border: 1.5px dashed rgba(255, 255, 255, 0.65);
   border-radius: 999px;
   background: var(--screen-accent, var(--primary));
   color: #fff;
   font-weight: 800;
-  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.18);
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.22);
   transform: rotate(-2deg);
   transition:
     transform var(--motion-fast) var(--ease-soft),
     box-shadow var(--motion-fast) var(--ease-soft);
 }
 
-.classify-stamp-button:not(:disabled):hover {
-  transform: rotate(0deg) translateY(-1px);
-  box-shadow: 0 8px 18px rgba(37, 43, 30, 0.22);
+@media (min-width: 1024px) {
+  .classify-v2-stamp-button {
+    left: 40%;
+    top: 66%;
+    padding: 13px 26px;
+  }
 }
 
-.classify-stamp-button:not(:disabled):active {
+.classify-v2-stamp-button:not(:disabled):hover {
+  transform: rotate(0deg) translateY(-1px);
+  box-shadow: 0 8px 18px rgba(37, 43, 30, 0.26);
+}
+
+.classify-v2-stamp-button:not(:disabled):active {
   transform: rotate(-1deg) scale(0.97);
 }
 
-.classify-stamp-button:disabled {
+.classify-v2-stamp-button:disabled {
   background: #a89a80;
   color: #fff;
   cursor: not-allowed;
@@ -6123,75 +6159,60 @@ input.reading-vocab-sticker-toggle:checked {
   transform: none;
 }
 
-/* classify-card-tray -- Phase 156, new. A shallow paper tray sitting
-   beside (>=1024px) or below (narrower) the desk column: a small fanned
-   stack of blank paper-card shapes (no text/numbers -- purely decorative,
-   so it can never be mistaken for real analysis output) previews "this
-   slip is about to become word cards", plus the resumeable-draft
-   affordance, so the first viewport reads as a card-making desk even
-   before any text has been typed. */
-.classify-card-tray {
+/* Card tray zone -- sits on the photographed card stack itself (bottom of
+   the mobile photo, right third of the desktop photo). No decorative
+   CSS card fan here any more -- the photo already shows real cards; this
+   zone only needs to carry the resumeable-draft receipt when one exists. */
+.classify-v2-tray-zone {
+  position: absolute;
+  left: 10%;
+  top: 68%;
+  width: 80%;
+  height: 28%;
   display: grid;
-  gap: 10px;
   align-content: start;
-  padding: 16px;
-  border: 1px dashed var(--paper-border);
-  border-radius: 4px 16px 16px 16px;
-  background: var(--soft-bg);
+  gap: 6px;
 }
 
 @media (min-width: 1024px) {
-  .classify-card-tray {
-    position: sticky;
-    top: 24px;
-    align-self: start;
+  .classify-v2-tray-zone {
+    left: 63%;
+    top: 62%;
+    width: 33%;
+    height: 32%;
   }
 }
 
-.classify-card-tray-label {
+.classify-v2-tray-hint {
   margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 4px 10px 10px 4px;
+  background: var(--panel-bg);
+  box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  line-height: 1.45;
 }
 
-.classify-card-tray-stack {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 62px;
+@media (min-width: 1024px) {
+  .classify-v2-tray-hint {
+    font-size: 11.5px;
+  }
 }
 
-.classify-card-tray-card {
-  position: absolute;
-  width: 42px;
-  height: 56px;
-  border: 1px solid var(--paper-border);
-  border-radius: 6px 6px 6px 2px;
-  background: var(--paper-bg);
-  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.12);
+.classify-v2-draft-chip {
+  font-size: 10.5px;
+  box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
 }
 
-.classify-card-tray-card:nth-child(1) {
-  transform: rotate(-9deg) translateX(-15px);
-  z-index: 1;
+@media (min-width: 1024px) {
+  .classify-v2-draft-chip {
+    font-size: 11.5px;
+  }
 }
 
-.classify-card-tray-card:nth-child(2) {
-  z-index: 2;
-}
-
-.classify-card-tray-card:nth-child(3) {
-  transform: rotate(9deg) translateX(15px);
-  z-index: 1;
-}
-
-.classify-card-tray-hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
+.classify-v2-copyright {
+  margin-top: 2px;
 }
 
 /* classify-draft-chip -- Phase 156. Was a plain centered <p> status line
@@ -9911,7 +9932,7 @@ input.reading-vocab-sticker-toggle:checked {
   .classify-word-card,
   .classify-result-summary {
     gap: 14px;
-    padding: 16px;
+    padding: 18px 16px;
   }
 
   /* Phase 112 -- tighter than the shared 14px/16px above, specifically for

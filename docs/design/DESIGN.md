@@ -6568,3 +6568,93 @@ and documentation phase only.
 using the new assets and the Phase 162 prompt structure. The likely candidates
 remain Classify V2 or Vocab V2, because they are the clearest tests of whether
 we can actually replace the old skeleton rather than decorate it.
+
+## Phase 164 -- V2 Asset Contact Sheet / Safe-Zone Review
+
+This phase prepared the implementation handoff after Phase 163's asset kit.
+The current work started from a clean `phase-164` branch after the Phase 162-
+163 documentation/mockup/asset changes were committed, pushed, fast-forwarded
+into `main`, pushed to `origin/main`, and the `phase-162` branch was deleted
+locally and remotely.
+
+**Contact sheet created:** `docs/design/mockups/v2/v2-asset-contact-sheet-
+safe-zones.png` combines all fourteen V2 runtime assets with green overlay
+boxes showing the primary live-DOM safe zones. This is intentionally not a UI
+mockup. It is a placement/audit sheet for where live text, buttons, state, and
+Shiori components can sit without being baked into raster images.
+
+**Safe-zone review created:** `docs/design/V2_ASSET_SAFE_ZONE_REVIEW.md`
+records the tab-by-tab verdicts. All seven tabs pass asset readiness for both
+desktop and mobile. The review also names the implementation trap for each
+tab: Home must not split back into title column plus book; Reading must keep
+input and book material distinct; Vocab must delete the old filter panel;
+Study must avoid a white admin card on the board; Shared Deck must use book
+spines as deck items; Classify must become source slip -> stamp -> card tray;
+Stats must avoid dashboard metric cards.
+
+**No further asset blockers:** no additional raster asset generation is needed
+before implementation. Small transparent cutouts may still be generated later
+for a specific component if needed, but collecting more decoration now would
+delay the real work: replacing old silhouettes.
+
+**Next phase recommendation:** start with **Classify V2** as the first pilot.
+It has the clearest old-structure failure and the clearest new scene workflow,
+so the screenshot result will make success or failure obvious.
+
+## Phase 165 -- Classify V2 Full Scene Reconstruction (V2 Pilot)
+
+The first real implementation pilot for the V2 scene bible: Classify's intro
+stage now renders on top of the actual `v2-classify-card-desk-*` photos
+(`frontend/public/brand/decor/v2/`) instead of a CSS-drawn approximation of a
+desk. `AnalyzeSection.tsx`'s Phase 156 `ClassifyDeskIntro`/`ClassifySourceSlip`/
+`ClassifyDeskControls`/`ClassifyCardTray` were replaced with `ClassifyDeskV2`/
+`ClassifySourceSlipV2`/`ClassifyDeskChipRowV2`/`ClassifyCardTrayV2`: the new
+`.classify-v2-scene` is an `aspect-ratio` box whose `background-image` is the
+photo itself (mobile 9:16 by default, desktop 16:9 swapped in at `>=1024px`,
+matching the app's existing desktop-tier split), and every live control --
+the source textarea, the deck-select/show-known paper chips, the stamp CTA,
+and the draft-resume receipt -- is an absolutely-positioned sibling placed
+against that photo's actual paper/stamp/tray objects, independently
+positioned per breakpoint since the two photos are different compositions,
+not a crop of one image. The textarea itself is transparent so typed text
+reads as ink on the photographed ruled paper rather than a white input box
+floating over it. `.classify-card-tray`'s old decorative CSS card-fan was
+dropped outright -- the photo already shows a real card stack, so the tray
+zone now only needs to carry the resumeable-draft receipt (reusing
+`.classify-draft-chip`/`.classify-quiet-link` unchanged). The post-analyze
+`ClassifyResultSummary` was also de-boxed: it no longer shares
+`.classify-word-card`'s bordered/border-top-accent panel rule (a literal
+"dashboard card" silhouette flagged by this phase's own failure criteria) --
+it's now its own asymmetric-corner-radius, slightly rotated card, and the
+four result-count tiles picked up more rotation/vertical stagger so they read
+as a small scattered card fan rather than an aligned pill row. The
+classify-card decision stage itself (`.classify-word-card`, the 4-way
+`.classify-action-grid`, Phase 112's mobile decision-grid protection) was
+deliberately left untouched, per this phase's brief.
+
+QA: `npm run build` clean, `git diff --check` clean. Real headless-Chrome
+(CDP, no Playwright installed -- see the WSL/CDP memory notes) QA against a
+scratch sqlite backend and a fresh registered test user covered 1280/1024/
+390/375/320px: desktop loads the 16:9 asset and only the 16:9 asset, mobile
+loads the 9:16 asset and only the 9:16 asset, zero horizontal overflow at
+every width, zero console errors, zero unexpected failed requests. Full
+functional flow verified end-to-end: fill source slip, select deck, toggle
+show-known, click the stamp CTA, `/analyze`, enter the card stage, classify 6+
+cards mixing all 4 statuses plus skip, reach the result summary, toggle the
+ledger, save, and confirm the save message. A second run specifically
+verified draft persistence: classify 3/10 cards, reload, confirm the draft
+receipt appears in the tray zone (not a full-width banner), click "이어하기",
+and confirm it resumes at card 4/10. Phase 112's mobile decision grid was
+re-measured mid-flow at 390px and stays fully inside the viewport. One
+transient failure mid-session was traced to running `npm run build` while
+`npm run dev` was still live in the same directory (the documented `.next`
+corruption issue) -- recovered by killing the dev server, `rm -rf .next`, and
+restarting, per the existing WSL dev-server memory notes; not a code defect.
+
+Remaining risk: the result-summary de-boxing is a light touch, not a full
+V2 scene treatment (no "finished card bundle" photo asset exists yet) -- it
+still reads as a soft card rather than a fully physical object, and the
+shared `CoverageSummary` component's own bordered box (used by other tabs
+too) was left as-is, out of this phase's file scope. Next candidate: Vocab V2
+(the remaining tab with the clearest old filter-panel skeleton) or Home V2,
+per the bible's recommended order.
