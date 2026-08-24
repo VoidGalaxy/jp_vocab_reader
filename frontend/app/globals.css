@@ -8184,44 +8184,28 @@ input.reading-vocab-sticker-toggle:checked {
   margin-top: 8px;
 }
 
-/* Casual Sticker Reader (Phase 68) -- vocab-notebook-scene: the filter
-   index, the word list, and the selected-item note page share one
-   open-book spread on desktop (>=1024px, see the media query further
-   below), matching the mockup's Notebook screen. Below that this is a
-   plain single-column grid with the same 10px rhythm .vocab-panel already
-   used between the filter and the list before this Phase -- mobile/tablet
-   are unaffected by this wrapper. */
-.vocab-notebook-scene {
+/* Phase 166 (Vocab V2) -- .vocab-notebook-scene/-index/-pages (a 3-column
+   CSS-paper grid: filter rail | list | detail, no real photo underneath)
+   are gone; the notebook is now .vocab-v2-scene, a real photographed
+   index-notebook (see below). .vocab-v2-pages (the flowing list+detail
+   area below the photo) keeps a plain 2-column grid. */
+.vocab-v2-pages {
   position: relative;
   display: grid;
   gap: 10px;
   min-width: 0;
 }
 
-.vocab-notebook-index,
-.vocab-notebook-pages {
-  min-width: 0;
-}
-
-/* Phase 87 -- 덱을 아직 고르지 않은 동안 .vocab-notebook-pages는 넓은
-   가운데 칸에 점선 박스 하나만 떠 있는 것처럼 보였다 (Phase 86 QA). 그
-   배경 자체를 옅은 줄노트 질감으로 바꿔 "빈 공간"이 아니라 "아직 아무것도
-   적히지 않은 노트북 페이지"로 읽히게 하고, 세로 여백도 좀 더 확보해
-   페이지 한 장을 펼쳐둔 느낌을 준다. .shared-deck-detail이 이미 쓰는
-   것과 같은 반복 그라디언트 줄 레시피를 재사용한다. 데스크톱(>=1024px)
-   전용 -- 모바일은 이 배경 없이 기존 .desk-surface-section 톤을 그대로
-   유지한다. */
+/* Phase 166 -- .vocab-v2-list-column already sits on the flowing ruled-
+   paper background (.vocab-v2-pages, see below), so the "덱을 아직 안
+   골랐어요" empty state just needs room to center in, not its own texture
+   layer. Desktop-only, matching this column's own larger min-height
+   elsewhere. */
 @media (min-width: 1024px) {
-  /* Phase 129 -- the repeating-gradient ruled lines standing in for "blank
-     notebook page" are dropped: .vocab-notebook-scene itself now carries
-     a real photographed notebook page as its background (see below), so
-     this empty state just sits on that directly instead of layering a
-     second, fake ruled-line texture on top of it. */
   .vocab-desk-empty {
     display: grid;
     align-items: center;
     min-height: 320px;
-    background: none;
   }
 }
 
@@ -8273,115 +8257,11 @@ input.reading-vocab-sticker-toggle:checked {
   height: 12px;
 }
 
-/* Filters (덱/검색/상태/정렬) and actions (학습하기/추가/관리) read as two
-   distinct groups instead of one long row of unrelated controls. */
-.vocab-filter-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-/* Casual Sticker Reader (Phase 57) -- was a bordered box matching the
-   search pill (V3 note above); now an underline-only field, same family as
-   the reading tab's own deck picker (.reading-deck-picker select) and the
-   candidate tray's filter/quick-select tabs, so 덱/정렬 read as labels
-   sitting on the notebook page rather than a boxed toolbar control. */
-.vocab-filter-group select {
-  border: none;
-  border-bottom: 1px solid var(--border-strong);
-  border-radius: 0;
-  padding: 6px 16px 6px 2px;
-  color: var(--text);
-  background: transparent;
-}
-
-.vocab-filter-group select:focus {
-  border-bottom-color: var(--screen-accent, var(--primary));
-  outline: none;
-}
-
-/* Phase 149 -- Vocab Full Reconstruction. Phase 114's flat heading strip
-   is kept (title still sits directly on the page, no card boundary), but
-   everything below the title is rebuilt: the old chip-row of stat pills
-   and the row of full webapp buttons both read as leftover "admin panel"
-   chrome in real screenshots. .vocab-pinned-notes below replaces the
-   pill row with small paper tags pinned at a slight rotation (a washi-
-   tape mark, same rgba(217,122,74,...) accent .vocab-page-guide already
-   uses elsewhere on this screen); .vocab-bookmark-actions replaces the
-   button row with small notched bookmark-flag labels (the same
-   right-notch clip-path .vocab-item-status-wrap already established for
-   the status select further down this file). */
-.vocab-notebook-header {
-  position: relative;
-  display: grid;
-  gap: 10px;
-  padding: 4px 2px 16px;
-  border-bottom: 1px dashed var(--paper-border);
-}
-
-.vocab-pinned-notes {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 10px 14px;
-  margin: 2px 0;
-}
-
-.vocab-pinned-note {
-  position: relative;
-  padding: 4px 10px 5px;
-  border-radius: 2px 2px 6px 2px;
-  background: var(--soft-bg);
-  color: var(--text-secondary);
-  font-size: 11.5px;
-  font-weight: 700;
-  white-space: nowrap;
-  box-shadow: 0 3px 6px rgba(120, 98, 40, 0.12);
-  transform: rotate(-1.4deg);
-}
-
-.vocab-pinned-note:nth-child(even) {
-  transform: rotate(1.2deg);
-}
-
-/* A small strip of washi tape "pinning" each note to the page -- same
-   motif/color .vocab-page-guide::before already uses below, repeated here
-   rather than invented fresh. */
-.vocab-pinned-note::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  z-index: 1;
-  width: 16px;
-  height: 9px;
-  border: 1px solid rgba(217, 122, 74, 0.42);
-  background: rgba(217, 122, 74, 0.3);
-  box-shadow: 0 2px 3px rgba(37, 43, 30, 0.12);
-  transform: translateX(-50%) rotate(-4deg);
-  pointer-events: none;
-}
-
-.vocab-pinned-note-deck {
-  background: var(--paper-bg);
-  color: var(--text);
-  font-weight: 800;
-}
-
-.vocab-pinned-note-accent {
-  background: rgba(217, 122, 74, 0.16);
-  color: var(--primary-dark);
-}
-
-.vocab-bookmark-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-}
-
+/* Phase 166 -- .vocab-filter-group/.vocab-notebook-header/.vocab-pinned-
+   note* (an "admin panel" stat-pill row above a filter toolbar) are gone.
+   The title is now .vocab-v2-heading (plain, above the scene) and the
+   stat summary is one small .vocab-v2-count-note pinned inside the scene
+   itself -- see the .vocab-v2-* rules further down this file. */
 /* Bookmark/flag-shaped action labels -- reuses the app's established
    right-notch clip-path (.vocab-item-status-wrap below, and
    .home-hero-bookmark/.library-hero-bookmark elsewhere) instead of the
@@ -8466,12 +8346,6 @@ input.reading-vocab-sticker-toggle:checked {
   color: var(--text);
   box-shadow: none;
   transform: none;
-}
-
-.vocab-bookmark-more {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .vocab-search-wrap {
@@ -8570,261 +8444,32 @@ input.reading-vocab-sticker-toggle:checked {
   color: #6b5f3f;
 }
 
-/* Casual Sticker Reader (Phase 68) -- desktop-only notebook spread: index
-   rail | word list | selected-item note page. Gated at the same
-   >=1024px "true desktop" tier Phase 65/66/67 already use; keep this
-   breakpoint in sync with VocabSection.tsx's isDesktopDetail matchMedia
-   query. Below this, .vocab-notebook-scene stays a plain single column
-   and .vocab-notebook-detail is never shown (display: none) -- mobile
-   keeps the exact inline row-expansion flow from before this Phase. */
+/* Phase 166 (Vocab V2) -- .vocab-notebook-scene/-index (a 3-column CSS
+   grid: filter rail | list | detail, no real photo underneath) are gone.
+   The filter rail is now .vocab-v2-tab-rail, anchored to the real photo
+   in .vocab-v2-scene (see further down this file). .vocab-notebook-detail
+   survives as the sticky "note page" half of the remaining 2-column
+   .vocab-v2-pages grid (list | detail) -- still gated at the same
+   >=1024px tier VocabSection.tsx's isDesktopDetail matchMedia query uses,
+   and mobile still never shows it (display: none), keeping the exact
+   inline row-expansion flow. */
 .vocab-notebook-detail {
   display: none;
 }
 
 @media (min-width: 1024px) {
-  /* Phase 149 -- Vocab Full Reconstruction. Phase 129's photographed-crop
-     approach (a stretched/zoomed vocab-ring-notebook-spread-web.webp
-     behind the index rail and again, separately, behind the detail
-     column) is dropped entirely: real screenshots at 1280/1024 showed the
-     detail column's own crop reading as a detached decoration sitting
-     next to a plain white middle column, not a shared physical surface.
-     All three columns now paint the exact same flat var(--paper-bg) +
-     ruled-line texture (see .vocab-notebook-pages and .vocab-notebook-
-     detail below) so the whole spread reads as one continuous notebook
-     material regardless of which column happens to hold content. The
-     rail also widens (was minmax(150,190)) so the physical index tabs
-     below have real surface area for long Korean labels instead of
-     relying on a fixed-pixel sprite crop. */
-  .vocab-notebook-scene {
-    grid-template-columns: minmax(178px, 210px) minmax(280px, 1fr) minmax(
-        250px,
-        300px
-      );
+  .vocab-v2-pages {
+    grid-template-columns: minmax(280px, 1fr) minmax(260px, 320px);
     align-items: start;
-    gap: 18px;
-    padding: 20px;
-    border: 1px solid var(--paper-border);
-    border-radius: 20px;
-    background-color: var(--paper-bg);
-    box-shadow: 0 16px 36px var(--paper-shadow);
-  }
-
-  /* Phase 76 -- a single quiet leaf-sprig hint (same recipe as Home/Study/
-     Shared's own leaf accents) top-right of the whole spread, echoing the
-     mockup's desk-clutter without adding a second prop cluster. Anchored
-     via `top` only, never `bottom` -- Phase 73's postmortem on this file
-     covers why anchoring to the bottom of a variable-height scene drifts
-     onto the wrong sibling's edge, and this scene's own height is set by
-     the word list column, which can run to 50+ rows. Sits above the note
-     page's top-right corner, inside the 30px page padding budget Reading's
-     own desk-prop layer (Phase 74) already bleeds into. */
-  .vocab-notebook-scene::before {
-    content: "";
-    position: absolute;
-    top: -10px;
-    right: 30px;
-    z-index: 1;
-    width: 22px;
-    height: 26px;
-    background:
-      radial-gradient(ellipse 5px 9px at 35% 62%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%),
-      radial-gradient(ellipse 5px 10px at 62% 40%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%);
-    opacity: 0.7;
-    transform: rotate(8deg);
-    pointer-events: none;
-  }
-
-  /* Phase 149 -- the photographed left-edge crop this rail used to carry
-     as its own background-image is dropped: it was the same "stand in
-     for real tabs" idea Phase 146 already replaced once, and reintroduced
-     the exact fixed-crop fragility Phase 146's real tabs were meant to
-     fix. Flat var(--paper-bg), matching every other column in the
-     spread now (see .vocab-notebook-scene above). */
-  .vocab-notebook-index {
-    padding: 10px 4px 10px 22px;
-    background-color: var(--paper-bg);
-  }
-
-  /* The filter index reads as a column of page-edge tabs, not a row of
-     toolbar controls -- 덱/검색/정렬 and the status tabs each stack
-     vertically instead of wrapping across a wide row. Scoped to this one
-     parent so SharedDeckSection's own reuse of .index-card-filter/
-     .vocab-status-filters (its subscribed-deck word filter) is
-     untouched. */
-  .vocab-notebook-index .vocab-filter-group {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 14px;
-  }
-
-  .vocab-notebook-index .vocab-search-wrap {
-    min-width: 0;
-  }
-
-  /* Phase 149 -- align-items:stretch (not Phase 146's flex-start) so every
-     tab now fills the rail's full width instead of sizing to a fixed
-     172px sprite crop -- this is the actual fix for "긴 라벨이 장식과
-     겹친다": a fluid CSS tab can never run out of room the way a
-     fixed-pixel image crop could. margin-left still bleeds the column
-     past the rail's own padding so the tabs read as protruding past the
-     notebook's edge, not sitting inside a filter box. */
-  .vocab-notebook-index .vocab-status-filters {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 7px;
-    margin-left: -18px;
-  }
-
-  /* Phase 149 -- real CSS-built tabs replace the phase145 sprite
-     entirely (the sprite is no longer referenced anywhere in this file).
-     Each tab is its own opaque flag: a flat status-tinted fill, rounded
-     on the protruding (left/outer) corner and square on the spine
-     (right/inner) corner where it re-attaches to the rail. Width is the
-     rail's own full width, not a fixed pixel crop, so an 8-character
-     label like "완벽히 아는 단어" always has real room instead of
-     brushing a decorative edge. The small ring/rivet mark (::after,
-     below) lives inside this same box with a reserved right-padding
-     gutter, so it is structurally incapable of overlapping the label --
-     no pixel math to get wrong, unlike the old sprite's per-chip
-     background-position-y table. */
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    min-height: 40px;
-    padding: 0 28px 0 14px;
-    border: none;
-    border-bottom: none;
-    border-radius: 8px 3px 3px 8px;
-    background-color: var(--soft-bg);
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 700;
-    text-align: left;
-    box-shadow: 2px 3px 7px rgba(37, 43, 30, 0.1);
-    transition:
-      transform var(--motion-fast) var(--ease-soft),
-      background-color var(--motion-fast) var(--ease-soft),
-      box-shadow var(--motion-fast) var(--ease-soft);
-  }
-
-  /* The reserved ring/rivet mark -- a small punched-hole circle on the
-     tab's spine-side edge, always inside the chip's own 28px right
-     padding gutter, never touching the label. Six tabs used for six live
-     filters (전체/모르는/헷갈림/아는/미분류/복습예정). */
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    right: 11px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: rgba(253, 249, 238, 0.75);
-    box-shadow: inset 0 1px 2px rgba(37, 43, 30, 0.35);
-    transform: translateY(-50%);
-    pointer-events: none;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip:hover {
-    background-color: var(--panel-bg);
-  }
-
-  /* Per-status resting tint -- each tab is color-coded even before it's
-     selected, same warm color language as the reading tab/study cards
-     (VocabSection.tsx now applies these classes regardless of active
-     state, not only when active). */
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-known {
-    background-color: rgba(27, 107, 58, 0.14);
-    color: #1b6b3a;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-uncertain {
-    background-color: rgba(111, 95, 150, 0.14);
-    color: #6f5f96;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-unknown {
-    background-color: rgba(150, 96, 63, 0.14);
-    color: #96603f;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-unclassified {
-    background-color: rgba(107, 95, 63, 0.14);
-    color: #6b5f3f;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-due {
-    background-color: rgba(193, 105, 74, 0.14);
-    color: var(--tone-coral);
-  }
-
-  /* Active = pulled out further, like a real selected divider sitting
-     proud of the stack, plus a deeper solid fill instead of the resting
-     tint -- no thick border/box-shadow ring, per this phase's continued
-     "두꺼운 bordered button처럼 만들지 않는다" instruction. */
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip-active {
-    transform: translateX(10px);
-    background-color: var(--screen-accent, var(--primary));
-    color: #fff;
-    font-weight: 800;
-    box-shadow: 3px 5px 12px rgba(37, 43, 30, 0.18);
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-chip-active::after {
-    background: rgba(255, 255, 255, 0.85);
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-known.vocab-filter-chip-active {
-    background-color: #1b6b3a;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-uncertain.vocab-filter-chip-active {
-    background-color: #6f5f96;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-unknown.vocab-filter-chip-active {
-    background-color: #96603f;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-unclassified.vocab-filter-chip-active {
-    background-color: #6b5f3f;
-  }
-
-  .vocab-notebook-index .vocab-status-filters .vocab-filter-due.vocab-filter-chip-active {
-    background-color: var(--tone-coral);
-  }
-
-  /* Phase 146 -- .index-card-filter's dashed border/radius/tinted fill
-     (still active on every other screen that reuses this class -- Shared
-     Deck's own subscribed-deck filter, untouched) is dropped entirely
-     here, and the Phase 124 washi-tape corner (::before) that used to
-     mark "this is a filter drawer" is removed rather than kept: real
-     protruding tabs now do that job directly on .vocab-status-filters
-     below, and a second, fake "pinned note" cue sitting right above them
-     would read as two competing physical-attachment motifs in the same
-     column. 덱/검색/정렬 now sit as plain unboxed labels directly on the
-     rail's own page background -- exactly what this phase's brief asks
-     for ("index tab과 충돌하는 boxed panel chrome은 제거"). */
-  .vocab-notebook-index .index-card-filter {
-    border: none;
-    border-radius: 0;
-    padding: 4px 4px 4px 0;
-    background: transparent;
+    gap: 20px;
   }
 
   /* Sticky so the note page stays in view while the (potentially long)
      word list scrolls past it, same idea as the reading tab's pinned
-     word inspector (Phase 65). Phase 149 -- Phase 129's zoomed photo crop
-     is dropped: at real screenshot size it read as a detached decoration
-     bolted onto an otherwise plain column, not part of the same physical
-     spread as the list next to it. This now paints the identical ruled-
-     paper recipe as .vocab-notebook-pages below (a repeating horizontal
-     rule + a single red vertical margin line, the actual index-card
-     paper motif the old photo was only a picture of), so list and detail
-     read as two pages of the same open notebook rather than two
-     different materials. .paper-corner (added in VocabSection.tsx)
+     word inspector (Phase 65). Paints the identical ruled-paper recipe as
+     .vocab-v2-list-column below (a repeating horizontal rule + a single
+     red vertical margin line) so list and detail read as two pages of
+     the same open notebook. .paper-corner (added in VocabSection.tsx)
      supplies the folded top-right corner every list row already carries,
      tying this panel to the same row-card language instead of a separate
      "photo panel" identity. */
@@ -8918,51 +8563,24 @@ input.reading-vocab-sticker-toggle:checked {
   border-bottom: 1px dashed var(--border);
 }
 
-/* Word list -- a compact, scannable list of thin rows (구현3) instead of
-   the old two-column stack of bordered/shadowed cards, so many words fit
-   per screen and the note reads as a list to skim, not a card gallery.
-   Divider lines between rows replace per-card borders/shadows; a row only
-   grows once its own detail panel is expanded (.vocab-row-expanded). */
-/* index-card-drawer (renamed from .vocab-list-compact): one continuous
-   bordered box with dashed row-dividers read as "a list", not a card box
-   -- this is a tinted drawer (soft-bg, accent-topped) holding
-   individually-carded rows with a real gap between them, so it reads as
-   index cards sitting in a card file instead of database table rows. */
-.index-card-drawer {
+/* Phase 166 -- .index-card-drawer (a tinted, accent-topped "drawer" box
+   holding the rows -- one more bordered panel between the scene and the
+   actual scan aid) is gone. .vocab-v2-list-column is the plain list
+   wrapper; at >=1024px it picks up the same repeating-rule ruled-paper
+   texture .vocab-notebook-detail already uses (a horizontal rule pattern
+   plus one red vertical margin line), so list and detail clearly read as
+   two pages of the same open notebook instead of a bordered panel next to
+   a plain white column. Rows themselves (.vocabulary-index-row) stay
+   fully opaque -- the texture only shows in the gaps between them, where
+   lined paper would normally peek through a stack of index cards. */
+.vocab-v2-list-column {
   display: grid;
-  gap: 8px;
-  padding: 8px;
-  border-top: 2px solid var(--screen-accent, var(--accent));
-  border-radius: 12px;
-  background: var(--soft-bg);
+  gap: 10px;
+  min-width: 0;
 }
 
-/* Phase 129 -- on the desktop notebook spread specifically, the drawer's
-   own tinted var(--soft-bg) panel (and .desk-surface's radial-gradient +
-   inset-shadow "resting on a desk" tint, from the shared .desk-surface
-   class this list's wrapper also carries) would sit as a second opaque
-   panel between .vocab-notebook-scene's own paper background and the
-   individually-carded rows -- exactly the "image background with the old
-   bordered panel still showing on top of it" failure mode this phase's
-   brief rules out. Both go transparent here, letting the scene's flat
-   paper tone show straight through the gaps between rows; the rows
-   themselves (.vocabulary-index-row, untouched) stay fully opaque, since
-   they're the actual scan aid, not decoration. Scoped under
-   .vocab-notebook-pages so mobile (a completely different, non-notebook
-   layout below 1024px) and other .desk-surface consumers (Study,
-   SharedDeckSection) are untouched.
-
-   Phase 149 -- the middle column previously relied on nothing but a flat
-   tone here, which real 1280/1024 screenshots showed reading as an empty
-   white web panel next to the header above it, not a notebook page. It
-   now carries the same repeating-rule texture as .vocab-notebook-detail
-   (a horizontal rule pattern plus one red vertical margin line), so the
-   two columns clearly read as pages of the same notebook -- the rows
-   sitting on top stay fully opaque, so the texture only shows in the
-   gaps between them, exactly where lined paper would normally peek
-   through a stack of index cards. */
 @media (min-width: 1024px) {
-  .vocab-notebook-pages {
+  .vocab-v2-list-column {
     padding: 4px 10px 4px 28px;
     background-image:
       linear-gradient(
@@ -8981,23 +8599,12 @@ input.reading-vocab-sticker-toggle:checked {
       );
   }
 
-  .vocab-notebook-pages .desk-surface {
-    background: none;
-    box-shadow: none;
-  }
-
-  .vocab-notebook-pages .index-card-drawer {
-    background: none;
-  }
-
-  /* Phase 149 -- the widened index rail (above) narrows this column at
-     1024px specifically; .result-heading's shared flex row (used by
-     several other tabs, so not changed globally) doesn't wrap, so the
-     "저장된 단어장" title text itself was wrapping into the 새로고침
-     button's reserved space instead. Scoped to this column only: the
-     button drops to its own line first, before the title text is forced
-     to wrap. */
-  .vocab-notebook-pages .result-heading {
+  /* .result-heading's shared flex row (used by several other tabs, so not
+     changed globally) doesn't wrap, so the "저장된 단어장" title text
+     itself was wrapping into the 새로고침 button's reserved space
+     instead. Scoped to this column only: the button drops to its own
+     line first, before the title text is forced to wrap. */
+  .vocab-v2-list-column .result-heading {
     flex-wrap: wrap;
   }
 }
@@ -9005,58 +8612,35 @@ input.reading-vocab-sticker-toggle:checked {
 /* vocabulary-index-row (renamed from .vocab-row) -- the outer row identity;
    vocab-row-* sub-classes below (headword/meaning/badges/detail/status)
    keep their existing names, same pattern as .reader-paper keeping its
-   reader-mode-* header sub-classes. */
-/* Phase 43: a resting box-shadow on every row (same idea as Phase 41's
-   shared-deck-grid fix) meant a full list of 20-30 words stacked that many
-   little card shadows on top of the drawer's own soft-bg fill -- box-in-
-   box-in-box down the whole list. Border lightened to --paper-border and
-   the resting shadow dropped; a row only lifts to the fuller border/shadow
-   on :hover or once expanded (.vocab-row-expanded below), so elevation
-   reads as "this one's active", not a default every row carries. */
-/* Casual Sticker Reader (Phase 57) -- the old left-edge colored stripe
-   (::before) is gone: it duplicated the status the bookmark-flag select
-   already shows in the same row, and was the one remaining "side-tab
-   accent" pattern in this list. Left padding matches the right now that
-   nothing reserves space for a stripe. .paper-corner (already applied in
-   JSX) supplies the row's one physical cue -- a small folded page corner --
-   so 20-50 rows read as index cards in a drawer, not a stack of stripes. */
+   reader-mode-* header sub-classes.
+
+   Phase 166 (Vocab V2) -- was a bordered/radius/folded-corner "index card"
+   per row (Phase 43/57): defensible on its own, but stacked 20-50 deep it
+   still reads as "a pile of cards", the exact silhouette this phase's
+   brief rules out for a scan-heavy operate screen ("카드 더미처럼 만들지
+   않는다"). Each row is now a plain ledger line -- no border/radius/fold,
+   a bottom dashed rule between rows instead (the same rule style
+   .vocab-row-detail already uses inside a row), so 20-50 words read as
+   entries in one ledger, not a stack of separate cards. */
 .vocabulary-index-row {
   position: relative;
-  overflow: hidden;
-  padding: 10px 14px;
-  border: 1px solid var(--paper-border);
-  border-radius: 10px 10px 10px 3px;
-  background: var(--panel-bg);
-  box-shadow: none;
-  transition:
-    background var(--motion-fast) var(--ease-soft),
-    border-color var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft),
-    transform var(--motion-fast) var(--ease-soft);
+  padding: 10px 4px;
+  border-bottom: 1px dashed var(--border);
+  background: transparent;
+  transition: background var(--motion-fast) var(--ease-soft);
+}
+
+.vocabulary-index-row:last-child {
+  border-bottom: none;
 }
 
 .vocabulary-index-row:hover {
-  border-color: var(--border);
-  background: var(--panel-bg);
-  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.1);
-  transform: translateY(-1px);
-}
-
-/* Phase 72 -- the row's own .paper-corner fold (top-right triangle)
-   brightens on hover, like light catching the lifted page corner -- a
-   material cue instead of only a heavier shadow. Color only (no size
-   change, unlike the shared-deck-cover fold, to avoid animating this
-   pseudo-element's border-width box). No rotate either (unlike the
-   shared-deck/home-sticker hovers): Phase 57 deliberately kept this list
-   untilted so a 20-50 row Operate screen stays scannable, and that holds
-   for this pass too. */
-.vocabulary-index-row:hover::after {
-  border-color: transparent var(--border) transparent transparent;
+  background: var(--soft-bg);
 }
 
 .vocab-row-expanded {
-  border-color: var(--border-strong);
-  box-shadow: 0 5px 14px rgba(120, 98, 40, 0.1);
+  background: var(--soft-bg);
+  border-bottom-color: var(--border-strong);
 }
 
 .vocab-row-main {
@@ -9131,6 +8715,38 @@ input.reading-vocab-sticker-toggle:checked {
   border-top: 1px dashed var(--border);
 }
 
+/* Phase 166 -- below the desktop tier (where detail lives in the sticky
+   .vocab-notebook-detail note page instead), an expanded row's inline
+   detail borrows the V2 scene's own "clipped note pulled from the
+   notebook's back pocket" motif -- a kraft-tone patch, a small binder-
+   clip corner mark, and a faint rotation -- rather than reading as a
+   plain expanded form section. Purely decorative (::before), no layout
+   change to the content it wraps. */
+@media (max-width: 1023px) {
+  .vocab-row-detail {
+    position: relative;
+    margin-top: 10px;
+    padding: 12px 12px 10px;
+    border-top: none;
+    border-radius: 3px 12px 12px 12px;
+    background: #f1e6cc;
+    transform: rotate(-0.4deg);
+  }
+
+  .vocab-row-detail::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: 16px;
+    z-index: 1;
+    width: 12px;
+    height: 16px;
+    border: 2px solid var(--tone-coral);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+}
+
 .vocab-item-surface {
   color: var(--text);
   font-size: 19px;
@@ -9154,6 +8770,17 @@ input.reading-vocab-sticker-toggle:checked {
    .library-hero-bookmark elsewhere in the brand system. */
 .vocab-item-status-wrap {
   flex: 0 0 auto;
+  /* justify-self:start -- .vocab-notebook-detail-header (the only grid
+     ancestor this wrapper sits in) defaults its grid items to
+     justify-items:stretch, which the flex-only "flex:0 0 auto" above does
+     nothing to opt out of; a percentage clip-path notch (82%) on a
+     stretched-to-full-grid-track width turns into a huge arrow banner
+     instead of a small flag. Explicit here rather than a scoped ancestor
+     override so every context this wrapper is used in stays a content-
+     sized flag, regardless of its parent's layout mode. */
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
   clip-path: polygon(0 0, 82% 0, 100% 50%, 82% 100%, 0 100%);
 }
 
@@ -9368,6 +8995,351 @@ input.reading-vocab-sticker-toggle:checked {
   background: rgba(200, 60, 60, 0.08);
   box-shadow: none;
   transform: none;
+}
+
+/* ===========================================================================
+   vocab-v2-* -- Phase 166 (V2 scene reconstruction: Vocab). The heading
+   sits on the plain page (small, like Classify's V2 heading); everything
+   below it is .vocab-v2-scene, an aspect-ratio box whose background-image
+   IS the photographed open index notebook (v2-vocab-index-* assets,
+   mobile 9:16 default, desktop 16:9 swapped in at >=1024px, matching every
+   other V2 tab's existing breakpoint split). The 6 status/due filters are
+   opaque physical tabs anchored to the photo's own tab column (left rail
+   desktop, right rail mobile); search sits on the photo's blank ruled
+   page; deck/sort are small paper chips on the photo's other page;
+   학습하기/원문읽기/더보기 are the same bookmark-flag tags the app already
+   uses elsewhere, tucked into the spread instead of a toolbar above it.
+   The scene is a fixed aspect-ratio "first impression" establishing shot,
+   not the list's scroll container -- .vocab-v2-pages (list + detail) flows
+   normally below it on matching paper tone, so a 20-50 row list stays a
+   normal page scroll, not a cramped nested-scroll box.
+   =========================================================================== */
+.vocab-v2-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 2px 10px;
+}
+
+.vocab-v2-heading-companion {
+  flex: 0 0 auto;
+}
+
+.vocab-v2-heading h2 {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.vocab-v2-scene-wrap {
+  position: relative;
+}
+
+.vocab-v2-scene {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 941 / 1672;
+  border-radius: 18px;
+  overflow: hidden;
+  background-color: var(--paper-bg);
+  background-image: url("/brand/decor/v2/v2-vocab-index-mobile-9x16.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 16px 36px var(--paper-shadow);
+}
+
+@media (min-width: 1024px) {
+  .vocab-v2-scene {
+    aspect-ratio: 1672 / 941;
+    background-image: url("/brand/decor/v2/v2-vocab-index-notebook-desktop-16x9.webp");
+  }
+}
+
+/* Tab rail -- 6 opaque physical tabs (전체/모르는/헷갈리는/아는/미분류/
+   복습예정만) covering the photo's own decorative tab column exactly, so
+   shape/position come from the real photographed tabs but color/label
+   come from the app's own status language (same hex values the mobile
+   inline filter chips already use) -- a tab never needs to fight the
+   photo for contrast since it fully opaques its own patch of it. Mobile:
+   right edge (the mobile photo's tabs run down the right side). Desktop:
+   left edge (the desktop photo's tabs run down the left side). */
+.vocab-v2-tab-rail {
+  position: absolute;
+  right: 0;
+  top: 13%;
+  width: 13%;
+  height: 70%;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3%;
+}
+
+@media (min-width: 1024px) {
+  .vocab-v2-tab-rail {
+    left: 2%;
+    right: auto;
+    top: 3%;
+    width: 15%;
+    height: 94%;
+  }
+}
+
+.vocab-v2-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 3px 10px 10px 3px;
+  background: var(--muted);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  box-shadow: 2px 3px 7px rgba(37, 43, 30, 0.16);
+  transition:
+    transform var(--motion-fast) var(--ease-soft),
+    box-shadow var(--motion-fast) var(--ease-soft);
+}
+
+@media (min-width: 1024px) {
+  .vocab-v2-tab {
+    border-radius: 10px 3px 3px 10px;
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+}
+
+.vocab-v2-tab-all {
+  background: var(--screen-accent, var(--tone-ink-brown));
+}
+
+.vocab-filter-known {
+  background: #1b6b3a;
+}
+
+.vocab-filter-uncertain {
+  background: #6f5f96;
+}
+
+.vocab-filter-unknown {
+  background: #96603f;
+}
+
+.vocab-filter-unclassified {
+  background: #6b5f3f;
+}
+
+.vocab-v2-tab-due {
+  background: var(--tone-coral);
+}
+
+/* Active = pulled out further, like a real selected divider sitting proud
+   of the stack, plus a brighter ring -- no thick border, matching the
+   pre-V2 tabs' own "두꺼운 bordered button처럼 만들지 않는다" rule. */
+.vocab-v2-tab-active {
+  transform: translateX(-3px) scale(1.04);
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.75) inset,
+    3px 5px 12px rgba(37, 43, 30, 0.24);
+}
+
+@media (min-width: 1024px) {
+  .vocab-v2-tab-active {
+    transform: translateX(4px) scale(1.04);
+  }
+}
+
+/* Search -- the single most scan-critical control, so it gets the photo's
+   blank ruled note page directly: a transparent input reads as writing on
+   that real paper, not a white box floating over the photo (same recipe
+   Classify V2's source-slip textarea uses). */
+.vocab-v2-search-zone {
+  position: absolute;
+  left: 5%;
+  top: 9%;
+  width: 78%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (min-width: 1024px) {
+  .vocab-v2-search-zone {
+    left: 20%;
+    top: 6%;
+    width: 32%;
+  }
+}
+
+.vocab-v2-search-zone .vocab-search-icon {
+  position: static;
+  flex: 0 0 auto;
+  transform: none;
+}
+
+.vocab-v2-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 2px;
+  border: none;
+  border-bottom: 1.5px solid rgba(61, 47, 20, 0.35);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.vocab-v2-search-input:focus {
+  outline: none;
+  border-bottom-color: var(--screen-accent, var(--primary));
+}
+
+.vocab-v2-search-input::placeholder {
+  color: #7c6a52;
+  opacity: 0.75;
+}
+
+/* Deck + sort -- small opaque paper chips (not translucent -- legible
+   regardless of what's directly beneath them), same recipe Classify V2's
+   deck/show-known chips use. Mobile groups them just below search on the
+   same ruled note; desktop tucks them onto the photo's other blank page. */
+.vocab-v2-controls-zone {
+  position: absolute;
+  left: 5%;
+  top: 22%;
+  width: 78%;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (min-width: 1024px) {
+  .vocab-v2-controls-zone {
+    left: 60%;
+    top: 6%;
+    width: 36%;
+  }
+}
+
+.vocab-v2-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
+}
+
+.vocab-v2-chip select {
+  min-width: 0;
+  max-width: 12em;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vocab-v2-chip-icon {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
+}
+
+/* 학습하기/원문읽기/더보기 -- reuses .vocab-bookmark-action's existing
+   notched-flag shape verbatim (see below), just repositioned into the
+   scene instead of a toolbar row above it. */
+/* Mobile: normal flow directly under the photo (not overlaid on it) --
+   the mobile photo's pocket zone is only ~19% of the scene's height, not
+   enough room for a wide primary CTA plus 2 more actions plus a stat note
+   without them colliding at the bottom edge (confirmed via a real
+   screenshot). Desktop has real room, so >=1024px switches back to an
+   absolute overlay on the photo's blank right page. */
+.vocab-v2-actions-zone {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* .vocab-bookmark-action-toggle's own margin-left:auto exists to push it
+   to the end of a wide toolbar row -- inside this narrower zone (a flex
+   column on desktop, a wrapping row on mobile) that auto margin instead
+   shoves it against the zone's own right edge, squeezing "더보기" onto two
+   lines. Zeroed out here so all 3 actions flow the same way. */
+.vocab-v2-actions-zone .vocab-bookmark-action-toggle {
+  margin-left: 0;
+}
+
+@media (min-width: 1024px) {
+  .vocab-v2-actions-zone {
+    position: absolute;
+    left: 60%;
+    top: 22%;
+    width: 36%;
+    z-index: 1;
+    margin-top: 0;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.vocab-v2-count-note {
+  position: static;
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 2px 8px 8px 2px;
+  background: var(--panel-bg);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
+  transform: rotate(-1deg);
+}
+
+@media (min-width: 1024px) {
+  .vocab-v2-count-note {
+    position: absolute;
+    z-index: 1;
+    margin-top: 0;
+    left: 60%;
+    top: 80%;
+    width: 36%;
+    font-size: 11.5px;
+  }
+}
+
+/* The 더보기 disclosure -- dynamic height, so it renders as a sibling
+   right after .vocab-v2-scene (a fixed aspect-ratio, overflow:hidden
+   box), not nested inside it. Reads as a small drawer pulled out from the
+   notebook rather than a toolbar. */
+.vocab-v2-more-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 2px 4px;
 }
 
 /* Softened -- 덱 관리/덱 공유/고급 used to each be their own
@@ -9849,30 +9821,22 @@ input.reading-vocab-sticker-toggle:checked {
     padding: 10px;
   }
 
-  .vocab-filter-group {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .vocab-filter-group .inline-field,
-  .vocab-filter-group input {
-    width: 100%;
-  }
-
-  /* Phase 80 (now applied to the Phase 149 bookmark-action classes) -- the
-     app-wide mobile `button { width: 100% }` touch-target rule (see the
-     >640px-gated rule elsewhere in this file) would stretch all 3
-     always-visible actions ("이 덱 학습하기"/"원문 읽기"/"더보기")
-     full-width, stacking them into an admin/settings-panel row (Phase 79
-     QA). Only the primary stays full-width; the rest opt back out to
-     their natural notched-tag width so the row still reads as one clear
-     primary action plus small labels, not three stacked action bars.
-     44px tap target kept via min-height, not visual padding. */
-  .vocab-bookmark-actions {
+  /* Phase 80 (now applied to the Phase 149 bookmark-action classes; Phase
+     166 retargets these two selectors from .vocab-bookmark-actions/
+     .vocab-bookmark-more to their V2 replacements) -- the app-wide mobile
+     `button { width: 100% }` touch-target rule (see the >640px-gated rule
+     elsewhere in this file) would stretch all 3 always-visible actions
+     ("이 덱 학습하기"/"원문 읽기"/"더보기") full-width, stacking them into
+     an admin/settings-panel row (Phase 79 QA). Only the primary stays
+     full-width; the rest opt back out to their natural notched-tag width
+     so the row still reads as one clear primary action plus small labels,
+     not three stacked action bars. 44px tap target kept via min-height,
+     not visual padding. */
+  .vocab-v2-actions-zone {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   .vocab-bookmark-action-primary {
@@ -9882,21 +9846,21 @@ input.reading-vocab-sticker-toggle:checked {
   .vocab-bookmark-action:not(.vocab-bookmark-action-primary) {
     width: auto;
     min-width: 0;
-    min-height: 44px;
+    min-height: 40px;
   }
 
   .vocab-bookmark-action-toggle {
     width: auto;
     min-width: 0;
-    min-height: 44px;
+    min-height: 40px;
     margin-left: 0;
   }
 
-  .vocab-bookmark-more {
+  .vocab-v2-more-panel {
     width: 100%;
   }
 
-  .vocab-bookmark-more .vocab-bookmark-action {
+  .vocab-v2-more-panel .vocab-bookmark-action {
     width: auto;
     min-width: 0;
     min-height: 42px;

@@ -6658,3 +6658,111 @@ shared `CoverageSummary` component's own bordered box (used by other tabs
 too) was left as-is, out of this phase's file scope. Next candidate: Vocab V2
 (the remaining tab with the clearest old filter-panel skeleton) or Home V2,
 per the bible's recommended order.
+
+## Phase 166 -- Vocab V2 Full Scene Reconstruction (Physical Index Notebook)
+
+The Vocab tab's Phase 68/149 "notebook spread" (a real IA improvement, but
+built entirely from CSS paper textures -- no photo underneath, and still a
+3-column filter-rail/list/detail grid at bottom) is replaced with a scene
+anchored to the real `v2-vocab-index-*` photos. Old structure removed:
+`.vocab-notebook-header` (stat-pill row + bookmark-action row),
+`.vocab-notebook-scene`/`.vocab-notebook-index` (the CSS-only 3-column
+grid and its `.vocab-filter-group`/underline-tab filter column),
+`.index-card-drawer` (a tinted, accent-topped box wrapping the list -- one
+more bordered panel between the scene and the rows), and the per-row
+bordered/radius/folded-corner "index card" look on `.vocabulary-index-row`
+(20-50 of them read as a card pile, the literal failure this phase's brief
+names). `VocabSection.tsx` gained `.vocab-v2-scene-wrap`/`.vocab-v2-scene`
+(the photographed open notebook, mobile 9:16 default, desktop 16:9 at
+`>=1024px`) plus `.vocab-v2-tab-rail`, `.vocab-v2-search-zone`,
+`.vocab-v2-controls-zone`, `.vocab-v2-actions-zone`, `.vocab-v2-count-note`,
+and `.vocab-v2-pages`/`.vocab-v2-list-column` for the flowing list+detail
+area below the photo.
+
+Silhouette: the 6 status/due filters (전체/모르는/헷갈리는/아는/미분류/복습
+예정만) are opaque physical tabs -- shape and position come from the real
+photographed tab column (left rail desktop, right rail mobile, both photos
+happen to show exactly 6 tab-shaped bands), color and label come from the
+app's existing status language (same hex values the old mobile filter chips
+already used, now reused as solid fills instead of underline accents), so a
+tab fully opaques its own patch of the photo rather than fighting it for
+contrast. Search sits directly on the photo's blank ruled page as a
+transparent input (same "ink on real paper" recipe Classify V2's source
+slip uses); deck/sort are small opaque paper chips on the photo's other
+page. The scene is a fixed aspect-ratio "first impression" shot only, not
+the list's scroll container -- `.vocab-v2-pages` flows normally below it on
+matching ruled-paper tone (desktop only; mobile stays plain for
+readability), so a 20-50 row list stays an ordinary page scroll instead of
+a cramped nested-scroll box. List rows are now plain ledger lines (a bottom
+dashed rule between rows, no border/radius/fold) instead of index cards.
+Detail stays the existing sticky "note page" aside on desktop (paperclip
+pin accent, ruled paper matching the list) inside a 2-column
+`.vocab-v2-pages` grid (list | detail, index rail no longer needed as a
+third column since tabs moved into the masthead); on mobile, an expanded
+row's inline detail now borrows the mobile photo's own "clipped note in a
+kraft pocket" motif (a kraft-tone patch + a small binder-clip corner mark +
+a faint rotation) instead of reading as a plain expanded form section.
+학습하기/원문읽기/더보기 reuse the existing `.vocab-bookmark-action` notched
+bookmark-flag shape verbatim, repositioned into the scene (desktop: overlaid
+on the photo's blank right page) or, on mobile, rendered as normal-flow
+siblings directly below the photo rather than overlaid on it -- a real
+screenshot showed the mobile photo's pocket zone (~19% of the scene's
+height) has no room for a wide primary CTA plus 2 more actions plus a stat
+note without the bottom row colliding with the count note, so
+`.vocab-v2-actions-zone`/`.vocab-v2-count-note` are `position: absolute`
+only at `>=1024px`; below that they're `position: static` in a new
+`.vocab-v2-scene-wrap` that gives both tiers a shared positioning context
+without either being clipped by the photo box's own `overflow: hidden`.
+Deck/share/custom-term/backup management stays exactly where Phase 68 put
+it (a "note tucked at the back of the notebook" disclosure below the scene,
+already de-boxed reasonably well pre-V2) -- functionally untouched, not
+this phase's stated problem.
+
+Two small pre-existing (not newly introduced) visual bugs were fixed
+opportunistically while touching this file: `.vocab-item-status-wrap`'s
+percentage-based clip-path notch turned into a huge arrow banner instead of
+a small flag whenever its grid ancestor (`.vocab-notebook-detail-header`)
+stretched it to the track's full width (`justify-self: start` +
+`width: fit-content` fixes it in every context, not just this one); and
+`.vocab-bookmark-action-toggle`'s own `margin-left: auto` (meant for a wide
+toolbar row) was shoving "더보기" against its new narrower zone's right edge
+and wrapping the label onto two lines.
+
+Functional/API/SRS/storage preserved exactly: deck select, search, status
+filter, due-only, sort, row expand/select, meaning quick-edit, report,
+edit, delete (confirm dialog unchanged), deck create/delete, custom-term
+CRUD, publish/CSV/JSON export-import/backup disclosures, and the
+Reading/Study/Shared navigation shortcuts -- no prop, handler, or payload
+shape changed in `VocabSection.tsx`; only JSX structure and class names.
+
+QA: `npm run build` clean, `git diff --check` clean, headless-Chrome CDP QA
+(scratch sqlite backend, a fresh test user, 14 seeded vocab items spanning
+all 4 statuses) at 1280/1024/390/375/320 -- correct asset per breakpoint
+(desktop 16:9 only at `>=1024px`, mobile 9:16 only below it, confirmed via a
+dedicated boundary check at exactly 1024px), zero horizontal overflow, zero
+console errors, zero unexpected failed/404 requests, 6 tabs present and
+never text-clipped at 320px. Real flow verified: enter Vocab, pick a deck,
+type a search query (14 -> 1 row), click a status tab (14 -> 4 known rows),
+change sort, expand a row (desktop populates the sticky detail page, mobile
+expands inline with the kraft-pocket accent, confirmed via an isolated
+fresh-navigation check after the first combined run produced a false
+negative from re-toggling an already-expanded row), open meaning quick-edit,
+confirm the delete button is reachable and its confirm dialog appears (auto-
+dismissed, never accepted -- no real delete performed even against the
+scratch DB), open 더보기 -> 덱/공유 관리 -> 고급 백업, all disclosures open
+correctly. One mid-session `npm run build` while `npm run dev` was still
+live corrupted `.next` a second time in this project (same class of issue as
+Phase 165) -- recovered the same way; not a code defect, but a repeat
+process mistake worth calling out for future phases.
+
+Remaining risk: the tab rail's 6 photo-anchored zones and the masthead's
+5 content zones were positioned from visual percentage estimates against
+the source photos (the same technique Phase 165 used), not exact pixel
+measurement -- reasonable at the breakpoints QA covered, but a very
+different viewport aspect (e.g. a much wider or taller unusual window) could
+still show minor drift. The management/share/custom-term panels were
+deliberately left as Phase 68 built them; a future pass could give them a
+lighter "notebook back-pocket" scene treatment to match the new masthead
+more closely. Next candidate: Home V2 or Study V2 -- both, along with
+Reading, Shared Deck, and Stats, still remain on their pre-V2 CSS-only
+treatment, per the bible's tab-by-tab recommended order.
