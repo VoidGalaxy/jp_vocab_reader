@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { AppEmptyState, BrandSectionBadge } from "./BrandElements";
+import { AppEmptyState } from "./BrandElements";
 import { ShioriMark, ShioriStamp } from "./Shiori";
 import { classifyMessageTone } from "./coverageUtils";
 import {
-  BookIcon,
   BookmarkIcon,
   BookshelfIcon,
   CardFileIcon,
@@ -416,49 +415,136 @@ export function SharedDeckSection({
   const messageTone = classifyMessageTone(message);
   const isInitialLoading = isLoading && decks.length === 0;
 
+  const hasDecks = sortedDecks.length > 0;
+
   return (
     <section className="tab-panel shared-deck-section" aria-live="polite">
-      {/* Phase 115 -- was a bordered/shadowed .panel-card.hero-card box (plus
-          a card-stack ghost-layer and a washi-tape strip holding it down)
-          floating above the shelf scene below. No mockup board shows a
-          separate header card above the shelf -- flattened to the same
-          unboxed heading-strip recipe Phase 114 used for Vocab's header
-          (.reading-input-open's border-bottom-dashed language), so title/
-          description/actions now read as page content leading into the
-          shelf rather than an admin panel on top of it. Shelf/grid cards
-          below (.shared-library-scene, .desk-surface-section,
-          .shared-deck-card) are untouched -- see DESIGN.md Phase 115. */}
-      <section className="shared-hero-card">
-        <div className="panel-card-header">
-          <h2 className="panel-card-title">
-            <ShioriMark className="shared-deck-title-mark" />
-            <BrandSectionBadge icon={BookshelfIcon} />
-            덱 책장
-          </h2>
-          <p className="panel-card-description">
-            내가 읽은 원문에서 쌓는 단어장이 기본이고, 레벨별 추천 어휘 덱은
-            보조로 가져와 활용하세요.
+      <span className="shared-scene-v2-eyebrow">
+        <ShioriMark variant="default" />
+        덱 책장
+      </span>
+
+      {/* Phase 170 -- one full-bleed V2 bookshelf photo is the scene anchor
+          (a different shot per breakpoint, not one crop of the other). The
+          photo's own painted spines are never mapped 1:1 to real decks --
+          real decks render as live .book-spine elements (Phase 158's
+          object, unchanged) in a horizontally-scrolling row pinned over the
+          photo's own shelf board; whatever width real decks don't fill just
+          shows the photo's own densely-stocked shelf underneath, which is
+          exactly why a handful of decks still reads as "a real shelf with
+          room on it" instead of bare web space (this phase's own
+          requirement) without any conditional filler markup. */}
+      <div className="shared-scene-v2">
+        <div className="shared-scene-v2-frame">
+          <picture className="shared-scene-v2-media">
+            <source
+              media="(min-width: 1024px)"
+              srcSet="/brand/decor/v2/v2-shared-bookshelf-desktop-16x9.webp"
+            />
+            <img
+              className="shared-scene-v2-media-img"
+              src="/brand/decor/v2/v2-shared-bookshelf-mobile-9x16.webp"
+              alt=""
+              draggable={false}
+            />
+          </picture>
+
+          {/* Small index tabs clipped to the shelf frame's own top-right
+              corner -- Phase 152's existing notch-tag shape
+              (.shared-deck-tab-action), just moved off a dedicated header
+              row and onto the scene itself so it reads as part of the
+              shelf furniture, not a toolbar sitting above it. */}
+          <div className="shared-scene-v2-actions">
+            <button type="button" className="shared-deck-tab-action" onClick={onGoToVocab}>
+              <CardFileIcon className="button-icon" />
+              어휘 노트
+            </button>
+            <button
+              type="button"
+              className="shared-deck-tab-action shared-deck-tab-action-ghost"
+              onClick={onRefresh}
+              disabled={isLoading}
+            >
+              <RotateIcon className="button-icon" />
+              {isLoading ? "..." : "새로고침"}
+            </button>
+          </div>
+
+          {hasDecks ? (
+            <div className="shared-shelf-band">
+              <div className="book-shelf-row">
+                {hasGroups ? (
+                  <>
+                    {recommendedDecks.map(renderBookSpine)}
+                    {myDecks.length > 0 ? (
+                      <span className="shared-shelf-divider" aria-hidden="true">
+                        내가 공유함
+                      </span>
+                    ) : null}
+                    {myDecks.map(renderBookSpine)}
+                    {otherDecks.length > 0 ? (
+                      <span className="shared-shelf-divider" aria-hidden="true">
+                        다른 학습자
+                      </span>
+                    ) : null}
+                    {otherDecks.map(renderBookSpine)}
+                  </>
+                ) : (
+                  sortedDecks.map(renderBookSpine)
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          <p className="shared-scene-v2-privacy">
+            <ShieldIcon className="shared-scene-v2-privacy-icon" />
+            가져온 덱은 학습 목록에 바로 추가돼요. 원문 전체는 들어가지 않아요.
           </p>
         </div>
-        <div className="shared-deck-header-actions">
-          <button type="button" className="shared-deck-tab-action" onClick={onGoToVocab}>
-            <CardFileIcon className="button-icon" />어휘 노트 보기
-          </button>
-          <button
-            type="button"
-            className="shared-deck-tab-action shared-deck-tab-action-ghost"
-            onClick={onRefresh}
-            disabled={isLoading}
+      </div>
+
+      {isInitialLoading ? (
+        <AppEmptyState
+          mood="loading"
+          moodSize="md"
+          className="shared-deck-loading"
+          title="덱 책장을 불러오는 중이에요..."
+        />
+      ) : !hasDecks ? (
+        messageTone === "error" ? (
+          // Fetch genuinely failed -- shows a retry CTA instead of the
+          // cheerful "둘러보세요" copy below, which would otherwise read as
+          // if the deck shelf is just empty rather than unreachable.
+          <AppEmptyState
+            mood="empty"
+            moodSize="md"
+            title="덱을 불러오지 못했어요."
+            description="잠시 후 다시 시도해주세요."
           >
-            <RotateIcon className="button-icon" />
-            {isLoading ? "불러오는 중..." : "새로고침"}
-          </button>
-        </div>
-        <p className="info-strip info-strip-quiet">
-          <ShieldIcon className="info-strip-icon" />
-          가져온 덱은 학습 목록에 바로 추가돼요. 원문 전체는 들어가지 않아요.
-        </p>
-      </section>
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={onRefresh}
+              disabled={isLoading}
+            >
+              <RotateIcon className="button-icon" />
+              {isLoading ? "다시 불러오는 중..." : "다시 불러오기"}
+            </button>
+          </AppEmptyState>
+        ) : (
+          <AppEmptyState
+            mood="empty"
+            moodSize="md"
+            title="가져올 수 있는 추천 덱을 살펴보세요."
+            description="내 어휘 노트를 공유하거나 추천 덱을 가져올 수 있어요."
+          >
+            <button type="button" className="ghost-button compact-button" onClick={onGoToVocab}>
+              <CardFileIcon className="button-icon" />
+              어휘 노트로 이동
+            </button>
+          </AppEmptyState>
+        )
+      ) : null}
 
       {hasJlptDeck ? (
         <p className="info-strip info-strip-quiet shared-deck-disclaimer">
@@ -502,107 +588,6 @@ export function SharedDeckSection({
           ) : null}
         </div>
       ) : null}
-
-      {/* Casual Sticker Reader (Phase 69) -- shared-library-scene: wraps the
-          shelf sections (and the opened-notebook detail panel) in one
-          wooden cabinet backdrop at the >=1024px desktop tier (same wood
-          tokens Phase 67's App Shell desk introduced), so browsing decks
-          reads as pulling a booklet off a shelf inside a cabinet rather
-          than scrolling a card grid. Below that breakpoint this is a
-          plain wrapper -- mobile/tablet render exactly as before this
-          Phase. */}
-      <div className="shared-library-scene">
-      <div className="desk-surface desk-surface-section">
-      {isInitialLoading ? (
-        <AppEmptyState
-          mood="loading"
-          moodSize="xl"
-          className="shared-deck-loading"
-          title="덱 책장을 불러오는 중이에요..."
-        />
-      ) : sortedDecks.length > 0 ? (
-        hasGroups ? (
-          <>
-            {recommendedDecks.length > 0 ? (
-              <div className="shelf-section">
-                <h3 className="shelf-section-title">
-                  <BookshelfIcon className="shelf-section-icon" />
-                  JLPT 추천 어휘 서가
-                </h3>
-                <div className="book-shelf-row">
-                  {recommendedDecks.map(renderBookSpine)}
-                </div>
-              </div>
-            ) : null}
-            {myDecks.length > 0 ? (
-              <div className="shelf-section">
-                <h3 className="shelf-section-title">
-                  <BookshelfIcon className="shelf-section-icon" />
-                  내가 공유한 덱
-                </h3>
-                <div className="book-shelf-row">{myDecks.map(renderBookSpine)}</div>
-              </div>
-            ) : null}
-            {otherDecks.length > 0 ? (
-              <div className="shelf-section">
-                <h3 className="shelf-section-title">
-                  <BookshelfIcon className="shelf-section-icon" />
-                  다른 학습자의 덱
-                </h3>
-                <div className="book-shelf-row">{otherDecks.map(renderBookSpine)}</div>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <div className="book-shelf-row">{sortedDecks.map(renderBookSpine)}</div>
-        )
-      ) : messageTone === "error" ? (
-        // Fetch genuinely failed -- shows a retry CTA instead of the
-        // cheerful "둘러보세요" copy below, which would otherwise read as
-        // if the deck shelf is just empty rather than unreachable.
-        // Phase 78 -- this used to be the one AppEmptyState in the app
-        // still falling back to a bare icon instead of `mood`; every other
-        // loading/empty moment (including its own sibling states right
-        // above/below in this same slot) already has Shiori standing in
-        // for a plain system icon, so this was reading as a harder "system
-        // error" beat than the rest of the app. Reuses the "empty" variant
-        // (the same asset the true-empty sibling state below already
-        // uses) rather than inventing a new "sorry" mood -- the copy is
-        // what tells the two states apart, not the art.
-        <AppEmptyState
-          mood="empty"
-          moodSize="xl"
-          title="덱을 불러오지 못했어요."
-          description="잠시 후 다시 시도해주세요."
-        >
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={onRefresh}
-            disabled={isLoading}
-          >
-            <RotateIcon className="button-icon" />
-            {isLoading ? "다시 불러오는 중..." : "다시 불러오기"}
-          </button>
-        </AppEmptyState>
-      ) : (
-        <AppEmptyState
-          mood="empty"
-          moodSize="xl"
-          title="가져올 수 있는 추천 덱을 살펴보세요."
-          description="내 어휘 노트를 공유하거나 추천 덱을 가져올 수 있어요."
-        >
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={onGoToVocab}
-          >
-            <CardFileIcon className="button-icon" />
-            어휘 노트로 이동
-          </button>
-        </AppEmptyState>
-      )}
-      </div>
 
       {selectedDeck ? (
         <section className="shared-deck-detail app-slide-up" key={selectedDeck.id}>
@@ -652,7 +637,11 @@ export function SharedDeckSection({
               !selectedDeckPublished ? null : (
                 <button
                   type="button"
-                  className={selectedAlreadyImported ? "secondary-button" : undefined}
+                  className={
+                    selectedAlreadyImported
+                      ? "secondary-button shared-deck-checkout-tag"
+                      : "shared-deck-checkout-tag"
+                  }
                   onClick={() => handleImportClick(selectedDeck)}
                   disabled={importingDeckId === selectedDeck.id}
                 >
@@ -668,7 +657,7 @@ export function SharedDeckSection({
               {canManageSharedDecks && selectedDeck.is_owner && selectedDeckPublished ? (
                 <button
                   type="button"
-                  className="danger-secondary-button"
+                  className="danger-secondary-button shared-deck-manage-tag"
                   onClick={() => onUnpublishDeck(selectedDeck.id)}
                   disabled={unpublishingDeckId === selectedDeck.id}
                 >
@@ -680,7 +669,7 @@ export function SharedDeckSection({
               {canManageSharedDecks && selectedDeck.is_owner && !selectedDeckPublished ? (
                 <button
                   type="button"
-                  className="secondary-button"
+                  className="secondary-button shared-deck-manage-tag"
                   onClick={() => onRepublishSharedDeck?.(selectedDeck.id)}
                   disabled={republishingDeckId === selectedDeck.id}
                 >
@@ -884,7 +873,6 @@ export function SharedDeckSection({
           </div>
         </section>
       ) : null}
-      </div>
     </section>
   );
 }

@@ -807,6 +807,219 @@
   --screen-accent-soft: #e7eef3;
 }
 
+/* ==========================================================================
+   Phase 170 (Shared Deck V2 Bookshelf Exchange Scene) -- Phase 158 already
+   fixed the item model (a standing .book-spine, not a card -- kept
+   unchanged below), but everything AROUND it was still web-app scaffolding:
+   .shared-hero-card was a title/description/action-row header sitting above
+   the shelf, .shared-library-scene was a CSS-gradient-and-old-photo "wood
+   cabinet" wrapper (phase127/shared-shelf-wood-strip-web.webp) with its own
+   per-group .shelf-section compartments, and two .info-strip notices stacked
+   above all of it. This block replaces the header/cabinet/compartment
+   scaffolding with one real V2 bookshelf photo (.shared-scene-v2-frame) --
+   a different shot per breakpoint, not one crop of the other -- and
+   positions real decks as a horizontally-scrolling row of the *same*
+   .book-spine elements directly over the photo's own shelf board. The
+   photo's own painted spines to the right of that row are never hidden or
+   replaced; they're what keeps a lightly-stocked shelf reading as "a real
+   shelf with room on it" instead of empty web space, without any
+   conditional filler markup. */
+.shared-scene-v2-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: var(--screen-accent, var(--muted));
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.shared-scene-v2-eyebrow .shiori-mark {
+  width: 18px;
+  height: 18px;
+}
+
+.shared-scene-v2 {
+  position: relative;
+}
+
+.shared-scene-v2-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 941 / 1672;
+  isolation: isolate;
+}
+
+.shared-scene-v2-media {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.shared-scene-v2-media-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+@media (min-width: 1024px) {
+  .shared-scene-v2-frame {
+    aspect-ratio: 1672 / 941;
+  }
+
+  .shared-scene-v2-media-img {
+    border-radius: 26px;
+  }
+}
+
+/* Small notched index tabs clipped to the shelf frame's own corner --
+   Phase 152's existing shape/color (.shared-deck-tab-action, unchanged),
+   just moved off a dedicated header row and onto the scene itself. */
+.shared-scene-v2-actions {
+  position: absolute;
+  z-index: 3;
+  top: 3%;
+  left: 3%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.shared-scene-v2-actions .shared-deck-tab-action {
+  padding: 7px 18px 7px 10px;
+  font-size: 11px;
+}
+
+@media (min-width: 1024px) {
+  .shared-scene-v2-actions {
+    top: 4%;
+    right: 4%;
+    left: auto;
+  }
+
+  .shared-scene-v2-actions .shared-deck-tab-action {
+    padding: 9px 22px 9px 14px;
+    font-size: 12.5px;
+  }
+}
+
+/* The live shelf: pinned over the photo's own shelf board (percentages
+   tuned per breakpoint against where each specific photo actually has a
+   row of spines -- see the two zones below), never growing the frame's own
+   aspect ratio regardless of how many decks exist. Horizontal scroll (not
+   wrap) is the "long shelf" metaphor -- you scan sideways for more books,
+   the same way .book-shelf-row's own comment already reasoned for why a
+   packed flex row (not an auto-fill grid) was the right shape back in
+   Phase 158. */
+.shared-shelf-band {
+  position: absolute;
+  z-index: 2;
+  left: 4%;
+  right: 4%;
+  top: 13%;
+  height: 21%;
+}
+
+@media (min-width: 1024px) {
+  .shared-shelf-band {
+    left: 2%;
+    right: 2%;
+    top: 25%;
+    height: 52%;
+  }
+}
+
+/* A slim upright label between deck groups (recommended / mine / other),
+   sitting in the same scrolling row as the spines it separates -- a small
+   shelf bookend tag, not a second heading row above a compartment. */
+.shared-shelf-divider {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 22px;
+  padding: 8px 0;
+  border-radius: 3px;
+  background: rgba(37, 23, 10, 0.55);
+  color: #fff9ec;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.shared-scene-v2-privacy {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 2%;
+  width: 82%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: rgba(253, 249, 238, 0.88);
+  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.14);
+  color: var(--text-secondary);
+  font-size: 9.5px;
+  line-height: 1.4;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+@media (min-width: 1024px) {
+  .shared-scene-v2-privacy {
+    width: auto;
+    max-width: 60%;
+    font-size: 11px;
+  }
+}
+
+.shared-scene-v2-privacy-icon {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  color: var(--success);
+}
+
+/* Checkout-slip CTA on the opened book's own header -- same notch-tag
+   language as .shared-deck-tab-action/.reader-bookmark-button, colored with
+   this screen's own --tone-dusty-blue accent, so import reads as a
+   stationery action pinned to the pulled-out book rather than a plain
+   secondary-button repeated in a footer row. Base secondary-button/plain
+   classes (already conditionally applied in SharedDeckSection.tsx,
+   unchanged) still carry color/background; this only supplies shape. */
+.shared-deck-checkout-tag {
+  border-radius: 3px;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 50%,
+    calc(100% - 14px) 100%,
+    0 100%
+  );
+  padding-right: 22px;
+}
+
+/* Owner manage actions (공유 취소/다시 공유하기) -- smaller and quieter
+   than the checkout tag above, so a destructive/reversible admin action
+   never competes with the deck's own primary next step, while staying
+   clearly its own reachable control rather than a repeated card-footer
+   button. */
+.shared-deck-manage-tag {
+  padding: 7px 14px;
+  font-size: 12px;
+}
+
 .study-log-page {
   --screen-accent: var(--sage-green);
   --screen-accent-soft: #eef6f0;
@@ -7086,222 +7299,12 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 12px;
 }
 
-/* Casual Sticker Reader (Phase 69) -- shared-library-scene: a plain
-   wrapper below the desktop tier (identical to before this Phase). At
-   >=1024px it becomes a wooden cabinet backdrop (reuses --desk-wood/
-   --desk-wood-deep, the same tokens Phase 67's App Shell desk uses) that
-   the shelf sections and the opened detail panel sit inside, so browsing
-   decks reads as a cabinet of shelves rather than a card grid on plain
-   page background. Keep this breakpoint in sync with the reader/study/
-   vocab desk scenes from Phase 65/66/68. */
-.shared-library-scene {
-  position: relative;
-  display: grid;
-  gap: 16px;
-  min-width: 0;
-}
-
-@media (min-width: 1024px) {
-  /* Phase 128 -- a photographed wood shelf panel (shared-shelf-wood-strip-
-     web.webp) replaces the flat two-stop wood gradient, so the cabinet
-     backdrop is real wood-grain material instead of a simulated one.
-     background-color keeps the old gradient's dark stop as a same-family
-     fallback if the image fails to load. */
-  .shared-library-scene {
-    padding: 20px;
-    border-radius: 26px;
-    background-color: var(--desk-wood-deep);
-    background-image: url("/brand/decor/phase127/shared-shelf-wood-strip-web.webp");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    box-shadow:
-      inset 0 2px 10px rgba(37, 23, 10, 0.35),
-      inset 0 -2px 0 rgba(255, 255, 255, 0.06);
-  }
-
-  /* Phase 75 -- a small leaf-sprig hint (top-left) and a paper shelf-label
-     tag (top-right), the same "cross-screen material" language Phase 73's
-     Home plant and Phase 74's Study leaf-sprig use, at cabinet scale. Both
-     anchored via `top` (never `bottom`) -- Phase 73's postmortem on this
-     file covers why anchoring decorative props to the bottom of a
-     variable-height scene can silently drift onto the wrong sibling's
-     edge. Neither is gated separately below 1024px; both live entirely
-     inside this media block so they simply don't exist below that tier,
-     matching every other desk-prop layer's mobile restraint. */
-  .shared-library-scene::before {
-    content: "";
-    position: absolute;
-    top: 10px;
-    left: 14px;
-    z-index: 1;
-    width: 26px;
-    height: 30px;
-    background:
-      radial-gradient(ellipse 6px 11px at 35% 62%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%),
-      radial-gradient(ellipse 6px 12px at 62% 40%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%);
-    opacity: 0.75;
-    transform: rotate(-6deg);
-    pointer-events: none;
-  }
-
-  .shared-library-scene::after {
-    content: "서가";
-    position: absolute;
-    top: -8px;
-    right: 22px;
-    z-index: 1;
-    padding: 4px 10px 3px;
-    border: 1px solid var(--paper-border);
-    border-radius: 3px;
-    background: var(--panel-bg);
-    color: var(--text-secondary);
-    font-size: 11px;
-    font-weight: 700;
-    box-shadow: 0 4px 8px rgba(37, 23, 10, 0.22);
-    transform: rotate(3deg);
-    pointer-events: none;
-  }
-
-  /* Each shelf section becomes its own light "compartment" resting inside
-     the dark cabinet, instead of all three groups sharing one flat
-     backdrop -- a real depth/shadow cue per shelf, not just a heading and
-     a dividing rule. Phase 88 -- a faint plank-grain hairline layer (very
-     low alpha) fills whatever part of the compartment a sparse 1-2 deck
-     shelf doesn't cover, so a lightly-stocked shelf still reads as "a shelf
-     with texture" instead of a flat white gap next to the cards. Bottom
-     padding grew from 22px to 26px to keep the new corner bookend prop
-     (below) inside its own reserved buffer, never under card content --
-     same "extra bottom padding is prop clearance" idiom the Phase 75 note
-     on this file already established for the cabinet-level leaf/tag. */
-  /* Phase 128 -- same wood photo as the cabinet backdrop above, so the
-     compartment is a real recessed wood shelf rather than a flat cream
-     panel sitting inside a photographed cabinet. A light warm wash
-     (linear-gradient) is layered on top -- not because any text sits
-     directly on this background (the shelf title is its own opaque pill,
-     the deck cards are their own opaque book covers), but to keep this
-     surface reading as a *lighter interior shelf* distinct from the dark
-     cabinet exterior behind it, the same depth cue the old flat
-     var(--panel-bg) fill gave for free. background-color keeps the old
-     fallback tone if the image fails to load. */
-  .shared-library-scene .shelf-section {
-    position: relative;
-    padding: 14px 16px 26px;
-    border-radius: 4px 16px 16px 16px;
-    background-color: var(--panel-bg);
-    background-image:
-      linear-gradient(rgba(253, 249, 238, 0.3), rgba(253, 249, 238, 0.3)),
-      url("/brand/decor/phase127/shared-shelf-wood-strip-web.webp");
-    background-size: cover, cover;
-    background-position: center, center;
-    background-repeat: no-repeat, no-repeat;
-    box-shadow: 0 10px 22px rgba(37, 23, 10, 0.16);
-  }
-
-  /* Small library bookend silhouette in the compartment's reserved bottom
-     corner -- reads as "this shelf has room, someone propped the books up"
-     rather than a stray empty corner. Fixed per-compartment prop (not
-     conditioned on deck count): it sits low enough that even a full shelf
-     never grows into it, since the grid's own content stops before the
-     26px bottom padding starts. */
-  .shared-library-scene .shelf-section::after {
-    content: "";
-    position: absolute;
-    right: 14px;
-    bottom: 6px;
-    z-index: 0;
-    width: 18px;
-    height: 20px;
-    background: linear-gradient(160deg, var(--desk-wood) 0%, var(--desk-wood-deep) 100%);
-    clip-path: polygon(0% 100%, 0% 15%, 100% 15%, 100% 38%, 32% 38%, 32% 100%);
-    opacity: 0.55;
-    pointer-events: none;
-  }
-
-  .shared-library-scene .shelf-section-title {
-    display: inline-flex;
-    width: fit-content;
-    margin: 0 0 10px;
-    padding: 4px 12px 3px;
-    border: 1px solid var(--paper-border);
-    border-bottom-color: var(--border);
-    border-radius: 3px 10px 10px 3px;
-    background: var(--paper-bg);
-    box-shadow: 0 3px 6px rgba(37, 23, 10, 0.12);
-    transform: rotate(-0.6deg);
-  }
-
-  /* Non-grouped fallback row (no recommended/mine/other split -- e.g. a
-     handful of decks with no JLPT levels) gets the same compartment
-     treatment as a single shelf, so it never sits bare against the wood.
-     Phase 158 -- renamed from .shared-deck-grid: the item model inside is
-     no longer a card grid (see .book-spine below), but this outer
-     compartment -- the actual shelf surface the spines stand on -- is a
-     legitimate layout anchor already, not something the Phase 157 audit
-     flagged, so it's kept. */
-  .shared-library-scene .desk-surface-section > .book-shelf-row {
-    padding: 14px 16px 22px;
-    border-radius: 4px 16px 16px 16px;
-    background-color: var(--panel-bg);
-    background-image:
-      linear-gradient(rgba(253, 249, 238, 0.3), rgba(253, 249, 238, 0.3)),
-      url("/brand/decor/phase127/shared-shelf-wood-strip-web.webp");
-    background-size: cover, cover;
-    background-position: center, center;
-    background-repeat: no-repeat, no-repeat;
-    box-shadow: 0 10px 22px rgba(37, 23, 10, 0.16);
-  }
-
-  /* Loading/error/empty states keep the existing AppEmptyState look but
-     get the same light compartment backing so they don't sit directly on
-     the dark wood with no surface under them. */
-  .shared-library-scene .desk-surface-section > .empty-guide,
-  .shared-library-scene .desk-surface-section > .shared-deck-loading {
-    padding: 24px 16px;
-    border-radius: 16px;
-    background: var(--panel-bg);
-  }
-
-  /* A faint ledge echoing the shelf grid's own bottom ledge, but along the
-     detail panel's top edge -- reads as "this booklet just came down off
-     the shelf above" rather than an unrelated panel appearing below. Phase
-     88 -- widened slightly and warmed toward --desk-wood-deep (was a flat
-     --border-strong) so the echo reads as the same wood-shelf material the
-     new bookend/plank-texture props above just introduced, not an unrelated
-     gray divider. */
-  .shared-deck-detail::after {
-    content: "";
-    position: absolute;
-    top: -12px;
-    left: 3%;
-    right: 3%;
-    height: 4px;
-    border-radius: 2px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      var(--desk-wood-deep) 10%,
-      var(--desk-wood-deep) 90%,
-      transparent
-    );
-    opacity: 0.45;
-    pointer-events: none;
-  }
-}
-
-/* Phase 115 -- demoted from a bordered/shadowed hero-card box (with a
-   corner washi-tape strip holding it down) to a flat heading strip sitting
-   directly on the page, matching Phase 114's identical fix on Vocab's
-   header. The tape was an "an index card is taped to the desk" cue for a
-   boxed element -- with no card left to tape down, it was dropped rather
-   than kept as orphaned decoration. */
-.shared-hero-card {
-  position: relative;
-  display: grid;
-  gap: 10px;
-  padding: 4px 2px 16px;
-  border-bottom: 1px dashed var(--paper-border);
-}
+/* Phase 170 -- .shared-library-scene (a CSS-gradient-then-old-photo "wood
+   cabinet" wrapper, phase127/shared-shelf-wood-strip-web.webp) and
+   .shared-hero-card (the title/description/action-row header sitting above
+   it) removed: replaced by .shared-scene-v2-frame's single real V2
+   bookshelf photo -- see the Phase 170 block near the top of this file
+   (search "Phase 170"). */
 
 /* Phase 152 -- "어휘 노트 보기"/"새로고침" used to be a plain
    .secondary-button/.ghost-button pair, i.e. the exact same full boxed
@@ -7367,104 +7370,38 @@ input.reading-vocab-sticker-toggle:checked {
   box-shadow: none;
 }
 
-/* One "shelf" of cards under a small heading -- a display-only grouping of
-   the same fetched deck list (recommended / mine / everyone else's), so the
-   grid reads as a sorted bookshelf instead of one undifferentiated pile. */
-.shelf-section {
-  display: grid;
-  gap: 10px;
-}
-
-/* A small ledge line under each shelf label -- reads as the shelf edge the
-   cards below sit on, tying the "서가" name to an actual shelf visual. */
-.shelf-section-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--paper-border);
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.shelf-section-icon {
-  flex: 0 0 auto;
-  width: 15px;
-  height: 15px;
-  color: var(--screen-accent, var(--accent));
-}
-
 /* book-shelf-row / book-spine -- Phase 158 (Shared Deck Real Bookshelf
-   Reconstruction). Was .shared-deck-grid/.shared-deck-card: a CSS Grid of
-   uniform rounded-rectangle cards, each carrying a short flat-color "cover
-   band" on top (Phase 152's own correction of an even earlier photographed-
-   cover version) then title/meta/description/a button footer below --
-   still fundamentally a card grid wearing book-flavored decoration, which
-   is exactly what Phase 157's audit named as the tab's one remaining
-   "existing web-app structure" failure. Discarded outright, not reskinned:
-   .book-shelf-row is a packed flex row (not a grid -- auto-fit/auto-fill
-   grid tracks stretch to fill remaining row width, which is what made a
-   sparse row of cards look like empty admin grid cells; fixed-width flex
-   items instead just stop, leaving plain shelf surface to their right, the
-   same silhouette a lightly-stocked real shelf has), and each deck is a
-   standing .book-spine: the full tone color (the same JLPT ramp / 내가
-   공유함 / 공유 덱 palette the old cover band used) fills the whole spine,
-   not just a cap band, title is the spine's own printed label instead of
-   text pushed below a cover graphic, and there is at most one action (a
-   pull-tab fixed to the spine's base -- see .book-spine-pulltab below)
-   instead of a card footer that could hold up to 3 buttons. No per-item
-   tilt: real shelved books stand straight, packed tight against their
-   neighbors -- the old card grid's alternating rotate() suited loose
-   scattered cards, not upright spines. */
+   Reconstruction) established the item model: not a card, a standing
+   .book-spine (full tone color, printed label, at most one pull-tab
+   action -- see .book-spine-pulltab below), unchanged by this phase.
+   Phase 170 changes only how the row itself is laid out: previously it
+   wrapped onto new lines against a CSS-drawn shelf-ledge pseudo-element
+   (::before/::after below), forming its own little shelf inside a card
+   compartment. Now it's a single horizontally-scrolling row -- the "long
+   shelf, scan sideways for more books" metaphor -- pinned directly over
+   the real V2 photo's own shelf board (.shared-shelf-band, see the Phase
+   170 block near the top of this file), so no CSS ledge/compartment
+   drawing is needed here any more; height:100% instead of a fixed px
+   value lets every spine fill whatever room that band actually has at a
+   given breakpoint. */
 .book-shelf-row {
   position: relative;
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 3px;
-  padding-bottom: 18px;
-}
-
-/* Shelf ledge -- a thin wood-toned line plus a soft shadow under the row
-   of spines, so the row reads as books resting on a shelf rather than
-   floating on plain background. */
-.book-shelf-row::before {
-  content: "";
-  position: absolute;
-  left: 2%;
-  right: 2%;
-  bottom: 8px;
-  height: 3px;
-  border-radius: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--border-strong) 12%,
-    var(--border-strong) 88%,
-    transparent
-  );
-  opacity: 0.6;
-}
-
-.book-shelf-row::after {
-  content: "";
-  position: absolute;
-  left: 2%;
-  right: 2%;
-  bottom: 11px;
-  height: 16px;
-  background: linear-gradient(180deg, rgba(120, 98, 40, 0.1), transparent);
-  pointer-events: none;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  height: 100%;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 2px 2px 6px;
 }
 
 .book-spine {
   position: relative;
-  flex: 0 0 96px;
+  flex: 0 0 clamp(58px, 7vw, 92px);
   display: flex;
   flex-direction: column;
-  height: 196px;
+  height: 100%;
   overflow: hidden;
   border-radius: 3px 8px 8px 3px;
   /* A darker gutter down the left edge and a lighter catch along the
@@ -7504,31 +7441,6 @@ input.reading-vocab-sticker-toggle:checked {
     ),
     var(--paper-bg);
   box-shadow: 0 16px 36px var(--paper-shadow);
-}
-
-/* Phase 75 -- a small leaf-sprig hint bleeding from the panel's left edge,
-   like the notebook was pulled off the shelf with a leaf still tucked
-   against its spine -- reinforces "this came off the shelf" without
-   touching the header row (close/import/unpublish/republish buttons) or
-   the word-list/filter/pagination content below it. Uses the free
-   ::before slot (::after is already taken above 1024px by the top-edge
-   shelf-ledge echo); gated to the same >=1024px tier as every other
-   Phase 73-75 desk prop for mobile restraint. */
-@media (min-width: 1024px) {
-  .shared-deck-detail::before {
-    content: "";
-    position: absolute;
-    top: 96px;
-    left: -12px;
-    width: 22px;
-    height: 26px;
-    background:
-      radial-gradient(ellipse 5px 9px at 35% 62%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%),
-      radial-gradient(ellipse 5px 10px at 62% 40%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%);
-    opacity: 0.8;
-    transform: rotate(-10deg);
-    pointer-events: none;
-  }
 }
 
 .shared-deck-detail-tape {
