@@ -6766,3 +6766,105 @@ lighter "notebook back-pocket" scene treatment to match the new masthead
 more closely. Next candidate: Home V2 or Study V2 -- both, along with
 Reading, Shared Deck, and Stats, still remain on their pre-V2 CSS-only
 treatment, per the bible's tab-by-tab recommended order.
+
+## Phase 167 -- Study V2 Full Scene Reconstruction (Felt Board Review Scene)
+
+Unlike Classify/Vocab, Study's DOM already satisfied the V2 bible's core
+structural demand going in: Phase 160 ("Study v2 Board Unity") had already
+merged the quick-start header, both option/stats disclosures, and every
+ready/empty/active/complete state into one `.study-board-scene` wrapper, so
+nothing on this tab has sat on the plain page background since that phase.
+What Study was still missing was the actual V2 photo -- `.study-board-scene`
+was texturing itself with `phase145/study-light-mint-felt-board.webp` (a
+flat, generic, pre-V2 felt swatch used identically at every viewport, with
+no mobile-specific composition at all) instead of the real
+`v2-study-board-*` assets, and several of its children (the quick-start
+tiles, the active flashcard) still read as flat CSS shapes rather than
+physical objects pinned to that board. This phase's diff is smaller and
+CSS-only (no `StudySection.tsx` JSX changed) precisely because the
+structural work was already done; the remaining work was a real material
+and anchoring pass, not a DOM rebuild.
+
+Old structure removed: the phase145 felt texture and its "one image, any
+aspect, `cover` handles it" technique (kept for desktop, since the new
+desktop photo is *also* a near-uniform blank board -- a couple of pushpins
+and one washi corner, nothing content-shaped -- but abandoned for mobile,
+see below); the 4 quick-start tiles' shared flat cream fill (every tile
+differed only by its small pin-dot color); and the active flashcard's flat
+`var(--panel-bg)` fill with no material texture of its own, sitting oddly
+plain in front of its own two photographed backing sheets.
+
+New silhouette: `.study-board-scene`'s background is now the real
+`v2-study-board-mobile-9x16.webp` (mobile default) / `v2-study-felt-board-
+desktop-16x9.webp` (desktop, `>=1024px`) photos -- a wood-framed felt
+pinboard with visible pushpins and washi-tape corners, not a flat fabric
+swatch. The two photos needed two different CSS techniques, not just two
+different URLs: the desktop photo is uniform enough that the old `cover`
+technique still works at any board height (ready/active/complete all vary
+hugely). The mobile photo is deliberately *not* uniform -- it has 4 real
+sticky notes pinned across the top and one big blank pinned note below
+them -- so `cover` would zoom/crop those unpredictably once the board grows
+tall (the active-review-card state easily runs 2-3x the photo's own natural
+height on a phone). Mobile instead uses `background-size: 100% auto;
+background-position: top`, which locks the photo to the container's width
+at its own true aspect ratio and pins it to the top, so the note zones
+always land in the same place regardless of how tall the content below
+them grows; the excess board height below the photo continues in a flat
+fallback color sampled from the photo's own felt tone (confirmed via
+screenshot: no visible/jarring seam even in the tallest active-card state).
+The quick-start tiles are no longer 4 same-color CTAs distinguished only by
+a pin dot -- the 3 secondary tiles now carry a pale paper tint matching
+their own pre-existing pin-dot color (amber/rose/terracotta), so the row
+reads as differently-colored sticky notes echoing the mobile photo's own 4
+notes (which remain visibly peeking above the tile row, not hidden behind
+it) rather than a same-old CTA row over new wallpaper; the primary tile
+keeps its own strong teal fill untouched as the one unmistakable action.
+The active flashcard picked up a faint repeating ruled-line texture (very
+low opacity, legibility of the Japanese word/meaning stays the priority)
+so the top sheet in the card stack reads as one more real index card
+rather than a plain web-card box sitting in front of its own photographed
+backing sheets.
+
+Functional mapping (all pre-existing, confirmed unchanged): quick-start
+tiles (`.study-cta-button`, `StudyBoardQuickStart`) call `onQuickStart`
+unchanged; progress (`.study-compact-progress`) reads `stats.reviewed_
+today_count`/`due_today_count` unchanged; options/stats disclosures
+(`.study-board-tag`/`<details>`) toggle native `open` state, deck/mode
+selects call `onSelectedDeckChange`/`onStudyModeChange` unchanged; the
+active card (`.study-card.hero-card`) renders `currentItem`, answer reveal
+calls `onShowAnswer`, and the 4-way rating grid (`.study-rating-stamp-
+tray`, already a well-established "stamp tray" treatment from Phase 58/66 -
+kept verbatim, not reworked) calls `onReview` with the same 4 `ReviewResult`
+values; complete state (`.complete-card`) reads `sessionCounts` and calls
+`onRestart`/`onGoToReading`/`onGoToVocab`/`onQuickStart("today")` unchanged.
+
+QA: `npm run build` clean, `git diff --check` clean. Headless-Chrome CDP QA
+(scratch sqlite backend, a fresh test user, 8 then +6 seeded vocab items
+spanning unknown/uncertain status) covered the full loop at 1280/1024/390/
+375/320: correct asset per breakpoint confirmed via computed
+`background-image` (desktop photo only at `>=1024px`, mobile photo only
+below it, each fetched exactly once per session per the network log, no
+opposite-asset requests), zero horizontal overflow, zero console errors,
+zero failed/404 requests throughout every run. Real flow verified: enter
+Study, click quick-start ("오늘 복습 시작"), reach the active card, reveal
+the answer, rate 2 cards with different ratings and confirm the card
+actually advances (front word changes each time), continue rating through
+to the completion state, open both 학습 옵션/학습 현황 disclosures and
+change study mode via the disclosed select, close them, click restart. On
+mobile (390/375/390 -- 320 needed no scroll at all), the 4-way rating grid
+was measured via `getBoundingClientRect` after answer-reveal at all three
+widths: fully within the viewport bottom, confirming Phase 112's
+mobile-decision-grid protection still holds against the new board photo.
+
+Remaining risk: the mobile quick-start tiles' vertical position was tuned
+by eye against one real screenshot per width, not derived from an exact
+formula matching the photo's note-zone pixels -- the notes stay genuinely
+visible above the tile row at the tested widths, but an unusual viewport
+could crop them differently. The desktop board's photo is intentionally
+decorative/ambient only (it has no content-shaped zones to anchor to,
+unlike the mobile photo or Classify/Vocab's desktop photos) -- this is a
+property of the source asset, not a shortcut taken in this phase, but it
+does mean desktop's "layout anchor" argument rests entirely on the DOM's
+own pinned-note material language rather than the photo's composition.
+Next candidate: Home V2, or Reading/Shared Deck/Stats V2, per the bible's
+recommended order.

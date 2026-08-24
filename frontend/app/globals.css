@@ -3454,43 +3454,55 @@ select {
 }
 
 /* Casual Sticker Reader (Phase 66) -- study-board-scene: the board every
-   Study active-session state (ready/empty/active/complete) sits on,
-   replacing the old light .desk-surface-stage tint. Light .study-card
-   sheets read clearly against it the same way the mockup's board scenes
-   always place light cards on a board, never text directly on the felt
-   itself.
-   Phase 148 -- was a deep-green felt board (Phase 66's --notebook-cover
-   tokens, then Phase 130's photographed dark-weave texture); this whole
-   "dark board" treatment was the single heaviest-reading surface left in
-   the casual-cute series (Phase 145-147 already moved Home/Vocab/Deck to
-   light paper/wood-adjacent surfaces), so it's replaced outright with
-   study-light-mint-felt-board.webp -- a real photographed light-mint felt
-   weave, same "uniform edge-to-edge texture, no distinguishing shapes"
-   property as the old photo, so `background-size: cover` still needs no
-   per-instance crop/position tuning at any board aspect ratio (including
-   the very short boards ready/empty render with no card stack yet). The
-   soft top-sheen radial-gradient is dropped -- it existed to add depth to
-   a dark surface; the light photo already has its own visible weave
-   depth and the highlight read as a washed-out haze on top of it instead.
-   box-shadow dropped from a deliberately heavy `0 16px 34px` drop shadow
-   to a much softer one, matching every other Phase 145-147 surface's
-   "light/natural, not heavy luxury" shadow language -- the board still
-   reads as sitting slightly proud of the page, just not as a slab.
-   background-color is a flat same-family fallback sampled from the new
-   photo if it fails to load. */
+   Study active-session state (ready/empty/active/complete) sits on.
+   Light .study-card sheets read clearly against it the same way the
+   mockup's board scenes always place light cards on a board, never text
+   directly on the felt itself.
+
+   Phase 167 (Study V2) -- the flat, uniform phase145 felt texture (chosen
+   specifically because it tiled safely via `background-size: cover` at
+   any board height) is replaced with the real v2-study-board-* photos.
+   The two photos are structurally different, not just different crops of
+   one image: the desktop photo is still a near-uniform blank felt board
+   (a couple of pushpins/a washi corner, nothing content-shaped), so it
+   keeps the old cover/center technique safely at >=1024px. The mobile
+   photo is NOT uniform -- it has 4 real sticky notes pinned across the
+   top and one big blank pinned note below them, meant to anchor the
+   quick-start tiles and the review card respectively. `cover` on a photo
+   with fixed content zones would zoom/crop unpredictably once the board
+   grows tall (the active-review-card state easily runs 2-3x the photo's
+   own natural height on a phone) -- `background-size: 100% auto` instead
+   locks the photo to the container's width at its own true aspect ratio,
+   pinned to the top, so the note zones always land in the same place
+   regardless of how tall the content below them grows; the excess board
+   height below the photo just continues in the flat fallback color
+   (sampled from the photo's own felt tone) instead of a distorted image.
+   `.study-cta-button`'s 4 tiles are recolored (see below) to echo those
+   same 4 note colors, so they read as the live, tappable versions of the
+   photo's own pinned notes rather than a same-old CTA row over new
+   wallpaper. */
 .study-board-scene {
   position: relative;
   display: grid;
   gap: 16px;
   padding: 22px 16px 30px;
   border-radius: 28px;
-  background-color: #cfe6c2;
-  background-image: url("/brand/decor/phase145/study-light-mint-felt-board.webp");
-  background-size: cover;
-  background-position: center;
+  background-color: #bcd8b0;
+  background-image: url("/brand/decor/v2/v2-study-board-mobile-9x16.webp");
+  background-size: 100% auto;
+  background-position: top center;
   background-repeat: no-repeat;
   box-shadow: 0 10px 22px rgba(120, 98, 40, 0.12);
   overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .study-board-scene {
+    background-color: #cfe6c2;
+    background-image: url("/brand/decor/v2/v2-study-felt-board-desktop-16x9.webp");
+    background-size: cover;
+    background-position: center;
+  }
 }
 
 /* Phase 74 -- a quiet leaf-sprig hint in the board's bottom-left corner,
@@ -3621,6 +3633,11 @@ select {
   transform: rotate(-3deg);
 }
 
+/* Phase 167 (Study V2) -- a faint repeating ruled-line texture (was a flat
+   var(--panel-bg) fill) so the top sheet in the stack reads as one more
+   real index card, not a plain web-card box sitting in front of the two
+   photographed backing sheets below it. Deliberately very low-opacity --
+   this card's job is Japanese-word legibility first, texture second. */
 .study-card {
   position: relative;
   z-index: 1;
@@ -3632,7 +3649,14 @@ select {
   border-top: 2px solid var(--screen-accent, var(--accent));
   border-radius: 12px;
   padding: 28px;
-  background: var(--panel-bg);
+  background-color: var(--panel-bg);
+  background-image: repeating-linear-gradient(
+    180deg,
+    rgba(61, 47, 20, 0.035) 0px,
+    rgba(61, 47, 20, 0.035) 1px,
+    transparent 1px,
+    transparent 28px
+  );
   box-shadow: 0 14px 30px rgba(120, 98, 40, 0.06);
 }
 
@@ -6372,9 +6396,22 @@ input.reading-vocab-sticker-toggle:checked {
   );
 }
 
+/* Phase 167 (Study V2) -- the 3 secondary tiles pick up a pale paper tint
+   matching their own existing pin-dot color (already established, just
+   never carried onto the card itself) instead of sharing one flat cream
+   fill -- reads as 4 differently-colored sticky notes pinned to the
+   board, the same idea the mobile V2 photo's own 4 pre-printed notes use,
+   not 4 identical tiles that only differ by a small dot. The primary tile
+   keeps its own strong teal fill untouched (still the one unmistakable
+   action). */
+.study-cta-button:nth-child(2) {
+  background: #fbeed2;
+}
+
 .study-cta-button:nth-child(3) {
   border-radius: 16px 16px 4px 16px;
   transform: rotate(-3.5deg) translateY(9px);
+  background: #f7dfe1;
 }
 
 .study-cta-button:nth-child(3)::before {
@@ -6390,6 +6427,7 @@ input.reading-vocab-sticker-toggle:checked {
 .study-cta-button:nth-child(4) {
   border-radius: 16px 16px 16px 4px;
   transform: rotate(5deg) translateY(-3px);
+  background: #fbe4d3;
 }
 
 .study-cta-button:nth-child(4)::before {
