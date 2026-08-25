@@ -219,20 +219,36 @@
    internally-scrolling box matching one ruled page's extent, so the book's
    own aspect ratio never has to stretch to fit a long source text or a long
    example sentence. */
+/* Phase 173 -- was a plain text row (display:inline-flex, normal flow)
+   sitting above .reading-scene-v2, its own small header section before the
+   scene ever started -- exactly the "외부 title row" the phase brief calls
+   out. Now lives inside .reading-scene-v2-frame (see ReadingTab.tsx) as a
+   small paper tag clipped to the book's top edge, half on the cover/half
+   hanging above it -- the same "tag pinned to the scene" language
+   .home-scene-v2-stamp already uses, just anchored to the frame's own top
+   edge instead of a spot in the middle of the photo. */
 .reading-scene-v2-eyebrow {
+  position: absolute;
+  z-index: 4;
+  left: 6%;
+  top: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 8px;
+  padding: 5px 12px 5px 8px;
+  border-radius: 3px 10px 10px 3px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
   color: var(--screen-accent, var(--muted));
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0.03em;
+  transform: translateY(-60%) rotate(-2deg);
 }
 
 .reading-scene-v2-eyebrow .shiori-mark {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .reading-scene-v2 {
@@ -824,20 +840,42 @@
    replaced; they're what keeps a lightly-stocked shelf reading as "a real
    shelf with room on it" instead of empty web space, without any
    conditional filler markup. */
+/* Phase 173 -- was a plain text row above .shared-scene-v2 (normal flow).
+   Now a small paper tag hanging off the shelf frame's own top edge --
+   left side (mobile's .shared-scene-v2-actions sits top-left there, so
+   this uses the opposite corner) or right side (desktop's actions zone
+   moves to top-right, so this moves to top-left) -- see the media query
+   below, mirrored from .shared-scene-v2-actions's own left/right flip. */
 .shared-scene-v2-eyebrow {
+  position: absolute;
+  z-index: 4;
+  right: 5%;
+  top: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 8px;
+  padding: 5px 12px 5px 8px;
+  border-radius: 3px 10px 10px 3px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
   color: var(--screen-accent, var(--muted));
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0.03em;
+  transform: translateY(-60%) rotate(2deg);
 }
 
 .shared-scene-v2-eyebrow .shiori-mark {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
+}
+
+@media (min-width: 1024px) {
+  .shared-scene-v2-eyebrow {
+    right: auto;
+    left: 6%;
+    transform: translateY(-60%) rotate(-2deg);
+  }
 }
 
 .shared-scene-v2 {
@@ -1040,24 +1078,34 @@
    content Phase 161 built (TodayStamps/StudyTimeline/DeckProgressJournal/
    WordSlip, all unchanged below) directly over the photo's own blank stamp
    labels, ruled ledger table, and pinned note slips. */
+/* Phase 173 -- was a plain text row (mark + text + a second ShioriStamp
+   label) in normal flow above .stats-scene-v2. Now one compact paper tag
+   hanging off the logbook's top edge, left side -- clear of
+   .stats-scene-v2-action (top-right) and far enough above
+   .stats-scene-v2-stamps (top:5-7%) that the small downward dip from
+   translateY(-60%) never reaches it. */
 .stats-scene-v2-eyebrow {
+  position: absolute;
+  z-index: 4;
+  left: 6%;
+  top: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 8px;
+  padding: 5px 12px 5px 8px;
+  border-radius: 3px 10px 10px 3px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
   color: var(--screen-accent, var(--muted));
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 800;
   letter-spacing: 0.03em;
+  transform: translateY(-60%) rotate(-2deg);
 }
 
 .stats-scene-v2-eyebrow .shiori-mark {
-  width: 18px;
-  height: 18px;
-}
-
-.stats-scene-v2-eyebrow-stamp {
-  margin-left: 2px;
+  width: 16px;
+  height: 16px;
 }
 
 .stats-scene-v2 {
@@ -1466,7 +1514,7 @@ button {
 
 .page {
   min-height: 100vh;
-  padding: 12px 14px 28px;
+  padding: 8px 14px 24px;
 }
 
 /* V3 final reset: renamed from .workspace to .library-canvas -- this is
@@ -1486,14 +1534,14 @@ button {
    a centered "content column" the way a text-heavy admin page would --
    widened accordingly (was 1240/1360). */
 .library-canvas {
-  width: min(1440px, 100%);
+  width: min(1520px, 100%);
   margin: 0 auto;
 }
 
 .library-canvas-reading,
 .library-canvas-shared,
 .library-canvas-vocab {
-  width: min(1560px, 100%);
+  width: min(1640px, 100%);
 }
 
 /* Phase 113 -- App Shell structural replacement. The old shell paired a
@@ -1535,8 +1583,8 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 10px;
-  padding: 7px 10px;
+  margin: 0 0 6px;
+  padding: 6px 10px;
   border-bottom: none;
   background: rgba(253, 249, 238, 0.82);
   backdrop-filter: blur(3px);
@@ -1876,13 +1924,16 @@ button {
      its own left to set (unset here falls through to the base .page rule
      above, which sets none either), just the width cap and a small top
      margin so the scene starts almost immediately under the toolbar
-     instead of 20-40px of card padding away from it. No page.tsx changes
-     needed. */
+     instead of 20-40px of card padding away from it.
+     Phase 173 -- width cap widened further (was min(1600px,96vw)) and top
+     margin/offset shaved down again to match the toolbar's own smaller
+     footprint below, so the scene occupies as much of the first viewport
+     as the toolbar leaves available. No page.tsx changes needed. */
   .page {
-    max-width: min(1600px, 96vw);
-    margin: 10px auto 0;
-    min-height: calc(100vh - 10px);
-    padding: 0 16px 28px;
+    max-width: min(1680px, 97vw);
+    margin: 6px auto 0;
+    min-height: calc(100vh - 6px);
+    padding: 0 14px 24px;
   }
 
   /* Phase 113 -- the mockup's single rounded toolbar sitting on top of the
@@ -1890,17 +1941,25 @@ button {
      separate sidebar.
      Phase 172 -- was a solid var(--panel-bg) pill with a hairline border
      and its own drop shadow, real chrome weight competing with the scene
-     right below it for attention. Now a translucent strip (Phase 118's old
-     Home-only "minimalChrome" skin, unconditional) and a smaller sticky
-     offset to match .page's own smaller top margin above. */
+     right below it for attention. Lightened to a translucent strip (Phase
+     118's old Home-only "minimalChrome" skin, unconditional).
+     Phase 173 -- still read as a rounded floating capsule (border-radius:
+     999px + its own frosted background), a shape strong enough to be the
+     first thing the eye picks out. Flattened into a plain paper-tab strip:
+     no capsule shape, a hairline dashed underedge (the same "torn paper
+     edge" language .study-board-tag-row/.app-nav-drawer-footer already use
+     elsewhere) instead of a filled pill, and a smaller sticky offset to
+     match .page's own smaller top margin above. */
   .app-toolbar {
     position: sticky;
-    top: 10px;
-    margin: 0 0 10px;
-    padding: 7px 10px 7px 12px;
-    border-radius: 999px;
+    top: 6px;
+    z-index: 20;
+    margin: 0 0 8px;
+    padding: 6px 10px;
+    border-radius: 0;
     border: none;
-    background: rgba(253, 249, 238, 0.72);
+    border-bottom: 1px dashed rgba(120, 98, 40, 0.16);
+    background: rgba(253, 249, 238, 0.6);
     backdrop-filter: blur(3px);
     box-shadow: none;
   }
@@ -1930,21 +1989,23 @@ button {
     align-items: center;
     gap: 6px;
     min-width: 0;
-    padding: 8px 12px;
-    border-radius: 999px;
+    padding: 6px 10px;
+    border-radius: 4px;
     color: var(--text-secondary);
     background: transparent;
     font-weight: 700;
     font-size: 12.5px;
     box-shadow: none;
     white-space: nowrap;
-    transition:
-      background var(--motion-fast) var(--ease-soft),
-      color var(--motion-fast) var(--ease-soft);
+    transition: color var(--motion-fast) var(--ease-soft);
   }
 
+  /* Phase 173 -- was a filled var(--soft-bg) pill on hover, the same
+     capsule shape the container itself just lost -- a color shift alone
+     (no fill, no shadow) keeps a tab reading as a paper tab, not a button. */
   .app-toolbar-link:not(:disabled):hover {
-    background: var(--soft-bg);
+    background: transparent;
+    color: var(--text);
     box-shadow: none;
     transform: none;
   }
@@ -1960,16 +2021,19 @@ button {
      easily out-weighed the quieter Phase 172 toolbar around it, let alone
      the scene below it. Phase 172 -- lighter soft-fill + tinted text
      instead (same language .app-nav-drawer-link-active already uses for
-     this exact state in the mobile drawer), keeping only the pin dot as
-     the strong marker. */
+     this exact state in the mobile drawer).
+     Phase 173 -- even the soft-fill pill still read as a highlighted
+     capsule sitting above the scene; dropped to plain tinted text, so the
+     only "you are here" markers left are that color and the existing
+     .app-toolbar-pin dot -- a stamp/dot, not a fill. */
   .app-toolbar-link-active {
     color: var(--primary-dark);
-    background: var(--soft-bg);
+    background: transparent;
     box-shadow: none;
   }
 
   .app-toolbar-link-active:not(:disabled):hover {
-    background: var(--soft-bg);
+    background: transparent;
   }
 
   .app-toolbar-pin {
@@ -6168,21 +6232,32 @@ input.reading-vocab-sticker-toggle:checked {
   border-bottom: 1px dashed var(--paper-border);
 }
 
-.classify-v2-heading {
-  display: flex;
+/* Phase 173 -- was .classify-v2-heading, a title row in normal flow above
+   the scene. Now a small paper tag hanging off the desk photo's own top
+   edge, positioned against .classify-v2-root (which isn't clipped) rather
+   than .classify-v2-scene (which is, via overflow:hidden) -- right side at
+   both breakpoints, clear of the source-slip zone on the left. */
+.classify-v2-title-tag {
+  position: absolute;
+  z-index: 4;
+  right: 5%;
+  top: 4px;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-}
-
-.classify-v2-heading-companion {
-  flex: 0 0 auto;
-}
-
-.classify-v2-heading h2 {
-  margin: 2px 0 0;
+  gap: 6px;
+  padding: 5px 12px 5px 8px;
+  border-radius: 3px 10px 10px 3px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
   color: var(--text);
-  font-size: 19px;
+  font-size: 12px;
   font-weight: 800;
+  transform: translateY(-60%) rotate(2deg);
+}
+
+.classify-v2-title-tag .shiori-mark {
+  width: 16px;
+  height: 16px;
 }
 
 /* The scene itself: mobile-first (9:16 photo) by default, desktop (16:9
@@ -8130,9 +8205,10 @@ input.reading-vocab-sticker-toggle:checked {
 
 /* Phase 166 -- .vocab-filter-group/.vocab-notebook-header/.vocab-pinned-
    note* (an "admin panel" stat-pill row above a filter toolbar) are gone.
-   The title is now .vocab-v2-heading (plain, above the scene) and the
-   stat summary is one small .vocab-v2-count-note pinned inside the scene
-   itself -- see the .vocab-v2-* rules further down this file. */
+   Phase 173 -- the title moved from a plain row above the scene into
+   .vocab-v2-title-tag, pinned inside the scene itself alongside the small
+   .vocab-v2-count-note stat summary -- see the .vocab-v2-* rules further
+   down this file. */
 /* Bookmark/flag-shaped action labels -- reuses the app's established
    right-notch clip-path (.vocab-item-status-wrap below, and
    .home-hero-bookmark/.library-hero-bookmark elsewhere) instead of the
@@ -8869,10 +8945,11 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 /* ===========================================================================
-   vocab-v2-* -- Phase 166 (V2 scene reconstruction: Vocab). The heading
-   sits on the plain page (small, like Classify's V2 heading); everything
-   below it is .vocab-v2-scene, an aspect-ratio box whose background-image
-   IS the photographed open index notebook (v2-vocab-index-* assets,
+   vocab-v2-* -- Phase 166 (V2 scene reconstruction: Vocab). Phase 173
+   moved the heading off the plain page and into the scene itself (see
+   .vocab-v2-title-tag below) -- everything here is .vocab-v2-scene, an
+   aspect-ratio box whose background-image IS the photographed open index
+   notebook (v2-vocab-index-* assets,
    mobile 9:16 default, desktop 16:9 swapped in at >=1024px, matching every
    other V2 tab's existing breakpoint split). The 6 status/due filters are
    opaque physical tabs anchored to the photo's own tab column (left rail
@@ -8885,26 +8962,45 @@ input.reading-vocab-sticker-toggle:checked {
    normally below it on matching paper tone, so a 20-50 row list stays a
    normal page scroll, not a cramped nested-scroll box.
    =========================================================================== */
-.vocab-v2-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 2px 10px;
-}
-
-.vocab-v2-heading-companion {
-  flex: 0 0 auto;
-}
-
-.vocab-v2-heading h2 {
-  margin: 2px 0 0;
-  color: var(--text);
-  font-size: 19px;
-  font-weight: 800;
-}
-
 .vocab-v2-scene-wrap {
   position: relative;
+}
+
+/* Phase 173 -- was .vocab-v2-heading, a title row in normal flow above
+   .vocab-v2-scene-wrap. Now a small paper tag hanging off the notebook's
+   own top edge -- left side on mobile (the tab rail runs down the right
+   edge there), right side on desktop (the rail moves to the left edge),
+   so it's never on the same side as those physical tabs at either
+   breakpoint. */
+.vocab-v2-title-tag {
+  position: absolute;
+  z-index: 4;
+  left: 5%;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 5px 8px;
+  border-radius: 3px 10px 10px 3px;
+  background: var(--panel-bg);
+  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  transform: translateY(-60%) rotate(-2deg);
+}
+
+.vocab-v2-title-tag .shiori-mark {
+  width: 16px;
+  height: 16px;
+}
+
+@media (min-width: 1024px) {
+  .vocab-v2-title-tag {
+    left: auto;
+    right: 4%;
+    transform: translateY(-60%) rotate(2deg);
+  }
 }
 
 .vocab-v2-scene {
@@ -9434,11 +9530,12 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 @media (max-width: 640px) {
-  /* Phase 172 -- was 18px 12px 32px, a leftover from before the base .page
-     rule above was tightened (28px 20px 40px -> 12px 14px 28px) to let
-     each tab's V2 scene start higher/bigger on the screen; this narrower-
-     viewport override re-widened past that tightened value, so it's
-     brought down to match the same intent instead of undoing it. */
+  /* Phase 172/173 -- was 18px 12px 32px, a leftover from before the base
+     .page rule above was progressively tightened (28px 20px 40px -> 12px
+     14px 28px -> 8px 14px 24px) to let each tab's V2 scene start higher/
+     bigger on the screen; this narrower-viewport override re-widened past
+     that tightened value, so it's kept in step with the same base numbers
+     instead of undoing them. */
   .page {
     padding: 8px 12px 24px;
   }

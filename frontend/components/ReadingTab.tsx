@@ -265,11 +265,6 @@ export function ReadingTab({
       }`}
       aria-live="polite"
     >
-      <span className="reading-scene-v2-eyebrow">
-        <ShioriMark variant="reading" />
-        원문 읽기
-      </span>
-
       {/* Phase 169 -- one full-bleed V2 open-book photo is the scene anchor
           (a different shot per breakpoint, not one crop of the other): the
           desktop photo is a two-page ruled spread, so .reading-page--left/
@@ -279,7 +274,13 @@ export function ReadingTab({
           page's full extent. Every live piece below (slip, reader text,
           word inspector, save memo, candidate tab) is positioned as a % of
           this same frame -- see globals.css for the exact zones, tuned per
-          breakpoint against where each photo actually has ruled-page room. */}
+          breakpoint against where each photo actually has ruled-page room.
+          Phase 173 -- the "원문 읽기" eyebrow used to be a plain text row
+          sitting above this scene, its own separate header section reading
+          as a leftover app title bar. Moved inside .reading-scene-v2-frame
+          as a small paper tag hanging off the book's top edge instead --
+          see .reading-scene-v2-eyebrow, now absolutely positioned against
+          the frame rather than sitting in normal flow above it. */}
       <div className="reading-scene-v2">
         <div className="reading-scene-v2-frame">
           <picture className="reading-scene-v2-media">
@@ -291,6 +292,11 @@ export function ReadingTab({
               draggable={false}
             />
           </picture>
+
+          <span className="reading-scene-v2-eyebrow">
+            <ShioriMark variant="reading" />
+            원문 읽기
+          </span>
 
           {hasResult ? (
             <ReaderMode

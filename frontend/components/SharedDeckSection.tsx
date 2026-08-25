@@ -419,11 +419,6 @@ export function SharedDeckSection({
 
   return (
     <section className="tab-panel shared-deck-section" aria-live="polite">
-      <span className="shared-scene-v2-eyebrow">
-        <ShioriMark variant="default" />
-        덱 책장
-      </span>
-
       {/* Phase 170 -- one full-bleed V2 bookshelf photo is the scene anchor
           (a different shot per breakpoint, not one crop of the other). The
           photo's own painted spines are never mapped 1:1 to real decks --
@@ -433,7 +428,12 @@ export function SharedDeckSection({
           shows the photo's own densely-stocked shelf underneath, which is
           exactly why a handful of decks still reads as "a real shelf with
           room on it" instead of bare web space (this phase's own
-          requirement) without any conditional filler markup. */}
+          requirement) without any conditional filler markup.
+          Phase 173 -- the "덱 책장" eyebrow used to be a plain text row
+          above this scene. Moved inside .shared-scene-v2-frame as a small
+          paper tag hanging off the shelf's top edge instead -- opposite
+          side from .shared-scene-v2-actions at each breakpoint (that zone
+          flips corners too, see below) so the two never overlap. */}
       <div className="shared-scene-v2">
         <div className="shared-scene-v2-frame">
           <picture className="shared-scene-v2-media">
@@ -448,6 +448,11 @@ export function SharedDeckSection({
               draggable={false}
             />
           </picture>
+
+          <span className="shared-scene-v2-eyebrow">
+            <ShioriMark variant="default" />
+            덱 책장
+          </span>
 
           {/* Small index tabs clipped to the shelf frame's own top-right
               corner -- Phase 152's existing notch-tag shape

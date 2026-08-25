@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ShioriCharacter, ShioriStamp } from "./Shiori";
+import { ShioriMark, ShioriStamp } from "./Shiori";
 import { CoverageSummary } from "./CoverageSummary";
 import { classifyMessageTone, computeCoverageStats } from "./coverageUtils";
 import type { CoverageStats } from "./types";
@@ -344,15 +344,17 @@ function ClassifyDeskV2({
 }: ClassifyDeskV2Props) {
   return (
     <section className="classify-v2-root">
-      <div className="classify-v2-heading">
-        <span className="shiori-glow shiori-companion--section classify-v2-heading-companion">
-          <ShioriCharacter variant="classify" size="sm" />
-        </span>
-        <div>
-          <span className="reading-input-eyebrow">읽은 원문에서 카드 만들기</span>
-          <h2>단어 카드를 만들어볼까요?</h2>
-        </div>
-      </div>
+      {/* Phase 173 -- was .classify-v2-heading, a title row in normal flow
+          above the scene (the same "제목 행 + 이미지 카드" shape this
+          phase's brief calls out as a failure). Now a small paper tag
+          hanging off the desk photo's own top edge -- positioned against
+          .classify-v2-root (not .classify-v2-scene) since the scene itself
+          clips overflow, the same reason Vocab's title tag also renders as
+          a sibling of its clipped scene box rather than a child of it. */}
+      <span className="classify-v2-title-tag">
+        <ShioriMark variant="classify" />
+        단어 카드 만들기
+      </span>
 
       <form className="classify-v2-scene" onSubmit={onAnalyze}>
         <ClassifySourceSlipV2 text={text} onTextChange={onTextChange} />

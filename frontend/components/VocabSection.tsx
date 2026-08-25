@@ -14,7 +14,7 @@ import {
   SearchIcon,
 } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
-import { ShioriCharacter, ShioriGuideCard } from "./Shiori";
+import { ShioriGuideCard, ShioriMark } from "./Shiori";
 import {
   formatDateTime,
   formatNextReview,
@@ -344,18 +344,24 @@ export function VocabSection({
           filters are opaque physical tabs anchored to the photo's own tab
           column, search/deck/sort are small paper labels on the photo's
           blank pages, and 학습하기/원문읽기/더보기 are bookmark tags tucked
-          into the same spread instead of a toolbar row above it. */}
-      <div className="vocab-v2-heading">
-        <span className="shiori-glow shiori-companion--section vocab-v2-heading-companion">
-          <ShioriCharacter variant="default" size="sm" />
-        </span>
-        <div>
-          <span className="reading-input-eyebrow">읽으며 담은 단어 노트</span>
-          <h2>내 단어장</h2>
-        </div>
-      </div>
-
+          into the same spread instead of a toolbar row above it.
+          Phase 173 -- the "읽으며 담은 단어 노트 / 내 단어장" heading used
+          to be its own row above the scene (.vocab-v2-heading, normal
+          flow), the same "title bar sitting on top of a photo" shape this
+          phase's brief specifically calls out. Moved into .vocab-v2-scene-
+          wrap as a small paper tag hanging off the notebook's top edge
+          instead -- see .vocab-v2-title-tag. Rendered as a sibling of
+          .vocab-v2-scene (not a child of it) so its own overflow:hidden
+          never clips the tag's upward hang, the same reason
+          .vocab-v2-actions-zone below already renders as a sibling too.
+          Opposite side from .vocab-v2-tab-rail at each breakpoint so it
+          never overlaps those tabs. */}
       <div className="vocab-v2-scene-wrap">
+      <span className="vocab-v2-title-tag">
+        <ShioriMark variant="default" />
+        내 단어장
+      </span>
+
       <div className="vocab-v2-scene">
         <div className="vocab-v2-tab-rail" role="group" aria-label="상태 필터">
           {statusFilterOptions.map((option) => {

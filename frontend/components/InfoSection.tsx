@@ -1,5 +1,5 @@
 import { AppEmptyState } from "./BrandElements";
-import { ShioriMark, ShioriStamp } from "./Shiori";
+import { ShioriMark } from "./Shiori";
 import { getDisplayMeaning } from "./shared";
 import {
   BookIcon,
@@ -253,12 +253,6 @@ export function StudyLogPage({
 
   return (
     <section className="tab-panel study-log-page" aria-live="polite">
-      <span className="stats-scene-v2-eyebrow">
-        <ShioriMark variant="success" />
-        학습 통계
-        <ShioriStamp variant="success" label="학습 기록" className="stats-scene-v2-eyebrow-stamp" />
-      </span>
-
       {/* Phase 171 -- one full-bleed V2 logbook photo (a two-page desktop
           spread, a single tall page on mobile -- a different shot per
           breakpoint, not one crop of the other) is the scene anchor. The
@@ -268,7 +262,12 @@ export function StudyLogPage({
           DeckProgressJournal/WordSlip markup Phase 161 already built,
           directly over those zones. See globals.css for the exact
           percentages, tuned per breakpoint against where each photo
-          actually has stamp/ledger/slip room. */}
+          actually has stamp/ledger/slip room.
+          Phase 173 -- the "학습 통계 / 학습 기록" eyebrow (mark + text +
+          a second ShioriStamp label) used to be its own row above this
+          scene. Now one compact paper tag hanging off the logbook's top
+          edge instead -- see .stats-scene-v2-eyebrow, moved inside
+          .stats-scene-v2-frame and absolutely positioned. */}
       <div className="stats-scene-v2">
         <div className="stats-scene-v2-frame">
           <picture className="stats-scene-v2-media">
@@ -283,6 +282,11 @@ export function StudyLogPage({
               draggable={false}
             />
           </picture>
+
+          <span className="stats-scene-v2-eyebrow">
+            <ShioriMark variant="success" />
+            학습 기록
+          </span>
 
           {hasStats ? (
             <button
