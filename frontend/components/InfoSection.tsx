@@ -1,5 +1,5 @@
 import { AppEmptyState } from "./BrandElements";
-import { ShioriStamp } from "./Shiori";
+import { ShioriMark, ShioriStamp } from "./Shiori";
 import { getDisplayMeaning } from "./shared";
 import {
   BookIcon,
@@ -24,13 +24,13 @@ type StudyLogPageProps = {
 };
 
 // ---------------------------------------------------------------------------
-// LogbookHeader -- title/subtitle plus the "오늘" numbers stamped directly
-// under it. Phase 161: the three numbers used to be their own titled section
-// ("오늘 학습" h3 + a row below it), which read as a small stat block bolted
-// onto the top of the page. They're postmarks on the page itself now -- no
-// section heading of their own, no dedicated <section> wrapper.
+// TodayStamps -- Phase 171. The three "오늘" numbers, unchanged data/markup
+// from Phase 161's postmark tags -- only where they're mounted changed (see
+// StudyLogPage: this now sits inside .stats-scene-v2-stamps, positioned over
+// the V2 logbook photo's own three blank label shapes, instead of under a
+// title/subtitle header row on a flat CSS page).
 // ---------------------------------------------------------------------------
-function LogbookHeader({
+function TodayStamps({
   dueTodayCount,
   recentCount,
   hardCount,
@@ -40,30 +40,23 @@ function LogbookHeader({
   hardCount: number;
 }) {
   return (
-    <header className="stats-logbook-header">
-      <div className="study-log-hero-row">
-        <h2 className="reading-hero-title">학습 통계</h2>
-        <ShioriStamp variant="success" label="학습 기록" />
-      </div>
-      <p className="reading-hero-subtitle">오늘까지의 학습 현황을 한눈에 확인하세요.</p>
-      <div className="stats-today-stamps">
-        <span className="study-stamp-tag">
-          <ClockIcon className="study-stamp-tag-icon" />
-          <span>오늘 복습</span>
-          <strong>{dueTodayCount}</strong>
-        </span>
-        <span className="study-stamp-tag">
-          <BookmarkIcon className="study-stamp-tag-icon" />
-          <span>최근 담은 단어</span>
-          <strong>{recentCount}</strong>
-        </span>
-        <span className="study-stamp-tag">
-          <PencilIcon className="study-stamp-tag-icon" />
-          <span>어려운 단어</span>
-          <strong>{hardCount}</strong>
-        </span>
-      </div>
-    </header>
+    <div className="stats-today-stamps">
+      <span className="study-stamp-tag">
+        <ClockIcon className="study-stamp-tag-icon" />
+        <span>오늘 복습</span>
+        <strong>{dueTodayCount}</strong>
+      </span>
+      <span className="study-stamp-tag">
+        <BookmarkIcon className="study-stamp-tag-icon" />
+        <span>최근 담은 단어</span>
+        <strong>{recentCount}</strong>
+      </span>
+      <span className="study-stamp-tag">
+        <PencilIcon className="study-stamp-tag-icon" />
+        <span>어려운 단어</span>
+        <strong>{hardCount}</strong>
+      </span>
+    </div>
   );
 }
 
@@ -194,7 +187,7 @@ function StudyLogEmptyState({ onGoToReading }: { onGoToReading: () => void }) {
   return (
     <AppEmptyState
       mood="empty"
-      moodSize="lg"
+      moodSize="md"
       title="아직 기록이 없어요."
       description="원문을 읽고 첫 단어를 담아보세요."
     >
@@ -207,12 +200,13 @@ function StudyLogEmptyState({ onGoToReading }: { onGoToReading: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
-// StudyLogPage -- Phase 161 (Study Logbook full reconstruction): the whole
-// tab is now one physical ledger book (.stats-logbook-page) instead of a
-// main-column-plus-widget-sidebar dashboard. Today's numbers are postmark
-// stamps on the header, the diary and deck ledger sit unboxed on the page,
-// and recent/difficult words are two small note slips resting beside the
-// ledger (below it on narrow screens) rather than a separate panel. All
+// StudyLogPage -- Phase 171 (Study Logbook V2 scene). Phase 161 already
+// unboxed every section onto one flat CSS page (.stats-logbook-page, a
+// plain bordered var(--paper-bg) rectangle); this phase replaces that flat
+// page with a real photographed V2 logbook scene (.stats-scene-v2-frame)
+// and positions the exact same content Phase 161 built -- TodayStamps,
+// StudyTimeline, DeckProgressJournal, WordSlip -- directly over the photo's
+// own blank stamp labels / ruled ledger table / pinned note slips. All
 // values still come from the existing StudyStats/VocabItem data already
 // fetched in page.tsx -- no new API calls, no route change.
 // ---------------------------------------------------------------------------
@@ -259,69 +253,106 @@ export function StudyLogPage({
 
   return (
     <section className="tab-panel study-log-page" aria-live="polite">
-      <div className="stats-logbook-scene">
-        <div className="stats-logbook-page paper-corner">
-          <LogbookHeader
-            dueTodayCount={stats?.due_today_count ?? 0}
-            recentCount={recentWords.length}
-            hardCount={hardWords.length}
-          />
+      <span className="stats-scene-v2-eyebrow">
+        <ShioriMark variant="success" />
+        학습 통계
+        <ShioriStamp variant="success" label="학습 기록" className="stats-scene-v2-eyebrow-stamp" />
+      </span>
 
-          {isStatsLoading && !stats ? (
-            <p className="muted-text">학습 기록을 불러오는 중입니다.</p>
-          ) : null}
-          {statsMessage ? <p className="message message--info">{statsMessage}</p> : null}
-
-          {isEmpty ? <StudyLogEmptyState onGoToReading={onGoToReading} /> : null}
-
-          {hasStats && stats ? (
-            <div className="stats-logbook-spread">
-              <div className="stats-logbook-leaf stats-logbook-leaf--main">
-                <StudyTimeline entries={journalEntries} />
-                <DeckProgressJournal deckStats={stats.deck_stats} />
-              </div>
-
-              <div className="stats-logbook-gutter" aria-hidden="true" />
-
-              <div className="stats-logbook-leaf stats-logbook-leaf--slips">
-                <WordSlip
-                  title="최근 담은 단어"
-                  icon={BookmarkIcon}
-                  isLoading={isWordsLoading}
-                  words={recentWords}
-                  emptyText="아직 담은 단어가 없어요."
-                />
-                <WordSlip
-                  title="자주 틀린 단어"
-                  icon={PencilIcon}
-                  isLoading={isWordsLoading}
-                  words={hardWords}
-                  emptyText="아직 자주 틀린 단어가 없어요."
-                  showWrongCount
-                />
-              </div>
-            </div>
-          ) : null}
+      {/* Phase 171 -- one full-bleed V2 logbook photo (a two-page desktop
+          spread, a single tall page on mobile -- a different shot per
+          breakpoint, not one crop of the other) is the scene anchor. The
+          photo's own blank label shapes/ruled table/pinned note slips are
+          never redrawn in CSS -- .stats-scene-v2-stamps/-journal/-slips
+          just position the exact same TodayStamps/StudyTimeline/
+          DeckProgressJournal/WordSlip markup Phase 161 already built,
+          directly over those zones. See globals.css for the exact
+          percentages, tuned per breakpoint against where each photo
+          actually has stamp/ledger/slip room. */}
+      <div className="stats-scene-v2">
+        <div className="stats-scene-v2-frame">
+          <picture className="stats-scene-v2-media">
+            <source
+              media="(min-width: 1024px)"
+              srcSet="/brand/decor/v2/v2-stats-logbook-desktop-16x9.webp"
+            />
+            <img
+              className="stats-scene-v2-media-img"
+              src="/brand/decor/v2/v2-stats-logbook-mobile-9x16.webp"
+              alt=""
+              draggable={false}
+            />
+          </picture>
 
           {hasStats ? (
-            <button type="button" className="ghost-button compact-button" onClick={onGoToVocab}>
+            <button
+              type="button"
+              className="stats-scene-v2-action"
+              onClick={onGoToVocab}
+            >
               <CardFileIcon className="button-icon" />
-              어휘 노트 전체 보기
+              어휘 노트
             </button>
           ) : null}
 
-          <footer className="stats-logbook-footer">
-            <p className="stats-logbook-footer-line">
-              <ShieldIcon className="info-strip-icon" />
-              원문 전체는 저장하지 않아요. 단어와 짧은 예문만 노트에 남아요.
-            </p>
-            <p className="stats-logbook-footer-line">
-              <BookIcon className="info-strip-icon" />
-              사전 뜻풀이는 JMdict/EDRDG, Kaikki/Wiktionary 데이터를 참고합니다.
-            </p>
-          </footer>
+          {hasStats && stats ? (
+            <div className="stats-scene-v2-stamps">
+              <TodayStamps
+                dueTodayCount={stats.due_today_count}
+                recentCount={recentWords.length}
+                hardCount={hardWords.length}
+              />
+            </div>
+          ) : null}
+
+          <div className="stats-scene-v2-journal">
+            {isStatsLoading && !stats ? (
+              <p className="muted-text">학습 기록을 불러오는 중입니다.</p>
+            ) : null}
+            {statsMessage ? <p className="message message--info">{statsMessage}</p> : null}
+
+            {isEmpty ? <StudyLogEmptyState onGoToReading={onGoToReading} /> : null}
+
+            {hasStats && stats ? (
+              <>
+                <StudyTimeline entries={journalEntries} />
+                <DeckProgressJournal deckStats={stats.deck_stats} />
+              </>
+            ) : null}
+          </div>
+
+          {hasStats ? (
+            <div className="stats-scene-v2-slips">
+              <WordSlip
+                title="최근 담은 단어"
+                icon={BookmarkIcon}
+                isLoading={isWordsLoading}
+                words={recentWords}
+                emptyText="아직 담은 단어가 없어요."
+              />
+              <WordSlip
+                title="자주 틀린 단어"
+                icon={PencilIcon}
+                isLoading={isWordsLoading}
+                words={hardWords}
+                emptyText="아직 자주 틀린 단어가 없어요."
+                showWrongCount
+              />
+            </div>
+          ) : null}
         </div>
       </div>
+
+      <footer className="stats-scene-v2-footer">
+        <p className="stats-scene-v2-footer-line">
+          <ShieldIcon className="info-strip-icon" />
+          원문 전체는 저장하지 않아요. 단어와 짧은 예문만 노트에 남아요.
+        </p>
+        <p className="stats-scene-v2-footer-line">
+          <BookIcon className="info-strip-icon" />
+          사전 뜻풀이는 JMdict/EDRDG, Kaikki/Wiktionary 데이터를 참고합니다.
+        </p>
+      </footer>
     </section>
   );
 }

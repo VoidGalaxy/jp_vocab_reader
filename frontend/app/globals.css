@@ -1027,6 +1027,210 @@
   max-width: 100%;
 }
 
+/* ==========================================================================
+   Phase 171 (Stats V2 Study Logbook Final Scene) -- Phase 161 already
+   unboxed every section (stamps/diary/ledger/slips) onto one shared
+   surface, but that surface was still a flat CSS rectangle
+   (.stats-logbook-page: border + var(--paper-bg) fill + shadow), not a real
+   scene -- no V2 photo was in play at all, so a screenshot still read as
+   "a stats page" rather than "a logbook lying open on a desk". This block
+   replaces that flat page with one full-bleed photographed V2 logbook
+   (.stats-scene-v2-frame -- a two-page desktop spread, a single tall page
+   on mobile, a different shot per breakpoint) and positions the exact same
+   content Phase 161 built (TodayStamps/StudyTimeline/DeckProgressJournal/
+   WordSlip, all unchanged below) directly over the photo's own blank stamp
+   labels, ruled ledger table, and pinned note slips. */
+.stats-scene-v2-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: var(--screen-accent, var(--muted));
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.stats-scene-v2-eyebrow .shiori-mark {
+  width: 18px;
+  height: 18px;
+}
+
+.stats-scene-v2-eyebrow-stamp {
+  margin-left: 2px;
+}
+
+.stats-scene-v2 {
+  position: relative;
+}
+
+.stats-scene-v2-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 941 / 1672;
+  isolation: isolate;
+}
+
+.stats-scene-v2-media {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.stats-scene-v2-media-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+@media (min-width: 1024px) {
+  .stats-scene-v2-frame {
+    aspect-ratio: 1672 / 941;
+  }
+
+  .stats-scene-v2-media-img {
+    border-radius: 26px;
+  }
+}
+
+/* Small notched index tab clipped to the scene's own corner -- same
+   shape/color language every other V2 scene's "go elsewhere" action uses
+   (.shared-deck-tab-action, .reader-bookmark-button), colored with this
+   screen's own --sage-green accent. */
+.stats-scene-v2-action {
+  position: absolute;
+  z-index: 3;
+  top: 3%;
+  right: 3%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  min-width: 0;
+  padding: 7px 18px 7px 10px;
+  border: 0;
+  border-radius: 3px;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 50%,
+    calc(100% - 14px) 100%,
+    0 100%
+  );
+  background: var(--screen-accent, var(--primary));
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 5px 12px rgba(37, 43, 30, 0.14);
+}
+
+.stats-scene-v2-action:not(:disabled):hover {
+  transform: translateX(2px);
+  box-shadow: 0 7px 16px rgba(37, 43, 30, 0.18);
+}
+
+@media (min-width: 1024px) {
+  .stats-scene-v2-action {
+    padding: 9px 22px 9px 14px;
+    font-size: 12.5px;
+  }
+}
+
+/* The three postmark stamps, pinned over the photo's own three blank label
+   shapes at the top of the left/main page. */
+.stats-scene-v2-stamps {
+  position: absolute;
+  z-index: 2;
+  left: 6%;
+  top: 7%;
+  width: 88%;
+  height: 13%;
+  overflow: hidden;
+}
+
+/* Diary lines then deck ledger rows -- one continuous scrollable page
+   surface over the photo's own ruled table, matching the brief's "stamp
+   summary -> diary entries -> deck ledger" reading order. */
+.stats-scene-v2-journal {
+  position: absolute;
+  z-index: 2;
+  left: 6%;
+  top: 22%;
+  width: 88%;
+  height: 46%;
+  overflow-y: auto;
+  padding: 2px 3%;
+}
+
+/* Two pinned word slips, resting on the photo's own note-slip cutouts. */
+.stats-scene-v2-slips {
+  position: absolute;
+  z-index: 2;
+  left: 6%;
+  top: 70%;
+  width: 88%;
+  height: 21%;
+  display: flex;
+  gap: 8px;
+}
+
+.stats-scene-v2-slips .stats-word-slip {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.stats-scene-v2-slips .stats-word-slip-list {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@media (min-width: 1024px) {
+  .stats-scene-v2-stamps {
+    left: 9%;
+    top: 5%;
+    width: 40%;
+    height: 24%;
+  }
+
+  .stats-scene-v2-journal {
+    left: 9%;
+    top: 30%;
+    width: 40%;
+    height: 57%;
+    padding: 2px 2%;
+  }
+
+  .stats-scene-v2-slips {
+    left: 53%;
+    top: 6%;
+    width: 37%;
+    height: 82%;
+    flex-direction: column;
+  }
+}
+
+.stats-scene-v2-footer {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+}
+
+.stats-scene-v2-footer-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
 /* Motion -- shared keyframes + utility animation classes. Deliberately
    small movements (2-8px, opacity, or a light scale) so state screens and
    companion illustrations settle into place instead of jumping in; nothing
@@ -2815,26 +3019,6 @@ button {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
-}
-
-.reading-hero {
-  display: grid;
-  gap: 4px;
-  padding: 2px 2px 4px;
-}
-
-.reading-hero-title {
-  margin: 0;
-  color: var(--text);
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.reading-hero-subtitle {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.6;
 }
 
 .analyze-form {
@@ -6726,98 +6910,19 @@ input.reading-vocab-sticker-toggle:checked {
   max-width: 100%;
 }
 
-/* Phase 161 (Study Logbook full reconstruction) -- replaces the old
-   .study-log-scene "main column + sticky sidebar" split, which was already
-   a dashboard silhouette (main journal + a persistent, bordered-off side
-   rail) even after Phase 155 softened its edges. The whole tab is now one
-   physical ledger book, .stats-logbook-page: a single bordered/shadowed
-   paper surface resting on the desk background, with every section
-   (header stamps, diary, deck ledger, word slips) unboxed *inside* that
-   one surface instead of each being its own nested card. */
-.stats-logbook-scene {
-  min-width: 0;
-}
-
-.stats-logbook-page {
-  position: relative;
-  display: grid;
-  gap: 18px;
-  min-width: 0;
-  max-width: 100%;
-  padding: 22px 22px 18px;
-  border: 1px solid var(--paper-border);
-  border-radius: 6px 22px 22px 22px;
-  background: var(--paper-bg);
-  box-shadow: 0 14px 30px rgba(120, 98, 40, 0.14);
-}
-
-.stats-logbook-header {
-  display: grid;
-  gap: 6px;
-  padding-bottom: 14px;
-  border-bottom: 1px dashed var(--paper-border);
-}
-
-/* The "오늘" numbers -- postmark stamps sitting directly under the title,
-   not a titled stat section of their own (see .study-stamp-tag). */
+/* Phase 171 -- .stats-logbook-scene/-page/-header/-spread/-leaf/-gutter and
+   .study-log-hero-row removed: that whole family built one flat CSS "page"
+   (a plain bordered var(--paper-bg) rectangle, no real photo) with its own
+   2-column grid/gutter split for the word slips. Replaced by
+   .stats-scene-v2-frame's real V2 logbook photo plus absolutely-positioned
+   .stats-scene-v2-stamps/-journal/-slips zones -- see the Phase 171 block
+   near the top of this file (search "Phase 171"). The "오늘" postmark
+   stamps below are unchanged -- only their mount point moved. */
 .stats-today-stamps {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 10px 14px;
-  margin: 6px 0 -4px;
-}
-
-/* Below 1024px: one continuous page, ledger then word slips in DOM order.
-   At/above 1024px: an open two-page spread -- ledger/diary on the left
-   leaf, word slips pinned to the right leaf, split by a bound-page gutter
-   instead of a sticky sidebar rule. */
-.stats-logbook-spread {
-  display: grid;
-  gap: 20px;
-  min-width: 0;
-}
-
-.stats-logbook-leaf {
-  display: grid;
-  gap: 18px;
-  min-width: 0;
-  align-content: start;
-}
-
-.stats-logbook-gutter {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .stats-logbook-spread {
-    grid-template-columns: minmax(0, 1fr) 1px minmax(240px, 300px);
-    gap: 22px;
-  }
-
-  .stats-logbook-gutter {
-    display: block;
-    align-self: stretch;
-    background: repeating-linear-gradient(
-      180deg,
-      var(--paper-border) 0,
-      var(--paper-border) 5px,
-      transparent 5px,
-      transparent 11px
-    );
-  }
-}
-
-/* Casual Sticker Reader (Phase 60) -- pairs the hero title with a small
-   ShioriStamp ("학습 기록" postmark) so the tab reads as a "오늘의 스탬프
-   로그" from the very first line rather than a bare stats-page title. Wraps
-   on narrow screens instead of forcing the stamp to shrink/clip. */
-.study-log-hero-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
 }
 
 /* Phase 161 -- was .records-log-title: plain bold text, which read as a
@@ -9374,30 +9479,11 @@ input.reading-vocab-sticker-toggle:checked {
   align-items: flex-end;
 }
 
-/* Phase 161 -- was .info-panel/.study-log-policy-card: the 저장 정책 note
-   and the dictionary-attribution line lived in their own boxed card below
-   the main scene, the last leftover "floating widget" once the rest of
-   the tab moved onto one shared page. Both are now plain footnote lines
-   inside .stats-logbook-page itself (see .stats-logbook-footer in
-   InfoSection.tsx), not a separate card. */
-.stats-logbook-footer {
-  display: grid;
-  gap: 4px;
-  margin-top: 2px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--paper-border);
-}
-
-.stats-logbook-footer-line {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
+/* Phase 171 -- .stats-logbook-footer/-footer-line removed: the policy/
+   attribution footnote now lives just below the scene frame as
+   .stats-scene-v2-footer/-footer-line (see the Phase 171 block near the
+   top of this file), no longer needing a border-top divider since it's no
+   longer sharing a box with the ledger content above it. */
 .info-panel-list {
   margin: 0;
   padding-left: 20px;
@@ -9477,10 +9563,6 @@ input.reading-vocab-sticker-toggle:checked {
      clearance above the heading row on mobile. */
   .shared-deck-detail {
     padding-top: 20px;
-  }
-
-  .reading-hero-title {
-    font-size: 18px;
   }
 
   textarea {
