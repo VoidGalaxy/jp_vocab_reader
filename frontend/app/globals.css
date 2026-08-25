@@ -1466,7 +1466,7 @@ button {
 
 .page {
   min-height: 100vh;
-  padding: 28px 20px 40px;
+  padding: 12px 14px 28px;
 }
 
 /* V3 final reset: renamed from .workspace to .library-canvas -- this is
@@ -1479,16 +1479,21 @@ button {
    "dead space on both sides of a still-narrow centered column", so the
    per-tab hook below widens the screens that most benefit from the extra
    room (읽기's reader canvas, 노트's index-card drawer, 덱 책장's shelf
-   grid). */
+   grid).
+   Phase 172 -- every room is now a full-bleed V2 scene frame with its own
+   aspect-ratio sizing, so this cap only needs to stop the frame from
+   stretching absurdly wide on an ultra-wide monitor, not reserve margin for
+   a centered "content column" the way a text-heavy admin page would --
+   widened accordingly (was 1240/1360). */
 .library-canvas {
-  width: min(1240px, 100%);
+  width: min(1440px, 100%);
   margin: 0 auto;
 }
 
 .library-canvas-reading,
 .library-canvas-shared,
 .library-canvas-vocab {
-  width: min(1360px, 100%);
+  width: min(1560px, 100%);
 }
 
 /* Phase 113 -- App Shell structural replacement. The old shell paired a
@@ -1515,7 +1520,14 @@ button {
    down to 641px -- this is a deliberate, width-driven change from that
    breakpoint, not just following the old convention). The
    >=1024px override further down expands this into the mockup's full
-   text-tab toolbar. */
+   text-tab toolbar.
+   Phase 172 -- was a solid var(--panel-bg) bar with a hairline border and
+   its own drop shadow, i.e. a real app bar that read as chrome before any
+   tab's own V2 scene did. Every tab now owns a full-bleed photographed
+   scene starting right under this row (see .app-shell-content below), so
+   this is a translucent strip resting on top of that scene instead --
+   Phase 118's old Home-only "minimalChrome" skin, now what every tab's
+   toolbar always looks like. */
 .app-toolbar {
   position: sticky;
   top: 0;
@@ -1523,11 +1535,12 @@ button {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 14px;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel-bg);
-  box-shadow: 0 4px 12px rgba(120, 98, 40, 0.08);
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-bottom: none;
+  background: rgba(253, 249, 238, 0.82);
+  backdrop-filter: blur(3px);
+  box-shadow: none;
 }
 
 .app-toolbar-menu-button {
@@ -1557,37 +1570,15 @@ button {
   height: 20px;
 }
 
-.app-toolbar-brand {
-  position: relative;
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 6px;
-}
-
-.app-toolbar-brand-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: var(--primary);
-  color: #ffffff;
-}
-
-.app-toolbar-brand-icon svg {
-  width: 14px;
-  height: 14px;
-}
-
-.app-toolbar-brand-name {
-  color: var(--text);
-  font-size: 13.5px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-}
+/* Phase 172 -- .app-toolbar-brand(+icon/-name) removed: was visible chrome
+   on every tab's toolbar (icon + "책갈피" wordmark, already aria-hidden --
+   purely decorative). Phase 118 already found that a brand mark competes
+   with the scene for "what is this screen about" on Home specifically and
+   hid it there via a Home-only CSS override; now every tab owns a scene
+   the same way, so the same call applies everywhere. Removed from
+   AppShell.tsx's markup outright rather than kept as unused dead JSX
+   behind a display:none rule -- the toolbar's job is wayfinding
+   (menu/tabs/account), not restating the app's name on every screen. */
 
 /* Text tabs only render inline at the >=1024px tier -- see below. */
 .app-toolbar-nav {
@@ -1608,45 +1599,6 @@ button {
    trigger for space on a slim mobile/tablet bar. */
 .app-toolbar-end .app-topbar-feedback-button {
   display: none;
-}
-
-/* Phase 118 -- Home only (AppShell.tsx's minimalChrome prop, set from
-   page.tsx when activeTab === "home"). The mockup's mobile Home top strip
-   is just a hamburger and one icon on bare background -- no bar, no brand
-   wordmark/mark, no boxed login pill -- so the notebook cover reads as the
-   first thing on the screen, not a nav bar with a notebook under it. Every
-   other tab keeps the solid Phase 113 bar untouched; this only fires while
-   Home is the active tab. */
-.app-toolbar--minimal {
-  background: none;
-  border-bottom: none;
-  box-shadow: none;
-}
-
-.app-toolbar--minimal .app-toolbar-brand {
-  display: none;
-}
-
-.app-toolbar--minimal .account-menu-trigger {
-  border: none;
-  background: none;
-  box-shadow: none;
-  transform: none;
-}
-
-.app-toolbar--minimal .account-menu-trigger:not(:disabled):hover {
-  background: var(--soft-bg);
-  transform: none;
-}
-
-@media (max-width: 400px) {
-  /* Safety valve at the very narrowest supported width (320px): drop the
-     brand wordmark first, keeping the menu button, brand icon, and
-     account trigger (which already truncates via
-     .account-menu-trigger-label) comfortably clear of each other. */
-  .app-toolbar-brand-name {
-    display: none;
-  }
 }
 
 @media (max-width: 1023px) {
@@ -1914,39 +1866,43 @@ button {
     background-size: auto, auto, auto, auto;
   }
 
-  /* .page is the single top-level wrapper every screen already renders
-     inside (see app/page.tsx's <main className="page">) -- giving it its
-     own bounded, paper-textured, rounded surface turns it into a "board"
-     floating on the wood desk instead of a borderless column that just
-     happens to sit on a warm-tinted page. No page.tsx changes needed. */
+  /* Phase 113 -- .page is the single top-level wrapper every screen
+     already renders inside (see app/page.tsx's <main className="page">).
+     It used to become its own bounded, paper-textured, rounded "board"
+     card floating on the wood desk -- a second frame the tab's own V2
+     scene then had to sit inside.
+     Phase 172 -- every tab now owns a full-bleed photographed scene of its
+     own, so that inner board card is gone: no background/radius/shadow of
+     its own left to set (unset here falls through to the base .page rule
+     above, which sets none either), just the width cap and a small top
+     margin so the scene starts almost immediately under the toolbar
+     instead of 20-40px of card padding away from it. No page.tsx changes
+     needed. */
   .page {
     max-width: min(1600px, 96vw);
-    margin: 20px auto;
-    min-height: calc(100vh - 40px);
-    padding: 26px 30px 40px;
-    border-radius: 28px;
-    background-color: var(--page-bg);
-    background-image: var(--paper-texture-image);
-    background-repeat: var(--paper-texture-repeat);
-    background-size: var(--paper-texture-size);
-    box-shadow:
-      0 34px 70px rgba(58, 38, 16, 0.35),
-      0 2px 0 rgba(255, 255, 255, 0.5) inset;
+    margin: 10px auto 0;
+    min-height: calc(100vh - 10px);
+    padding: 0 16px 28px;
   }
 
-  /* Phase 113 -- the mockup's single rounded toolbar sitting on the
-     board's top edge: brand + every tab as a text link + feedback/account,
-     one row, no separate sidebar. Reuses the exact "paper toolbar tag"
-     pill treatment the old .app-topbar had at this same tier. */
+  /* Phase 113 -- the mockup's single rounded toolbar sitting on top of the
+     scene: every tab as a text link + feedback/account, one row, no
+     separate sidebar.
+     Phase 172 -- was a solid var(--panel-bg) pill with a hairline border
+     and its own drop shadow, real chrome weight competing with the scene
+     right below it for attention. Now a translucent strip (Phase 118's old
+     Home-only "minimalChrome" skin, unconditional) and a smaller sticky
+     offset to match .page's own smaller top margin above. */
   .app-toolbar {
     position: sticky;
-    top: 20px;
-    margin: 0 0 20px;
-    padding: 8px 10px 8px 14px;
+    top: 10px;
+    margin: 0 0 10px;
+    padding: 7px 10px 7px 12px;
     border-radius: 999px;
-    border: 1px solid var(--paper-border);
-    background: var(--panel-bg);
-    box-shadow: 0 6px 16px rgba(120, 98, 40, 0.1);
+    border: none;
+    background: rgba(253, 249, 238, 0.72);
+    backdrop-filter: blur(3px);
+    box-shadow: none;
   }
 
   .app-toolbar-menu-button {
@@ -1999,17 +1955,21 @@ button {
     height: 15px;
   }
 
-  /* Same "stuck-on bookmark tab" language the old rail's active link used
-     -- strong solid-primary fill plus a pin dot -- carried over to a
-     horizontal pill instead of a vertical rail row. */
+  /* Was a strong solid-primary fill + white text, the same "stuck-on
+     bookmark tab" treatment the old rail's active link used -- a pill that
+     easily out-weighed the quieter Phase 172 toolbar around it, let alone
+     the scene below it. Phase 172 -- lighter soft-fill + tinted text
+     instead (same language .app-nav-drawer-link-active already uses for
+     this exact state in the mobile drawer), keeping only the pin dot as
+     the strong marker. */
   .app-toolbar-link-active {
-    color: #ffffff;
-    background: var(--primary);
-    box-shadow: 0 3px 8px rgba(var(--primary-rgb), 0.32);
+    color: var(--primary-dark);
+    background: var(--soft-bg);
+    box-shadow: none;
   }
 
   .app-toolbar-link-active:not(:disabled):hover {
-    background: var(--primary);
+    background: var(--soft-bg);
   }
 
   .app-toolbar-pin {
@@ -2063,16 +2023,22 @@ button {
   position: relative;
 }
 
+/* Phase 172 -- was a solid bordered pill (var(--panel-bg) + var(--border)),
+   real chrome weight sitting next to the toolbar's other controls. Now
+   borderless/transparent by default -- Phase 118's old Home-only
+   "minimalChrome" treatment for this same trigger, unconditional now that
+   every tab's toolbar is this quiet. Reads as a small desk label until
+   hovered/opened, not a boxed app button. */
 .account-menu-trigger {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
   padding: 6px 12px 6px 6px;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 999px;
   color: var(--text);
-  background: var(--panel-bg);
+  background: none;
   font-size: 13px;
   font-weight: 700;
   box-shadow: none;
@@ -2496,34 +2462,6 @@ button {
    media-gated rule declared BEFORE its unconditional base rule loses
    to it even while the media query matches. */
 @media (min-width: 1024px) {
-  /* Phase 118 -- Home only: the mockup's "HOME DESK" panel has no inner
-     white board at all -- the notebook, stickies and props sit straight on
-     the wood. Keeping .page's own padding/margin/max-width (so the toolbar
-     and content still line up with every other tab) but stripping the
-     background/shadow/radius that turned it into a second nested card
-     under the notebook card. Applied via page.tsx adding this class
-     alongside .page only while activeTab === "home". */
-  .page--home {
-    background-color: transparent;
-    background-image: none;
-    box-shadow: none;
-    border-radius: 0;
-    min-height: auto;
-  }
-
-  /* Phase 118 -- Home only (see AppShell.tsx's minimalChrome prop, set from
-     page.tsx when activeTab === "home"): the same toolbar, but translucent
-     and borderless so it reads as a light strip floating over the desk
-     scene rather than an app-admin nav bar competing with the notebook for
-     "main subject of the screen" -- the desktop mockup's HOME DESK toolbar
-     is a thin, quiet strip, not a bordered pill. Every other tab keeps the
-     Phase 113 solid toolbar untouched. */
-  .app-toolbar--minimal {
-    background: rgba(253, 249, 238, 0.7);
-    border-color: transparent;
-    box-shadow: none;
-  }
-
   /* Phase 168 -- desktop composition for the same full-bleed frame: the
      desktop photo is 16:9 (plain cover, room fanned out beside it) instead
      of 9:16 (cover with a torn-paper note and sticky tabs already baked
@@ -9496,8 +9434,13 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 @media (max-width: 640px) {
+  /* Phase 172 -- was 18px 12px 32px, a leftover from before the base .page
+     rule above was tightened (28px 20px 40px -> 12px 14px 28px) to let
+     each tab's V2 scene start higher/bigger on the screen; this narrower-
+     viewport override re-widened past that tightened value, so it's
+     brought down to match the same intent instead of undoing it. */
   .page {
-    padding: 18px 12px 32px;
+    padding: 8px 12px 24px;
   }
 
   .library-canvas {

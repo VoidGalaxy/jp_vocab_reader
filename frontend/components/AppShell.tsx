@@ -21,12 +21,6 @@ type AppShellProps = {
   accountSlot: React.ReactNode;
   feedbackSlot: React.ReactNode;
   children: React.ReactNode;
-  // Phase 118 -- Home only (page.tsx passes true when activeTab === "home").
-  // Swaps the toolbar's solid pill chrome for a translucent, borderless
-  // strip so it reads as a light strip over the Home desk scene instead of
-  // an app-admin nav bar competing with the notebook cover. Every other
-  // tab renders the toolbar exactly as Phase 113 built it.
-  minimalChrome?: boolean;
 };
 
 // Phase 113 -- replaces the old two-piece chrome (a persistent left
@@ -45,12 +39,18 @@ type AppShellProps = {
 // (built from the existing tabs/activeTab/handleTabChange state in
 // page.tsx) drives both presentations, so there is exactly one source of
 // truth for "what page am I on" regardless of which one is visible.
+//
+// Phase 172 -- every tab now owns a full-bleed V2 photographed scene (see
+// globals.css's Phase 172 block), so the old `minimalChrome` prop (Phase
+// 118, a Home-only translucent toolbar skin layered on top of a heavier
+// default) is gone: that lighter look -- plus a further-quieted active-tab
+// indicator -- is just what `.app-toolbar` always looks like now, for
+// every tab, not a conditional skin.
 export function AppShell({
   navItems,
   accountSlot,
   feedbackSlot,
   children,
-  minimalChrome = false,
 }: AppShellProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -74,11 +74,7 @@ export function AppShell({
 
   return (
     <div className="app-shell">
-      <header
-        className={
-          minimalChrome ? "app-toolbar app-toolbar--minimal" : "app-toolbar"
-        }
-      >
+      <header className="app-toolbar">
         <button
           type="button"
           className="app-toolbar-menu-button"
@@ -89,13 +85,6 @@ export function AppShell({
         >
           <MenuIcon />
         </button>
-
-        <span className="app-toolbar-brand" aria-hidden="true">
-          <span className="app-toolbar-brand-icon">
-            <BookIcon />
-          </span>
-          <span className="app-toolbar-brand-name">책갈피</span>
-        </span>
 
         <nav className="app-toolbar-nav" aria-label="일본어 단어장 주요 메뉴">
           {navItems.map((item) => (
