@@ -1922,6 +1922,22 @@ button {
     background-size: auto, auto, auto, auto;
   }
 
+  /* Phase 175 (Home scene-first correction) -- Home's own V2 scene photo
+     IS a wood desk, so the global wood-desk `body` above (a CSS gradient,
+     different grain/tone than the photo) shows through the frame's own
+     side gutters and any leftover height below it and reads as a second,
+     competing wood surface -- exactly the "photo pasted onto a wood page"
+     look this phase corrects. Home falls back to the app's quiet base
+     paper texture instead, scoped with :has() so no other tab's
+     background policy changes (every other tab's photographed scene is a
+     bookshelf/book/logbook, not a desk, so no such clash exists there). */
+  body:has(.home-scene-v2) {
+    background-color: var(--page-bg);
+    background-image: var(--paper-texture-image);
+    background-repeat: var(--paper-texture-repeat);
+    background-size: var(--paper-texture-size);
+  }
+
   /* Phase 113 -- .page is the single top-level wrapper every screen
      already renders inside (see app/page.tsx's <main className="page">).
      It used to become its own bounded, paper-textured, rounded "board"
@@ -2261,7 +2277,14 @@ button {
   background:
     radial-gradient(ellipse 72% 48% at 50% 52%, rgba(47, 42, 36, 0.16), transparent 72%),
     linear-gradient(145deg, rgba(201, 160, 110, 0.42), rgba(156, 114, 72, 0.32));
-  box-shadow: inset 0 -18px 34px rgba(64, 43, 24, 0.1);
+  /* Outward bleed (not an inward blur on the photo itself) so the hard
+     photographic rectangle dissolves a little into the neutral paper
+     surround instead of reading as a pasted-on photo card -- overflow:
+     hidden above only clips the frame's own children/content, not this
+     shadow, which paints outside the box. */
+  box-shadow:
+    inset 0 -18px 34px rgba(64, 43, 24, 0.1),
+    0 10px 30px rgba(120, 98, 40, 0.14);
 }
 
 .home-scene-v2-media {
@@ -2585,9 +2608,21 @@ button {
      of 9:16 (cover with a torn-paper note and sticky tabs already baked
      in), so every child gets its own desktop position rather than just a
      bigger version of the mobile one. */
+  /* Phase 175 -- was `min-height` only, a floor with no ceiling: at any
+     viewport wider than ~1225px the aspect-ratio-derived height (width *
+     941/1672) climbs straight past it with nothing to stop it, so a wide
+     desktop window produced a 900px+ tall frame that pushed the shortcut
+     row/privacy tag below the fold -- the exact "잘림/스크롤" failure this
+     phase corrects. `max-height` replaces it as a real ceiling: width
+     still fills the container (so the notebook stays full-bleed, not a
+     shrunk-down hero card), but height is now bounded by the viewport
+     itself, cropping the photo a little more via its existing
+     object-fit:cover rather than growing the object past one screen. The
+     clamp()'s own floor (440px) does the old min-height's job, so that
+     property is dropped rather than kept alongside a conflicting max. */
   .home-scene-v2-frame {
     aspect-ratio: 1672 / 941;
-    min-height: min(690px, calc(100vh - 82px));
+    max-height: clamp(440px, calc(100vh - 118px), 620px);
   }
 
   .home-scene-v2-media-img {
@@ -2598,10 +2633,12 @@ button {
     inset: -2.4% -2.2%;
   }
 
-  .home-scene-v2-frame::before {
-    inset: 2.8% 2.2% 3.4%;
-    border-radius: 34px 38px 42px 30px;
-  }
+  /* Phase 175 -- was its own inset (2.8%/2.2%/3.4%) rounded box, which drew
+     a second rounded rectangle a little inside the frame's true edge --
+     exactly the "photo mat" look this phase removes. Left unset here so
+     the base rule's plain full-bleed vignette (inset:0, no radius) applies
+     at desktop too, and the shadow above now does the "soften the true
+     edge" job instead. */
 
   /* The desktop photo has no built-in paper where the title belongs (the
      cover itself is a plain green surface), so this note gets its own
