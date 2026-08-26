@@ -189,6 +189,8 @@
 .home-dashboard {
   --screen-accent: var(--tone-amber);
   --screen-accent-soft: #f7ecd6;
+  display: block;
+  gap: 0;
 }
 
 .reading-panel {
@@ -1538,6 +1540,12 @@ button {
   margin: 0 auto;
 }
 
+.library-canvas-home {
+  width: min(1780px, calc(100vw - 28px));
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+
 .library-canvas-reading,
 .library-canvas-shared,
 .library-canvas-vocab {
@@ -2249,12 +2257,17 @@ button {
   width: 100%;
   aspect-ratio: 941 / 1672;
   isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 72% 48% at 50% 52%, rgba(47, 42, 36, 0.16), transparent 72%),
+    linear-gradient(145deg, rgba(201, 160, 110, 0.42), rgba(156, 114, 72, 0.32));
+  box-shadow: inset 0 -18px 34px rgba(64, 43, 24, 0.1);
 }
 
 .home-scene-v2-media {
   display: block;
   position: absolute;
-  inset: 0;
+  inset: -1.6% -2.8%;
   z-index: 0;
 }
 
@@ -2263,7 +2276,46 @@ button {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 20px;
+  border-radius: 0;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+.home-scene-v2-frame::before,
+.home-scene-v2-frame::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.home-scene-v2-frame::before {
+  inset: 0;
+  border-radius: 0;
+  box-shadow: inset 0 -32px 46px rgba(56, 42, 27, 0.14);
+}
+
+.home-scene-v2-frame::after {
+  left: 10%;
+  right: 8%;
+  bottom: 8%;
+  height: 18%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(47, 42, 36, 0.2), transparent 68%);
+  filter: blur(10px);
+  opacity: 0.55;
+}
+
+.home-scene-v2-cover-field,
+.home-scene-v2-edge-field {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.home-scene-v2-cover-field > *,
+.home-scene-v2-edge-field > * {
+  pointer-events: auto;
 }
 
 /* Mobile: the photo already has a torn paper note taped down top-left, so
@@ -2273,7 +2325,7 @@ button {
    that spot (plain green cover only). */
 .home-scene-v2-note {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   left: 6%;
   top: 6%;
   width: 48%;
@@ -2329,8 +2381,8 @@ button {
 .home-scene-v2-stamp {
   position: absolute;
   z-index: 4;
-  left: 50%;
-  top: 43%;
+  left: 49%;
+  top: 42%;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -2376,10 +2428,10 @@ button {
    texture used elsewhere in the app (phase131 asset kit). */
 .home-scene-v2-shortcuts {
   position: absolute;
-  z-index: 3;
-  top: 28%;
-  right: 3%;
-  width: 86%;
+  z-index: 4;
+  top: 27.5%;
+  right: 4%;
+  width: 84%;
   display: flex;
   justify-content: flex-end;
   gap: 4px;
@@ -2389,6 +2441,7 @@ button {
   display: flex;
   flex: 1 1 0;
   min-width: 0;
+  min-height: 0;
   align-items: center;
   gap: 4px;
   padding: 6px 6px;
@@ -2406,17 +2459,17 @@ button {
    pill-shaped bar instead of three individually-tucked tabs. */
 .home-scene-v2-shortcut--vocab {
   background: #f7ecd6;
-  transform: rotate(-2deg);
+  transform: rotate(-3deg) translateY(2px);
 }
 
 .home-scene-v2-shortcut--review {
   background: #f7e9e2;
-  transform: rotate(1.5deg);
+  transform: rotate(2.5deg) translateY(-3px);
 }
 
 .home-scene-v2-shortcut--decks {
   background: #e6eef0;
-  transform: rotate(-1deg);
+  transform: rotate(-2deg) translateY(3px);
 }
 
 .home-scene-v2-shortcut:not(:disabled):hover {
@@ -2477,7 +2530,7 @@ button {
    unchanged Shiori art. */
 .home-scene-v2-charm {
   position: absolute;
-  z-index: 3;
+  z-index: 5;
   right: 7%;
   bottom: 15%;
   opacity: 0.97;
@@ -2493,23 +2546,24 @@ button {
 .home-scene-v2-privacy {
   position: absolute;
   z-index: 3;
-  left: 50%;
-  bottom: 3%;
-  width: 78%;
+  left: 6%;
+  bottom: 2.5%;
+  width: auto;
+  max-width: 74%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 6px;
   margin: 0;
   padding: 5px 10px;
-  border-radius: 10px;
+  border-radius: 3px 10px 10px 3px;
   background: rgba(253, 249, 238, 0.88);
   box-shadow: 0 4px 10px rgba(120, 98, 40, 0.14);
   color: var(--text-secondary);
   font-size: 9.5px;
   line-height: 1.4;
-  text-align: center;
-  transform: translateX(-50%);
+  text-align: left;
+  transform: rotate(-1deg);
 }
 
 .home-scene-v2-privacy-icon {
@@ -2533,10 +2587,20 @@ button {
      bigger version of the mobile one. */
   .home-scene-v2-frame {
     aspect-ratio: 1672 / 941;
+    min-height: min(690px, calc(100vh - 82px));
   }
 
   .home-scene-v2-media-img {
-    border-radius: 26px;
+    border-radius: 0;
+  }
+
+  .home-scene-v2-media {
+    inset: -2.4% -2.2%;
+  }
+
+  .home-scene-v2-frame::before {
+    inset: 2.8% 2.2% 3.4%;
+    border-radius: 34px 38px 42px 30px;
   }
 
   /* The desktop photo has no built-in paper where the title belongs (the
@@ -2545,14 +2609,28 @@ button {
      shadow "note resting on the cover" language the app already uses for
      pinned notes elsewhere, not a new shape. */
   .home-scene-v2-note {
-    left: 18%;
-    top: 9%;
-    width: 32%;
+    left: 17%;
+    top: 8%;
+    width: 31%;
     padding: 22px 24px 20px;
-    border-radius: 3px 18px 3px 18px;
+    border-radius: 2px 18px 4px 16px;
     background: var(--panel-bg);
     box-shadow: 0 14px 26px rgba(37, 43, 30, 0.18);
     transform: rotate(-1.5deg);
+  }
+
+  .home-scene-v2-note::before {
+    content: "";
+    position: absolute;
+    top: -8px;
+    left: 18%;
+    width: 54px;
+    height: 14px;
+    border: 1px solid rgba(139, 108, 66, 0.28);
+    background: rgba(248, 221, 165, 0.58);
+    box-shadow: 0 2px 4px rgba(37, 43, 30, 0.1);
+    transform: rotate(-5deg);
+    pointer-events: none;
   }
 
   /* clamp(), not a fixed px jump -- keeps the note's rendered height a
@@ -2580,9 +2658,9 @@ button {
      which an actual overlap over a variable-height note risked (measured
      at the 1024px floor, the note's tallest realistic case). */
   .home-scene-v2-stamp {
-    left: 20%;
-    top: 44%;
-    padding: 16px 40px 16px 24px;
+    left: 19%;
+    top: 43%;
+    padding: 16px 42px 16px 24px;
     font-size: 15.5px;
     transform: rotate(3deg);
   }
@@ -2595,33 +2673,38 @@ button {
     transform: rotate(0deg) scale(0.97);
   }
 
-  /* Fanned across the cover's lower-right region as bigger photographed
-     sticky notes, mirroring the title note's placement on the opposite
-     corner -- both live clusters pinned to the same cover instead of one
-     pinned and the other occupying a separate track. */
+  /* Scattered along the cover's lower-right corner as three individually
+     tucked sticky notes -- uneven widths, alternating vertical offsets and
+     a slight overlap (negative margin on the middle note) so the cluster
+     reads as tabs stuck on at different times, not a matched 3-card row.
+     Mirrors the title note's placement on the opposite corner -- both
+     clusters pinned to the same cover instead of one pinned and the other
+     occupying a separate track. */
   .home-scene-v2-shortcuts {
     top: auto;
-    right: 5%;
-    bottom: 7%;
+    right: 3%;
+    bottom: 11%;
     width: 56%;
-    gap: 16px;
+    align-items: flex-end;
+    gap: 2px;
   }
 
   .home-scene-v2-shortcut {
     position: relative;
-    flex: 1 1 170px;
-    max-width: 200px;
+    flex: 0 0 auto;
+    width: clamp(130px, 12.4vw, 150px);
+    max-width: none;
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
-    padding: 16px 18px;
+    gap: 9px;
+    padding: 14px 15px;
     border-radius: 4px 18px 18px 18px;
     overflow: hidden;
     background-color: var(--panel-bg);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    box-shadow: 0 12px 22px rgba(120, 98, 40, 0.16);
+    box-shadow: 0 10px 18px rgba(120, 98, 40, 0.16);
     transition:
       transform var(--motion-fast) var(--ease-soft),
       box-shadow var(--motion-fast) var(--ease-soft);
@@ -2629,14 +2712,22 @@ button {
 
   .home-scene-v2-shortcut--vocab {
     background-image: url("/brand/decor/phase131/sticky-note-yellow.webp");
+    transform: rotate(-4deg) translateY(9px);
+    z-index: 1;
   }
 
   .home-scene-v2-shortcut--review {
     background-image: url("/brand/decor/phase131/sticky-note-coral.webp");
+    width: clamp(138px, 13.2vw, 160px);
+    margin: 0 -10px;
+    transform: rotate(2.5deg) translateY(-9px);
+    z-index: 3;
   }
 
   .home-scene-v2-shortcut--decks {
     background-image: url("/brand/decor/phase131/sticky-note-blue.webp");
+    transform: rotate(-2deg) translateY(5px);
+    z-index: 2;
   }
 
   .home-scene-v2-shortcut::before {
@@ -2653,8 +2744,22 @@ button {
   }
 
   .home-scene-v2-shortcut:not(:disabled):hover {
-    transform: translateY(-3px) rotate(0deg);
     box-shadow: 0 16px 28px rgba(120, 98, 40, 0.22);
+  }
+
+  /* Each note lifts from its own resting rotation/offset rather than
+     snapping flat to a shared rotate(0) -- keeps the scatter intact on
+     hover instead of the three briefly re-forming a straight row. */
+  .home-scene-v2-shortcut--vocab:not(:disabled):hover {
+    transform: rotate(-1.5deg) translateY(2px);
+  }
+
+  .home-scene-v2-shortcut--review:not(:disabled):hover {
+    transform: rotate(1deg) translateY(-14px);
+  }
+
+  .home-scene-v2-shortcut--decks:not(:disabled):hover {
+    transform: rotate(0deg) translateY(-1px);
   }
 
   .home-scene-v2-shortcut-icon {
@@ -2688,16 +2793,16 @@ button {
   /* Rests just left of the fanned shortcuts, clear of the note/stamp
      cluster on the opposite side of the cover. */
   .home-scene-v2-charm {
-    right: 62%;
-    bottom: 9%;
+    right: 61%;
+    bottom: 11%;
   }
 
   /* Left-aligned under the note's own left edge, low on the cover -- clear
      of both the note/stamp cluster above it and the shortcut fan to its
      right. */
   .home-scene-v2-privacy {
-    left: 19%;
-    bottom: 4%;
+    left: 18%;
+    bottom: 3%;
     width: auto;
     max-width: 30%;
     justify-content: flex-start;
@@ -10208,6 +10313,23 @@ input.reading-vocab-sticker-toggle:checked {
     width: 100%;
     min-height: 44px;
     padding: 11px 14px;
+  }
+
+  .home-scene-v2-sample,
+  .home-scene-v2-stamp,
+  .home-scene-v2-shortcut {
+    width: auto;
+    min-width: 0;
+  }
+
+  .home-scene-v2-stamp {
+    min-height: 42px;
+    padding: 11px 24px 11px 16px;
+  }
+
+  .home-scene-v2-shortcut {
+    min-height: 38px;
+    padding: 6px;
   }
 
   .compact-button,

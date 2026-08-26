@@ -93,102 +93,86 @@ export function HomeDashboard({
           />
         </picture>
 
-        {/* Mobile: sits directly on the photographed torn-paper note (no
-            card chrome of its own). Desktop: the same photo has no paper
-            in that spot, so the >=1024px CSS gives this its own small
-            paper-note surface -- see globals.css. */}
-        <div className="home-scene-v2-note">
-          <h2 className="home-scene-v2-title">
-            오늘도 한 문장,
-            <br />한 단어.
-          </h2>
-          <p className="home-scene-v2-subtitle">
-            모르는 단어를 눌러두면, 읽으면서 단어장이 자연스럽게 쌓여요.
+        <div className="home-scene-v2-cover-field">
+          <div className="home-scene-v2-note">
+            <h2 className="home-scene-v2-title">
+              오늘도 한 문장,
+              <br />한 단어.
+            </h2>
+            <p className="home-scene-v2-subtitle">
+              모르는 단어를 눌러두면, 읽으면서 단어장이 자연스럽게 쌓여요.
+            </p>
+            <button
+              type="button"
+              className="home-scene-v2-sample"
+              onClick={onTryWithSample}
+            >
+              샘플로 체험
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className="home-scene-v2-stamp"
+            onClick={onStartReading}
+          >
+            <SparkleIcon className="button-icon" />
+            <span>원문 읽기 시작</span>
+          </button>
+
+          <p className="home-scene-v2-privacy">
+            <ShieldIcon className="home-scene-v2-privacy-icon" />
+            원문 전체는 서버에 저장하지 않아요.
           </p>
-          <button
-            type="button"
-            className="home-scene-v2-sample"
-            onClick={onTryWithSample}
-          >
-            샘플로 체험
-          </button>
         </div>
 
-        {/* The primary CTA, pressed onto the notebook cover itself as an
-            ink-stamped tag (same fixed-notch shape family the rest of the
-            app already uses for stamps/bookmarks -- .classify-stamp-
-            button, .reader-bookmark-button -- plus a dashed inset ring and
-            a resting rotation), not a centered pill floating on the
-            photo. */}
-        <button
-          type="button"
-          className="home-scene-v2-stamp"
-          onClick={onStartReading}
-        >
-          <SparkleIcon className="button-icon" />
-          <span>원문 읽기 시작</span>
-        </button>
+        <div className="home-scene-v2-edge-field">
+          <div className="home-scene-v2-shortcuts" role="group" aria-label="바로가기">
+            <button
+              type="button"
+              className="home-scene-v2-shortcut home-scene-v2-shortcut--vocab"
+              onClick={onGoToVocab}
+            >
+              <span className="home-scene-v2-shortcut-icon">
+                <CardFileIcon />
+              </span>
+              <span className="home-scene-v2-shortcut-text">
+                <span className="home-scene-v2-shortcut-label">단어장</span>
+                <span className="home-scene-v2-shortcut-hint">{vocabHint}</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="home-scene-v2-shortcut home-scene-v2-shortcut--review"
+              onClick={isDevUser ? onOpenAccount : onStartTodayReview}
+            >
+              <span className="home-scene-v2-shortcut-icon home-scene-v2-shortcut-icon--character">
+                <ShioriCharacter variant="review" size="sm" />
+              </span>
+              <span className="home-scene-v2-shortcut-text">
+                <span className="home-scene-v2-shortcut-label">복습</span>
+                <span className="home-scene-v2-shortcut-hint">{reviewHint}</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              className="home-scene-v2-shortcut home-scene-v2-shortcut--decks"
+              onClick={onGoToSharedDecks}
+            >
+              <span className="home-scene-v2-shortcut-icon">
+                <BookshelfIcon />
+              </span>
+              <span className="home-scene-v2-shortcut-text">
+                <span className="home-scene-v2-shortcut-label">덱</span>
+                <span className="home-scene-v2-shortcut-hint">{decksHint}</span>
+              </span>
+            </button>
+          </div>
 
-        {/* Three shortcuts read as sticky notes tucked into the
-            notebook's own edge (top edge on mobile, where the photo
-            already shows three tab tips poking out; lower-right edge on
-            desktop, fanned across the cover) -- one cluster attached to
-            the book, not a separate row/column beside it. Same three
-            handlers as before, dev-user account-panel branch on 복습
-            unchanged. */}
-        <div className="home-scene-v2-shortcuts" role="group" aria-label="바로가기">
-          <button
-            type="button"
-            className="home-scene-v2-shortcut home-scene-v2-shortcut--vocab"
-            onClick={onGoToVocab}
-          >
-            <span className="home-scene-v2-shortcut-icon">
-              <CardFileIcon />
-            </span>
-            <span className="home-scene-v2-shortcut-text">
-              <span className="home-scene-v2-shortcut-label">단어장</span>
-              <span className="home-scene-v2-shortcut-hint">{vocabHint}</span>
-            </span>
-          </button>
-          <button
-            type="button"
-            className="home-scene-v2-shortcut home-scene-v2-shortcut--review"
-            onClick={isDevUser ? onOpenAccount : onStartTodayReview}
-          >
-            <span className="home-scene-v2-shortcut-icon home-scene-v2-shortcut-icon--character">
-              <ShioriCharacter variant="review" size="sm" />
-            </span>
-            <span className="home-scene-v2-shortcut-text">
-              <span className="home-scene-v2-shortcut-label">복습</span>
-              <span className="home-scene-v2-shortcut-hint">{reviewHint}</span>
-            </span>
-          </button>
-          <button
-            type="button"
-            className="home-scene-v2-shortcut home-scene-v2-shortcut--decks"
-            onClick={onGoToSharedDecks}
-          >
-            <span className="home-scene-v2-shortcut-icon">
-              <BookshelfIcon />
-            </span>
-            <span className="home-scene-v2-shortcut-text">
-              <span className="home-scene-v2-shortcut-label">덱</span>
-              <span className="home-scene-v2-shortcut-hint">{decksHint}</span>
-            </span>
-          </button>
+          <span className="home-scene-v2-charm" aria-hidden="true">
+            <ShioriCharacter variant="default" size="md" />
+          </span>
         </div>
-
-        {/* A small resting point on the desk, not a second illustration
-            competing with the notebook -- default variant, unchanged
-            component/art. */}
-        <span className="home-scene-v2-charm" aria-hidden="true">
-          <ShioriCharacter variant="default" size="md" />
-        </span>
-
-        <p className="home-scene-v2-privacy">
-          <ShieldIcon className="home-scene-v2-privacy-icon" />
-          원문 전체는 서버에 저장하지 않아요.
-        </p>
       </div>
     </section>
   );
