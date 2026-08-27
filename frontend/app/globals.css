@@ -2582,23 +2582,32 @@ button {
     position: absolute;
   }
 
+  /* Phase 178 (density pass) -- the previous composition kept every object
+     comfortably clear of its neighbors (small overlaps, generous gaps),
+     which read as calm on its own but as "assets scattered on a page"
+     once the objects themselves stayed this modest in size -- nothing was
+     big or close enough to the others to read as the scene's obvious
+     center. This pass makes the notebook unmistakably the main object
+     (+16% width) and pulls every other piece in close enough to overlap
+     it or its neighbors, so the whole cluster reads as one arrangement
+     instead of five independently-floating stickers. */
   .home-v3-notebook {
-    left: 31%;
-    top: 12%;
-    width: 43%;
+    left: 24%;
+    top: 7%;
+    width: 51%;
     margin-top: 0;
     /* Explicit, lowest z-index -- the note/CTA now come *before* the
        notebook in DOM order (mobile reading order), so without this the
        notebook would paint over them by default stacking instead of the
        other way around. */
     z-index: 0;
-    filter: drop-shadow(0 18px 26px rgba(64, 43, 24, 0.22));
+    filter: drop-shadow(0 20px 30px rgba(64, 43, 24, 0.26));
   }
 
   .home-v3-note {
     left: 0;
-    top: 2%;
-    width: 33%;
+    top: 0;
+    width: 39%;
     z-index: 2;
     transform: rotate(-2deg);
   }
@@ -2608,54 +2617,61 @@ button {
   }
 
   .home-v3-title {
-    font-size: clamp(21px, 2vw, 27px);
+    font-size: clamp(23px, 2.2vw, 29px);
   }
 
   .home-v3-subtitle {
     max-width: 26ch;
-    font-size: clamp(11.5px, 1vw, 13px);
+    font-size: clamp(12px, 1.05vw, 13.5px);
   }
 
   .home-v3-sample {
-    font-size: clamp(11px, 0.95vw, 12.5px);
+    font-size: clamp(11.5px, 1vw, 13px);
   }
 
+  /* Sits right under the note with almost no gap -- the two read as one
+     "start here" column instead of two unrelated pieces, and its own
+     right edge now runs a little onto the notebook's left edge on
+     purpose (the brief explicitly allows the CTA to overlap the cover). */
   .home-v3-cta {
-    left: 5%;
-    top: 47%;
-    width: 27%;
+    left: 2%;
+    top: 45%;
+    width: 32%;
     z-index: 2;
     transform: rotate(-1.5deg);
   }
 
   .home-v3-cta-content {
     padding: 0 26% 5% 9%;
-    font-size: clamp(14px, 1.2vw, 16px);
+    font-size: clamp(15px, 1.3vw, 17px);
   }
 
+  /* Anchored onto the notebook's own bottom-right corner (negative right,
+     raised bottom%) rather than sitting in the clear desk space below it
+     -- reads as tabs stuck to the cover, not a separate row underneath. */
   .home-v3-shortcuts {
     display: block;
-    right: 1%;
-    bottom: 5%;
-    width: 47%;
+    right: -3%;
+    bottom: 9%;
+    width: 58%;
   }
 
   .home-v3-shortcut {
     position: absolute;
-    width: 36%;
+    width: 40%;
   }
 
   .home-v3-shortcut--vocab {
     left: 0;
-    bottom: 4%;
+    bottom: 2%;
     transform: rotate(-4deg);
     z-index: 1;
   }
 
   .home-v3-shortcut--review {
-    left: 32%;
-    bottom: 16%;
-    width: 38%;
+    left: 29%;
+    bottom: 15%;
+    width: 42%;
     transform: rotate(2.5deg);
     z-index: 3;
   }
@@ -2664,7 +2680,7 @@ button {
     left: 0;
     right: 0;
     bottom: 0;
-    width: 36%;
+    width: 40%;
     margin-left: auto;
     grid-column: auto;
     justify-self: auto;
@@ -2711,10 +2727,16 @@ button {
     font-size: 10.5px;
   }
 
+  /* Moved from the scene's far bottom-left corner (isolated, nothing else
+     nearby) to directly under the note/CTA "start here" column instead --
+     same left edge as the note above it, small enough gap to read as the
+     last item in that column rather than a fourth, unrelated group. */
   .home-v3-privacy {
-    left: 2%;
-    bottom: 2%;
-    width: 21%;
+    left: 1%;
+    top: 70%;
+    bottom: auto;
+    width: 23%;
+    transform: rotate(-1deg);
     margin: 0;
   }
 
@@ -2723,9 +2745,12 @@ button {
     font-size: 10.5px;
   }
 
+  /* Tucked beside the shortcut cluster, on the notebook's cover itself
+     (not the empty desk between the two groups) -- a resting point next
+     to the stickers, not a lone figure floating in the gap. */
   .home-v3-charm {
-    left: 39%;
-    bottom: 9%;
+    left: 46%;
+    bottom: 15%;
     right: auto;
     z-index: 4;
     margin: 0;
