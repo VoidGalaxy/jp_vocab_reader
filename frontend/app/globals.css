@@ -193,6 +193,27 @@
   gap: 0;
 }
 
+@media (min-width: 1024px) {
+  /* Phase 177 -- the notebook scene has its own capped height (see
+     .home-v3-scene below) so it never grows into a giant hero on a tall
+     monitor, but pinning it to the top of .page's own full-viewport-height
+     box then left the paper surface reading as empty dead space
+     underneath rather than deliberate desk margin. Centering it in
+     whatever height .page actually has reads as "an object placed in the
+     middle of a desk" instead. Scoped to .home-dashboard (Home-only), not
+     .page/.app-shell-content, so no other tab's vertical rhythm changes. */
+  /* .tab-panel.home-dashboard (not just .home-dashboard) so this beats the
+     later, same-specificity `.tab-panel { display: grid }` base rule --
+     two single-class selectors of equal specificity would otherwise
+     resolve by source order, and .tab-panel's is declared after this. */
+  .tab-panel.home-dashboard {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: calc(100svh - 140px);
+  }
+}
+
 .reading-panel {
   --screen-accent: var(--tone-ink-green);
   --screen-accent-soft: #e9f2ea;
@@ -1461,6 +1482,22 @@ body {
   background-size: var(--paper-texture-size);
 }
 
+/* Phase 177 (Home V3 layered asset rebuild) -- Home is a paper-surface
+   scene at every width now (mobile stacks the same objects in normal flow
+   instead of switching composition, see the Home V3 block below), so this
+   is unconditional rather than gated to >=1024px like the old Home V2
+   wood-neutralization override was -- one paper asset, one look, on phones
+   too. :has() gives it higher specificity than the plain `body` rule above
+   and the >=1024px wood-desk `body` override further down, so it wins at
+   every width without needing !important or extra nesting; scoped so no
+   other tab's background policy changes. */
+body:has(.home-v3) {
+  background-color: #f7efd9;
+  background-image: url("/brand/decor/home-v3/home-v3-paper-surface.png");
+  background-repeat: repeat;
+  background-size: 620px 620px;
+}
+
 @media (max-width: 640px) {
   /* Decorative layers stay minimal on mobile -- dot texture + ruled lines
      (both cheap, no positioning math) + top glow. The book-spine columns
@@ -1540,11 +1577,12 @@ button {
   margin: 0 auto;
 }
 
-.library-canvas-home {
-  width: min(1780px, calc(100vw - 28px));
-  margin-left: 50%;
-  transform: translateX(-50%);
-}
+/* Phase 177 -- Home V3 is a centered, max-width object scene (paper
+   surface + notebook + notes), not a full-bleed photo frame, so it no
+   longer needs the old .library-canvas-home breakout (escaping .page's own
+   padding via margin-left:50%/translateX(-50%) to reach near-full
+   viewport width). The base .library-canvas rule above is enough --
+   .home-v3-scene sets its own, tighter max-width below. */
 
 .library-canvas-reading,
 .library-canvas-shared,
@@ -1922,22 +1960,6 @@ button {
     background-size: auto, auto, auto, auto;
   }
 
-  /* Phase 175 (Home scene-first correction) -- Home's own V2 scene photo
-     IS a wood desk, so the global wood-desk `body` above (a CSS gradient,
-     different grain/tone than the photo) shows through the frame's own
-     side gutters and any leftover height below it and reads as a second,
-     competing wood surface -- exactly the "photo pasted onto a wood page"
-     look this phase corrects. Home falls back to the app's quiet base
-     paper texture instead, scoped with :has() so no other tab's
-     background policy changes (every other tab's photographed scene is a
-     bookshelf/book/logbook, not a desk, so no such clash exists there). */
-  body:has(.home-scene-v2) {
-    background-color: var(--page-bg);
-    background-image: var(--paper-texture-image);
-    background-repeat: var(--paper-texture-repeat);
-    background-size: var(--paper-texture-size);
-  }
-
   /* Phase 113 -- .page is the single top-level wrapper every screen
      already renders inside (see app/page.tsx's <main className="page">).
      It used to become its own bounded, paper-textured, rounded "board"
@@ -2250,134 +2272,139 @@ button {
 }
 
 /* ==========================================================================
-   Phase 168 (Home V2 Full Scene Replacement) -- Phase 159 fixed the
-   shortcuts reading as a second cluster beside the book, but the book
-   itself was still a CSS-drawn cutout (.home-cover-object, a transparent
-   PNG on a fixed 1619:971 canvas) capped at max-width:760px inside a
-   centered column -- at any wide viewport that left real wood/paper margin
-   on both sides of a comparatively small hero card, which is the exact
-   "hero card floating on a big empty board" shape the V2 bible calls a
-   failure. This pass drops the CSS-object/column model entirely.
-   .home-scene-v2-frame is a single full-bleed <picture> of a real V2 desk
-   photograph -- a different shot per breakpoint, not one crop of the
-   other -- sized to 100% of the available width at the photo's own aspect
-   ratio, so the scene fills however much width the page box actually has
-   instead of stopping at a fixed px hero size. Title note, CTA, the three
-   shortcuts, Shiori, and the privacy line are all absolutely positioned as
-   percentages of that same frame, calibrated separately per breakpoint
-   against where each specific photo actually has paper/cover/tab room --
-   there is no shared layout reused across the two differently-composed
-   shots the way the old book-photo-in-a-box was reused unmodified. */
-.home-scene-v2-frame {
+   Phase 177 (Home V3 layered asset rebuild) -- Phases 168-176 built Home as
+   one full-bleed photographed desk scene: a single <picture> sized to its
+   own aspect ratio, with every live piece positioned as a % of that one
+   photo. That model's ceiling was the photo itself -- fitting the whole
+   scene in one viewport meant cropping the photo tighter and tighter each
+   pass, and the photographed wood background could never stop competing
+   with the app's own wood desk background because both were literally
+   photographs of a desk (see the removed body:has(.home-scene-v2) hack).
+   This throws the single-photo model out. `.home-v3-scene` is a plain box
+   (no aspect-ratio, no source photo) holding five independent transparent-
+   PNG objects -- notebook, title note, CTA stamp, three shortcut tabs,
+   privacy label -- composed like a mockup instead of cropped from one
+   photograph. Each "paper" object is the same two-layer pattern: an <img>
+   (home-v3-*-img) absolutely filling the object at z-index:0, and a DOM
+   content layer (home-v3-*-content, or the button/p's own text for the
+   simpler ones) at z-index:1 -- so every image still carries zero baked
+   copy, exactly like the V2 photo did. Mobile does not scale this
+   composition down; `.home-v3-scene` switches from an absolute-position
+   desk box to a plain flex column (note -> CTA -> notebook -> shortcuts ->
+   privacy), each object sized for its own row instead of a %-of-frame
+   position. */
+.home-v3-scene {
   position: relative;
-  width: 100%;
-  aspect-ratio: 941 / 1672;
-  isolation: isolate;
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse 72% 48% at 50% 52%, rgba(47, 42, 36, 0.16), transparent 72%),
-    linear-gradient(145deg, rgba(201, 160, 110, 0.42), rgba(156, 114, 72, 0.32));
-  /* Outward bleed (not an inward blur on the photo itself) so the hard
-     photographic rectangle dissolves a little into the neutral paper
-     surround instead of reading as a pasted-on photo card -- overflow:
-     hidden above only clips the frame's own children/content, not this
-     shadow, which paints outside the box. */
-  box-shadow:
-    inset 0 -18px 34px rgba(64, 43, 24, 0.1),
-    0 10px 30px rgba(120, 98, 40, 0.14);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: min(460px, 100%);
+  margin: 0 auto;
+  /* .page's own fixed bottom padding (24px, shared by every tab) still
+     applies after this section ends -- on mobile that padding alone was
+     enough to push documentElement.scrollHeight past the viewport even
+     once every visible object (privacy tag included) already fit inside
+     it, since .page's padding lives outside this scene's own box.
+     Pulling the scene's own bottom margin negative here (Home-scoped,
+     .page's shared rule is untouched) cancels that leftover padding
+     instead of counting on shrinking content further. Reset to 0 at
+     >=1024px below, where .page uses a different margin/min-height
+     pattern this doesn't apply to. */
+  margin-bottom: -16px;
+  padding: 2px 0 4px;
 }
 
-.home-scene-v2-media {
-  display: block;
+.home-v3-note {
+  position: relative;
+  width: min(420px, 100%);
+  aspect-ratio: 1451 / 956;
+}
+
+.home-v3-cta {
+  position: relative;
+  width: min(240px, 66%);
+  aspect-ratio: 1743 / 683;
+  align-self: center;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.home-v3-notebook {
+  position: relative;
+  width: min(196px, 52%);
+  aspect-ratio: 1183 / 860;
+  margin-top: 2px;
+}
+
+/* Rests just past the notebook's own bottom-right corner in normal flow
+   (a small negative margin pulls it up over the corner instead of leaving
+   a gap) rather than needing an absolute % position of its own -- the
+   notebook's rendered height on mobile depends on nothing but its own
+   width, so this stays put regardless of how tall the note/CTA above it
+   wrap. */
+.home-v3-charm {
+  align-self: flex-end;
+  margin: -32px 14% 0 0;
+  opacity: 0.97;
+}
+
+.home-v3-charm .shiori-asset-img {
+  animation: shiori-idle-float 6.5s ease-in-out infinite;
+}
+
+.home-v3-note-img,
+.home-v3-cta-img,
+.home-v3-notebook-img,
+.home-v3-shortcut-img,
+.home-v3-privacy-img {
   position: absolute;
-  inset: -1.6% -2.8%;
+  inset: 0;
   z-index: 0;
-}
-
-.home-scene-v2-media-img {
-  display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: 0;
-  filter: saturate(1.05) contrast(1.02);
+  display: block;
+  pointer-events: none;
+  user-select: none;
 }
 
-.home-scene-v2-frame::before,
-.home-scene-v2-frame::after {
-  content: "";
-  position: absolute;
+.home-v3-note-content {
+  position: relative;
   z-index: 1;
-  pointer-events: none;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  box-sizing: border-box;
+  padding: 16% 10% 4%;
 }
 
-.home-scene-v2-frame::before {
-  inset: 0;
-  border-radius: 0;
-  box-shadow: inset 0 -32px 46px rgba(56, 42, 27, 0.14);
-}
-
-.home-scene-v2-frame::after {
-  left: 10%;
-  right: 8%;
-  bottom: 8%;
-  height: 18%;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(47, 42, 36, 0.2), transparent 68%);
-  filter: blur(10px);
-  opacity: 0.55;
-}
-
-.home-scene-v2-cover-field,
-.home-scene-v2-edge-field {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-}
-
-.home-scene-v2-cover-field > *,
-.home-scene-v2-edge-field > * {
-  pointer-events: auto;
-}
-
-/* Mobile: the photo already has a torn paper note taped down top-left, so
-   the title/subtitle/sample link sit directly on that paper -- no second
-   card drawn on top of it. The >=1024px override below gives this its own
-   small paper surface, because the desktop photo has no built-in paper in
-   that spot (plain green cover only). */
-.home-scene-v2-note {
-  position: absolute;
-  z-index: 3;
-  left: 6%;
-  top: 6%;
-  width: 48%;
-}
-
-.home-scene-v2-title {
+.home-v3-title {
   margin: 0;
   color: var(--text);
-  font-size: 15.5px;
+  font-size: 16px;
   font-weight: 800;
-  line-height: 1.3;
+  line-height: 1.28;
 }
 
-.home-scene-v2-subtitle {
+.home-v3-subtitle {
   margin: 6px 0 0;
-  max-width: 26ch;
+  max-width: 30ch;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
-.home-scene-v2-sample {
+.home-v3-sample {
   display: inline-block;
-  margin-top: 7px;
-  padding: 3px 2px;
+  margin-top: auto;
+  padding: 6px 2px 0;
   border: none;
   background: none;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -2385,471 +2412,344 @@ button {
   box-shadow: none;
 }
 
-.home-scene-v2-sample:not(:disabled):hover {
+.home-v3-sample:not(:disabled):hover {
   color: var(--text-secondary);
   text-decoration-color: var(--border-strong);
   box-shadow: none;
   transform: none;
 }
 
-/* The primary CTA -- an ink-stamped tag pressed onto the notebook cover,
-   reusing the app's established fixed-pixel clip-path notch family
-   (.reader-bookmark-button, .classify-stamp-button) instead of a rounded
-   pill, plus a dashed inset ring (a cheap stand-in for a rubber-stamp
-   impression, no extra asset needed) and a resting rotation so it reads as
-   a physical object placed on the photo, not a button floating over it.
-   width stays auto with generous horizontal padding rather than
-   width:100% -- large enough for an easy thumb tap without stretching
-   edge-to-edge like a standard mobile app button. */
-.home-scene-v2-stamp {
-  position: absolute;
-  z-index: 4;
-  left: 49%;
-  top: 42%;
-  display: inline-flex;
+.home-v3-cta-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 100%;
   align-items: center;
-  gap: 7px;
-  padding: 13px 28px 13px 20px;
-  border: 0;
-  border-radius: 3px;
-  clip-path: polygon(
-    0 0,
-    calc(100% - 16px) 0,
-    100% 50%,
-    calc(100% - 16px) 100%,
-    0 100%
-  );
-  outline: 2px dashed rgba(255, 255, 255, 0.4);
-  outline-offset: -6px;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  padding: 0 30% 6% 8%;
   color: #ffffff;
-  background: var(--tone-ink-green);
   font-size: 13.5px;
   font-weight: 700;
   white-space: nowrap;
-  box-shadow: 0 10px 20px rgba(37, 43, 30, 0.24);
-  transform: translateX(-50%) rotate(-2deg);
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft);
+  transition: transform var(--motion-fast) var(--ease-soft);
 }
 
-.home-scene-v2-stamp:not(:disabled):hover {
-  filter: brightness(1.08);
-  box-shadow: 0 12px 24px rgba(37, 43, 30, 0.3);
-  transform: translateX(-50%) rotate(0deg);
+.home-v3-cta:not(:disabled):hover .home-v3-cta-content {
+  transform: scale(1.03);
 }
 
-.home-scene-v2-stamp:not(:disabled):active {
-  transform: translateX(-50%) rotate(0deg) scale(0.97);
+.home-v3-cta:not(:disabled):active .home-v3-cta-content {
+  transform: scale(0.97);
 }
 
-/* Three shortcuts tucked along the notebook's top edge, matching where the
-   mobile photo already shows three sticky-tab tips poking out above the
-   cover -- one cluster attached to the book, not a separate row beside it.
-   Flat panel-bg color here (no photo fetch) to keep the mobile payload
-   light; the >=1024px override swaps in the photographed sticky-note
-   texture used elsewhere in the app (phase131 asset kit). */
-.home-scene-v2-shortcuts {
-  position: absolute;
-  z-index: 4;
-  top: 27.5%;
-  right: 4%;
-  width: 84%;
+.home-v3-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  width: min(320px, 90%);
+}
+
+.home-v3-shortcut {
+  position: relative;
+  aspect-ratio: 711 / 583;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.home-v3-shortcut--review {
+  aspect-ratio: 687 / 578;
+}
+
+.home-v3-shortcut--decks {
+  aspect-ratio: 714 / 559;
+  grid-column: 1 / span 2;
+  justify-self: center;
+  width: 62%;
+}
+
+.home-v3-shortcut-content {
+  position: relative;
+  z-index: 1;
   display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-.home-scene-v2-shortcut {
-  display: flex;
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 0;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 6px;
-  border-radius: 3px 12px 12px 3px;
-  background: var(--panel-bg);
-  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.22);
-  color: var(--text);
+  height: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+  padding: 20% 12% 14%;
   text-align: left;
+  color: var(--text);
 }
 
-/* Flat tints (existing --screen-accent-soft tokens already used elsewhere
-   per tab, not new colors) so the three read as separate sticky notes even
-   before the >=1024px override swaps in the photographed sticky-note
-   texture -- a uniform panel-bg on all three would fuse them into one
-   pill-shaped bar instead of three individually-tucked tabs. */
-.home-scene-v2-shortcut--vocab {
-  background: #f7ecd6;
-  transform: rotate(-3deg) translateY(2px);
-}
-
-.home-scene-v2-shortcut--review {
-  background: #f7e9e2;
-  transform: rotate(2.5deg) translateY(-3px);
-}
-
-.home-scene-v2-shortcut--decks {
-  background: #e6eef0;
-  transform: rotate(-2deg) translateY(3px);
-}
-
-.home-scene-v2-shortcut:not(:disabled):hover {
-  box-shadow: 0 9px 18px rgba(120, 98, 40, 0.28);
-  transform: translateY(-2px) rotate(0deg);
-}
-
-.home-scene-v2-shortcut-icon {
+.home-v3-shortcut-icon {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 21px;
-  height: 21px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   color: #ffffff;
 }
 
-.home-scene-v2-shortcut-icon svg {
+.home-v3-shortcut-icon svg {
   width: 11px;
   height: 11px;
 }
 
-.home-scene-v2-shortcut--vocab .home-scene-v2-shortcut-icon {
+.home-v3-shortcut--vocab .home-v3-shortcut-icon {
   background: var(--tone-ink-brown);
 }
 
-.home-scene-v2-shortcut--decks .home-scene-v2-shortcut-icon {
+.home-v3-shortcut--decks .home-v3-shortcut-icon {
   background: var(--tone-dusty-blue);
 }
 
-.home-scene-v2-shortcut-icon--character {
+.home-v3-shortcut-icon--character {
   background: var(--soft-bg);
 }
 
-.home-scene-v2-shortcut-text {
+.home-v3-shortcut-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.home-scene-v2-shortcut-label {
+.home-v3-shortcut-label {
   overflow: hidden;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-/* Desktop-only hint line (see the >=1024px override) -- the mobile tabs
-   are label-only (icon + short word), no room for a second line here. */
-.home-scene-v2-shortcut-hint {
-  display: none;
-}
-
-/* A small resting point on the desk, not a second illustration competing
-   with the notebook for attention -- see HomeDashboard.tsx's `size="md"`,
-   unchanged Shiori art. */
-.home-scene-v2-charm {
-  position: absolute;
-  z-index: 5;
-  right: 7%;
-  bottom: 15%;
-  opacity: 0.97;
-}
-
-.home-scene-v2-charm .shiori-asset-img {
-  animation: shiori-idle-float 6.5s ease-in-out infinite;
-}
-
-/* A small printed label stuck to the cover rather than a footer sitting
-   below the whole scene -- keeps the privacy note inside the desk object
-   itself, per the brief's "no separate footer" rule. */
-.home-scene-v2-privacy {
-  position: absolute;
-  z-index: 3;
-  left: 6%;
-  bottom: 2.5%;
-  width: auto;
-  max-width: 74%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  margin: 0;
-  padding: 5px 10px;
-  border-radius: 3px 10px 10px 3px;
-  background: rgba(253, 249, 238, 0.88);
-  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.14);
-  color: var(--text-secondary);
+.home-v3-shortcut-hint {
+  overflow: hidden;
+  color: var(--muted);
   font-size: 9.5px;
-  line-height: 1.4;
-  text-align: left;
-  transform: rotate(-1deg);
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.home-scene-v2-privacy-icon {
-  flex: 0 0 auto;
-  width: 13px;
-  height: 13px;
-  color: var(--success);
+.home-v3-privacy {
+  position: relative;
+  width: min(266px, 76%);
+  aspect-ratio: 1457 / 414;
+  margin: 0;
 }
 
-/* Phase 118 -- desktop (>=1024px) Home overrides, moved to after the
-   mobile-first Home rules above so this block's declarations win the
-   cascade at desktop widths regardless of media-query nesting -- two
-   same-specificity .home-* rules cascade by source order, and a
-   media-gated rule declared BEFORE its unconditional base rule loses
-   to it even while the media query matches. */
+.home-v3-privacy-text {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 100%;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 8% 6% 8% 27%;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 @media (min-width: 1024px) {
-  /* Phase 168 -- desktop composition for the same full-bleed frame: the
-     desktop photo is 16:9 (plain cover, room fanned out beside it) instead
-     of 9:16 (cover with a torn-paper note and sticky tabs already baked
-     in), so every child gets its own desktop position rather than just a
-     bigger version of the mobile one. */
-  /* Phase 175 -- was `min-height` only, a floor with no ceiling: at any
-     viewport wider than ~1225px the aspect-ratio-derived height (width *
-     941/1672) climbs straight past it with nothing to stop it, so a wide
-     desktop window produced a 900px+ tall frame that pushed the shortcut
-     row/privacy tag below the fold -- the exact "잘림/스크롤" failure this
-     phase corrects. `max-height` replaces it as a real ceiling: width
-     still fills the container (so the notebook stays full-bleed, not a
-     shrunk-down hero card), but height is now bounded by the viewport
-     itself, cropping the photo a little more via its existing
-     object-fit:cover rather than growing the object past one screen. The
-     clamp()'s own floor (440px) does the old min-height's job, so that
-     property is dropped rather than kept alongside a conflicting max. */
-  .home-scene-v2-frame {
-    aspect-ratio: 1672 / 941;
-    max-height: clamp(440px, calc(100vh - 118px), 620px);
+  /* Desktop swaps the mobile flex column for a fixed-box desk composition:
+     every object becomes position:absolute, placed as a % of this one
+     box, the same "percent of a shared frame" language the old V2 photo
+     used -- just against a designed box instead of a photo's own baked
+     aspect ratio, so the box's own height can be capped to the viewport
+     directly instead of fighting an image's fixed ratio. */
+  .home-v3-scene {
+    display: block;
+    width: min(1040px, 92vw);
+    height: clamp(440px, calc(100svh - 140px), 600px);
+    padding: 0;
+    margin: 10px auto 0;
   }
 
-  .home-scene-v2-media-img {
-    border-radius: 0;
-  }
-
-  .home-scene-v2-media {
-    inset: -2.4% -2.2%;
-  }
-
-  /* Phase 175 -- was its own inset (2.8%/2.2%/3.4%) rounded box, which drew
-     a second rounded rectangle a little inside the frame's true edge --
-     exactly the "photo mat" look this phase removes. Left unset here so
-     the base rule's plain full-bleed vignette (inset:0, no radius) applies
-     at desktop too, and the shadow above now does the "soften the true
-     edge" job instead. */
-
-  /* The desktop photo has no built-in paper where the title belongs (the
-     cover itself is a plain green surface), so this note gets its own
-     small paper-card surface here -- same asymmetric-radius/rotation/soft-
-     shadow "note resting on the cover" language the app already uses for
-     pinned notes elsewhere, not a new shape. */
-  .home-scene-v2-note {
-    left: 17%;
-    top: 8%;
-    width: 31%;
-    padding: 22px 24px 20px;
-    border-radius: 2px 18px 4px 16px;
-    background: var(--panel-bg);
-    box-shadow: 0 14px 26px rgba(37, 43, 30, 0.18);
-    transform: rotate(-1.5deg);
-  }
-
-  .home-scene-v2-note::before {
-    content: "";
+  .home-v3-note,
+  .home-v3-cta,
+  .home-v3-notebook,
+  .home-v3-shortcuts,
+  .home-v3-privacy,
+  .home-v3-charm {
     position: absolute;
-    top: -8px;
-    left: 18%;
-    width: 54px;
-    height: 14px;
-    border: 1px solid rgba(139, 108, 66, 0.28);
-    background: rgba(248, 221, 165, 0.58);
-    box-shadow: 0 2px 4px rgba(37, 43, 30, 0.1);
-    transform: rotate(-5deg);
-    pointer-events: none;
   }
 
-  /* clamp(), not a fixed px jump -- keeps the note's rendered height a
-     roughly constant fraction of the frame across the whole >=1024px
-     range (the frame's own height tracks viewport width via aspect-ratio,
-     so a fixed px title would occupy a bigger % of a narrower/shorter
-     frame at 1024 than at 1280, and the stamp below it is positioned by
-     %). */
-  .home-scene-v2-title {
-    font-size: clamp(22px, 2.2vw, 30px);
+  .home-v3-notebook {
+    left: 31%;
+    top: 12%;
+    width: 43%;
+    margin-top: 0;
+    /* Explicit, lowest z-index -- the note/CTA now come *before* the
+       notebook in DOM order (mobile reading order), so without this the
+       notebook would paint over them by default stacking instead of the
+       other way around. */
+    z-index: 0;
+    filter: drop-shadow(0 18px 26px rgba(64, 43, 24, 0.22));
   }
 
-  .home-scene-v2-subtitle {
-    max-width: 30ch;
-    font-size: clamp(11.5px, 1.05vw, 13.5px);
+  .home-v3-note {
+    left: 0;
+    top: 2%;
+    width: 33%;
+    z-index: 2;
+    transform: rotate(-2deg);
   }
 
-  .home-scene-v2-sample {
+  .home-v3-note-content {
+    padding: 19% 11% 9%;
+  }
+
+  .home-v3-title {
+    font-size: clamp(21px, 2vw, 27px);
+  }
+
+  .home-v3-subtitle {
+    max-width: 26ch;
+    font-size: clamp(11.5px, 1vw, 13px);
+  }
+
+  .home-v3-sample {
     font-size: clamp(11px, 0.95vw, 12.5px);
   }
 
-  /* Sits just below the note's own left edge -- close enough (small gap,
-     matching rotation family) to read as one pinned corner cluster, but
-     never overlapping the note's own text regardless of exact line-wrap,
-     which an actual overlap over a variable-height note risked (measured
-     at the 1024px floor, the note's tallest realistic case). */
-  .home-scene-v2-stamp {
-    left: 19%;
-    top: 43%;
-    padding: 16px 42px 16px 24px;
-    font-size: 15.5px;
-    transform: rotate(3deg);
+  .home-v3-cta {
+    left: 5%;
+    top: 47%;
+    width: 27%;
+    z-index: 2;
+    transform: rotate(-1.5deg);
   }
 
-  .home-scene-v2-stamp:not(:disabled):hover {
-    transform: rotate(0deg);
+  .home-v3-cta-content {
+    padding: 0 26% 5% 9%;
+    font-size: clamp(14px, 1.2vw, 16px);
   }
 
-  .home-scene-v2-stamp:not(:disabled):active {
-    transform: rotate(0deg) scale(0.97);
+  .home-v3-shortcuts {
+    display: block;
+    right: 1%;
+    bottom: 5%;
+    width: 47%;
   }
 
-  /* Scattered along the cover's lower-right corner as three individually
-     tucked sticky notes -- uneven widths, alternating vertical offsets and
-     a slight overlap (negative margin on the middle note) so the cluster
-     reads as tabs stuck on at different times, not a matched 3-card row.
-     Mirrors the title note's placement on the opposite corner -- both
-     clusters pinned to the same cover instead of one pinned and the other
-     occupying a separate track. */
-  .home-scene-v2-shortcuts {
-    top: auto;
-    right: 3%;
-    bottom: 11%;
-    width: 56%;
-    align-items: flex-end;
-    gap: 2px;
+  .home-v3-shortcut {
+    position: absolute;
+    width: 36%;
   }
 
-  .home-scene-v2-shortcut {
-    position: relative;
-    flex: 0 0 auto;
-    width: clamp(130px, 12.4vw, 150px);
-    max-width: none;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 9px;
-    padding: 14px 15px;
-    border-radius: 4px 18px 18px 18px;
-    overflow: hidden;
-    background-color: var(--panel-bg);
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    box-shadow: 0 10px 18px rgba(120, 98, 40, 0.16);
-    transition:
-      transform var(--motion-fast) var(--ease-soft),
-      box-shadow var(--motion-fast) var(--ease-soft);
-  }
-
-  .home-scene-v2-shortcut--vocab {
-    background-image: url("/brand/decor/phase131/sticky-note-yellow.webp");
-    transform: rotate(-4deg) translateY(9px);
+  .home-v3-shortcut--vocab {
+    left: 0;
+    bottom: 4%;
+    transform: rotate(-4deg);
     z-index: 1;
   }
 
-  .home-scene-v2-shortcut--review {
-    background-image: url("/brand/decor/phase131/sticky-note-coral.webp");
-    width: clamp(138px, 13.2vw, 160px);
-    margin: 0 -10px;
-    transform: rotate(2.5deg) translateY(-9px);
+  .home-v3-shortcut--review {
+    left: 32%;
+    bottom: 16%;
+    width: 38%;
+    transform: rotate(2.5deg);
     z-index: 3;
   }
 
-  .home-scene-v2-shortcut--decks {
-    background-image: url("/brand/decor/phase131/sticky-note-blue.webp");
-    transform: rotate(-2deg) translateY(5px);
+  .home-v3-shortcut--decks {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 36%;
+    margin-left: auto;
+    grid-column: auto;
+    justify-self: auto;
+    transform: rotate(-2deg);
     z-index: 2;
   }
 
-  .home-scene-v2-shortcut::before {
-    content: "";
-    position: absolute;
-    top: -6px;
-    left: 20px;
-    width: 24px;
-    height: 10px;
-    background: rgba(139, 108, 66, 0.28);
-    border: 1px solid rgba(139, 108, 66, 0.35);
-    transform: rotate(-5deg);
-    pointer-events: none;
+  .home-v3-shortcut:not(:disabled):hover {
+    filter: brightness(1.04);
   }
 
-  .home-scene-v2-shortcut:not(:disabled):hover {
-    box-shadow: 0 16px 28px rgba(120, 98, 40, 0.22);
+  .home-v3-shortcut--vocab:not(:disabled):hover {
+    transform: rotate(-1.5deg) translateY(-3px);
   }
 
-  /* Each note lifts from its own resting rotation/offset rather than
-     snapping flat to a shared rotate(0) -- keeps the scatter intact on
-     hover instead of the three briefly re-forming a straight row. */
-  .home-scene-v2-shortcut--vocab:not(:disabled):hover {
-    transform: rotate(-1.5deg) translateY(2px);
+  .home-v3-shortcut--review:not(:disabled):hover {
+    transform: rotate(1deg) translateY(-5px);
   }
 
-  .home-scene-v2-shortcut--review:not(:disabled):hover {
-    transform: rotate(1deg) translateY(-14px);
+  .home-v3-shortcut--decks:not(:disabled):hover {
+    transform: rotate(0deg) translateY(-3px);
   }
 
-  .home-scene-v2-shortcut--decks:not(:disabled):hover {
-    transform: rotate(0deg) translateY(-1px);
+  .home-v3-shortcut-content {
+    padding: 24% 14% 12%;
+    gap: 8px;
   }
 
-  .home-scene-v2-shortcut-icon {
-    width: 40px;
-    height: 40px;
+  .home-v3-shortcut-icon {
+    width: 34px;
+    height: 34px;
   }
 
-  .home-scene-v2-shortcut-icon svg {
-    width: 19px;
-    height: 19px;
+  .home-v3-shortcut-icon svg {
+    width: 16px;
+    height: 16px;
   }
 
-  .home-scene-v2-shortcut-text {
-    align-items: flex-start;
-    gap: 3px;
+  .home-v3-shortcut-label {
+    font-size: 13.5px;
   }
 
-  .home-scene-v2-shortcut-label {
-    font-size: 14px;
-    white-space: normal;
+  .home-v3-shortcut-hint {
+    font-size: 10.5px;
   }
 
-  .home-scene-v2-shortcut-hint {
-    display: block;
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 600;
-    line-height: 1.4;
+  .home-v3-privacy {
+    left: 2%;
+    bottom: 2%;
+    width: 21%;
+    margin: 0;
   }
 
-  /* Rests just left of the fanned shortcuts, clear of the note/stamp
-     cluster on the opposite side of the cover. */
-  .home-scene-v2-charm {
-    right: 61%;
-    bottom: 11%;
+  .home-v3-privacy-text {
+    padding: 8% 6% 8% 26%;
+    font-size: 10.5px;
   }
 
-  /* Left-aligned under the note's own left edge, low on the cover -- clear
-     of both the note/stamp cluster above it and the shortcut fan to its
-     right. */
-  .home-scene-v2-privacy {
-    left: 18%;
-    bottom: 3%;
-    width: auto;
-    max-width: 30%;
-    justify-content: flex-start;
-    font-size: 11.5px;
-    transform: none;
+  .home-v3-charm {
+    left: 39%;
+    bottom: 9%;
+    right: auto;
+    z-index: 4;
+    margin: 0;
   }
+}
 
-  .home-scene-v2-privacy-icon {
-    width: 15px;
-    height: 15px;
+/* Phase 177 polish -- at >=1440px the 1040px/600px caps above left a very
+   large, flat margin of paper on every side with the object cluster's
+   visual weight sitting close to dead-center of that leftover space, which
+   read as "not quite arranged yet" rather than "a spacious desk": a
+   deliberate composition still anchors itself somewhere, it doesn't just
+   float in the middle of unused canvas. Two independent moves, not one
+   bigger version of the same box: the scene's own box grows modestly (not
+   toward "full-bleed photo" size -- ~13-14% wider/taller, still capped),
+   and separately the whole cluster's vertical anchor shifts down via
+   margin-top (flex centering keeps a margin-top/margin-bottom asymmetry,
+   so this reads as "settled a little below center" rather than
+   mathematically centered) so nav space above reads as a header, not as
+   half the empty desk. */
+@media (min-width: 1440px) {
+  .home-v3-scene {
+    width: min(1180px, 78vw);
+    height: clamp(440px, calc(100svh - 150px), 668px);
+    margin-top: 46px;
   }
 }
 
@@ -10352,21 +10252,11 @@ input.reading-vocab-sticker-toggle:checked {
     padding: 11px 14px;
   }
 
-  .home-scene-v2-sample,
-  .home-scene-v2-stamp,
-  .home-scene-v2-shortcut {
+  .home-v3-sample,
+  .home-v3-cta,
+  .home-v3-shortcut {
     width: auto;
     min-width: 0;
-  }
-
-  .home-scene-v2-stamp {
-    min-height: 42px;
-    padding: 11px 24px 11px 16px;
-  }
-
-  .home-scene-v2-shortcut {
-    min-height: 38px;
-    padding: 6px;
   }
 
   .compact-button,

@@ -1,7 +1,7 @@
 "use client";
 
 import { ShioriCharacter } from "./Shiori";
-import { BookshelfIcon, CardFileIcon, ShieldIcon, SparkleIcon } from "./icons";
+import { BookshelfIcon, CardFileIcon, SparkleIcon } from "./icons";
 import type { StudyStats, VocabItem } from "./types";
 
 type HomeDashboardProps = {
@@ -18,31 +18,32 @@ type HomeDashboardProps = {
   sharedDeckCount: number;
   onGoToSharedDecks: () => void;
   // Reused only for a light one-word peek in the 단어장 shortcut's hint line
-  // (desktop only, see .home-scene-v2-shortcut-hint) -- no separate "최근
-  // 담은 단어" section on Home. Same /vocab-items?sort=created_desc read the
-  // 기록 탭 already makes, no new API call.
+  // (desktop only, see .home-v3-shortcut-hint) -- no separate "최근 담은
+  // 단어" section on Home. Same /vocab-items?sort=created_desc read the 기록
+  // 탭 already makes, no new API call.
   recentWords: VocabItem[];
 };
 
-// Phase 168 (Home V2 Full Scene Replacement) -- Phase 159 fixed the
-// shortcuts reading as a second cluster beside the book, but the book
-// itself was still a CSS-drawn cutout (.home-cover-object, a transparent
-// PNG at max-width:760px) sitting inside a centered column, which is
-// exactly the "hero card in the middle of a wide empty wood board" shape
-// the V2 bible names as a failure -- the desktop screenshot still read as
-// an app hero panel with a photo behind it, not a desk. This pass throws
-// out that whole object/column model: `.home-scene-v2-frame` is now a
-// single full-bleed <picture> of the real V2 desk photograph (mobile
-// notebook-with-torn-note-and-sticky-tabs shot below 1024px, desktop
-// notebook-cover-on-a-full-desk shot at/above it), sized to the photo's
-// own aspect ratio at 100% of the available width instead of capped at a
-// fixed px hero size -- so the scene itself fills the first viewport
-// however wide the page box is, rather than leaving wood on either side
-// of a narrow centered card. Every live piece (title note, CTA, three
-// shortcuts, Shiori, privacy line) is absolutely positioned as a percent
-// of that same photo, calibrated per breakpoint against where that
-// specific photo actually has paper/cover/tab room -- not a shared layout
-// reused across two differently-composed images.
+const ASSET_BASE = "/brand/decor/home-v3";
+
+// Phase 177 (Home V3 layered asset rebuild) -- Phase 168-176 built Home as
+// one full-bleed photographed desk scene with every live element
+// absolutely positioned as a % of that single photo. That model's ceiling
+// was the photo itself: a single image can only be one crop/composition,
+// so fitting the whole scene in one viewport meant cropping the photo
+// (Phase 176), and the frame's own photographed wood background could
+// never fully stop competing with the app's outer wood background because
+// both were literally photographs of a desk.
+// This pass throws out the single-photo model entirely. Home is now a
+// paper surface background (a page-level texture, not a scene photo) with
+// five independent transparent-PNG objects -- notebook, title note, CTA
+// stamp, three shortcut tabs, privacy label -- laid out like a mockup, not
+// cropped from one photograph. Every object still carries only its own
+// art (no baked Korean/Japanese copy); live text/icons/routing are DOM
+// content layered on top exactly as before, just against a different
+// image per element instead of one shared photo. Mobile drops the
+// absolute-position desk composition for plain document flow (note -> CTA
+// -> notebook -> shortcuts -> privacy), not a shrunk copy of desktop.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -73,106 +74,148 @@ export function HomeDashboard({
     sharedDeckCount > 0 ? "다른 덱도 둘러보기" : "나만의 학습 덱 만들기";
 
   return (
-    <section className="tab-panel home-dashboard home-scene-v2" aria-live="polite">
-      <div className="home-scene-v2-frame">
-        {/* Two separate photographs, not one crop of the other -- the
-            mobile shot already has a torn paper note and three sticky
-            tabs built into the composition, the desktop shot is a plain
-            cover with room fanned out beside it. <picture> means only the
-            breakpoint-matched file is ever requested. */}
-        <picture className="home-scene-v2-media">
-          <source
-            media="(min-width: 1024px)"
-            srcSet="/brand/decor/v2/v2-home-notebook-desktop-16x9.webp"
-          />
+    <section className="tab-panel home-dashboard home-v3" aria-live="polite">
+      <div className="home-v3-scene">
+        {/* DOM order is mobile's *reading* order (plain flex-column flow,
+            see globals.css) -- note/CTA before the notebook itself, per
+            the brief's "제목 메모를 먼저 읽히게" -- while desktop absolutely
+            positions every child by %, so this order has no effect on
+            desktop placement (z-index below keeps desktop stacking correct
+            regardless of source order). */}
+        <div className="home-v3-note">
           <img
-            className="home-scene-v2-media-img"
-            src="/brand/decor/v2/v2-home-notebook-mobile-9x16.webp"
+            className="home-v3-note-img"
+            src={`${ASSET_BASE}/home-v3-title-note.png`}
             alt=""
             draggable={false}
           />
-        </picture>
-
-        <div className="home-scene-v2-cover-field">
-          <div className="home-scene-v2-note">
-            <h2 className="home-scene-v2-title">
+          <div className="home-v3-note-content">
+            <h2 className="home-v3-title">
               오늘도 한 문장,
               <br />한 단어.
             </h2>
-            <p className="home-scene-v2-subtitle">
+            <p className="home-v3-subtitle">
               모르는 단어를 눌러두면, 읽으면서 단어장이 자연스럽게 쌓여요.
             </p>
             <button
               type="button"
-              className="home-scene-v2-sample"
+              className="home-v3-sample"
               onClick={onTryWithSample}
             >
               샘플로 체험
             </button>
           </div>
+        </div>
 
-          <button
-            type="button"
-            className="home-scene-v2-stamp"
-            onClick={onStartReading}
-          >
+        <button type="button" className="home-v3-cta" onClick={onStartReading}>
+          <img
+            className="home-v3-cta-img"
+            src={`${ASSET_BASE}/home-v3-cta-stamp.png`}
+            alt=""
+            draggable={false}
+          />
+          <span className="home-v3-cta-content">
             <SparkleIcon className="button-icon" />
             <span>원문 읽기 시작</span>
-          </button>
+          </span>
+        </button>
 
-          <p className="home-scene-v2-privacy">
-            <ShieldIcon className="home-scene-v2-privacy-icon" />
-            원문 전체는 서버에 저장하지 않아요.
-          </p>
+        <div className="home-v3-notebook" aria-hidden="true">
+          <img
+            className="home-v3-notebook-img"
+            src={`${ASSET_BASE}/home-v3-notebook-cover.png`}
+            alt=""
+            draggable={false}
+          />
         </div>
 
-        <div className="home-scene-v2-edge-field">
-          <div className="home-scene-v2-shortcuts" role="group" aria-label="바로가기">
-            <button
-              type="button"
-              className="home-scene-v2-shortcut home-scene-v2-shortcut--vocab"
-              onClick={onGoToVocab}
-            >
-              <span className="home-scene-v2-shortcut-icon">
+        {/* Rests just past the notebook's own bottom-right corner (see
+            .home-v3-charm's negative margin in globals.css) -- a resting
+            point beside the notebook, not a separate floating decoration. */}
+        <span className="home-v3-charm" aria-hidden="true">
+          <ShioriCharacter variant="default" size="md" />
+        </span>
+
+        <div className="home-v3-shortcuts" role="group" aria-label="바로가기">
+          <button
+            type="button"
+            className="home-v3-shortcut home-v3-shortcut--vocab"
+            onClick={onGoToVocab}
+          >
+            <img
+              className="home-v3-shortcut-img"
+              src={`${ASSET_BASE}/home-v3-shortcut-tab-yellow.png`}
+              alt=""
+              draggable={false}
+            />
+            <span className="home-v3-shortcut-content">
+              <span className="home-v3-shortcut-icon">
                 <CardFileIcon />
               </span>
-              <span className="home-scene-v2-shortcut-text">
-                <span className="home-scene-v2-shortcut-label">단어장</span>
-                <span className="home-scene-v2-shortcut-hint">{vocabHint}</span>
+              <span className="home-v3-shortcut-text">
+                <span className="home-v3-shortcut-label">단어장</span>
+                <span className="home-v3-shortcut-hint">{vocabHint}</span>
               </span>
-            </button>
-            <button
-              type="button"
-              className="home-scene-v2-shortcut home-scene-v2-shortcut--review"
-              onClick={isDevUser ? onOpenAccount : onStartTodayReview}
-            >
-              <span className="home-scene-v2-shortcut-icon home-scene-v2-shortcut-icon--character">
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-v3-shortcut home-v3-shortcut--review"
+            onClick={isDevUser ? onOpenAccount : onStartTodayReview}
+          >
+            <img
+              className="home-v3-shortcut-img"
+              src={`${ASSET_BASE}/home-v3-shortcut-tab-coral.png`}
+              alt=""
+              draggable={false}
+            />
+            <span className="home-v3-shortcut-content">
+              <span className="home-v3-shortcut-icon home-v3-shortcut-icon--character">
                 <ShioriCharacter variant="review" size="sm" />
               </span>
-              <span className="home-scene-v2-shortcut-text">
-                <span className="home-scene-v2-shortcut-label">복습</span>
-                <span className="home-scene-v2-shortcut-hint">{reviewHint}</span>
+              <span className="home-v3-shortcut-text">
+                <span className="home-v3-shortcut-label">복습</span>
+                <span className="home-v3-shortcut-hint">{reviewHint}</span>
               </span>
-            </button>
-            <button
-              type="button"
-              className="home-scene-v2-shortcut home-scene-v2-shortcut--decks"
-              onClick={onGoToSharedDecks}
-            >
-              <span className="home-scene-v2-shortcut-icon">
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-v3-shortcut home-v3-shortcut--decks"
+            onClick={onGoToSharedDecks}
+          >
+            <img
+              className="home-v3-shortcut-img"
+              src={`${ASSET_BASE}/home-v3-shortcut-tab-blue.png`}
+              alt=""
+              draggable={false}
+            />
+            <span className="home-v3-shortcut-content">
+              <span className="home-v3-shortcut-icon">
                 <BookshelfIcon />
               </span>
-              <span className="home-scene-v2-shortcut-text">
-                <span className="home-scene-v2-shortcut-label">덱</span>
-                <span className="home-scene-v2-shortcut-hint">{decksHint}</span>
+              <span className="home-v3-shortcut-text">
+                <span className="home-v3-shortcut-label">덱</span>
+                <span className="home-v3-shortcut-hint">{decksHint}</span>
               </span>
-            </button>
-          </div>
-
-          <span className="home-scene-v2-charm" aria-hidden="true">
-            <ShioriCharacter variant="default" size="md" />
-          </span>
+            </span>
+          </button>
         </div>
+
+        {/* home-v3-privacy-label.png already bakes in its own shield badge
+            (see ASSET_MANIFEST.md), so unlike the old .home-scene-v2-privacy
+            this carries no separate DOM ShieldIcon -- one shield, not two. */}
+        <p className="home-v3-privacy">
+          <img
+            className="home-v3-privacy-img"
+            src={`${ASSET_BASE}/home-v3-privacy-label.png`}
+            alt=""
+            draggable={false}
+          />
+          <span className="home-v3-privacy-text">
+            원문 전체는 서버에 저장하지 않아요.
+          </span>
+        </p>
       </div>
     </section>
   );
