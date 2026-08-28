@@ -2592,8 +2592,8 @@ button {
      it or its neighbors, so the whole cluster reads as one arrangement
      instead of five independently-floating stickers. */
   .home-v3-notebook {
-    left: 24%;
-    top: 7%;
+    left: 27%;
+    top: 10%;
     width: 51%;
     margin-top: 0;
     /* Explicit, lowest z-index -- the note/CTA now come *before* the
@@ -2605,8 +2605,8 @@ button {
   }
 
   .home-v3-note {
-    left: 0;
-    top: 0;
+    left: 4%;
+    top: 4%;
     width: 39%;
     z-index: 2;
     transform: rotate(-2deg);
@@ -2634,8 +2634,8 @@ button {
      right edge now runs a little onto the notebook's left edge on
      purpose (the brief explicitly allows the CTA to overlap the cover). */
   .home-v3-cta {
-    left: 2%;
-    top: 45%;
+    left: 5%;
+    top: 48%;
     width: 32%;
     z-index: 2;
     transform: rotate(-1.5deg);
@@ -2652,7 +2652,7 @@ button {
   .home-v3-shortcuts {
     display: block;
     right: -3%;
-    bottom: 9%;
+    bottom: 5%;
     width: 58%;
   }
 
@@ -2732,8 +2732,8 @@ button {
      same left edge as the note above it, small enough gap to read as the
      last item in that column rather than a fourth, unrelated group. */
   .home-v3-privacy {
-    left: 1%;
-    top: 70%;
+    left: 4%;
+    top: 73%;
     bottom: auto;
     width: 23%;
     transform: rotate(-1deg);
@@ -2745,12 +2745,16 @@ button {
     font-size: 10.5px;
   }
 
-  /* Tucked beside the shortcut cluster, on the notebook's cover itself
-     (not the empty desk between the two groups) -- a resting point next
-     to the stickers, not a lone figure floating in the gap. */
+  /* Phase 179 -- was left:46%, which landed right on the vocab sticker's
+     own left edge and read as Shiori accidentally draped across someone
+     else's paper rather than a deliberate resting spot. Moved to the open
+     desk gap directly under the notebook's own bottom edge, between the
+     CTA column (ends ~34%) and the shortcut cluster (starts ~45%) --
+     clearly its own small resting point, not overlapping either group. */
   .home-v3-charm {
-    left: 46%;
-    bottom: 15%;
+    left: 40%;
+    top: 50%;
+    bottom: auto;
     right: auto;
     z-index: 4;
     margin: 0;
