@@ -2294,6 +2294,13 @@ button {
    privacy), each object sized for its own row instead of a %-of-frame
    position. */
 .home-v3-scene {
+  /* Own stacking context, so the z-index:-1 layers below (the ambient
+     background wash, and each object's own contact-shadow pseudo) stay
+     scoped behind THIS box's children instead of escaping to compete
+     with body's own opaque background at the page's outer stacking
+     context -- without this they silently render invisible, painted
+     under body's own paper-surface fill instead of under the notebook. */
+  isolation: isolate;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -2313,6 +2320,25 @@ button {
      pattern this doesn't apply to. */
   margin-bottom: -16px;
   padding: 2px 0 4px;
+}
+
+/* Phase 181 (scene integration) -- home-v3-paper-surface.png alone reads
+   as a flat, endless sheet behind independently-floating cutouts, not a
+   desk the objects actually sit on. This is the shared "one light source,
+   one surface" layer every tab object now sits inside: a soft top-light
+   wash plus (desktop only, see the media query below) a warm ambient pool
+   and a darker contact-shadow band under where the notebook/shortcut
+   cluster actually rests -- CSS gradients only, no new photo, so the
+   background stays a quiet surface rather than becoming a scene photo
+   again. Negative z-index keeps it behind every object (the lowest,
+   .home-v3-notebook, is z-index:0). */
+.home-v3-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(255, 248, 230, 0.22), transparent 32%);
+  pointer-events: none;
 }
 
 .home-v3-note {
@@ -2586,6 +2612,38 @@ button {
     margin: 10px auto 0;
   }
 
+  /* A broad warm ambient wash (not the geometric center of the box, but
+     shifted onto the notebook/shortcut cluster and beyond it into the
+     empty right/bottom paper -- the "widen the visual center" the brief
+     asks for, without resizing or moving any asset) plus the same soft
+     top light from the base rule. Radial-gradient alpha falloff alone
+     read as barely-there against this busy a dot-grid texture at normal
+     viewing size (verified by sampling actual rendered pixels), so the
+     real contact-shadow work happens in the ::after below instead, as an
+     actual blurred solid shape rather than a gradient ramp -- filter:blur
+     produces a properly soft-edged pool that reads clearly as shadow
+     where a transparent-to-color gradient just faded into the paper
+     noise. */
+  .home-v3-scene::before {
+    background:
+      radial-gradient(ellipse 78% 68% at 60% 54%, rgba(120, 88, 48, 0.28), transparent 78%),
+      linear-gradient(180deg, rgba(255, 248, 230, 0.28), transparent 30%);
+  }
+
+  .home-v3-scene::after {
+    content: "";
+    position: absolute;
+    left: 28%;
+    top: 52%;
+    width: 68%;
+    height: 44%;
+    z-index: -1;
+    background: rgba(32, 22, 10, 0.4);
+    border-radius: 50%;
+    filter: blur(52px);
+    pointer-events: none;
+  }
+
   .home-v3-note,
   .home-v3-cta,
   .home-v3-notebook,
@@ -2615,6 +2673,23 @@ button {
        other way around. */
     z-index: 0;
     filter: drop-shadow(0 20px 30px rgba(64, 43, 24, 0.26));
+  }
+
+  /* The drop-shadow above follows the book's own silhouette (reads as an
+     object's cast shadow), which alone still looks like a shape floating
+     a little above the page. This is a separate, flatter contact-shadow
+     ellipse right at the spine/base edge -- the "the book is actually
+     pressing into the desk" cue a cast shadow alone doesn't give. */
+  .home-v3-notebook::after {
+    content: "";
+    position: absolute;
+    left: 2%;
+    right: 2%;
+    bottom: -10%;
+    height: 22%;
+    z-index: -1;
+    background: radial-gradient(ellipse 65% 100% at 50% 0%, rgba(30, 20, 9, 0.55), transparent 78%);
+    pointer-events: none;
   }
 
   .home-v3-note {
@@ -2664,8 +2739,8 @@ button {
      -- reads as tabs stuck to the cover, not a separate row underneath. */
   .home-v3-shortcuts {
     display: block;
-    right: -2%;
-    bottom: 5%;
+    right: 1%;
+    bottom: 8%;
     width: 56%;
   }
 
@@ -2781,6 +2856,24 @@ button {
   .home-v3-charm .shiori-asset {
     width: 100%;
     height: 100%;
+  }
+
+  /* Shiori's own PNG has no ground shadow baked in (it's an isolated
+     sprite), so without this she reads as a sticker pressed onto the
+     cover rather than a small figure actually sitting on it. A soft flat
+     oval right under her feet, tinted to the same warm-shadow color as
+     the notebook's own contact shadow above, is enough to read as
+     "resting on the cover" instead of "stuck to the cover". */
+  .home-v3-charm::before {
+    content: "";
+    position: absolute;
+    left: 6%;
+    right: 6%;
+    bottom: -14%;
+    height: 34%;
+    z-index: -1;
+    background: radial-gradient(ellipse 60% 100% at 50% 25%, rgba(30, 20, 9, 0.48), transparent 75%);
+    pointer-events: none;
   }
 }
 
