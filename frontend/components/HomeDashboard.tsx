@@ -129,11 +129,12 @@ export function HomeDashboard({
           />
         </div>
 
-        {/* Rests just past the notebook's own bottom-right corner (see
-            .home-v3-charm's negative margin in globals.css) -- a resting
-            point beside the notebook, not a separate floating decoration. */}
+        {/* Sized up (lg, not md) and placed on the notebook's own open
+            right-hand cover -- Shiori is meant to read as the home's
+            brand-emotional center here, not a small corner decoration; see
+            .home-v3-charm in globals.css for the desktop placement. */}
         <span className="home-v3-charm" aria-hidden="true">
-          <ShioriCharacter variant="default" size="md" />
+          <ShioriCharacter variant="default" size="lg" />
         </span>
 
         <div className="home-v3-shortcuts" role="group" aria-label="바로가기">
