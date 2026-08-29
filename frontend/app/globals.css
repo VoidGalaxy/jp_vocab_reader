@@ -193,12 +193,19 @@
      below). The app-wide root font-family (Arial/Hiragino Sans/Yu Gothic/
      Malgun Gothic) is a plain UI sans everywhere else, which is exactly
      right for controls and body copy but read as "web app" rather than
-     "handmade stationery" on Home's own headline. No remote font: every
-     name here is an OS-bundled Korean serif (Windows ships Batang/
-     AppleMyungjo covers macOS), falling through to the browser's generic
-     serif if neither is installed rather than silently landing back on
-     the UI sans. */
+     "handmade stationery" on Home's own headline.
+     Phase 187 -- Batang-first (Phase 186) read as a stiff, formal
+     word-processor Myungjo -- swapped the lead candidate to Gungsuh, a
+     rounder, more brush-influenced OS-bundled Korean serif that carries
+     more hand-touch character at the same weight (verified side by side
+     at 400/700 weight before switching, not by description alone). Batang
+     stays as a fallback rather than being dropped, since Gungsuh isn't
+     universal either. No remote font: every name is OS-bundled (Windows
+     ships Gungsuh/Batang, AppleMyungjo covers macOS), falling through to
+     the browser's generic serif rather than silently landing back on the
+     UI sans if none are installed. */
   --home-serif:
+    "Gungsuh",
     "Nanum Myeongjo",
     "Batang",
     "AppleMyungjo",
@@ -1478,6 +1485,21 @@ html {
    `scroll` (not `fixed`) attachment so it never taxes mobile scroll perf. */
 body {
   margin: 0;
+  /* Phase 187 -- fixes a pre-existing, tab-agnostic (not Home-specific)
+     6px vertical scrollbar: `.page` sets `margin: 6px auto 0` (see its own
+     rule further down) to leave a gap under the toolbar, but body has no
+     padding/border of its own above `.page`, so that top margin collapses
+     straight through body per normal CSS margin-collapsing rules --
+     body's rendered box silently starts 6px below the viewport top while
+     still reporting its own height as if it started at 0, so
+     `documentElement.scrollHeight` ends up 6px taller than the viewport
+     on every tab. `display: flow-root` gives body its own block
+     formatting context, which stops a child's margin from collapsing
+     through it -- .page's 6px becomes real space measured inside body
+     instead of leaking above it. Purely a containment fix: no visible
+     layout changes anywhere (verified against .page's own already-visible
+     6px top gap, which is unaffected). */
+  display: flow-root;
   /* Defensive safety net -- every scrollable/wide element in the app
      (.tab-nav, filter-chip rows, ...) already scrolls internally, so the
      page itself should never need to scroll horizontally. Catches
@@ -1522,18 +1544,33 @@ body {
    as much as the plant (near its left edge) -- shifting right preserves
    more of the right-edge props since the notebook cluster's own left
    column (title note) already sits closest to the photo's left edge. */
+/* Phase 187 -- the plate's own contrast/saturation/light-dapple pulled
+   the eye before the notebook did (the exact "background reads first"
+   failure). A flat warm scrim, painted on top of the photo in the same
+   background-image stack (first-listed paints topmost), recedes it
+   perceptually -- lighter areas mix toward the scrim's cream and dark
+   areas lose some bite -- without touching foreground elements the way a
+   body-level `filter` would (filter on body would also wash out the
+   notebook/note/CTA sitting on top of it). Position pushed further into
+   the corner (72%/22%, was 62%/30-42%) than Phase 186's version so the
+   brightest dapple/prop cluster sits closer to the very edge instead of
+   reading as a second focal point competing with the notebook. */
 body:has(.home-v3) {
   background-color: #d9c3a0;
-  background-image: url("/brand/decor/home-v3/home-v3-desk-surface-mobile.png");
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: 62% 30%;
+  background-image:
+    linear-gradient(rgba(247, 239, 219, 0.4), rgba(247, 239, 219, 0.4)),
+    url("/brand/decor/home-v3/home-v3-desk-surface-mobile.png");
+  background-repeat: no-repeat, no-repeat;
+  background-size: 100% 100%, cover;
+  background-position: center, 72% 22%;
 }
 
 @media (min-width: 1024px) {
   body:has(.home-v3) {
-    background-image: url("/brand/decor/home-v3/home-v3-desk-surface-desktop.png");
-    background-position: 62% 42%;
+    background-image:
+      linear-gradient(rgba(247, 239, 219, 0.4), rgba(247, 239, 219, 0.4)),
+      url("/brand/decor/home-v3/home-v3-desk-surface-desktop.png");
+    background-position: center, 72% 30%;
   }
 }
 
@@ -2369,6 +2406,16 @@ button {
   flex-direction: column;
   align-items: center;
   width: 100%;
+  /* Phase 187 -- notebook/note/CTA/shortcuts/privacy were each illustrated
+     separately and composited on top of the (now photographed) desk
+     surface, so their color temperature/contrast never matched the
+     photo's warm kraft-paper cast -- the "PNG stickers on a photo" look.
+     One subtle color-grade over the whole cluster (not per-asset, so it
+     stays cheap to maintain) nudges every object toward the same warm
+     cast as the desk plate, as if lit by the same light. Kept light
+     enough that the live DOM text inside (title, hints, labels) stays
+     fully legible -- this is a tint, not a wash. */
+  filter: sepia(0.07) saturate(1.05) brightness(1.01);
 }
 
 /* Phase 186 -- Phase 185's `.home-v3-prop` DOM cutouts (leaf/washi-tape/
@@ -2376,17 +2423,24 @@ button {
    background plate (see body:has(.home-v3) above) already bakes the same
    plant/washi-tape/paperclip/pen into its own edges -- keeping the DOM
    copies would have doubled them up. */
-/* Phase 186 -- short, crisp paper-edge shadow shared by the three "loose
-   paper" objects (title note, CTA stamp, shortcut tabs), unified to the
-   new background plate's top-left light source: a small positive x/y
+/* Phase 186/187 -- short, crisp paper-edge shadow shared by the three
+   "loose paper" objects (title note, CTA stamp, shortcut tabs), unified to
+   the background plate's top-left light source: a small positive x/y
    offset (light from upper-left casts toward lower-right) with a tight
    blur, unlike the notebook's much bigger/softer shadow below -- these
    read as thin paper resting a few millimeters off the desk, not a heavy
-   object like the notebook. */
+   object like the notebook.
+   Phase 187 -- tightened further (2px 4px 4px/.22 -> 1px 2px 2px/.14): the
+   shortcut tabs especially read as thick, dark, floating cards rather
+   than tabs tucked into the notebook's edge -- a shadow this size/opacity
+   works for the note/CTA (larger paper, more lift off the desk) but was
+   too heavy once scaled down to the smaller shortcut tabs. One shared
+   value keeps all three consistent rather than splitting into per-object
+   tuning. */
 .home-v3-note,
 .home-v3-cta,
 .home-v3-shortcut {
-  filter: drop-shadow(2px 4px 4px rgba(64, 43, 24, 0.22));
+  filter: drop-shadow(1px 2px 2px rgba(64, 43, 24, 0.14));
 }
 
 .home-v3-note {
@@ -2523,11 +2577,16 @@ button {
 
 .home-v3-title {
   margin: 0;
-  color: var(--text);
+  /* Warm ink-brown, distinct from --text's slightly cooler default --
+     matches the note paper's own printed-ink read rather than a UI
+     heading color. */
+  color: #3c2d1c;
   font-family: var(--home-serif);
   font-size: 16px;
-  font-weight: 700;
-  line-height: 1.32;
+  /* Phase 187 -- Gungsuh at 700 (screenshotted side by side) still read
+     heavy/blocky; 500 keeps its softer, more brush-like character. */
+  font-weight: 500;
+  line-height: 1.36;
   letter-spacing: 0.01em;
 }
 
@@ -2855,35 +2914,43 @@ button {
   /* Sits right under the note with almost no gap -- the two read as one
      "start here" column instead of two unrelated pieces, and its own
      right edge now runs a little onto the notebook's left edge on
-     purpose (the brief explicitly allows the CTA to overlap the cover). */
+     purpose (the brief explicitly allows the CTA to overlap the cover).
+     Phase 187 -- shrunk (34% -> 27%): at the cluster's Phase 184/185 full
+     width, 34% rendered as a wide banner competing with the note above it
+     instead of a stamp-sized label sitting on the note/notebook seam. */
   .home-v3-cta {
     left: 0%;
-    top: 48%;
-    width: 34%;
+    top: 47%;
+    width: 27%;
     z-index: 2;
     transform: rotate(-1.5deg);
   }
 
   .home-v3-cta-content {
     padding: 0 26% 5% 9%;
-    font-size: clamp(15px, 1.3vw, 17px);
+    font-size: clamp(13px, 1.05vw, 15px);
   }
 
   /* Anchored past the notebook's own bottom-right corner (negative right/
      bottom pushes the group beyond the cluster box's own edge, into the
      scene's own side padding) rather than sitting inside the clear desk
      space above it -- reads as tabs actually hanging off the cover's
-     edge and dipping past it, not a row that merely sits near it. */
+     edge and dipping past it, not a row that merely sits near it.
+     Phase 187 -- shrunk (50% -> 40% group, 39% -> 34% each tab) and pulled
+     down further (-2% -> -6%): at the previous size these read as a row
+     of cards sitting below the notebook rather than tabs inserted into
+     its bottom edge -- smaller and dipping further past the edge reads
+     as "tucked in", not "placed next to". */
   .home-v3-shortcuts {
     display: block;
     right: 0%;
-    bottom: -2%;
-    width: 50%;
+    bottom: -6%;
+    width: 40%;
   }
 
   .home-v3-shortcut {
     position: absolute;
-    width: 39%;
+    width: 34%;
   }
 
   .home-v3-shortcut--vocab {
@@ -2918,7 +2985,7 @@ button {
     /* Combined into one filter value -- a separate `filter: brightness()`
        here would replace (not add to) the base rule's drop-shadow instead
        of stacking with it, blanking the paper-edge shadow on hover. */
-    filter: brightness(1.04) drop-shadow(2px 4px 4px rgba(64, 43, 24, 0.22));
+    filter: brightness(1.04) drop-shadow(1px 2px 2px rgba(64, 43, 24, 0.14));
   }
 
   .home-v3-shortcut--vocab:not(:disabled):hover {
@@ -2938,33 +3005,40 @@ button {
     gap: 8px;
   }
 
+  /* Phase 187 -- scaled down with the tabs themselves (see .home-v3-
+     shortcut above, 39% -> 34%): the previous fixed px sizes were tuned
+     for the larger tab and read as oversized once the tab shrank. */
   .home-v3-shortcut-icon {
-    width: 34px;
-    height: 34px;
+    width: 28px;
+    height: 28px;
   }
 
   .home-v3-shortcut-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
 
   .home-v3-shortcut-label {
-    font-size: 13.5px;
+    font-size: 12px;
   }
 
   .home-v3-shortcut-hint {
-    font-size: 10.5px;
+    font-size: 9.5px;
   }
 
   /* Moved from the scene's far bottom-left corner (isolated, nothing else
      nearby) to directly under the note/CTA "start here" column instead --
      same left edge as the note above it, small enough gap to read as the
-     last item in that column rather than a fourth, unrelated group. */
+     last item in that column rather than a fourth, unrelated group.
+     Phase 187 -- pulled up closer to the CTA and shrunk (76% -> 70% top,
+     24% -> 19% width): the previous gap read as its own isolated footer
+     line rather than a small sticker tucked at the bottom of the note/CTA
+     pile. */
   .home-v3-privacy {
-    left: 0%;
-    top: 76%;
+    left: 1%;
+    top: 70%;
     bottom: auto;
-    width: 24%;
+    width: 19%;
     transform: rotate(-1deg);
     margin: 0;
   }
