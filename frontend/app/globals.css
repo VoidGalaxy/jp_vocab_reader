@@ -189,30 +189,21 @@
 .home-dashboard {
   --screen-accent: var(--tone-amber);
   --screen-accent-soft: #f7ecd6;
-  /* Phase 186 -- Home-only display serif for the title (see .home-v3-title
-     below). The app-wide root font-family (Arial/Hiragino Sans/Yu Gothic/
-     Malgun Gothic) is a plain UI sans everywhere else, which is exactly
-     right for controls and body copy but read as "web app" rather than
-     "handmade stationery" on Home's own headline.
-     Phase 187 -- Batang-first (Phase 186) read as a stiff, formal
-     word-processor Myungjo -- swapped the lead candidate to Gungsuh, a
-     rounder, more brush-influenced OS-bundled Korean serif that carries
-     more hand-touch character at the same weight (verified side by side
-     at 400/700 weight before switching, not by description alone). Batang
-     stays as a fallback rather than being dropped, since Gungsuh isn't
-     universal either. No remote font: every name is OS-bundled (Windows
-     ships Gungsuh/Batang, AppleMyungjo covers macOS), falling through to
-     the browser's generic serif rather than silently landing back on the
-     UI sans if none are installed. */
-  --home-serif:
-    "Gungsuh",
-    "Nanum Myeongjo",
-    "Batang",
-    "AppleMyungjo",
-    "Noto Serif KR",
-    ui-serif,
-    Georgia,
-    serif;
+  /* Phase 186 -- Home-only display treatment for the title (see .home-v3-
+     title below), so it doesn't read as the same plain UI sans as every
+     button and label around it.
+     Phase 187 -- Batang (Phase 186's choice) read as a stiff, formal
+     word-processor Myungjo, swapped for Gungsuh.
+     Phase 188 -- Gungsuh, judged in the actual scene rather than in
+     isolation, leaned the other way: brush calligraphy/an old document,
+     not "handmade stationery note". Two OS-serif candidates in a row have
+     now missed in the same direction (too formal/traditional) -- dropping
+     the font-family swap entirely rather than trying a third system
+     font blind. The title still needs to read as different from a plain
+     web-app heading, but that distinction now comes from weight/size/
+     color/letter-spacing on the same root sans stack every other Home
+     label already uses (see .home-v3-title), not from hunting for the
+     one "right" OS-bundled Korean typeface. No remote font either way. */
   display: block;
   gap: 0;
 }
@@ -1555,22 +1546,32 @@ body {
    the corner (72%/22%, was 62%/30-42%) than Phase 186's version so the
    brightest dapple/prop cluster sits closer to the very edge instead of
    reading as a second focal point competing with the notebook. */
+/* Phase 187 added the flat scrim to recede the photo; Phase 188 adds a
+   vignette on top of that (center clear, edges darken/warm slightly) so
+   the light-dapple pattern and edge props settle further back instead of
+   pulling the eye before the notebook does -- the vignette does the
+   "recede the busy corners" work the flat scrim alone couldn't, since a
+   uniform scrim dims everything equally rather than specifically the
+   areas competing with the cluster. Position pushed further into the
+   corner again (78%/18-26%, was 72%/22-30%) for the same reason. */
 body:has(.home-v3) {
   background-color: #d9c3a0;
   background-image:
-    linear-gradient(rgba(247, 239, 219, 0.4), rgba(247, 239, 219, 0.4)),
+    radial-gradient(ellipse 90% 80% at 50% 42%, transparent 45%, rgba(64, 46, 26, 0.16) 100%),
+    linear-gradient(rgba(247, 239, 219, 0.46), rgba(247, 239, 219, 0.46)),
     url("/brand/decor/home-v3/home-v3-desk-surface-mobile.png");
-  background-repeat: no-repeat, no-repeat;
-  background-size: 100% 100%, cover;
-  background-position: center, 72% 22%;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-size: 100% 100%, 100% 100%, cover;
+  background-position: center, center, 78% 18%;
 }
 
 @media (min-width: 1024px) {
   body:has(.home-v3) {
     background-image:
-      linear-gradient(rgba(247, 239, 219, 0.4), rgba(247, 239, 219, 0.4)),
+      radial-gradient(ellipse 90% 80% at 50% 42%, transparent 45%, rgba(64, 46, 26, 0.16) 100%),
+      linear-gradient(rgba(247, 239, 219, 0.46), rgba(247, 239, 219, 0.46)),
       url("/brand/decor/home-v3/home-v3-desk-surface-desktop.png");
-    background-position: center, 72% 30%;
+    background-position: center, center, 78% 26%;
   }
 }
 
@@ -2423,24 +2424,26 @@ button {
    background plate (see body:has(.home-v3) above) already bakes the same
    plant/washi-tape/paperclip/pen into its own edges -- keeping the DOM
    copies would have doubled them up. */
-/* Phase 186/187 -- short, crisp paper-edge shadow shared by the three
-   "loose paper" objects (title note, CTA stamp, shortcut tabs), unified to
-   the background plate's top-left light source: a small positive x/y
-   offset (light from upper-left casts toward lower-right) with a tight
-   blur, unlike the notebook's much bigger/softer shadow below -- these
-   read as thin paper resting a few millimeters off the desk, not a heavy
-   object like the notebook.
-   Phase 187 -- tightened further (2px 4px 4px/.22 -> 1px 2px 2px/.14): the
-   shortcut tabs especially read as thick, dark, floating cards rather
-   than tabs tucked into the notebook's edge -- a shadow this size/opacity
-   works for the note/CTA (larger paper, more lift off the desk) but was
-   too heavy once scaled down to the smaller shortcut tabs. One shared
-   value keeps all three consistent rather than splitting into per-object
-   tuning. */
+/* Phase 186/187 -- short, crisp paper-edge shadow shared by the "loose
+   paper" objects (title note, CTA stamp), unified to the background
+   plate's top-left light source: a small positive x/y offset (light from
+   upper-left casts toward lower-right) with a tight blur, unlike the
+   notebook's much bigger/softer shadow below -- these read as thin paper
+   resting a few millimeters off the desk, not a heavy object like the
+   notebook. */
 .home-v3-note,
-.home-v3-cta,
-.home-v3-shortcut {
+.home-v3-cta {
   filter: drop-shadow(1px 2px 2px rgba(64, 43, 24, 0.14));
+}
+
+/* Phase 188 -- split off from the note/CTA rule above with an even
+   lighter shadow: at the note/CTA's size this shadow reads as "lifted
+   paper", but the shortcut tabs are smaller and sit tucked into the
+   notebook's own bottom edge (see .home-v3-shortcuts' negative bottom% ),
+   so the same shadow read as a thick dark line under a floating card
+   instead of a shallow tab crease. */
+.home-v3-shortcut {
+  filter: drop-shadow(0.5px 1px 1px rgba(64, 43, 24, 0.1));
 }
 
 .home-v3-note {
@@ -2521,14 +2524,19 @@ button {
 .home-v3-charm::before {
   content: "";
   position: absolute;
-  left: 10%;
-  right: 10%;
-  bottom: -18%;
-  height: 30%;
+  left: 8%;
+  right: 8%;
+  bottom: -12%;
+  height: 22%;
   z-index: -1;
-  /* Phase 186 -- center shifted right (56%) to match the plate's top-left
-     light source, same as the notebook's own contact shadow. */
-  background: radial-gradient(ellipse 60% 100% at 56% 25%, rgba(30, 20, 9, 0.4), transparent 75%);
+  /* Phase 186 -- center shifted right to match the plate's top-left light
+     source, same as the notebook's own contact shadow.
+     Phase 188 -- flattened (ellipse 60%/100% -> 78%/55%, box height 30% ->
+     22%, pulled closer to her feet) and pushed further right (56% -> 60%)
+     -- the rounder/taller version read as a soft blob under a floating
+     sticker rather than a shallow, directional shadow pressed onto the
+     cover. */
+  background: radial-gradient(ellipse 78% 55% at 60% 30%, rgba(30, 20, 9, 0.42), transparent 72%);
   pointer-events: none;
 }
 
@@ -2581,13 +2589,15 @@ button {
      matches the note paper's own printed-ink read rather than a UI
      heading color. */
   color: #3c2d1c;
-  font-family: var(--home-serif);
-  font-size: 16px;
-  /* Phase 187 -- Gungsuh at 700 (screenshotted side by side) still read
-     heavy/blocky; 500 keeps its softer, more brush-like character. */
-  font-weight: 500;
-  line-height: 1.36;
-  letter-spacing: 0.01em;
+  /* Phase 188 -- no font-family override (see .home-dashboard's comment):
+     inherits the app's own root sans stack, same as every other Home
+     label. Medium weight (not the 700-800 a UI heading would use) plus
+     open letter-spacing/line-height is what carries the "handwritten
+     note" softness here instead of a swapped typeface. */
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.42;
+  letter-spacing: 0.015em;
 }
 
 .home-v3-subtitle {
@@ -2821,10 +2831,19 @@ button {
     pointer-events: none;
   }
 
+  /* Phase 188 -- 96vw/near-full-height (Phase 184/185) left almost no desk
+     margin at ordinary laptop widths (1024-1439px), reading as a zoomed-in
+     crop rather than "a desk scene shot from a little further back". Pulled
+     in to 82vw and capped lower/shorter, with a real top margin (was 6px,
+     just enough to clear the toolbar) so there's a visible landing gap
+     under nav instead of the note starting immediately below it. Notebook
+     stays the dominant object at the same % of the cluster -- only the
+     cluster's own share of the viewport shrank, not the notebook's share
+     of the cluster. */
   .home-v3-cluster {
-    width: min(1360px, 96vw);
-    height: clamp(560px, calc(100svh - 170px), 820px);
-    margin: 6px auto 0;
+    width: min(1180px, 82vw);
+    height: clamp(480px, calc(100svh - 220px), 680px);
+    margin: 28px auto 0;
   }
 
   .home-v3-note,
@@ -2885,7 +2904,7 @@ button {
 
   .home-v3-note {
     left: 0%;
-    top: 0%;
+    top: -1%;
     width: 44%;
     z-index: 2;
     transform: rotate(-2deg);
@@ -2917,11 +2936,17 @@ button {
      purpose (the brief explicitly allows the CTA to overlap the cover).
      Phase 187 -- shrunk (34% -> 27%): at the cluster's Phase 184/185 full
      width, 34% rendered as a wide banner competing with the note above it
-     instead of a stamp-sized label sitting on the note/notebook seam. */
+     instead of a stamp-sized label sitting on the note/notebook seam.
+     Phase 188 -- widened slightly again (27% -> 32%) and raised (47% ->
+     45%): at 27% wide starting from left:0%, the CTA's own right edge
+     (27%) fell short of the notebook's left edge (30%, see .home-v3-
+     notebook above) by 3 points -- it wasn't actually touching the
+     notebook at all, just sitting on bare desk next to it. 32% clears
+     that gap with a couple points of real overlap onto the cover. */
   .home-v3-cta {
     left: 0%;
-    top: 47%;
-    width: 27%;
+    top: 45%;
+    width: 32%;
     z-index: 2;
     transform: rotate(-1.5deg);
   }
@@ -2940,11 +2965,13 @@ button {
      down further (-2% -> -6%): at the previous size these read as a row
      of cards sitting below the notebook rather than tabs inserted into
      its bottom edge -- smaller and dipping further past the edge reads
-     as "tucked in", not "placed next to". */
+     as "tucked in", not "placed next to".
+     Phase 188 -- pulled down further still (-6% -> -10%): still read as
+     sitting just below the cover rather than tucked into it. */
   .home-v3-shortcuts {
     display: block;
     right: 0%;
-    bottom: -6%;
+    bottom: -10%;
     width: 40%;
   }
 
@@ -2985,7 +3012,7 @@ button {
     /* Combined into one filter value -- a separate `filter: brightness()`
        here would replace (not add to) the base rule's drop-shadow instead
        of stacking with it, blanking the paper-edge shadow on hover. */
-    filter: brightness(1.04) drop-shadow(1px 2px 2px rgba(64, 43, 24, 0.14));
+    filter: brightness(1.04) drop-shadow(0.5px 1px 1px rgba(64, 43, 24, 0.1));
   }
 
   .home-v3-shortcut--vocab:not(:disabled):hover {
@@ -3080,25 +3107,29 @@ button {
   .home-v3-charm::before {
     content: "";
     position: absolute;
-    left: 6%;
-    right: 6%;
-    bottom: -14%;
-    height: 34%;
+    left: 5%;
+    right: 5%;
+    bottom: -9%;
+    height: 24%;
     z-index: -1;
-    background: radial-gradient(ellipse 60% 100% at 56% 25%, rgba(30, 20, 9, 0.48), transparent 75%);
+    background: radial-gradient(ellipse 78% 55% at 60% 30%, rgba(30, 20, 9, 0.5), transparent 72%);
     pointer-events: none;
   }
 }
 
-/* Phase 184 -- at >=1440px the cluster keeps growing (was capped at 1360px
-   above) so the notebook keeps scaling with the viewport instead of
-   plateauing into a fixed-size object surrounded by more and more bare
-   desk on wide monitors. */
+/* Phase 184 -- at >=1440px the cluster keeps growing so the notebook keeps
+   scaling with the viewport instead of plateauing into a fixed-size
+   object surrounded by more and more bare desk on wide monitors.
+   Phase 188 -- pulled in with the 1024px tier above (90vw -> 78vw) for the
+   same "camera a little further back" reason; the wide reference
+   screenshot this phase was judged against already had generous desk
+   margin at ultrawide sizes, so this tier only needed to come down
+   slightly, not as much as the 1024-1439px tier did. */
 @media (min-width: 1440px) {
   .home-v3-cluster {
-    width: min(1560px, 90vw);
-    height: clamp(620px, calc(100svh - 190px), 880px);
-    margin-top: 20px;
+    width: min(1400px, 78vw);
+    height: clamp(560px, calc(100svh - 230px), 780px);
+    margin-top: 36px;
   }
 
   /* Shiori's 150px reads as a bit small once the whole cluster has grown
