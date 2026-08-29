@@ -1,7 +1,6 @@
 "use client";
 
-import { ShioriCharacter } from "./Shiori";
-import { BookshelfIcon, CardFileIcon, SparkleIcon } from "./icons";
+import { BookshelfIcon, CardFileIcon, CardsIcon, SparkleIcon } from "./icons";
 import type { StudyStats, VocabItem } from "./types";
 
 type HomeDashboardProps = {
@@ -127,14 +126,6 @@ export function HomeDashboard({
           />
         </div>
 
-        {/* Sized up (lg, not md) and placed on the notebook's own open
-            right-hand cover -- Shiori is meant to read as the home's
-            brand-emotional center here, not a small corner decoration; see
-            .home-v3-charm in globals.css for the desktop placement. */}
-        <span className="home-v3-charm" aria-hidden="true">
-          <ShioriCharacter variant="default" size="lg" />
-        </span>
-
         <div className="home-v3-shortcuts" role="group" aria-label="바로가기">
           <button
             type="button"
@@ -169,8 +160,8 @@ export function HomeDashboard({
               draggable={false}
             />
             <span className="home-v3-shortcut-content">
-              <span className="home-v3-shortcut-icon home-v3-shortcut-icon--character">
-                <ShioriCharacter variant="review" size="sm" />
+              <span className="home-v3-shortcut-icon">
+                <CardsIcon />
               </span>
               <span className="home-v3-shortcut-text">
                 <span className="home-v3-shortcut-label">복습</span>

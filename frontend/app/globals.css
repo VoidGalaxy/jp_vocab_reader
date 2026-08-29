@@ -2478,6 +2478,13 @@ button {
   aspect-ratio: 1183 / 860;
   margin-top: -12px;
   z-index: 1;
+  /* Phase 189 -- purely decorative (aria-hidden, no handler), and the
+     shortcut tabs now overlap up into the notebook's own box with a
+     lower z-index (see .home-v3-shortcuts) so their tucked-in top edge
+     reads as hidden behind the cover. Without this, that overlapping
+     area of the notebook -- which paints on top -- would swallow clicks
+     meant for the tab underneath it. */
+  pointer-events: none;
   /* Phase 186 -- shadow direction unified to the new background plate's
      top-left light source: a positive x-offset (light from upper-left
      casts toward lower-right) instead of the old straight-down shadow.
@@ -2504,58 +2511,13 @@ button {
   pointer-events: none;
 }
 
-/* Rests just past the notebook's own bottom-right corner in normal flow
-   (a small negative margin pulls it up over the corner instead of leaving
-   a gap) rather than needing an absolute % position of its own -- the
-   notebook's rendered height on mobile depends on nothing but its own
-   width, so this stays put regardless of how tall the note/CTA above it
-   wrap. */
-.home-v3-charm {
-  position: relative;
-  align-self: flex-end;
-  margin: -30px 15% 0 0;
-  opacity: 0.97;
-  z-index: 5;
-}
-
-/* Ground-contact shadow so Shiori reads as resting on the cover instead of
-   a sticker pasted onto it -- used to be desktop-only (see the >=1024px
-   override below), but mobile needs the same grounding cue. */
-.home-v3-charm::before {
-  content: "";
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: -12%;
-  height: 22%;
-  z-index: -1;
-  /* Phase 186 -- center shifted right to match the plate's top-left light
-     source, same as the notebook's own contact shadow.
-     Phase 188 -- flattened (ellipse 60%/100% -> 78%/55%, box height 30% ->
-     22%, pulled closer to her feet) and pushed further right (56% -> 60%)
-     -- the rounder/taller version read as a soft blob under a floating
-     sticker rather than a shallow, directional shadow pressed onto the
-     cover. */
-  background: radial-gradient(ellipse 78% 55% at 60% 30%, rgba(30, 20, 9, 0.42), transparent 72%);
-  pointer-events: none;
-}
-
-/* Phase 180 -- the JSX bumped Shiori from size="md" to size="lg" for the
-   desktop brand-presence increase below, but "lg" (72px, vs. "md"'s 40px)
-   is a shared design-system tier also used at this same mobile flow
-   position -- letting it apply here too pushed mobile's carefully-tuned
-   zero-scroll layout (see the -16px margin-bottom hack above) back over
-   the viewport. Pinned back down to a smaller, mobile-appropriate size
-   here; the >=1024px override further down is where the real size
-   increase actually lives. */
-.home-v3-charm .shiori-asset {
-  width: 40px;
-  height: 40px;
-}
-
-.home-v3-charm .shiori-asset-img {
-  animation: shiori-idle-float 6.5s ease-in-out infinite;
-}
+/* Phase 189 -- Shiori removed from Home (the shared component/asset and
+   her use on other tabs are untouched; this was Home-only decoration).
+   `.home-v3-charm` and its ground-shadow pseudo-element used to live here
+   -- deleted rather than left as dead CSS. See HomeDashboard.tsx for the
+   DOM removal and the compositional rebalance that replaced her (deeper
+   note/CTA/shortcut overlap with the notebook instead of a center
+   decoration). */
 
 .home-v3-note-img,
 .home-v3-cta-img,
@@ -2732,8 +2694,11 @@ button {
   background: var(--tone-dusty-blue);
 }
 
-.home-v3-shortcut-icon--character {
-  background: var(--soft-bg);
+/* Phase 189 -- replaces the review shortcut's Shiori-character icon badge
+   (Home no longer renders Shiori at all); matches the vocab/decks rules
+   above it, coral to match this tab's own paper tone. */
+.home-v3-shortcut--review .home-v3-shortcut-icon {
+  background: var(--tone-coral);
 }
 
 .home-v3-shortcut-text {
@@ -2850,8 +2815,7 @@ button {
   .home-v3-cta,
   .home-v3-notebook,
   .home-v3-shortcuts,
-  .home-v3-privacy,
-  .home-v3-charm {
+  .home-v3-privacy {
     position: absolute;
   }
 
@@ -2942,11 +2906,15 @@ button {
      (27%) fell short of the notebook's left edge (30%, see .home-v3-
      notebook above) by 3 points -- it wasn't actually touching the
      notebook at all, just sitting on bare desk next to it. 32% clears
-     that gap with a couple points of real overlap onto the cover. */
+     that gap with a couple points of real overlap onto the cover.
+     Phase 189 -- widened once more (32% -> 35%) for a clearer bite onto
+     the cover now that Shiori (who used to occupy the cover's center)
+     is gone -- the note/CTA column reads as more firmly attached to the
+     notebook instead of just clearing the edge. */
   .home-v3-cta {
     left: 0%;
     top: 45%;
-    width: 32%;
+    width: 35%;
     z-index: 2;
     transform: rotate(-1.5deg);
   }
@@ -2967,12 +2935,23 @@ button {
      its bottom edge -- smaller and dipping further past the edge reads
      as "tucked in", not "placed next to".
      Phase 188 -- pulled down further still (-6% -> -10%): still read as
-     sitting just below the cover rather than tucked into it. */
+     sitting just below the cover rather than tucked into it.
+     Phase 189 -- inverted the approach: instead of pulling the group
+     further down (which only ever moves it further from the cover, never
+     "into" it), it now sits much higher (-10% -> 12%, positive -- its own
+     top portion now falls inside the notebook's box, see the notebook's
+     own top/width above) AND paints BEHIND the notebook (z-index -1 vs
+     the notebook's 0) -- the part of each tab inside that rectangle is
+     now actually covered by the cover, so the tabs read as tucked under
+     it with only their lower icon/label "poking out" below the spine
+     edge. .home-v3-notebook has pointer-events:none so this doesn't cost
+     any click target. */
   .home-v3-shortcuts {
     display: block;
     right: 0%;
-    bottom: -10%;
+    bottom: 14%;
     width: 40%;
+    z-index: -1;
   }
 
   .home-v3-shortcut {
@@ -3075,46 +3054,6 @@ button {
     font-size: 10.5px;
   }
 
-  /* Phase 180 -- Shiori is the home's brand-emotional center, not a small
-     resting point. Phase 184 pushes her further still (92px -> 150px) now
-     that the notebook cover itself is much bigger -- the target mockup
-     shows her large enough to read as a figure actually reading on the
-     cover, not a corner sticker. Sits on the notebook's own empty
-     right-hand cover, between the bookmark ribbon (top-right) and the
-     shortcut cluster's overlap (bottom-right). */
-  .home-v3-charm {
-    left: 58%;
-    top: 14%;
-    bottom: auto;
-    right: auto;
-    width: 150px;
-    height: 150px;
-    z-index: 4;
-    margin: 0;
-  }
-
-  .home-v3-charm .shiori-asset {
-    width: 100%;
-    height: 100%;
-  }
-
-  /* Shiori's own PNG has no ground shadow baked in (it's an isolated
-     sprite), so without this she reads as a sticker pressed onto the
-     cover rather than a small figure actually sitting on it. A soft flat
-     oval right under her feet, tinted to the same warm-shadow color as
-     the notebook's own contact shadow above, is enough to read as
-     "resting on the cover" instead of "stuck to the cover". */
-  .home-v3-charm::before {
-    content: "";
-    position: absolute;
-    left: 5%;
-    right: 5%;
-    bottom: -9%;
-    height: 24%;
-    z-index: -1;
-    background: radial-gradient(ellipse 78% 55% at 60% 30%, rgba(30, 20, 9, 0.5), transparent 72%);
-    pointer-events: none;
-  }
 }
 
 /* Phase 184 -- at >=1440px the cluster keeps growing so the notebook keeps
@@ -3132,12 +3071,15 @@ button {
     margin-top: 36px;
   }
 
-  /* Shiori's 150px reads as a bit small once the whole cluster has grown
-     this much wider -- scales up further only at this tier, same spot on
-     the notebook. */
-  .home-v3-charm {
-    width: 172px;
-    height: 172px;
+  /* Phase 189 -- the shortcut group's overlap into the notebook (see the
+     1024px tier's .home-v3-shortcuts) is set as a % of the CLUSTER's own
+     height, but the notebook's height comes from its WIDTH (aspect-ratio)
+     -- since cluster width and height scale differently across viewport
+     sizes, the same % overlaps more at this wider tier and started
+     swallowing the icon badges, not just the tape-strip top. Pulled back
+     down here rather than tuning one value to try to fit every width. */
+  .home-v3-shortcuts {
+    bottom: 8%;
   }
 }
 
