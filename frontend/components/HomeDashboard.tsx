@@ -25,27 +25,18 @@ type HomeDashboardProps = {
 };
 
 const ASSET_BASE = "/brand/decor/home-v3";
-// Phase 185 -- home-v3's own prop crops (home-v3-prop-pen.png, home-v3-
-// prop-paperclip.png) still carry a baked-in dark vignette/stray matte
-// fragment from their shared source sheet, so the edge desk props borrow
-// ../phase131/'s already-QA'd transparent cutouts instead (see the
-// .home-v3-prop comment in globals.css).
-const PROP_BASE = "/brand/decor/phase131";
 
-// Phase 177-183 -- current Home regressed into a central card-frame;
-// implement the target mockup (references/mockups/home-phase184-target-
-// mockup.png) instead.
-// Phase 184 (target mockup implementation) -- Phase 183's `.home-v3-mat`
-// gave the cluster a real surface to rest on, but that surface rendered as
-// a rounded card, and the mockup's first read is a big notebook filling
-// the screen, not an illustration inside a card. The mat wrapper is gone;
-// `.home-v3-scene` itself is now the near-full-bleed surface (a wide, low
-// ambient wash + contact shadow, no card edge/box-shadow), and
-// `.home-v3-cluster` -- the notebook-as-compound-object, unchanged in
-// concept from Phase 183 -- is sized to make the notebook the dominant
-// object on desktop, the way the target mockup does. Mobile keeps the same
-// cluster nesting; only the overlap direction changes (vertical stack with
-// negative-margin overlaps instead of desktop's absolute %).
+// Phase 177-185 -- structure/composition is settled (big notebook cluster,
+// note/CTA/shortcuts attached to it); this pass is background/material
+// fidelity, not layout.
+// Phase 186 (background plate integration) -- Phase 185's DOM prop cutouts
+// (leaf/washi-tape/paperclip/pen, borrowed from ../phase131/) are gone --
+// the new photographed background plate (home-v3-desk-surface-{desktop,
+// mobile}.png, applied via body:has(.home-v3) in globals.css) already
+// bakes the same plant/washi-tape/paperclip/pen into its own edges, so
+// keeping the DOM copies would have doubled them up. Nothing in this file
+// changed beyond removing that dead code -- the plate is a pure background-
+// image swap with no new DOM.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -78,22 +69,6 @@ export function HomeDashboard({
   return (
     <section className="tab-panel home-dashboard home-v3" aria-live="polite">
       <div className="home-v3-scene">
-        {/* Edge desk props, positioned against the scene (not the cluster)
-            so they stay in the desk margin outside the notebook cluster's
-            own footprint -- see the .home-v3-prop comment in globals.css
-            for why these are hidden below 1440px. Purely decorative. */}
-        <span className="home-v3-prop home-v3-prop--leaf" aria-hidden="true">
-          <img src={`${PROP_BASE}/desk-prop-leaf.webp`} alt="" draggable={false} />
-        </span>
-        <span className="home-v3-prop home-v3-prop--washi" aria-hidden="true">
-          <img src={`${PROP_BASE}/desk-prop-washi-tape.webp`} alt="" draggable={false} />
-        </span>
-        <span className="home-v3-prop home-v3-prop--paperclip" aria-hidden="true">
-          <img src={`${PROP_BASE}/desk-prop-paperclip.webp`} alt="" draggable={false} />
-        </span>
-        <span className="home-v3-prop home-v3-prop--pen" aria-hidden="true">
-          <img src={`${PROP_BASE}/desk-prop-pen.webp`} alt="" draggable={false} />
-        </span>
         {/* .home-v3-cluster is the notebook-as-compound-object: every child
             below is positioned as a % of THIS box (see globals.css), not
             the outer scene, so the note/CTA/shortcuts/Shiori read as

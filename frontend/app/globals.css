@@ -189,6 +189,23 @@
 .home-dashboard {
   --screen-accent: var(--tone-amber);
   --screen-accent-soft: #f7ecd6;
+  /* Phase 186 -- Home-only display serif for the title (see .home-v3-title
+     below). The app-wide root font-family (Arial/Hiragino Sans/Yu Gothic/
+     Malgun Gothic) is a plain UI sans everywhere else, which is exactly
+     right for controls and body copy but read as "web app" rather than
+     "handmade stationery" on Home's own headline. No remote font: every
+     name here is an OS-bundled Korean serif (Windows ships Batang/
+     AppleMyungjo covers macOS), falling through to the browser's generic
+     serif if neither is installed rather than silently landing back on
+     the UI sans. */
+  --home-serif:
+    "Nanum Myeongjo",
+    "Batang",
+    "AppleMyungjo",
+    "Noto Serif KR",
+    ui-serif,
+    Georgia,
+    serif;
   display: block;
   gap: 0;
 }
@@ -1482,35 +1499,42 @@ body {
   background-size: var(--paper-texture-size);
 }
 
-/* Phase 177 (Home V3 layered asset rebuild) -- Home is a paper-surface
-   scene at every width now (mobile stacks the same objects in normal flow
-   instead of switching composition, see the Home V3 block below), so this
-   is unconditional rather than gated to >=1024px like the old Home V2
-   wood-neutralization override was -- one paper asset, one look, on phones
-   too. :has() gives it higher specificity than the plain `body` rule above
+/* Phase 186 -- Phase 177-185 all tried to fake a photographed desk surface
+   with CSS (a repeated flat paper tile, then radial-gradient light pools
+   blended over it, then DOM prop cutouts pinned to the corners). Each pass
+   still read as a composite -- gradients and PNG props on a flat tile
+   never fully sold "one photographed surface" the way an actual photo
+   does. This uses the real photographed plate instead
+   (home-v3-desk-surface-{desktop,mobile}.png): warm kraft-paper grain,
+   real top-left directional light (the dappled leaf-shadow falloff), and
+   the plant/washi-tape/paperclip/pen props already baked into the photo
+   at its edges -- so there is nothing left to fake or duplicate in CSS.
+   `:has()` gives this higher specificity than the plain `body` rule above
    and the >=1024px wood-desk `body` override further down, so it wins at
-   every width without needing !important or extra nesting; scoped so no
-   other tab's background policy changes. */
-/* Phase 185 -- Phase 184's single top-left radial pool, layered as its own
-   flat image on top of the repeated paper tile, still read as two
-   independent things stacked on each other: a light "panel" sitting over
-   a separately-patterned wallpaper, with a visible seam wherever the pool
-   faded out before the tile's own edges did. This replaces that with one
-   blended surface: two full-viewport light pools (a warm source top-left,
-   a much fainter cool-shadow pool bottom-right so the light reads as
-   directional, not just "brighter in one corner") plus the same paper
-   tile, but blended into the base color with `soft-light` instead of
-   painted as a flat separate layer -- the grain now reads as texture IN
-   the lit surface, not a wallpaper pattern the light sits on top of. */
+   every width without needing !important; scoped so no other tab's
+   background policy changes. Mobile gets the portrait-cropped plate
+   (props relocated for a narrow frame) below 1024px, matching the
+   existing mobile/desktop split every other Home V3 rule already uses;
+   desktop gets the landscape plate at 1024px+. `background-position` is
+   biased right-of-center (62%) rather than plain "center": at most real
+   viewport ratios `cover` crops some width off both sides, and centering
+   evenly would crop into the pen/paperclip (near the photo's right edge)
+   as much as the plant (near its left edge) -- shifting right preserves
+   more of the right-edge props since the notebook cluster's own left
+   column (title note) already sits closest to the photo's left edge. */
 body:has(.home-v3) {
-  background-color: #f4e9d0;
-  background-image:
-    radial-gradient(ellipse 100% 85% at 16% 6%, rgba(255, 238, 200, 0.6), transparent 62%),
-    radial-gradient(ellipse 90% 75% at 88% 92%, rgba(96, 68, 36, 0.16), transparent 65%),
-    url("/brand/decor/home-v3/home-v3-paper-surface.png");
-  background-repeat: no-repeat, no-repeat, repeat;
-  background-size: 100% 100%, 100% 100%, 620px 620px;
-  background-blend-mode: normal, normal, soft-light;
+  background-color: #d9c3a0;
+  background-image: url("/brand/decor/home-v3/home-v3-desk-surface-mobile.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: 62% 30%;
+}
+
+@media (min-width: 1024px) {
+  body:has(.home-v3) {
+    background-image: url("/brand/decor/home-v3/home-v3-desk-surface-desktop.png");
+    background-position: 62% 42%;
+  }
 }
 
 @media (max-width: 640px) {
@@ -2347,35 +2371,22 @@ button {
   width: 100%;
 }
 
-/* Phase 185 -- edge desk props (the target mockup's plant/washi-tape/
-   paperclip/pen). home-v3's own prop crops (home-v3-prop-pen.png,
-   home-v3-prop-paperclip.png) still carry a baked-in dark vignette/stray
-   matte fragment from their uncropped source sheet -- reusing them would
-   fail the "clean matte only" bar, so this borrows the already-QA'd
-   transparent cutouts from `../phase131/` instead (that phase's own
-   manifest confirmed real per-pixel alpha, no vignette, by compositing
-   each one onto white). Hidden below 1440px: the notebook cluster stays
-   Phase 184's full width (96vw/96vw) down to 1024px, which leaves only a
-   ~2-4% gutter outside it -- not enough room for a prop without risking
-   the "collides with the scene" failure, so props only render once the
-   cluster's own cap (90vw at >=1440px) actually opens up real desk margin
-   on the sides. Positioned relative to `.home-v3-scene` (not the cluster),
-   inset from the viewport edge, so they sit outside the cluster's own
-   footprint regardless of what the cluster is doing at its own edges. */
-.home-v3-prop {
-  display: none;
-  position: absolute;
-  z-index: 1;
-  opacity: 0.94;
-  pointer-events: none;
-  filter: drop-shadow(0 10px 16px rgba(64, 43, 24, 0.2));
-}
-
-.home-v3-prop img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+/* Phase 186 -- Phase 185's `.home-v3-prop` DOM cutouts (leaf/washi-tape/
+   paperclip/pen borrowed from ../phase131/) are gone. The new photographed
+   background plate (see body:has(.home-v3) above) already bakes the same
+   plant/washi-tape/paperclip/pen into its own edges -- keeping the DOM
+   copies would have doubled them up. */
+/* Phase 186 -- short, crisp paper-edge shadow shared by the three "loose
+   paper" objects (title note, CTA stamp, shortcut tabs), unified to the
+   new background plate's top-left light source: a small positive x/y
+   offset (light from upper-left casts toward lower-right) with a tight
+   blur, unlike the notebook's much bigger/softer shadow below -- these
+   read as thin paper resting a few millimeters off the desk, not a heavy
+   object like the notebook. */
+.home-v3-note,
+.home-v3-cta,
+.home-v3-shortcut {
+  filter: drop-shadow(2px 4px 4px rgba(64, 43, 24, 0.22));
 }
 
 .home-v3-note {
@@ -2410,13 +2421,20 @@ button {
   aspect-ratio: 1183 / 860;
   margin-top: -12px;
   z-index: 1;
-  filter: drop-shadow(0 14px 18px rgba(64, 43, 24, 0.24));
+  /* Phase 186 -- shadow direction unified to the new background plate's
+     top-left light source: a positive x-offset (light from upper-left
+     casts toward lower-right) instead of the old straight-down shadow.
+     Wide and low, not sharp -- the notebook is the one heavy object in
+     the scene. */
+  filter: drop-shadow(7px 16px 16px rgba(64, 43, 24, 0.26));
 }
 
 /* A flatter contact-shadow ellipse at the spine/base edge, on top of the
    drop-shadow above -- the "the book is actually pressing into the mat"
    cue a cast shadow alone doesn't give. Lives at every width now (used to
-   be desktop-only), since mobile needed the same grounding cue. */
+   be desktop-only), since mobile needed the same grounding cue. Center
+   shifted right of the book's own center (58% not 50%) to match the same
+   top-left light source. */
 .home-v3-notebook::after {
   content: "";
   position: absolute;
@@ -2425,7 +2443,7 @@ button {
   bottom: -9%;
   height: 20%;
   z-index: -1;
-  background: radial-gradient(ellipse 65% 100% at 50% 0%, rgba(30, 20, 9, 0.5), transparent 78%);
+  background: radial-gradient(ellipse 65% 100% at 58% 0%, rgba(30, 20, 9, 0.5), transparent 78%);
   pointer-events: none;
 }
 
@@ -2454,7 +2472,9 @@ button {
   bottom: -18%;
   height: 30%;
   z-index: -1;
-  background: radial-gradient(ellipse 60% 100% at 50% 25%, rgba(30, 20, 9, 0.4), transparent 75%);
+  /* Phase 186 -- center shifted right (56%) to match the plate's top-left
+     light source, same as the notebook's own contact shadow. */
+  background: radial-gradient(ellipse 60% 100% at 56% 25%, rgba(30, 20, 9, 0.4), transparent 75%);
   pointer-events: none;
 }
 
@@ -2504,9 +2524,11 @@ button {
 .home-v3-title {
   margin: 0;
   color: var(--text);
+  font-family: var(--home-serif);
   font-size: 16px;
-  font-weight: 800;
-  line-height: 1.28;
+  font-weight: 700;
+  line-height: 1.32;
+  letter-spacing: 0.01em;
 }
 
 .home-v3-subtitle {
@@ -2660,7 +2682,9 @@ button {
 .home-v3-shortcut-label {
   overflow: hidden;
   font-size: 12px;
-  font-weight: 800;
+  /* Phase 186 -- 800 read as a UI button label; a paper tab's own printed
+     label doesn't need to shout as loud as an app button does. */
+  font-weight: 650;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -2777,14 +2801,17 @@ button {
        notebook would paint over them by default stacking instead of the
        other way around. */
     z-index: 0;
-    filter: drop-shadow(0 24px 34px rgba(64, 43, 24, 0.28));
+    /* Phase 186 -- same top-left light source as the mobile rule (positive
+       x-offset), scaled up for the much bigger desktop notebook. */
+    filter: drop-shadow(12px 26px 30px rgba(64, 43, 24, 0.3));
   }
 
   /* The drop-shadow above follows the book's own silhouette (reads as an
      object's cast shadow), which alone still looks like a shape floating
      a little above the page. This is a separate, flatter contact-shadow
      ellipse right at the spine/base edge -- the "the book is actually
-     pressing into the desk" cue a cast shadow alone doesn't give. */
+     pressing into the desk" cue a cast shadow alone doesn't give. Center
+     shifted right (58%) to match the plate's top-left light source. */
   .home-v3-notebook::after {
     content: "";
     position: absolute;
@@ -2793,7 +2820,7 @@ button {
     bottom: -10%;
     height: 22%;
     z-index: -1;
-    background: radial-gradient(ellipse 65% 100% at 50% 0%, rgba(30, 20, 9, 0.55), transparent 78%);
+    background: radial-gradient(ellipse 65% 100% at 58% 0%, rgba(30, 20, 9, 0.55), transparent 78%);
     pointer-events: none;
   }
 
@@ -2888,7 +2915,10 @@ button {
   }
 
   .home-v3-shortcut:not(:disabled):hover {
-    filter: brightness(1.04);
+    /* Combined into one filter value -- a separate `filter: brightness()`
+       here would replace (not add to) the base rule's drop-shadow instead
+       of stacking with it, blanking the paper-edge shadow on hover. */
+    filter: brightness(1.04) drop-shadow(2px 4px 4px rgba(64, 43, 24, 0.22));
   }
 
   .home-v3-shortcut--vocab:not(:disabled):hover {
@@ -2981,7 +3011,7 @@ button {
     bottom: -14%;
     height: 34%;
     z-index: -1;
-    background: radial-gradient(ellipse 60% 100% at 50% 25%, rgba(30, 20, 9, 0.48), transparent 75%);
+    background: radial-gradient(ellipse 60% 100% at 56% 25%, rgba(30, 20, 9, 0.48), transparent 75%);
     pointer-events: none;
   }
 }
@@ -3003,47 +3033,6 @@ button {
   .home-v3-charm {
     width: 172px;
     height: 172px;
-  }
-
-  /* Corner desk props -- only once the cluster's own 90vw cap actually
-     leaves real desk margin outside it (see the base .home-v3-prop
-     comment for why this is gated to this tier). Inset from the
-     viewport/scene edge, not the cluster, so they stay clear of it
-     regardless of the cluster's own internal layout. */
-  .home-v3-prop {
-    display: block;
-  }
-
-  .home-v3-prop--leaf {
-    left: 1.2%;
-    top: 4%;
-    width: clamp(46px, 3.6vw, 84px);
-    aspect-ratio: 223 / 400;
-    transform: rotate(-10deg);
-  }
-
-  .home-v3-prop--washi {
-    left: 1%;
-    bottom: 6%;
-    width: clamp(50px, 4vw, 90px);
-    aspect-ratio: 400 / 353;
-    transform: rotate(8deg);
-  }
-
-  .home-v3-prop--paperclip {
-    right: 1.3%;
-    top: 16%;
-    width: clamp(38px, 3vw, 66px);
-    aspect-ratio: 400 / 378;
-    transform: rotate(20deg);
-  }
-
-  .home-v3-prop--pen {
-    right: 1%;
-    top: 50%;
-    width: clamp(46px, 3.6vw, 82px);
-    aspect-ratio: 184 / 400;
-    transform: rotate(38deg);
   }
 }
 
