@@ -26,23 +26,20 @@ type HomeDashboardProps = {
 
 const ASSET_BASE = "/brand/decor/home-v3";
 
-// Phase 177 (Home V3 layered asset rebuild) -- reskin failed; five straight
-// CSS-only passes (177-181) kept every object positioned as its own %
-// offset of one shared box, which still read as a paper background with a
-// bundle of PNGs scattered on it no matter how much overlap/shadow was
-// added.
-// Phase 183 (skeleton replacement) -- adds two wrapper roles that didn't
-// exist before instead of more numeric tweaks. `.home-v3-mat` is the
-// physical desk surface (a real placemat card, not a texture tile) that
-// the whole cluster visibly rests on. `.home-v3-cluster` is the notebook
-// treated as one compound object: note/CTA/shortcuts/Shiori/privacy are
-// still independent DOM nodes for live text and handlers, but every one of
-// them is now positioned as a % of the notebook's own cluster box instead
-// of the outer scene, so they move and overlap as attachments of the
-// notebook rather than as five separately-placed stickers. Mobile keeps
-// this same mat+cluster nesting (not a separate flat document flow) --
-// only the overlap direction changes (vertical stack with negative-margin
-// overlaps instead of desktop's absolute %).
+// Phase 177-183 -- current Home regressed into a central card-frame;
+// implement the target mockup (references/mockups/home-phase184-target-
+// mockup.png) instead.
+// Phase 184 (target mockup implementation) -- Phase 183's `.home-v3-mat`
+// gave the cluster a real surface to rest on, but that surface rendered as
+// a rounded card, and the mockup's first read is a big notebook filling
+// the screen, not an illustration inside a card. The mat wrapper is gone;
+// `.home-v3-scene` itself is now the near-full-bleed surface (a wide, low
+// ambient wash + contact shadow, no card edge/box-shadow), and
+// `.home-v3-cluster` -- the notebook-as-compound-object, unchanged in
+// concept from Phase 183 -- is sized to make the notebook the dominant
+// object on desktop, the way the target mockup does. Mobile keeps the same
+// cluster nesting; only the overlap direction changes (vertical stack with
+// negative-margin overlaps instead of desktop's absolute %).
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -75,10 +72,9 @@ export function HomeDashboard({
   return (
     <section className="tab-panel home-dashboard home-v3" aria-live="polite">
       <div className="home-v3-scene">
-       <div className="home-v3-mat">
         {/* .home-v3-cluster is the notebook-as-compound-object: every child
             below is positioned as a % of THIS box (see globals.css), not
-            the outer mat/scene, so the note/CTA/shortcuts/Shiori read as
+            the outer scene, so the note/CTA/shortcuts/Shiori read as
             attachments of the notebook rather than independently-placed
             stickers. DOM order is mobile's *reading* order (vertical
             overlap flow) -- note/CTA before the notebook itself, per the
@@ -223,7 +219,6 @@ export function HomeDashboard({
           </span>
         </p>
         </div>
-       </div>
       </div>
     </section>
   );
