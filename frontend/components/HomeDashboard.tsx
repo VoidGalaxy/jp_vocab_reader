@@ -25,6 +25,12 @@ type HomeDashboardProps = {
 };
 
 const ASSET_BASE = "/brand/decor/home-v3";
+// Phase 185 -- home-v3's own prop crops (home-v3-prop-pen.png, home-v3-
+// prop-paperclip.png) still carry a baked-in dark vignette/stray matte
+// fragment from their shared source sheet, so the edge desk props borrow
+// ../phase131/'s already-QA'd transparent cutouts instead (see the
+// .home-v3-prop comment in globals.css).
+const PROP_BASE = "/brand/decor/phase131";
 
 // Phase 177-183 -- current Home regressed into a central card-frame;
 // implement the target mockup (references/mockups/home-phase184-target-
@@ -72,6 +78,22 @@ export function HomeDashboard({
   return (
     <section className="tab-panel home-dashboard home-v3" aria-live="polite">
       <div className="home-v3-scene">
+        {/* Edge desk props, positioned against the scene (not the cluster)
+            so they stay in the desk margin outside the notebook cluster's
+            own footprint -- see the .home-v3-prop comment in globals.css
+            for why these are hidden below 1440px. Purely decorative. */}
+        <span className="home-v3-prop home-v3-prop--leaf" aria-hidden="true">
+          <img src={`${PROP_BASE}/desk-prop-leaf.webp`} alt="" draggable={false} />
+        </span>
+        <span className="home-v3-prop home-v3-prop--washi" aria-hidden="true">
+          <img src={`${PROP_BASE}/desk-prop-washi-tape.webp`} alt="" draggable={false} />
+        </span>
+        <span className="home-v3-prop home-v3-prop--paperclip" aria-hidden="true">
+          <img src={`${PROP_BASE}/desk-prop-paperclip.webp`} alt="" draggable={false} />
+        </span>
+        <span className="home-v3-prop home-v3-prop--pen" aria-hidden="true">
+          <img src={`${PROP_BASE}/desk-prop-pen.webp`} alt="" draggable={false} />
+        </span>
         {/* .home-v3-cluster is the notebook-as-compound-object: every child
             below is positioned as a % of THIS box (see globals.css), not
             the outer scene, so the note/CTA/shortcuts/Shiori read as
