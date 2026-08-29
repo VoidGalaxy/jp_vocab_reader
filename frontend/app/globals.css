@@ -2848,6 +2848,34 @@ button {
     filter: drop-shadow(12px 26px 30px rgba(64, 43, 24, 0.3));
   }
 
+  /* Phase 190 -- the "tabs tucked under the cover" depth cue, replacing
+     Phase 189's negative z-index on the whole shortcut group (see its own
+     comment for why that broke). A thin cream strip -- the same tone as
+     the notebook's own baked-in page-edge sliver at its spine -- anchored
+     to the NOTEBOOK's bottom edge and sized entirely relative to the
+     notebook's own box (not the cluster), so it scales consistently with
+     the notebook across viewport widths instead of drifting the way a
+     cluster-height-relative % did. z-index above both the notebook (0)
+     and the shortcut tabs (2) so it visually sits on top of whichever
+     part of a tab falls under it; height is a deliberately small slice
+     (~10% of the notebook's own height) so it only ever covers a tab's
+     blank top margin above its icon (each tab's own content padding
+     starts 24% down, see .home-v3-shortcut-content), never the
+     icon/label/hint themselves. Inherits pointer-events:none from the
+     notebook, so it never blocks a click even over the sliver it hides. */
+  .home-v3-notebook::before {
+    content: "";
+    position: absolute;
+    left: 3%;
+    right: 3%;
+    bottom: -7%;
+    height: 11%;
+    z-index: 6;
+    background: linear-gradient(180deg, #f1e7cf 0%, #e9dab8 100%);
+    border-radius: 0 0 3px 3px;
+    box-shadow: 0 3px 5px rgba(64, 43, 24, 0.16);
+  }
+
   /* The drop-shadow above follows the book's own silhouette (reads as an
      object's cast shadow), which alone still looks like a shape floating
      a little above the page. This is a separate, flatter contact-shadow
@@ -2936,22 +2964,36 @@ button {
      as "tucked in", not "placed next to".
      Phase 188 -- pulled down further still (-6% -> -10%): still read as
      sitting just below the cover rather than tucked into it.
-     Phase 189 -- inverted the approach: instead of pulling the group
-     further down (which only ever moves it further from the cover, never
-     "into" it), it now sits much higher (-10% -> 12%, positive -- its own
-     top portion now falls inside the notebook's box, see the notebook's
-     own top/width above) AND paints BEHIND the notebook (z-index -1 vs
-     the notebook's 0) -- the part of each tab inside that rectangle is
-     now actually covered by the cover, so the tabs read as tucked under
-     it with only their lower icon/label "poking out" below the spine
-     edge. .home-v3-notebook has pointer-events:none so this doesn't cost
-     any click target. */
+     Phase 189 -- tried sending the whole group behind the notebook
+     (negative z-index) with a big positive `bottom%` so its top portion
+     fell inside the notebook's box. This broke two ways at once: the
+     overlap amount is a % of the CLUSTER's height, but the notebook's own
+     height comes from its WIDTH (aspect-ratio) -- the two scale
+     differently across viewport sizes, so the "safe" overlap tuned at one
+     width buried the icons/labels entirely at another (confirmed on an
+     actual wide screenshot). And putting the whole group behind the
+     notebook is also just the wrong tool: any occlusion depth needs to
+     stay tiny and separate from whether the tabs are z-index-foreground
+     (clickable, undimmed) at all.
+     Phase 190 -- back to a normal foreground z-index (see the shared
+     z-index below) sitting close to the notebook's bottom edge, no
+     overlap math tying it to the notebook's box. The "tucked under the
+     cover" depth cue now comes entirely from `.home-v3-notebook::before`
+     -- a thin cream strip anchored to the NOTEBOOK's own bottom edge
+     (same aspect-ratio-derived scale as the notebook itself, not the
+     cluster) that paints a fixed, small band across whatever the tab tops
+     happen to sit under. Sized to the notebook, not the cluster, so it
+     no longer drifts between viewport widths -- but the shortcut GROUP's
+     own position is still a % of the CLUSTER's height, so how close it
+     actually sits to that strip still drifts (see the two overrides
+     below for the same reason .home-v3-notebook's own bottom-edge-as-%-
+     of-cluster-height isn't constant). Tuned per-tier by taking real
+     screenshots at each rather than one value everywhere. */
   .home-v3-shortcuts {
     display: block;
     right: 0%;
-    bottom: 14%;
+    bottom: 24%;
     width: 40%;
-    z-index: -1;
   }
 
   .home-v3-shortcut {
@@ -3039,13 +3081,20 @@ button {
      Phase 187 -- pulled up closer to the CTA and shrunk (76% -> 70% top,
      24% -> 19% width): the previous gap read as its own isolated footer
      line rather than a small sticker tucked at the bottom of the note/CTA
-     pile. */
+     pile.
+     Phase 190 -- shrunk again (19% -> 15%) and nudged off note/CTA's
+     shared left:0% (1% -> 4%) with more rotation (-1deg -> -3deg): at the
+     same left edge and a near-zero tilt, note/CTA/privacy lined up into
+     a visibly straight vertical edge -- reading as an aligned UI column,
+     not objects someone set down. Breaking that one shared edge and
+     giving it a more tossed-on angle reads as a smaller, lower-priority
+     sticker instead of the column's fourth rung. */
   .home-v3-privacy {
-    left: 1%;
+    left: 4%;
     top: 70%;
     bottom: auto;
-    width: 19%;
-    transform: rotate(-1deg);
+    width: 15%;
+    transform: rotate(-3deg);
     margin: 0;
   }
 
@@ -3064,6 +3113,24 @@ button {
    screenshot this phase was judged against already had generous desk
    margin at ultrawide sizes, so this tier only needed to come down
    slightly, not as much as the 1024-1439px tier did. */
+/* Phase 190 -- the shortcut group's own overlap-into-the-notebook amount
+   (.home-v3-shortcuts' bottom%) is a % of the CLUSTER's height, while the
+   notebook's bottom edge -- what it needs to line up with -- is at a %
+   of that SAME cluster height that depends on the cluster's width/height
+   ratio, which is not constant: cluster width comes from a vw-based
+   clamp, cluster height from an svh-based one, and they grow at
+   different rates as the viewport does. One bottom% value could not fit
+   every tier -- confirmed by computing the notebook's actual bottom
+   edge position at each tier (roughly 57% of cluster height at 1024px,
+   70% at 1280px, high-80s% on very wide/short monitors) rather than
+   guessing. This tier and the 1440px one below each re-tune it against
+   that tier's own ratio. */
+@media (min-width: 1280px) {
+  .home-v3-shortcuts {
+    bottom: 8%;
+  }
+}
+
 @media (min-width: 1440px) {
   .home-v3-cluster {
     width: min(1400px, 78vw);
@@ -3071,15 +3138,8 @@ button {
     margin-top: 36px;
   }
 
-  /* Phase 189 -- the shortcut group's overlap into the notebook (see the
-     1024px tier's .home-v3-shortcuts) is set as a % of the CLUSTER's own
-     height, but the notebook's height comes from its WIDTH (aspect-ratio)
-     -- since cluster width and height scale differently across viewport
-     sizes, the same % overlaps more at this wider tier and started
-     swallowing the icon badges, not just the tape-strip top. Pulled back
-     down here rather than tuning one value to try to fit every width. */
   .home-v3-shortcuts {
-    bottom: 8%;
+    bottom: -4%;
   }
 }
 

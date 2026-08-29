@@ -70,7 +70,7 @@ export function HomeDashboard({
       <div className="home-v3-scene">
         {/* .home-v3-cluster is the notebook-as-compound-object: every child
             below is positioned as a % of THIS box (see globals.css), not
-            the outer scene, so the note/CTA/shortcuts/Shiori read as
+            the outer scene, so the note/CTA/shortcuts read as
             attachments of the notebook rather than independently-placed
             stickers. DOM order is mobile's *reading* order (vertical
             overlap flow) -- note/CTA before the notebook itself, per the
