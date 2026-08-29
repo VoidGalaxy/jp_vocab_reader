@@ -26,24 +26,23 @@ type HomeDashboardProps = {
 
 const ASSET_BASE = "/brand/decor/home-v3";
 
-// Phase 177 (Home V3 layered asset rebuild) -- Phase 168-176 built Home as
-// one full-bleed photographed desk scene with every live element
-// absolutely positioned as a % of that single photo. That model's ceiling
-// was the photo itself: a single image can only be one crop/composition,
-// so fitting the whole scene in one viewport meant cropping the photo
-// (Phase 176), and the frame's own photographed wood background could
-// never fully stop competing with the app's outer wood background because
-// both were literally photographs of a desk.
-// This pass throws out the single-photo model entirely. Home is now a
-// paper surface background (a page-level texture, not a scene photo) with
-// five independent transparent-PNG objects -- notebook, title note, CTA
-// stamp, three shortcut tabs, privacy label -- laid out like a mockup, not
-// cropped from one photograph. Every object still carries only its own
-// art (no baked Korean/Japanese copy); live text/icons/routing are DOM
-// content layered on top exactly as before, just against a different
-// image per element instead of one shared photo. Mobile drops the
-// absolute-position desk composition for plain document flow (note -> CTA
-// -> notebook -> shortcuts -> privacy), not a shrunk copy of desktop.
+// Phase 177 (Home V3 layered asset rebuild) -- reskin failed; five straight
+// CSS-only passes (177-181) kept every object positioned as its own %
+// offset of one shared box, which still read as a paper background with a
+// bundle of PNGs scattered on it no matter how much overlap/shadow was
+// added.
+// Phase 183 (skeleton replacement) -- adds two wrapper roles that didn't
+// exist before instead of more numeric tweaks. `.home-v3-mat` is the
+// physical desk surface (a real placemat card, not a texture tile) that
+// the whole cluster visibly rests on. `.home-v3-cluster` is the notebook
+// treated as one compound object: note/CTA/shortcuts/Shiori/privacy are
+// still independent DOM nodes for live text and handlers, but every one of
+// them is now positioned as a % of the notebook's own cluster box instead
+// of the outer scene, so they move and overlap as attachments of the
+// notebook rather than as five separately-placed stickers. Mobile keeps
+// this same mat+cluster nesting (not a separate flat document flow) --
+// only the overlap direction changes (vertical stack with negative-margin
+// overlaps instead of desktop's absolute %).
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -76,12 +75,18 @@ export function HomeDashboard({
   return (
     <section className="tab-panel home-dashboard home-v3" aria-live="polite">
       <div className="home-v3-scene">
-        {/* DOM order is mobile's *reading* order (plain flex-column flow,
-            see globals.css) -- note/CTA before the notebook itself, per
-            the brief's "제목 메모를 먼저 읽히게" -- while desktop absolutely
+       <div className="home-v3-mat">
+        {/* .home-v3-cluster is the notebook-as-compound-object: every child
+            below is positioned as a % of THIS box (see globals.css), not
+            the outer mat/scene, so the note/CTA/shortcuts/Shiori read as
+            attachments of the notebook rather than independently-placed
+            stickers. DOM order is mobile's *reading* order (vertical
+            overlap flow) -- note/CTA before the notebook itself, per the
+            brief's "제목 메모를 먼저 읽히게" -- while desktop absolutely
             positions every child by %, so this order has no effect on
             desktop placement (z-index below keeps desktop stacking correct
             regardless of source order). */}
+        <div className="home-v3-cluster">
         <div className="home-v3-note">
           <img
             className="home-v3-note-img"
@@ -217,6 +222,8 @@ export function HomeDashboard({
             원문 전체는 서버에 저장하지 않아요.
           </span>
         </p>
+        </div>
+       </div>
       </div>
     </section>
   );
