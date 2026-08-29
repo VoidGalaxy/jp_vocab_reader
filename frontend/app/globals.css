@@ -8325,28 +8325,18 @@ input.reading-vocab-sticker-toggle:checked {
   margin-top: 8px;
 }
 
-/* Phase 166 (Vocab V2) -- .vocab-notebook-scene/-index/-pages (a 3-column
-   CSS-paper grid: filter rail | list | detail, no real photo underneath)
-   are gone; the notebook is now .vocab-v2-scene, a real photographed
-   index-notebook (see below). .vocab-v2-pages (the flowing list+detail
-   area below the photo) keeps a plain 2-column grid. */
-.vocab-v2-pages {
-  position: relative;
-  display: grid;
-  gap: 10px;
-  min-width: 0;
-}
-
-/* Phase 166 -- .vocab-v2-list-column already sits on the flowing ruled-
-   paper background (.vocab-v2-pages, see below), so the "덱을 아직 안
-   골랐어요" empty state just needs room to center in, not its own texture
-   layer. Desktop-only, matching this column's own larger min-height
-   elsewhere. */
+/* Phase 182 -- .vocab-v2-pages (list+detail flowing BELOW the photo on a
+   separately CSS-simulated ruled-paper texture, entirely disconnected from
+   the actual photo above it) is gone. List and detail now render as
+   absolutely-positioned layers directly on .vocab-v3-scene's own photo --
+   see the .vocab-v3-* block further down this file. .vocab-desk-empty
+   still just needs room to center its guide message in, now inside
+   .vocab-v3-ledger-wrap instead of the old .vocab-v2-list-column. */
 @media (min-width: 1024px) {
   .vocab-desk-empty {
     display: grid;
     align-items: center;
-    min-height: 320px;
+    min-height: 220px;
   }
 }
 
@@ -8586,109 +8576,93 @@ input.reading-vocab-sticker-toggle:checked {
   color: #6b5f3f;
 }
 
-/* Phase 166 (Vocab V2) -- .vocab-notebook-scene/-index (a 3-column CSS
-   grid: filter rail | list | detail, no real photo underneath) are gone.
-   The filter rail is now .vocab-v2-tab-rail, anchored to the real photo
-   in .vocab-v2-scene (see further down this file). .vocab-notebook-detail
-   survives as the sticky "note page" half of the remaining 2-column
-   .vocab-v2-pages grid (list | detail) -- still gated at the same
-   >=1024px tier VocabSection.tsx's isDesktopDetail matchMedia query uses,
-   and mobile still never shows it (display: none), keeping the exact
-   inline row-expansion flow. */
-.vocab-notebook-detail {
+/* Phase 182 -- .vocab-notebook-detail (a separate sticky card painted with
+   a CSS ruled-paper texture standing in for "the notebook's other page")
+   and .vocab-v2-list-column (the list's own, separately-simulated ruled
+   texture) are both gone. List and detail are no longer two independently
+   textured panels sitting side by side below a photo -- .vocab-v3-ledger
+   and .vocab-v3-detail are just internally-scrolling DOM layers laid
+   directly on the ONE real photo's own left/right pages (.vocab-v3-scene,
+   further down). Mobile keeps .vocab-v3-detail hidden (display:none) and
+   the exact inline per-row detail flow, same as before this phase. */
+.vocab-v3-detail {
   display: none;
 }
 
 @media (min-width: 1024px) {
-  .vocab-v2-pages {
-    grid-template-columns: minmax(280px, 1fr) minmax(260px, 320px);
-    align-items: start;
-    gap: 20px;
+  .vocab-v3-ledger-wrap {
+    position: absolute;
+    left: 17%;
+    top: 25%;
+    width: 36%;
+    height: 68%;
+    /* flex, not grid-template-rows: the middle child (the {message}
+       paragraph) only renders conditionally, and a fixed row-track count
+       would leave .vocab-v3-ledger (meant to be the flexible last track)
+       stuck in whichever track its position happens to land in instead of
+       actually filling the remaining height. flex:1 on the ledger itself
+       (below) fills whatever space is left regardless of how many
+       siblings precede it. */
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
   }
 
-  /* Sticky so the note page stays in view while the (potentially long)
-     word list scrolls past it, same idea as the reading tab's pinned
-     word inspector (Phase 65). Paints the identical ruled-paper recipe as
-     .vocab-v2-list-column below (a repeating horizontal rule + a single
-     red vertical margin line) so list and detail read as two pages of
-     the same open notebook. .paper-corner (added in VocabSection.tsx)
-     supplies the folded top-right corner every list row already carries,
-     tying this panel to the same row-card language instead of a separate
-     "photo panel" identity. */
-  .vocab-notebook-detail {
-    display: block;
-    position: sticky;
-    top: 24px;
-    max-height: calc(100vh - 48px);
+  /* Compound selector (beats either single-class rule regardless of
+     source order) -- the "덱을 아직 안 골랐어요" guide is this wrap's only
+     child then, and needs to center in the leftover space rather than
+     stretch to fill it the way a real ledger list does. */
+  .vocab-v3-ledger-wrap.vocab-desk-empty {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .vocab-v3-ledger {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    padding: 18px 16px 18px 34px;
-    border: 1px solid var(--paper-border);
-    border-radius: 4px 16px 16px 16px;
-    background-color: var(--paper-bg);
-    background-image:
-      linear-gradient(
-        90deg,
-        transparent 25px,
-        rgba(193, 105, 74, 0.38) 25px,
-        rgba(193, 105, 74, 0.38) 26px,
-        transparent 26px
-      ),
-      repeating-linear-gradient(
-        180deg,
-        rgba(61, 47, 20, 0.07) 0px,
-        rgba(61, 47, 20, 0.07) 1px,
-        transparent 1px,
-        transparent 27px
-      );
-    box-shadow: 0 10px 24px var(--paper-shadow);
+    padding-right: 6px;
   }
 
-  .vocab-notebook-detail .vocab-row-detail {
+  .vocab-v3-detail {
+    display: block;
+    position: absolute;
+    left: 57%;
+    top: 8%;
+    width: 35%;
+    height: 84%;
+    overflow-y: auto;
+    padding: 4px 10px 10px;
+  }
+
+  /* The ledger column is narrower than a normal page-width word list, so
+     the row's own flex-wrap row (headword + meaning + status + toggle all
+     trying to share one line before wrapping) read as a jumbled two-line
+     mess instead of clean wraps -- stacking each part on its own line
+     here is more legible in this narrower column, closer to how a real
+     ledger entry (one fact per line) reads anyway. */
+  .vocab-v3-ledger .vocab-row-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .vocab-v3-ledger .vocab-row-meaning {
+    flex-basis: auto;
+  }
+
+  .vocab-v3-detail .vocab-row-detail {
     margin-top: 0;
     padding-top: 0;
     border-top: none;
   }
-
-  /* Phase 76 -- a small wire paperclip pinning the top of the note page
-     (nested rounded-rect rings, border only, same recipe as Reading's
-     .reader-desk-prop--clip), reinforcing "a selected word's page held
-     open" instead of the panel just floating. Centered on the box's top
-     edge (not right-aligned) so it never sits near the scene-level
-     leaf-sprig hint above (.vocab-notebook-scene::before, top-right of the
-     whole spread). .vocab-notebook-detail is already `position: sticky` (a
-     positioned element), so these anchor to it directly with no extra
-     wrapper needed. Idle guide and populated detail share the same outer
-     element, so this shows in both states. */
-  .vocab-notebook-detail::before,
-  .vocab-notebook-detail::after {
-    content: "";
-    position: absolute;
-    top: -9px;
-    left: 50%;
-    z-index: 2;
-    width: 16px;
-    height: 24px;
-    border: 2px solid var(--tone-coral);
-    border-radius: 7px;
-    transform: translateX(-50%);
-    pointer-events: none;
-  }
-
-  .vocab-notebook-detail::after {
-    top: -4px;
-    width: 10px;
-    height: 15px;
-    border-color: var(--tone-coral);
-  }
 }
 
-/* Phase 87 -- this used to draw its own dashed-border/soft-bg box nested
-   inside .vocab-notebook-detail's own bordered/shadowed panel, so the idle
-   note page read as "an empty box inside another empty box" right next to
-   the equally-empty middle column (Phase 86 QA). It now just sits directly
-   on the parent's ruled-paper background -- one page, one guide message,
-   not two stacked empty containers. */
-.vocab-notebook-detail-idle {
+/* Phase 87 -- the idle note page sits directly on the parent photo's own
+   paper instead of drawing a second nested box -- one page, one guide
+   message. */
+.vocab-v3-detail-idle {
   display: grid;
   place-items: center;
   gap: 8px;
@@ -8697,58 +8671,12 @@ input.reading-vocab-sticker-toggle:checked {
   text-align: center;
 }
 
-.vocab-notebook-detail-header {
+.vocab-v3-detail-header {
   display: grid;
   gap: 8px;
   padding-bottom: 12px;
   margin-bottom: 12px;
   border-bottom: 1px dashed var(--border);
-}
-
-/* Phase 166 -- .index-card-drawer (a tinted, accent-topped "drawer" box
-   holding the rows -- one more bordered panel between the scene and the
-   actual scan aid) is gone. .vocab-v2-list-column is the plain list
-   wrapper; at >=1024px it picks up the same repeating-rule ruled-paper
-   texture .vocab-notebook-detail already uses (a horizontal rule pattern
-   plus one red vertical margin line), so list and detail clearly read as
-   two pages of the same open notebook instead of a bordered panel next to
-   a plain white column. Rows themselves (.vocabulary-index-row) stay
-   fully opaque -- the texture only shows in the gaps between them, where
-   lined paper would normally peek through a stack of index cards. */
-.vocab-v2-list-column {
-  display: grid;
-  gap: 10px;
-  min-width: 0;
-}
-
-@media (min-width: 1024px) {
-  .vocab-v2-list-column {
-    padding: 4px 10px 4px 28px;
-    background-image:
-      linear-gradient(
-        90deg,
-        transparent 15px,
-        rgba(193, 105, 74, 0.32) 15px,
-        rgba(193, 105, 74, 0.32) 16px,
-        transparent 16px
-      ),
-      repeating-linear-gradient(
-        180deg,
-        rgba(61, 47, 20, 0.06) 0px,
-        rgba(61, 47, 20, 0.06) 1px,
-        transparent 1px,
-        transparent 27px
-      );
-  }
-
-  /* .result-heading's shared flex row (used by several other tabs, so not
-     changed globally) doesn't wrap, so the "저장된 단어장" title text
-     itself was wrapping into the 새로고침 button's reserved space
-     instead. Scoped to this column only: the button drops to its own
-     line first, before the title text is forced to wrap. */
-  .vocab-v2-list-column .result-heading {
-    flex-wrap: wrap;
-  }
 }
 
 /* vocabulary-index-row (renamed from .vocab-row) -- the outer row identity;
@@ -8865,13 +8793,22 @@ input.reading-vocab-sticker-toggle:checked {
    plain expanded form section. Purely decorative (::before), no layout
    change to the content it wraps. */
 @media (max-width: 1023px) {
+  /* Phase 182 -- was a flat kraft-tone patch; now the real note-pocket
+     photo (the same bordered index-card crop the desktop detail pane
+     sits on, see .vocab-v3-detail), so an expanded row's detail reads as
+     a slip pulled from the SAME notebook's back pocket rather than an
+     unrelated tinted card. */
   .vocab-row-detail {
     position: relative;
     margin-top: 10px;
-    padding: 12px 12px 10px;
+    padding: 14px 14px 10px 22px;
     border-top: none;
     border-radius: 3px 12px 12px 12px;
-    background: #f1e6cc;
+    background-color: #f8f2dd;
+    background-image: url("/brand/decor/phase182/vocab-note-pocket-mobile.webp");
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 8px 18px rgba(37, 43, 30, 0.16);
     transform: rotate(-0.4deg);
   }
 
@@ -9140,39 +9077,38 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 /* ===========================================================================
-   vocab-v2-* -- Phase 166 (V2 scene reconstruction: Vocab). Phase 173
-   moved the heading off the plain page and into the scene itself (see
-   .vocab-v2-title-tag below) -- everything here is .vocab-v2-scene, an
-   aspect-ratio box whose background-image IS the photographed open index
-   notebook (v2-vocab-index-* assets,
-   mobile 9:16 default, desktop 16:9 swapped in at >=1024px, matching every
-   other V2 tab's existing breakpoint split). The 6 status/due filters are
-   opaque physical tabs anchored to the photo's own tab column (left rail
-   desktop, right rail mobile); search sits on the photo's blank ruled
-   page; deck/sort are small paper chips on the photo's other page;
-   학습하기/원문읽기/더보기 are the same bookmark-flag tags the app already
-   uses elsewhere, tucked into the spread instead of a toolbar above it.
-   The scene is a fixed aspect-ratio "first impression" establishing shot,
-   not the list's scroll container -- .vocab-v2-pages (list + detail) flows
-   normally below it on matching paper tone, so a 20-50 row list stays a
-   normal page scroll, not a cramped nested-scroll box.
+   vocab-v3-* -- Phase 182 (Vocab Full Scene Replacement / Skeleton
+   Removal). Mobile (base rules): a compact top slip (title tag + search +
+   deck/sort), a horizontal wrapping row of physical index tabs, then a
+   single ruled notebook page (vocab-ledger-page-mobile.webp) the ledger
+   rows sit on in normal document flow -- a different shot of the same
+   notebook, not the desktop spread scaled down. Selected-row detail stays
+   the existing inline .vocab-row-detail flow (see its own mobile rules
+   further down), now given a small note-pocket paper backing.
+   >=1024px: .vocab-v3-scene becomes ONE open ring-binder photo
+   (vocab-notebook-spread-no-tabs.webp -- tabs cropped out at the source so
+   .vocab-v3-tab-rail's own photographed tab crops are the only tabs on
+   screen) with the tab rail sticking out past its left edge, search/deck/
+   sort as paper labels on the left page's own top margin, the word ledger
+   an internally-scrolling layer over the rest of that same left page, and
+   the detail note living on the photo's own right-page index card --
+   list, detail, and controls all read as one physical object instead of a
+   photo header plus a separately-textured list below it.
    =========================================================================== */
-.vocab-v2-scene-wrap {
+.vocab-v3-scene {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* Phase 173 -- was .vocab-v2-heading, a title row in normal flow above
-   .vocab-v2-scene-wrap. Now a small paper tag hanging off the notebook's
-   own top edge -- left side on mobile (the tab rail runs down the right
-   edge there), right side on desktop (the rail moves to the left edge),
-   so it's never on the same side as those physical tabs at either
-   breakpoint. */
-.vocab-v2-title-tag {
-  position: absolute;
-  z-index: 4;
-  left: 5%;
-  top: 0;
+.vocab-v3-notebook-img {
+  display: none;
+}
+
+.vocab-v3-title-tag {
   display: inline-flex;
+  align-self: flex-start;
   align-items: center;
   gap: 6px;
   padding: 5px 12px 5px 8px;
@@ -9182,218 +9118,129 @@ input.reading-vocab-sticker-toggle:checked {
   color: var(--text);
   font-size: 12px;
   font-weight: 800;
-  transform: translateY(-60%) rotate(-2deg);
+  transform: rotate(-2deg);
 }
 
-.vocab-v2-title-tag .shiori-mark {
+.vocab-v3-title-tag .shiori-mark {
   width: 16px;
   height: 16px;
 }
 
-@media (min-width: 1024px) {
-  .vocab-v2-title-tag {
-    left: auto;
-    right: 4%;
-    transform: translateY(-60%) rotate(2deg);
-  }
-}
-
-.vocab-v2-scene {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 941 / 1672;
-  border-radius: 18px;
-  overflow: hidden;
-  background-color: var(--paper-bg);
-  background-image: url("/brand/decor/v2/v2-vocab-index-mobile-9x16.webp");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  box-shadow: 0 16px 36px var(--paper-shadow);
-}
-
-@media (min-width: 1024px) {
-  .vocab-v2-scene {
-    aspect-ratio: 1672 / 941;
-    background-image: url("/brand/decor/v2/v2-vocab-index-notebook-desktop-16x9.webp");
-  }
-}
-
-/* Tab rail -- 6 opaque physical tabs (전체/모르는/헷갈리는/아는/미분류/
-   복습예정만) covering the photo's own decorative tab column exactly, so
-   shape/position come from the real photographed tabs but color/label
-   come from the app's own status language (same hex values the mobile
-   inline filter chips already use) -- a tab never needs to fight the
-   photo for contrast since it fully opaques its own patch of it. Mobile:
-   right edge (the mobile photo's tabs run down the right side). Desktop:
-   left edge (the desktop photo's tabs run down the left side). */
-.vocab-v2-tab-rail {
-  position: absolute;
-  right: 0;
-  top: 13%;
-  width: 13%;
-  height: 70%;
-  z-index: 1;
+/* Physical index tabs -- a horizontal wrapping row on mobile (no
+   horizontal scroll: brief explicitly rules that out), each button a real
+   photographed tab crop (phase182/vocab-tab-*.png) instead of a solid CSS
+   color block. */
+.vocab-v3-tab-rail {
   display: flex;
-  flex-direction: column;
-  gap: 3%;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
-@media (min-width: 1024px) {
-  .vocab-v2-tab-rail {
-    left: 2%;
-    right: auto;
-    top: 3%;
-    width: 15%;
-    height: 94%;
-  }
-}
-
-.vocab-v2-tab {
-  flex: 1 1 0;
-  min-width: 0;
+.vocab-v3-tab {
+  position: relative;
+  flex: 0 0 auto;
+  width: 30%;
+  aspect-ratio: 362 / 260;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 4px;
-  border: none;
-  border-radius: 3px 10px 10px 3px;
-  background: var(--muted);
-  color: #fff;
-  font-size: 10.5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
   font-weight: 800;
-  line-height: 1.25;
   text-align: center;
-  box-shadow: 2px 3px 7px rgba(37, 43, 30, 0.16);
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft);
+  cursor: pointer;
 }
 
-@media (min-width: 1024px) {
-  .vocab-v2-tab {
-    border-radius: 10px 3px 3px 10px;
-    font-size: 12px;
-    padding: 4px 6px;
-  }
-}
-
-.vocab-v2-tab-all {
-  background: var(--screen-accent, var(--tone-ink-brown));
-}
-
-.vocab-filter-known {
-  background: #1b6b3a;
-}
-
-.vocab-filter-uncertain {
-  background: #6f5f96;
-}
-
-.vocab-filter-unknown {
-  background: #96603f;
-}
-
-.vocab-filter-unclassified {
-  background: #6b5f3f;
-}
-
-.vocab-v2-tab-due {
-  background: var(--tone-coral);
-}
-
-/* Active = pulled out further, like a real selected divider sitting proud
-   of the stack, plus a brighter ring -- no thick border, matching the
-   pre-V2 tabs' own "두꺼운 bordered button처럼 만들지 않는다" rule. */
-.vocab-v2-tab-active {
-  transform: translateX(-3px) scale(1.04);
-  box-shadow:
-    0 0 0 2px rgba(255, 255, 255, 0.75) inset,
-    3px 5px 12px rgba(37, 43, 30, 0.24);
-}
-
-@media (min-width: 1024px) {
-  .vocab-v2-tab-active {
-    transform: translateX(4px) scale(1.04);
-  }
-}
-
-/* Search -- the single most scan-critical control, so it gets the photo's
-   blank ruled note page directly: a transparent input reads as writing on
-   that real paper, not a white box floating over the photo (same recipe
-   Classify V2's source-slip textarea uses). */
-.vocab-v2-search-zone {
+.vocab-v3-tab-img {
   position: absolute;
-  left: 5%;
-  top: 9%;
-  width: 78%;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+
+.vocab-v3-tab-label {
+  position: relative;
   z-index: 1;
+  padding: 0 14% 6% 8%;
+  line-height: 1.15;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
+}
+
+.vocab-v3-tab-active {
+  filter: brightness(1.08) saturate(1.15);
+  transform: translateY(-3px) scale(1.04);
+}
+
+.vocab-v3-tab-active .vocab-v3-tab-label {
+  font-weight: 900;
+}
+
+/* Compact top slip -- search first (the single most scan-critical
+   control), deck + sort chips right after. Normal flow on mobile, laid
+   onto the photo's own blank page margin on desktop (see the >=1024px
+   override below). */
+.vocab-v3-topstrip {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.vocab-v3-search-slip {
+  display: flex;
+  flex: 1 1 200px;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 3px 12px 12px 3px;
+  background: var(--panel-bg);
+  box-shadow: 0 4px 10px rgba(37, 43, 30, 0.1);
 }
 
-@media (min-width: 1024px) {
-  .vocab-v2-search-zone {
-    left: 20%;
-    top: 6%;
-    width: 32%;
-  }
-}
-
-.vocab-v2-search-zone .vocab-search-icon {
-  position: static;
-  flex: 0 0 auto;
-  transform: none;
-}
-
-.vocab-v2-search-input {
+.vocab-v3-search-input {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  padding: 4px 2px;
+  padding: 2px 2px 3px;
   border: none;
-  border-bottom: 1.5px solid rgba(61, 47, 20, 0.35);
+  border-bottom: 1.5px solid rgba(61, 47, 20, 0.3);
   border-radius: 0;
   background: transparent;
   color: var(--text);
   font-size: 13px;
 }
 
-.vocab-v2-search-input:focus {
+.vocab-v3-search-input:focus {
   outline: none;
   border-bottom-color: var(--screen-accent, var(--primary));
 }
 
-.vocab-v2-search-input::placeholder {
-  color: #7c6a52;
-  opacity: 0.75;
+/* .vocab-search-icon (shared with SharedDeckSection's own search field) is
+   absolutely positioned by default for a wrap that pads its input to make
+   room -- this slip is a plain flex row instead, so the icon needs to sit
+   in flow as a normal flex item. */
+.vocab-v3-search-slip .vocab-search-icon {
+  position: static;
+  flex: 0 0 auto;
+  transform: none;
 }
 
-/* Deck + sort -- small opaque paper chips (not translucent -- legible
-   regardless of what's directly beneath them), same recipe Classify V2's
-   deck/show-known chips use. Mobile groups them just below search on the
-   same ruled note; desktop tucks them onto the photo's other blank page. */
-.vocab-v2-controls-zone {
-  position: absolute;
-  left: 5%;
-  top: 22%;
-  width: 78%;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+.vocab-v3-chip-icon {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
 }
 
-@media (min-width: 1024px) {
-  .vocab-v2-controls-zone {
-    left: 60%;
-    top: 6%;
-    width: 36%;
-  }
-}
-
-.vocab-v2-chip {
+.vocab-v3-chip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -9408,7 +9255,7 @@ input.reading-vocab-sticker-toggle:checked {
   box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
 }
 
-.vocab-v2-chip select {
+.vocab-v3-chip select {
   min-width: 0;
   max-width: 12em;
   border: none;
@@ -9420,57 +9267,51 @@ input.reading-vocab-sticker-toggle:checked {
   text-overflow: ellipsis;
 }
 
-.vocab-v2-chip-icon {
-  flex: 0 0 auto;
-  width: 12px;
-  height: 12px;
-  color: var(--muted);
+/* Ledger wrap -- mobile: the shared ruled-page photo behind normal-flow
+   rows (the list scrolls with the page, same as every other mobile list in
+   this app). Desktop switches to an internally-scrolling layer positioned
+   over the SAME notebook photo's left page -- see the >=1024px rules
+   further down (grouped with .vocab-v3-detail so list/detail positioning
+   stays easy to compare side by side). */
+.vocab-v3-ledger-wrap {
+  position: relative;
+  min-width: 0;
+  padding: 12px 14px 12px 10px;
+  border-radius: 4px 16px 16px 4px;
+  background-color: #f8f2dd;
+  background-image: url("/brand/decor/phase182/vocab-ledger-page-mobile.webp");
+  background-size: cover;
+  background-position: top;
+  background-repeat: no-repeat;
+  box-shadow: 0 10px 22px rgba(37, 43, 30, 0.14);
 }
 
-/* 학습하기/원문읽기/더보기 -- reuses .vocab-bookmark-action's existing
-   notched-flag shape verbatim (see below), just repositioned into the
-   scene instead of a toolbar row above it. */
-/* Mobile: normal flow directly under the photo (not overlaid on it) --
-   the mobile photo's pocket zone is only ~19% of the scene's height, not
-   enough room for a wide primary CTA plus 2 more actions plus a stat note
-   without them colliding at the bottom edge (confirmed via a real
-   screenshot). Desktop has real room, so >=1024px switches back to an
-   absolute overlay on the photo's blank right page. */
-.vocab-v2-actions-zone {
-  position: static;
+.vocab-v3-ledger {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* 학습하기/원문읽기/더보기 stamp row + the small stat note, both rendered
+   as siblings right after .vocab-v3-scene -- see VocabSection.tsx. */
+.vocab-v3-stamp-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 4px;
 }
 
-/* .vocab-bookmark-action-toggle's own margin-left:auto exists to push it
-   to the end of a wide toolbar row -- inside this narrower zone (a flex
-   column on desktop, a wrapping row on mobile) that auto margin instead
-   shoves it against the zone's own right edge, squeezing "더보기" onto two
-   lines. Zeroed out here so all 3 actions flow the same way. */
-.vocab-v2-actions-zone .vocab-bookmark-action-toggle {
-  margin-left: 0;
+.vocab-v3-more-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 2px 4px;
 }
 
-@media (min-width: 1024px) {
-  .vocab-v2-actions-zone {
-    position: absolute;
-    left: 60%;
-    top: 22%;
-    width: 36%;
-    z-index: 1;
-    margin-top: 0;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-.vocab-v2-count-note {
-  position: static;
+.vocab-v3-count-note {
   display: inline-block;
-  margin-top: 8px;
+  margin-left: auto;
   padding: 4px 10px;
   border-radius: 2px 8px 8px 2px;
   background: var(--panel-bg);
@@ -9482,26 +9323,108 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 @media (min-width: 1024px) {
-  .vocab-v2-count-note {
+  /* The whole scene collapses onto ONE real photo: the mobile-only single-
+     page image and the mobile tab-rail's wrapping-row layout both give way
+     to the photo + a left-edge tab column. */
+  .vocab-v3-scene {
+    display: block;
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    aspect-ratio: 1267 / 933;
+  }
+
+  .vocab-v3-notebook-img {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: fill;
+    pointer-events: none;
+    user-select: none;
+    border-radius: 10px;
+    box-shadow: 0 18px 36px rgba(37, 43, 30, 0.22);
+  }
+
+  .vocab-v3-title-tag {
+    position: absolute;
+    z-index: 3;
+    left: 4%;
+    top: -3%;
+    transform: rotate(-2deg);
+  }
+
+  /* Sticks out past the photo's own left cover edge, exactly where the
+     source photo's baked-in tabs used to be before they were cropped out
+     -- these are the ONLY tabs on screen now. */
+  .vocab-v3-tab-rail {
+    position: absolute;
+    z-index: 2;
+    /* Was -6%: the scene doesn't reliably have that much surrounding page
+       margin at every width, so a negative left this large clipped tab
+       labels against the viewport's own left edge (confirmed via
+       screenshot -- "완벽히 아는 단어" lost its 완). 0 keeps the tabs
+       flush with the notebook's own left cover edge instead of bleeding
+       further left past it. */
+    left: 0;
+    top: 4%;
+    width: 14%;
+    height: 90%;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+
+  .vocab-v3-tab {
+    flex: 1 1 0;
+    width: 100%;
+    aspect-ratio: auto;
+    font-size: 12px;
+  }
+
+  .vocab-v3-tab-label {
+    padding: 0 40% 6% 6%;
+    font-size: 10.5px;
+  }
+
+  .vocab-v3-tab-active {
+    transform: translateX(4px) scale(1.05);
+  }
+
+  .vocab-v3-topstrip {
     position: absolute;
     z-index: 1;
-    margin-top: 0;
-    left: 60%;
-    top: 80%;
-    width: 36%;
-    font-size: 11.5px;
+    left: 17%;
+    top: 3%;
+    width: 32%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
   }
-}
 
-/* The 더보기 disclosure -- dynamic height, so it renders as a sibling
-   right after .vocab-v2-scene (a fixed aspect-ratio, overflow:hidden
-   box), not nested inside it. Reads as a small drawer pulled out from the
-   notebook rather than a toolbar. */
-.vocab-v2-more-panel {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 2px 4px;
+  /* .vocab-v3-search-slip's mobile flex-basis (200px, sized for a row
+     layout) becomes a HEIGHT basis once the topstrip switches to
+     flex-direction:column here -- ballooned the slip to ~200px tall
+     instead of its natural content height. */
+  .vocab-v3-search-slip {
+    flex: 0 0 auto;
+  }
+
+  .vocab-v3-chip {
+    align-self: flex-start;
+  }
+
+  .vocab-v3-ledger-wrap {
+    background: none;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .vocab-v3-ledger {
+    gap: 0;
+  }
 }
 
 /* Softened -- 덱 관리/덱 공유/고급 used to each be their own
@@ -9977,7 +9900,7 @@ input.reading-vocab-sticker-toggle:checked {
      so the row still reads as one clear primary action plus small labels,
      not three stacked action bars. 44px tap target kept via min-height,
      not visual padding. */
-  .vocab-v2-actions-zone {
+  .vocab-v3-stamp-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -10001,11 +9924,11 @@ input.reading-vocab-sticker-toggle:checked {
     margin-left: 0;
   }
 
-  .vocab-v2-more-panel {
+  .vocab-v3-more-panel {
     width: 100%;
   }
 
-  .vocab-v2-more-panel .vocab-bookmark-action {
+  .vocab-v3-more-panel .vocab-bookmark-action {
     width: auto;
     min-width: 0;
     min-height: 42px;

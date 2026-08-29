@@ -306,11 +306,11 @@ export function VocabSection({
     });
   }
 
-  // Casual Sticker Reader (Phase 68; Phase 166 moved the filter rail into
-  // the V2 masthead scene, leaving list + selected-item detail page as a
-  // 2-column spread) only kicks in at the same >=1024px "true desktop"
-  // tier Phase 65/66/67 already gate on; keep this breakpoint in sync
-  // with .vocab-v2-pages's grid in globals.css. Starts false (matches
+  // Casual Sticker Reader (Phase 68; Phase 182 moved list + detail onto
+  // the same notebook photo the tab rail already anchors to) only kicks in
+  // at the same >=1024px "true desktop" tier the rest of the scene gates
+  // on; keep this breakpoint in sync with .vocab-v3-detail's own
+  // display:none/block switch in globals.css. Starts false (matches
   // SSR/first paint); only read once a
   // row is actually expanded, which never happens before this effect has
   // had a chance to run, so there is no hydration mismatch to worry about
@@ -334,77 +334,95 @@ export function VocabSection({
   }
 
   return (
-    <section className="tab-panel vocab-panel" aria-live="polite">
-      {/* Phase 166 (Vocab V2) -- replaces the Phase 149 boxed-hero-free but
-          still admin-panel-shaped header (stat pill row + bookmark-action
-          row) and the Phase 68 vocab-notebook-scene (a 3-column CSS-paper
-          grid: index rail | list | detail, no real photo underneath it).
-          The title now sits above a real photographed open index notebook
-          (.vocab-v2-scene, v2-vocab-index-* assets) -- the 6 status/due
-          filters are opaque physical tabs anchored to the photo's own tab
-          column, search/deck/sort are small paper labels on the photo's
-          blank pages, and 학습하기/원문읽기/더보기 are bookmark tags tucked
-          into the same spread instead of a toolbar row above it.
-          Phase 173 -- the "읽으며 담은 단어 노트 / 내 단어장" heading used
-          to be its own row above the scene (.vocab-v2-heading, normal
-          flow), the same "title bar sitting on top of a photo" shape this
-          phase's brief specifically calls out. Moved into .vocab-v2-scene-
-          wrap as a small paper tag hanging off the notebook's top edge
-          instead -- see .vocab-v2-title-tag. Rendered as a sibling of
-          .vocab-v2-scene (not a child of it) so its own overflow:hidden
-          never clips the tag's upward hang, the same reason
-          .vocab-v2-actions-zone below already renders as a sibling too.
-          Opposite side from .vocab-v2-tab-rail at each breakpoint so it
-          never overlaps those tabs. */}
-      <div className="vocab-v2-scene-wrap">
-      <span className="vocab-v2-title-tag">
-        <ShioriMark variant="default" />
-        내 단어장
-      </span>
+    <section className="tab-panel vocab-panel vocab-v3" aria-live="polite">
+      {/* Phase 182 (Vocab Full Scene Replacement) -- the Phase 166 "V2"
+          scene was a photographed notebook used ONLY as a fixed-aspect
+          header establishing shot: filters/search/deck/sort/actions
+          overlaid on it, then .vocab-v2-pages (the actual list + detail)
+          flowed in normal document flow *below* the photo on a separately
+          CSS-simulated ruled-paper texture. Two different "notebook"
+          representations stacked on top of each other -- exactly the
+          "list/detail이 하나의 단어장 안에 묶이지 않는다" failure. This
+          throws that model out: .vocab-v3-scene is ONE open ring-binder
+          photo (tabs cropped OUT of the source photo -- see
+          vocab-notebook-spread-no-tabs.webp -- so our own interactive tab
+          assets are the only tabs on screen) and the word ledger + detail
+          note both render as absolutely-positioned DOM layers directly on
+          top of that same photo's own left/right pages, not below it.
+          Status/due filters are no longer solid CSS-color chips
+          (.vocab-v2-tab's `background: var(--muted)` etc, the "거대한 세로
+          컬러 필터 블록" the brief calls out) -- they're real photographed
+          index-tab crops (phase182/vocab-tab-*.png, sliced from the
+          previously-unused phase145 tab-strip asset) sticking out past the
+          notebook's own left edge. Mobile does not reuse this absolute-
+          position desktop layout at a smaller scale -- see the mobile-only
+          rules in globals.css for the separate compact-slip / horizontal-
+          tab-strip / single-page-ledger composition. */}
+      <div className="vocab-v3-scene">
+        <img
+          className="vocab-v3-notebook-img"
+          src="/brand/decor/phase182/vocab-notebook-spread-no-tabs.webp"
+          alt=""
+          draggable={false}
+        />
+        <span className="vocab-v3-title-tag">
+          <ShioriMark variant="default" />
+          내 단어장
+        </span>
 
-      <div className="vocab-v2-scene">
-        <div className="vocab-v2-tab-rail" role="group" aria-label="상태 필터">
+        <div className="vocab-v3-tab-rail" role="group" aria-label="상태 필터">
           {statusFilterOptions.map((option) => {
             const isActive = statusFilter === option.value;
-            const colorClass = statusFilterColorClass[option.value];
             return (
               <button
                 key={option.value}
                 type="button"
-                className={`vocab-v2-tab${isActive ? " vocab-v2-tab-active" : ""}${
-                  colorClass ? ` ${colorClass}` : " vocab-v2-tab-all"
+                className={`vocab-v3-tab vocab-v3-tab-${option.value}${
+                  isActive ? " vocab-v3-tab-active" : ""
                 }`}
                 aria-pressed={isActive}
                 onClick={() => onStatusFilterChange(option.value)}
               >
-                {option.label}
+                <img
+                  className="vocab-v3-tab-img"
+                  src={`/brand/decor/phase182/vocab-tab-${option.value}.png`}
+                  alt=""
+                  draggable={false}
+                />
+                <span className="vocab-v3-tab-label">{option.label}</span>
               </button>
             );
           })}
           <button
             type="button"
-            className={`vocab-v2-tab vocab-v2-tab-due${dueOnly ? " vocab-v2-tab-active" : ""}`}
+            className={`vocab-v3-tab vocab-v3-tab-due${dueOnly ? " vocab-v3-tab-active" : ""}`}
             aria-pressed={dueOnly}
             onClick={() => onDueOnlyChange(!dueOnly)}
           >
-            복습 예정만
+            <img
+              className="vocab-v3-tab-img"
+              src="/brand/decor/phase182/vocab-tab-due.png"
+              alt=""
+              draggable={false}
+            />
+            <span className="vocab-v3-tab-label">복습 예정만</span>
           </button>
         </div>
 
-        <div className="vocab-v2-search-zone">
-          <SearchIcon className="vocab-search-icon" />
-          <input
-            className="vocab-v2-search-input"
-            value={searchText}
-            onChange={(event) => onSearchTextChange(event.target.value)}
-            placeholder="단어, 읽기, 뜻으로 검색"
-            aria-label="단어장 검색"
-          />
-        </div>
+        <div className="vocab-v3-topstrip">
+          <div className="vocab-v3-search-slip">
+            <SearchIcon className="vocab-search-icon" />
+            <input
+              className="vocab-v3-search-input"
+              value={searchText}
+              onChange={(event) => onSearchTextChange(event.target.value)}
+              placeholder="단어, 읽기, 뜻으로 검색"
+              aria-label="단어장 검색"
+            />
+          </div>
 
-        <div className="vocab-v2-controls-zone">
-          <label className="vocab-v2-chip">
-            <CardFileIcon className="vocab-v2-chip-icon" />
+          <label className="vocab-v3-chip vocab-v3-chip-deck">
+            <CardFileIcon className="vocab-v3-chip-icon" />
             <select value={selectedDeckId} onChange={(event) => onSelectedDeckChange(event.target.value)}>
               <option value="" disabled hidden>덱을 선택해 주세요</option>
               <option value="all">전체 단어장</option>
@@ -415,7 +433,7 @@ export function VocabSection({
               ))}
             </select>
           </label>
-          <label className="vocab-v2-chip">
+          <label className="vocab-v3-chip vocab-v3-chip-sort">
             정렬
             <select
               value={sortValue}
@@ -431,124 +449,12 @@ export function VocabSection({
           </label>
         </div>
 
-      </div>
-
-      {/* actions-zone and count-note render as their own siblings after
-          .vocab-v2-scene (not nested inside it) so they can never be
-          clipped by the photo box's own overflow:hidden -- desktop has
-          real room to overlay them on the photo's blank right page
-          (.vocab-v2-scene-wrap gives them an absolute-positioning context
-          matching the scene's own bounds), but the mobile photo's pocket
-          zone is only ~19% of the scene's height, not enough room for 3
-          buttons plus a stat note without them colliding. Below 1024px
-          these render in normal flow directly under the photo instead. */}
-      <div className="vocab-v2-actions-zone">
-        <button
-          type="button"
-          className="vocab-bookmark-action vocab-bookmark-action-primary"
-          onClick={onStudySelectedDeck}
-          disabled={selectedDeckId === "all" || selectedDeckId === ""}
-          title={
-            selectedDeckId === "all" || selectedDeckId === ""
-              ? "학습할 특정 덱을 먼저 선택해 주세요."
-              : undefined
-          }
-        >
-          <CardsIcon className="button-icon" />이 덱 학습하기
-        </button>
-        <button
-          type="button"
-          className="vocab-bookmark-action"
-          onClick={onGoToReading}
-        >
-          <BookIcon className="button-icon" />
-          원문 읽기
-        </button>
-        <button
-          type="button"
-          className="vocab-bookmark-action-toggle"
-          onClick={() => setIsMoreActionsOpen((value) => !value)}
-          aria-expanded={isMoreActionsOpen}
-        >
-          <ChevronDownIcon
-            className={`reading-vocab-collapse-icon${
-              isMoreActionsOpen ? "" : " reading-vocab-collapse-icon-collapsed"
-            }`}
-          />
-          더보기
-        </button>
-      </div>
-
-      <div className="vocab-v2-count-note">
-        전체 {stats ? stats.total_vocab_count : items.length}개 · 복습 예정{" "}
-        {stats ? stats.due_today_count : "-"}개 · 어려운 단어{" "}
-        {stats ? stats.hard_count : "-"}개
-      </div>
-      </div>
-
-      {/* Rendered as a sibling right after the scene, not inside it -- the
-          scene is a fixed aspect-ratio photo box (overflow:hidden so the
-          photo's edges stay clean), and this disclosure's height is
-          dynamic (4 buttons wrap differently per width), so it would get
-          clipped if nested inside that box. */}
-      {isMoreActionsOpen ? (
-        <div className="vocab-v2-more-panel">
-          <button
-            type="button"
-            className="vocab-bookmark-action"
-            onClick={onGoToStudyToday}
-          >
-            <CardsIcon className="button-icon" />
-            오늘 복습하기
-          </button>
-          <button
-            type="button"
-            className="vocab-bookmark-action"
-            onClick={onGoToShared}
-          >
-            <BookshelfIcon className="button-icon" />
-            덱 책장
-          </button>
-          <button
-            type="button"
-            className="vocab-bookmark-action"
-            onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
-          >
-            {isNewVocabFormOpen ? "단어 추가 닫기" : "+ 단어 직접 추가"}
-          </button>
-          {/* 기존 경로(더보기 -> 덱/공유 관리 -> 고급 -> 토글)는 3단계였고,
-              열어도 실제 목록은 화면 밖이라 반응이 없는 것처럼 보였다
-              (Phase 48 QA). 자주 쓰는 편집 기능이라 더보기에서 바로
-              진입시키고, 다른 관리 카드도 함께 열어 기존 경로와 상태를
-              맞춘 뒤 위 useEffect가 실제 내용으로 스크롤해 준다. */}
-          <button
-            type="button"
-            className="vocab-bookmark-action"
-            onClick={() => {
-              setIsManagementOpen(true);
-              setIsCustomTermManagerOpen(true);
-            }}
-          >
-            사용자 정의 용어 관리
-          </button>
-          <button
-            type="button"
-            className="vocab-bookmark-action"
-            onClick={() => setIsManagementOpen((open) => !open)}
-            aria-expanded={isManagementOpen}
-          >
-            덱/공유 관리
-          </button>
-        </div>
-      ) : null}
-
-      <div className="vocab-v2-pages">
       {/* Phase 87 -- 덱을 아직 고르지 않은 상태는 페이지 배경 자체를 줄노트
           질감으로 바꿔 "빈 박스"가 아니라 "아직 아무것도 안 쓴 노트북
           페이지"처럼 읽히게 하고, 그 위에 놓이는 안내는 .vocab-page-guide로
           페이지에 붙인 작은 안내 스티커처럼 만든다 (아래 globals.css). */}
       <div
-        className={`vocab-v2-list-column${
+        className={`vocab-v3-ledger-wrap${
           selectedDeckId === "" ? " vocab-desk-empty" : ""
         }`}
       >
@@ -608,7 +514,7 @@ export function VocabSection({
       ) : null}
 
       {items.length > 0 ? (
-        <div className="vocab-v2-ledger-list">
+        <div className="vocab-v3-ledger">
           {items.map((item) => {
             const isExpanded =
               expandedItemIds.has(item.id) || editingItemId === item.id;
@@ -756,15 +662,17 @@ export function VocabSection({
       )}
       </div>
 
-      {/* vocab-notebook-detail -- the notebook spread's right-hand note
-          page (desktop only, see globals.css). Always mounted (idle guide
-          when nothing is selected, or the same VocabItemDetail content the
-          mobile inline row shows) so it reads as a permanent fixture of
-          the spread, matching the reading tab's pinned inspector (Phase
-          65). selectedItem is only non-null once expandedItemIds still
-          has it -- collapsing a row on desktop falls back to idle for
-          free, no extra bookkeeping needed. */}
-      <aside className="vocab-notebook-detail paper-corner">
+      {/* vocab-v3-detail -- the SAME notebook photo's right-hand note-card
+          page (desktop only, see globals.css; hidden on mobile where the
+          selected item's detail instead renders inline under its row,
+          styled as a folded slip -- see .vocab-row-detail's mobile rules).
+          Always mounted (idle guide when nothing is selected, or the same
+          VocabItemDetail content the mobile inline row shows) so it reads
+          as a permanent fixture of the spread, matching the reading tab's
+          pinned inspector. selectedItem is only non-null once
+          expandedItemIds still has it -- collapsing a row on desktop falls
+          back to idle for free, no extra bookkeeping needed. */}
+      <aside className="vocab-v3-detail">
         {(() => {
           const selectedItem =
             selectedItemId !== null && expandedItemIds.has(selectedItemId)
@@ -789,7 +697,7 @@ export function VocabSection({
                     ? "이 덱에는 아직 담은 단어가 없어요."
                     : "단어를 펼치면 이 자리에서 자세히 볼 수 있어요.";
             return (
-              <div className="vocab-notebook-detail-idle">
+              <div className="vocab-v3-detail-idle">
                 <ShioriGuideCard
                   variant="reading"
                   size="md"
@@ -800,7 +708,7 @@ export function VocabSection({
           }
           return (
             <>
-              <div className="vocab-notebook-detail-header">
+              <div className="vocab-v3-detail-header">
                 <div className="vocab-row-headword">
                   <span className="vocab-item-surface">{selectedItem.surface}</span>
                   {selectedItem.reading && selectedItem.reading !== selectedItem.surface ? (
@@ -845,6 +753,102 @@ export function VocabSection({
         })()}
       </aside>
       </div>
+
+      {/* 학습하기/원문읽기/더보기 -- renders as a sibling right after the
+          scene (not absolutely overlaid on the photo) so its dynamic
+          wrapping height can never be clipped by the scene's own
+          overflow:hidden, matching the "더보기" disclosure right after it.
+          Same .vocab-bookmark-action notched-flag stamp shape as before --
+          only the position moved from "inside the photo" to "a stamped row
+          right under the book", still read as attached to the same
+          object, not a toolbar. */}
+      <div className="vocab-v3-stamp-row">
+        <button
+          type="button"
+          className="vocab-bookmark-action vocab-bookmark-action-primary"
+          onClick={onStudySelectedDeck}
+          disabled={selectedDeckId === "all" || selectedDeckId === ""}
+          title={
+            selectedDeckId === "all" || selectedDeckId === ""
+              ? "학습할 특정 덱을 먼저 선택해 주세요."
+              : undefined
+          }
+        >
+          <CardsIcon className="button-icon" />이 덱 학습하기
+        </button>
+        <button
+          type="button"
+          className="vocab-bookmark-action"
+          onClick={onGoToReading}
+        >
+          <BookIcon className="button-icon" />
+          원문 읽기
+        </button>
+        <button
+          type="button"
+          className="vocab-bookmark-action-toggle"
+          onClick={() => setIsMoreActionsOpen((value) => !value)}
+          aria-expanded={isMoreActionsOpen}
+        >
+          <ChevronDownIcon
+            className={`reading-vocab-collapse-icon${
+              isMoreActionsOpen ? "" : " reading-vocab-collapse-icon-collapsed"
+            }`}
+          />
+          더보기
+        </button>
+        <span className="vocab-v3-count-note">
+          전체 {stats ? stats.total_vocab_count : items.length}개 · 복습 예정{" "}
+          {stats ? stats.due_today_count : "-"}개 · 어려운 단어{" "}
+          {stats ? stats.hard_count : "-"}개
+        </span>
+      </div>
+
+      {isMoreActionsOpen ? (
+        <div className="vocab-v3-more-panel">
+          <button
+            type="button"
+            className="vocab-bookmark-action"
+            onClick={onGoToStudyToday}
+          >
+            <CardsIcon className="button-icon" />
+            오늘 복습하기
+          </button>
+          <button
+            type="button"
+            className="vocab-bookmark-action"
+            onClick={onGoToShared}
+          >
+            <BookshelfIcon className="button-icon" />
+            덱 책장
+          </button>
+          <button
+            type="button"
+            className="vocab-bookmark-action"
+            onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
+          >
+            {isNewVocabFormOpen ? "단어 추가 닫기" : "+ 단어 직접 추가"}
+          </button>
+          <button
+            type="button"
+            className="vocab-bookmark-action"
+            onClick={() => {
+              setIsManagementOpen(true);
+              setIsCustomTermManagerOpen(true);
+            }}
+          >
+            사용자 정의 용어 관리
+          </button>
+          <button
+            type="button"
+            className="vocab-bookmark-action"
+            onClick={() => setIsManagementOpen((open) => !open)}
+            aria-expanded={isManagementOpen}
+          >
+            덱/공유 관리
+          </button>
+        </div>
+      ) : null}
 
       {/* Casual Sticker Reader (Phase 68) -- management/share/custom-term
           panels moved here, after the notebook scene, instead of sitting
