@@ -91,6 +91,26 @@ const ASSET_BASE_V4 = "/brand/decor/home-v4";
 // background vignette, a bigger rail, a stronger emboss, and privacy
 // repositioned into the note/CTA cluster (see the Phase 196 comments on
 // each of those rules).
+// Phase 197 (Shiori peek / lighting+privacy correction) -- the vignette
+// from 196 still read as stage lighting rather than a lit desk, the
+// privacy label sat inside the CTA ticket's own box (its shadow/tail
+// painted over the label text), and Shiori was reintroduced as a small
+// peek behind the title note's tape (candidate F) instead of the earlier
+// failed "mascot sitting on the notebook cover" placement -- see the
+// Shiori-peek element and its CSS comment below for how the occlusion is
+// built. No DOM change for the lighting/privacy fixes, only globals.css.
+// Phase 198 (material grounding) -- removed the privacy sticker entirely:
+// it was Phase 194-197's fix target for four phases running (small ->
+// footer-like -> repositioned into the cluster -> repositioned again off
+// the CTA) and this phase's brief judged the object itself unnecessary on
+// Home's first screen rather than worth a fifth placement attempt. The
+// save-policy line it carried ("원문 전체는 서버에 저장하지 않아요.") is
+// UI copy only -- no storage behavior it was describing has changed, the
+// line is just no longer shown on Home. `home-v3-privacy-label.png` is
+// left in place (untouched) in case a later phase wants the policy line
+// somewhere else on Home; the now-unused `.home-v4-privacy*` CSS is
+// pruned in globals.css. Shiori's peek size also grows this phase (see
+// .home-v4-shiori-peek) -- same tape-occlusion mechanic, just bigger.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -269,21 +289,6 @@ export function HomeDashboard({
             </button>
           </div>
         </div>
-
-        {/* home-v3-privacy-label.png already bakes in its own shield badge
-            (see ASSET_MANIFEST.md), so this carries no separate DOM
-            ShieldIcon -- one shield, not two. */}
-        <p className="home-v4-privacy">
-          <img
-            className="home-v4-privacy-img"
-            src={`${ASSET_BASE}/home-v3-privacy-label.png`}
-            alt=""
-            draggable={false}
-          />
-          <span className="home-v4-privacy-text">
-            원문 전체는 서버에 저장하지 않아요.
-          </span>
-        </p>
       </div>
     </section>
   );

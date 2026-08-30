@@ -1541,15 +1541,21 @@ body {
    enough to recede the far corners, not enough to look staged) and the
    transparent core widened to 44-46% so the dimming only starts well past
    where the note/notebook/CTA cluster actually sits, instead of licking
-   its edges. */
+   its edges.
+   Phase 198 -- still read as staged per this phase's own brief, so lowered
+   again: alpha 0.32 -> 0.2, transparent core 44-46% -> 50-52%. The rest of
+   this phase's grounding work (a darker/more saturated cover, stronger
+   contact shadows) does more of the "notebook reads as the strongest
+   object" job than the vignette should be doing alone -- the vignette's
+   remaining job is just a light natural falloff at the true corners. */
 body:has(.home-v4) {
   background-color: #d9b98a;
   background-image:
     linear-gradient(rgba(255, 248, 226, 0.14), transparent 42%),
     radial-gradient(
-      ellipse 68% 62% at 46% 36%,
-      transparent 46%,
-      rgba(30, 19, 8, 0.32) 100%
+      ellipse 70% 64% at 46% 36%,
+      transparent 52%,
+      rgba(30, 19, 8, 0.2) 100%
     ),
     url("/brand/decor/home-v4/home-v4-desk-surface-mobile.png");
   background-repeat: no-repeat, no-repeat, no-repeat;
@@ -1562,9 +1568,9 @@ body:has(.home-v4) {
     background-image:
       linear-gradient(rgba(255, 248, 226, 0.14), transparent 42%),
       radial-gradient(
-        ellipse 62% 66% at 42% 38%,
-        transparent 44%,
-        rgba(30, 19, 8, 0.32) 100%
+        ellipse 64% 68% at 42% 38%,
+        transparent 50%,
+        rgba(30, 19, 8, 0.2) 100%
       ),
       url("/brand/decor/home-v4/home-v4-desk-surface-desktop.png");
     background-position: center, center, center;
@@ -2423,14 +2429,18 @@ body:has(.home-v4) .app-toolbar {
   filter: sepia(0.07) saturate(1.05) brightness(1.01);
 }
 
-/* Short, crisp paper-edge shadow shared by the "loose paper" objects
-   (title note, CTA ticket), unified to the background plate's top-left
-   light source: a small positive x/y offset (light from upper-left casts
-   toward lower-right) with a tight blur, unlike the notebook's much
-   bigger/softer shadow below -- these read as thin paper resting a few
-   millimeters off the desk, not a heavy object like the notebook. */
-.home-v4-note,
-.home-v4-cta {
+/* Short, crisp paper-edge shadow for the "loose paper" title note,
+   unified to the background plate's top-left light source: a small
+   positive x/y offset (light from upper-left casts toward lower-right)
+   with a tight blur, unlike the notebook's much bigger/softer shadow
+   below -- reads as thin paper resting a few millimeters off the desk,
+   not a heavy object like the notebook.
+   Phase 198 -- this used to be shared with `.home-v4-cta`, but the brief
+   wants the CTA's own shadow doing a different, slightly heavier job (see
+   .home-v4-cta below) now that "붙어 보이게" is its own explicit
+   requirement rather than an assumption the shared paper-shadow already
+   covered -- split so each can be tuned without dragging the other along. */
+.home-v4-note {
   filter: drop-shadow(1px 2px 2px rgba(64, 43, 24, 0.14));
 }
 
@@ -2476,12 +2486,20 @@ body:has(.home-v4) .app-toolbar {
      smaller negative top now lets roughly the bottom half of her box
      actually sink into the tape/note's own canvas (where .home-v4-
      note-img, z-index above this, paints over it) instead of clearing
-     the tape's top edge entirely. */
+     the tape's top edge entirely.
+     Phase 198 -- 30/38px read as "there's a mark on the tape" rather than
+     an intentional charm, per the brief's "있는지 모를 정도로 작아도
+     실패". Grown to 42/58px; top scaled down by roughly the same factor
+     (-7/-10 -> -11/-16) to hold the same ~26-28% exposed-above-the-tape
+     fraction the smaller size had, so growing her doesn't also expose
+     more of her (which would start reading as a full mascot instead of a
+     peek) -- checked against a cropped screenshot after the change, not
+     assumed from the ratio alone. */
   left: 50%;
-  top: -7px;
+  top: -11px;
   z-index: -1;
-  width: 30px;
-  height: 30px;
+  width: 42px;
+  height: 42px;
   transform: translateX(-50%);
   pointer-events: none;
   user-select: none;
@@ -2489,9 +2507,9 @@ body:has(.home-v4) .app-toolbar {
 
 @media (min-width: 1024px) {
   .home-v4-note .home-v4-shiori-peek {
-    top: -10px;
-    width: 38px;
-    height: 38px;
+    top: -16px;
+    width: 58px;
+    height: 58px;
   }
 }
 
@@ -2511,6 +2529,15 @@ body:has(.home-v4) .app-toolbar {
   cursor: pointer;
   transform: rotate(-1.5deg);
   z-index: 4;
+  /* Phase 198 -- previously shared the note's own 1px/2px paper shadow,
+     which read as slightly *too* weightless once the notebook/rail next
+     to it got heavier, stronger contact shadows this same phase (the
+     brief's "CTA는 떠 보이지 않게... 얕은 그림자로"). Still shallow --
+     small offset, small blur, same top-left light direction -- just
+     enough more than the note's own to read as "sitting on top of the
+     note/cover", not enough to look like a separate heavy object the way
+     the notebook's shadow does. */
+  filter: drop-shadow(2px 4px 4px rgba(64, 43, 24, 0.24));
 }
 
 /* The notebook composite. position:relative at every width (not just
@@ -2520,37 +2547,50 @@ body:has(.home-v4) .app-toolbar {
    mobile-flow version and a separate desktop-absolute version. */
 .home-v4-notebook {
   position: relative;
-  width: min(300px, 80%);
+  /* Phase 198 -- +6-7% (300px/80% -> 320px/84%) per the brief's "4-8%만
+     키운다": enough to read as a stronger, more grounded object, not
+     enough to re-crop the desk the way Phase 194 corrected for. */
+  width: min(320px, 84%);
   aspect-ratio: 1183 / 860;
   margin-top: -12px;
   z-index: 1;
   /* Shadow direction unified to the background plate's top-left light
      source: a positive x-offset (light from upper-left casts toward
      lower-right) instead of a straight-down shadow. Wide and low, not
-     sharp -- the notebook is the one heavy object in the scene. */
-  filter: drop-shadow(7px 16px 16px rgba(64, 43, 24, 0.26));
+     sharp -- the notebook is the one heavy object in the scene.
+     Phase 198 -- offset/blur/alpha all increased (7/16/16/0.26 ->
+     9/20/22/0.34) as part of the brief's "책상에 닿아 보이게" contact
+     shadow pass: a bigger, darker cast shadow is what actually reads as
+     "resting on a surface" at a glance, more than the ellipse pool below
+     alone does. */
+  filter: drop-shadow(9px 20px 22px rgba(64, 43, 24, 0.34));
 }
 
 /* A flatter contact-shadow ellipse at the spine/base edge, on top of the
    drop-shadow above -- the "the book is actually pressing into the desk"
    cue a cast shadow alone doesn't give. Center shifted right of the
    book's own center (58% not 50%) to match the same top-left light
-   source. */
+   source.
+   Phase 198 -- widened past the notebook's own edges (4%/4% inset ->
+   -6%/-2%, asymmetric to keep following the same 58%-right-of-center
+   light source) and made taller/darker (20%/0.5 -> 26%/0.6) so the pool
+   reads as a broad, low patch of desk in shadow instead of a shadow that
+   stops exactly at the book's own silhouette -- the brief's "넓고 낮은
+   책상 접지 그림자". */
 .home-v4-notebook::after {
   content: "";
   position: absolute;
-  left: 4%;
-  right: 4%;
-  bottom: -9%;
-  height: 20%;
+  left: -6%;
+  right: -2%;
+  bottom: -12%;
+  height: 26%;
   z-index: -1;
-  background: radial-gradient(ellipse 65% 100% at 58% 0%, rgba(30, 20, 9, 0.5), transparent 78%);
+  background: radial-gradient(ellipse 68% 100% at 58% 0%, rgba(30, 20, 9, 0.6), transparent 78%);
   pointer-events: none;
 }
 
 .home-v4-note-img,
-.home-v4-cta-img,
-.home-v4-privacy-img {
+.home-v4-cta-img {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -2577,6 +2617,14 @@ body:has(.home-v4) .app-toolbar {
   display: block;
   pointer-events: none;
   user-select: none;
+  /* Phase 198 -- material grounding: the cover read as a slightly pale/
+     washed-out sage next to the vignette-recede background, part of why
+     the notebook still felt weaker than its surroundings despite already
+     being the scene's biggest object. Filter only on the cover image
+     itself (not `.home-v4-notebook` as a whole) so it darkens/saturates
+     just the fabric texture -- the emboss/tab-rail/drop-shadow siblings
+     are untouched and don't get doubly darkened. */
+  filter: saturate(1.22) brightness(0.91) contrast(1.05);
 }
 
 /* Phase 195 -- fills the notebook's own previously-blank lower-right cover
@@ -2590,7 +2638,11 @@ body:has(.home-v4) .app-toolbar {
    still registered as blank at a glance (the brief's "표지가 빈 표지로
    보이면 실패"). Bigger and darker, but still just opacity on the same
    flat overlay (no added shadow/border/stroke) -- that distinction is
-   what keeps it a stamped material detail instead of a pasted-on sticker. */
+   what keeps it a stamped material detail instead of a pasted-on sticker.
+   Phase 198 -- the cover underneath got darker/more saturated this phase
+   (see .home-v4-notebook-img's own filter), which ate back some of the
+   emboss's contrast against it; nudged up again (0.42 -> 0.48) to hold
+   the same visible strength against the new, darker base. */
 .home-v4-notebook-emboss {
   position: absolute;
   right: 4%;
@@ -2598,7 +2650,7 @@ body:has(.home-v4) .app-toolbar {
   width: 40%;
   aspect-ratio: 1367 / 1150;
   z-index: 4;
-  opacity: 0.42;
+  opacity: 0.48;
   pointer-events: none;
   user-select: none;
 }
@@ -2725,6 +2777,31 @@ body:has(.home-v4) .app-toolbar {
   z-index: 2;
 }
 
+/* Phase 198 -- the rail image carries its own baked-in shadow (see the
+   Phase 195 comment above), but that shadow is soft/tight enough to read
+   as "the paper tabs have some thickness", not "this whole rail is
+   sitting on the desk" -- the brief's own contact-shadow pass explicitly
+   calls out the rail as needing a shadow separate from the notebook's own
+   (a shared shadow would have to compromise between two very differently
+   shaped objects). A low, wide pool timed to the rail's own bottom edge,
+   same top-left light source (58%-right-of-center) as the notebook's
+   equivalent pool above it. z-index:-1 puts it behind the rail's own art
+   (z-index 0) and buttons (z-index 1) within the rail's own stacking
+   context; since it sits at/below the rail's already-below-the-notebook
+   bottom edge, it's already outside the notebook's own box and so is
+   never covered by the cover regardless of the notebook's higher z-index. */
+.home-v4-tab-rail::after {
+  content: "";
+  position: absolute;
+  left: -4%;
+  right: -2%;
+  bottom: -14%;
+  height: 24%;
+  z-index: -1;
+  background: radial-gradient(ellipse 70% 100% at 58% 0%, rgba(30, 20, 9, 0.42), transparent 76%);
+  pointer-events: none;
+}
+
 .home-v4-tab-rail-img {
   position: absolute;
   inset: 0;
@@ -2840,16 +2917,59 @@ body:has(.home-v4) .app-toolbar {
   height: 11px;
 }
 
-.home-v4-shortcut--vocab .home-v4-shortcut-icon {
-  background: var(--tone-ink-brown);
+/* Phase 198 -- material/typography per tab: the badges and the label/hint
+   text under them used the same near-black `--text`/`--muted` pair on all
+   three tabs, so the only thing distinguishing yellow/coral/blue was the
+   paper color -- the badge circle read as a generic dark dot dropped on
+   top of whatever color happened to be under it (the brief's "generic
+   dark circle처럼 보이면 실패"), and the text didn't visually belong to
+   its own tab's paper the way a printed label on colored card stock
+   would. Each tab's badge and text now share one hue family (a deep,
+   paper-appropriate shade of that tab's own color), just at different
+   lightness -- badge as a solid circle, label darkest/flattest for
+   reading, hint a lighter step of the same hue for the label/hint
+   hierarchy `--text`/`--muted` used to carry generically.
+   These are Home-local literal colors, not overrides of the shared
+   `--tone-*` design tokens those tokens' own consumers elsewhere in the
+   app still use unchanged -- Home's own tab colors needed to be more
+   specific than a token meant to be reused screen-to-screen anyway.
+   Qualified with `.home-v4-tab-rail` (matching this block's other
+   selectors) for consistency, not because any exemption rule collides
+   with these specifically. */
+.home-v4-tab-rail .home-v4-shortcut--vocab .home-v4-shortcut-icon {
+  background: #4a3520;
 }
 
-.home-v4-shortcut--decks .home-v4-shortcut-icon {
-  background: var(--tone-dusty-blue);
+.home-v4-tab-rail .home-v4-shortcut--vocab .home-v4-shortcut-label {
+  color: #3d2f14;
 }
 
-.home-v4-shortcut--review .home-v4-shortcut-icon {
-  background: var(--tone-coral);
+.home-v4-tab-rail .home-v4-shortcut--vocab .home-v4-shortcut-hint {
+  color: #6b5a35;
+}
+
+.home-v4-tab-rail .home-v4-shortcut--decks .home-v4-shortcut-icon {
+  background: #25455a;
+}
+
+.home-v4-tab-rail .home-v4-shortcut--decks .home-v4-shortcut-label {
+  color: #1c3444;
+}
+
+.home-v4-tab-rail .home-v4-shortcut--decks .home-v4-shortcut-hint {
+  color: #4a6575;
+}
+
+.home-v4-tab-rail .home-v4-shortcut--review .home-v4-shortcut-icon {
+  background: #7a3320;
+}
+
+.home-v4-tab-rail .home-v4-shortcut--review .home-v4-shortcut-label {
+  color: #5c2415;
+}
+
+.home-v4-tab-rail .home-v4-shortcut--review .home-v4-shortcut-hint {
+  color: #8a5040;
 }
 
 .home-v4-shortcut-text {
@@ -2882,38 +3002,6 @@ body:has(.home-v4) .app-toolbar {
   line-height: 1.3;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.home-v4-privacy {
-  position: relative;
-  width: min(270px, 80%);
-  aspect-ratio: 1457 / 414;
-  align-self: flex-start;
-  /* Tucked directly under the note/CTA column, off their shared left
-     edge and rotated more than either of them, on purpose -- a small,
-     lower-priority sticker, not the fourth rung of an aligned UI column
-     (note/CTA/privacy sharing one exact left edge read as a list, not
-     objects someone set down on a desk).
-     Positive top margin (not the tight -8px a sibling-of-notebook layout
-     would use): .home-v4-tab-rail is absolutely positioned and escapes
-     notebook's own normal-flow box, extending visually below it -- a
-     tight negative margin here put this sticker right in that zone. */
-  margin: 48px 0 0 7%;
-  transform: rotate(-3deg);
-  z-index: 1;
-}
-
-.home-v4-privacy-text {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  height: 100%;
-  align-items: center;
-  box-sizing: border-box;
-  padding: 8% 6% 8% 27%;
-  color: var(--text-secondary);
-  font-size: 10px;
-  line-height: 1.35;
 }
 
 @media (min-width: 1024px) {
@@ -2951,38 +3039,20 @@ body:has(.home-v4) .app-toolbar {
        the new background vignette above, which recedes the desk itself
        so the extra notebook size actually registers instead of just
        eating into the same amount of "visible desk" complaint Phase 194
-       pulled the camera back to fix. */
-    --nb-left: 28%;
+       pulled the camera back to fix.
+       Phase 198 -- +6% again (58% -> 62%, inside the brief's 4-8% band),
+       shifted 2 points further left (28% -> 26%) to keep roughly the same
+       margin of bare desk past the notebook's own right edge instead of
+       eating further into it. */
+    --nb-left: 26%;
     --nb-top: 2%;
-    --nb-w: 58%;
+    --nb-w: 62%;
     --note-left: 0%;
     --note-top: -2%;
     --note-w: 50%;
     --cta-left: 0%;
     --cta-top: 41%;
     --cta-w: 40%;
-    /* Privacy moves out of "stray footer" territory (-2%/75%, off on its
-       own well below everything else) and up into the note/CTA/notebook
-       cluster's own footprint -- left edge now shares the note/CTA
-       column's 0% instead of sitting further left of it, so it reads as
-       one more object belonging to that pile of stationery rather than a
-       page footer that happens to render inside the scene box.
-       Phase 197 -- top:58% put this INSIDE the CTA ticket's own box
-       instead of near its lower third as intended: the CTA (top:41%,
-       width:40%, its own 2014/781 aspect-ratio) runs to roughly 41% +
-       (0.40 * sceneWidth / 2.579) / sceneHeight of scene height, which at
-       ordinary desktop scene proportions lands past 70% -- well below
-       where this assumed CTA ended, so the ticket's own drop-shadow and
-       tail painted directly over the privacy label underneath it (the
-       brief's failure case, confirmed in the reported screenshot, not
-       guessed from the numbers alone). Pushed down again with a real
-       margin below that measured CTA bottom, not just enough to clear it
-       exactly -- a fixed offset from a measured edge is one adjustment
-       away from re-touching the moment either box's own size changes;
-       a visible gap has slack either box's future resize can eat into
-       without the overlap coming back. */
-    --privacy-left: 3%;
-    --privacy-top: 76%;
   }
 
   /* The broad, low contact-shadow pool under the whole scene -- desktop
@@ -3005,8 +3075,7 @@ body:has(.home-v4) .app-toolbar {
 
   .home-v4-note,
   .home-v4-cta,
-  .home-v4-notebook,
-  .home-v4-privacy {
+  .home-v4-notebook {
     position: absolute;
   }
 
@@ -3023,15 +3092,18 @@ body:has(.home-v4) .app-toolbar {
        DOM order, so without this the notebook would paint over them by
        default stacking instead of the other way around. */
     z-index: 0;
-    filter: drop-shadow(12px 26px 30px rgba(64, 43, 24, 0.3));
+    /* Phase 198 -- same "책상에 닿아 보이게" contact-shadow strengthening
+       as the base rule above, scaled for the desktop tier's larger
+       absolute notebook size (12/26/30/0.3 -> 15/32/38/0.38). */
+    filter: drop-shadow(15px 32px 38px rgba(64, 43, 24, 0.38));
   }
 
   .home-v4-notebook::after {
-    left: 2%;
-    right: 2%;
-    bottom: -10%;
-    height: 22%;
-    background: radial-gradient(ellipse 65% 100% at 58% 0%, rgba(30, 20, 9, 0.55), transparent 78%);
+    left: -6%;
+    right: -3%;
+    bottom: -13%;
+    height: 28%;
+    background: radial-gradient(ellipse 68% 100% at 58% 0%, rgba(30, 20, 9, 0.65), transparent 78%);
   }
 
   /* Phase 194 -- widened (44% -> 48%) so the note's own right edge visibly
@@ -3111,45 +3183,6 @@ body:has(.home-v4) .app-toolbar {
     font-size: 10.5px;
   }
 
-  /* Phase 194 pulled this off the note/CTA's shared left edge and well
-     below everything else specifically to avoid reading as "the fourth
-     rung of an aligned UI column" -- but taken far enough, that same move
-     reads as a completely different failure instead: a page footer that
-     happens to render inside the scene box, disconnected from the note/
-     CTA/notebook pile it's supposed to belong to (the brief's "scene 밖
-     작은 footer처럼 보이는 위치"). Phase 196 -- moved back toward that
-     column (left -2% -> var(--privacy-left), sharing its 0%-ish edge) and
-     up into the CTA ticket's own lower third (top 75% -> var(--privacy-
-     top)) instead of a full scene-height below it, so it visually
-     belongs to the same pile of stationery instead of sitting apart from
-     it. Rotation eased (-6deg -> -3deg) for the same reason: a small
-     shared tilt reads as "part of the same messy desk", a much sharper
-     one on its own reads as a separate decoration. */
-  .home-v4-privacy {
-    left: var(--privacy-left);
-    top: var(--privacy-top);
-    bottom: auto;
-    /* Phase 197 -- 15% wrapped its own single sentence onto 3 lines at
-       1024px widths (the brief's "1024에서 읽기 어려우면 실패") since the
-       box was narrow enough that most words broke mid-line. Widened
-       (15% -> 20%) so the same text fits in <=2 lines instead of shrinking
-       the font, which would have hurt legibility more than it helped. */
-    width: 20%;
-    /* Belt-and-suspenders alongside the repositioning above: even a
-       correctly-placed box can end up under a neighbor's drop-shadow if
-       either one's size is retuned later without remembering this
-       relationship exists. z-index above the CTA/note/notebook's own
-       (all <=3) means the label text stays readable even if a future
-       resize brings the boxes physically closer again. */
-    z-index: 5;
-    transform: rotate(-3deg);
-    margin: 0;
-  }
-
-  .home-v4-privacy-text {
-    padding: 8% 6% 8% 24%;
-    font-size: 10.5px;
-  }
 }
 
 /* At >=1440px the scene keeps growing so the notebook keeps scaling with
