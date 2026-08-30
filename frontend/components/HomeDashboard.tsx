@@ -50,6 +50,17 @@ const ASSET_BASE = "/brand/decor/home-v3";
 // into one `.home-v4-scene` root, since the two boxes had drifted into
 // doing the same job (a single positioning root for the note/CTA/
 // notebook/privacy layer).
+// Phase 194 (physical contact rebuild) -- the notebook-composite skeleton
+// from Phase 192 was structurally right (tabs nested inside the notebook,
+// positioned against its own box) but the actual camera distance/contact
+// depth still read as a photo with PNGs pasted on: the notebook filled
+// too much of the frame (cropping the desk instead of sitting on it), and
+// note/CTA only barely grazed the notebook's edge instead of visibly
+// resting on it. This pass only re-tunes scale/overlap and renames the
+// tab group (`.home-v4-shortcuts` -> `.home-v4-tab-rail`, see below) to
+// name what it actually is -- no new DOM nesting was needed since
+// Phase 192's notebook-relative structure already solved the coordinate-
+// mismatch bug this exists to avoid re-introducing.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -121,10 +132,12 @@ export function HomeDashboard({
         </button>
 
         {/* .home-v4-notebook is the notebook COMPOSITE: cover image +
-            shortcut tab group live in the same box on purpose, so the
-            tabs' overlap-with-the-cover math is a % of THIS box, not the
-            outer scene -- see the top-of-file comment for why that's the
-            actual fix this phase, not just a class rename. */}
+            tab rail live in the same box on purpose, so the tabs'
+            overlap-with-the-cover math is a % of THIS box, not the outer
+            scene. `.home-v4-tab-rail` (was `.home-v4-shortcuts`) names
+            what it actually is: the strip of the notebook's own bottom
+            edge the tabs ride along and poke out from, not a generic
+            "group of shortcut buttons" floating near the notebook. */}
         <div className="home-v4-notebook">
           <img
             className="home-v4-notebook-img"
@@ -133,7 +146,7 @@ export function HomeDashboard({
             alt=""
             draggable={false}
           />
-          <div className="home-v4-shortcuts" role="group" aria-label="바로가기">
+          <div className="home-v4-tab-rail" role="group" aria-label="바로가기">
             <button
               type="button"
               className="home-v4-shortcut home-v4-shortcut--vocab"

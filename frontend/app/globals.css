@@ -2336,12 +2336,12 @@ button {
      a fixed box every child is a % of), not two nested boxes doing
      overlapping jobs.
    - `.home-v4-notebook` is now a true composite: its cover image and
-     `.home-v4-shortcuts` are siblings in the SAME box. The tabs' overlap
+     `.home-v4-tab-rail` are siblings in the SAME box. The tabs' overlap
      with the cover is a % of the notebook's own width/aspect-ratio, not
      the scene's -- constant across every viewport, not tuned per tier.
    - The occlusion itself is just `.home-v4-notebook-img`'s own z-index
-     sitting above the nested `.home-v4-shortcuts` -- no separate slab
-     element. Wherever the tab group's box happens to fall inside the
+     sitting above the nested `.home-v4-tab-rail` -- no separate slab
+     element. Wherever the tab rail's box happens to fall inside the
      notebook's own rectangle, the cover (which only exists inside that
      same rectangle) paints over it; the part of each tab deliberately
      positioned outside that rectangle can never be covered, by
@@ -2426,9 +2426,9 @@ button {
 }
 
 /* The notebook composite. position:relative at every width (not just
-   desktop) since `.home-v4-shortcuts` is now a child positioned relative
+   desktop) since `.home-v4-tab-rail` is now a child positioned relative
    to THIS box, in both the mobile and desktop layouts alike -- one
-   positioning language for the tab group at any viewport size, not a
+   positioning language for the tab rail at any viewport size, not a
    mobile-flow version and a separate desktop-absolute version. */
 .home-v4-notebook {
   position: relative;
@@ -2475,9 +2475,9 @@ button {
 }
 
 /* The cover image is the actual occluder, not a separate slab (see the
-   top-of-block comment): z-index above `.home-v4-shortcuts` (its own
+   top-of-block comment): z-index above `.home-v4-tab-rail` (its own
    sibling, nested inside this same .home-v4-notebook box, z-index 2
-   below) so wherever the tab group's box geometrically falls inside the
+   below) so wherever the tab rail's box geometrically falls inside the
    notebook's own rectangle, the cover paints over it. pointer-events:none
    because it's decorative (aria-hidden in the DOM) -- also means it can
    never swallow a click even over the sliver of a tab it visually hides. */
@@ -2577,21 +2577,29 @@ button {
   transform: scale(0.97);
 }
 
-/* The shortcut tab group -- nested inside .home-v4-notebook (see
-   HomeDashboard.tsx), positioned as a % of the NOTEBOOK's own box. One
-   set of values now works at every viewport width: the notebook's own
+/* The tab rail -- nested inside .home-v4-notebook (see HomeDashboard.tsx),
+   positioned as a % of the NOTEBOOK's own box, not the outer scene: one
+   set of values works at every viewport width because the notebook's own
    aspect-ratio doesn't change with the viewport the way the old cluster/
-   scene box's height did, so there is no per-breakpoint tuning left to
-   do. right/bottom both negative -- the group sits mostly past the
-   notebook's own right and bottom edges (on the open desk, per the target
-   mockup's blue tab sitting clear of the cover), with only its own top
-   portion reaching up into the notebook's rectangle where the cover
-   image (z-index above this, see .home-v4-notebook-img) covers it. */
-.home-v4-shortcuts {
+   scene box's height did. Named for what it physically is (Phase 194,
+   was `.home-v4-shortcuts`) -- the strip of the notebook's own bottom
+   edge the tabs ride along, not a floating group of buttons that happens
+   to sit nearby. right/bottom both negative -- the rail sits mostly past
+   the notebook's own right and bottom edges (on the open desk), with
+   only its own top portion reaching up into the notebook's rectangle
+   where the cover image (z-index above this, see .home-v4-notebook-img)
+   covers it.
+   Phase 194 -- pulled in (right -4%->-2%, width 68%->56%) to keep the
+   whole rail closer to the notebook's own footprint instead of sprawling
+   past its right edge, matching the target mockup's tighter tab cluster
+   -- bottom/height are untouched from Phase 192, since those specifically
+   control how deep the tabs tuck under the cover and were verified by
+   measuring rendered rects, not eyeballing a screenshot. */
+.home-v4-tab-rail {
   position: absolute;
-  right: -4%;
+  right: -2%;
   bottom: -24%;
-  width: 68%;
+  width: 56%;
   /* Every child tab is ALSO position:absolute (needed for the fan
      rotation/overlap arrangement), and absolutely positioned children
      never contribute to their parent's auto height -- without an
@@ -2602,22 +2610,21 @@ button {
   z-index: 2;
 }
 
-/* Phase 192 -- qualified with the parent (.home-v4-shortcuts .home-v4-
-   shortcut, not just .home-v4-shortcut) so this beats a pre-existing
-   mobile touch-target rule elsewhere in this file (`@media (max-width:
-   640px) { button { width:100% } .home-v4-sample, .home-v4-cta, .home-
-   v4-shortcut { width:auto } }`, exempting Home's own custom-width
-   buttons from the app-wide "buttons go full-width on mobile" rule).
-   That exemption sets `width:auto`, which has the SAME specificity as a
-   bare `.home-v4-shortcut` selector and sits later in the file, so it
-   silently won and put every tab back to shrink-to-fit sizing at mobile
-   widths -- confirmed by measuring the actual rendered rects (each tab a
-   different, content-driven width instead of the intended 34/41/39%),
-   not by eyeballing a screenshot. The two-class selector here has higher
-   specificity than that single-class exemption, so it wins regardless of
-   viewport width without needing to touch or remove that older rule
-   (still needed for the note's sample link and the CTA). */
-.home-v4-shortcuts .home-v4-shortcut {
+/* Qualified with the parent (.home-v4-tab-rail .home-v4-shortcut, not
+   just .home-v4-shortcut) so this beats a pre-existing mobile
+   touch-target rule elsewhere in this file (`@media (max-width: 640px) {
+   button { width:100% } .home-v4-sample, .home-v4-cta, .home-v4-shortcut
+   { width:auto } }`, exempting Home's own custom-width buttons from the
+   app-wide "buttons go full-width on mobile" rule). That exemption sets
+   `width:auto`, which has the SAME specificity as a bare .home-v4-
+   shortcut selector and sits later in the file, so it silently won and
+   put every tab back to shrink-to-fit sizing at mobile widths --
+   confirmed by measuring the actual rendered rects, not by eyeballing a
+   screenshot. The two-class selector here has higher specificity than
+   that single-class exemption, so it wins regardless of viewport width
+   without needing to touch or remove that older rule (still needed for
+   the note's sample link and the CTA). */
+.home-v4-tab-rail .home-v4-shortcut {
   position: absolute;
   aspect-ratio: 711 / 583;
   width: 34%;
@@ -2634,7 +2641,7 @@ button {
   z-index: 1;
 }
 
-.home-v4-shortcuts .home-v4-shortcut--review {
+.home-v4-tab-rail .home-v4-shortcut--review {
   aspect-ratio: 687 / 578;
   left: 29%;
   bottom: 15%;
@@ -2643,7 +2650,7 @@ button {
   z-index: 3;
 }
 
-.home-v4-shortcuts .home-v4-shortcut--decks {
+.home-v4-tab-rail .home-v4-shortcut--decks {
   aspect-ratio: 714 / 559;
   right: 0;
   bottom: 0;
@@ -2757,7 +2764,7 @@ button {
      (note/CTA/privacy sharing one exact left edge read as a list, not
      objects someone set down on a desk).
      Positive top margin (not the tight -8px a sibling-of-notebook layout
-     would use): .home-v4-shortcuts is absolutely positioned and escapes
+     would use): .home-v4-tab-rail is absolutely positioned and escapes
      notebook's own normal-flow box, extending visually below it -- a
      tight negative margin here put this sticker right in that zone. */
   margin: 48px 0 0 7%;
@@ -2782,15 +2789,18 @@ button {
   /* Desktop switches `.home-v4-scene` from the mobile vertical stack to a
      fixed-box desk composition: every direct child becomes
      position:absolute, placed as a % of the SCENE. Sized so the notebook
-     (60% of the scene) reads as the dominant object with real desk
-     margin around it -- "a desk scene shot from a little further back",
-     not a zoomed-in crop (the failure a too-large scene box produced in
-     earlier phases) and not a small card either. */
+     reads as the dominant object with real desk margin around it -- "a
+     desk scene shot from a little further back", not a zoomed-in crop.
+     Phase 194 -- pulled back further (82vw/1180px -> 72vw/1020px): even
+     at the Phase 188 size, the notebook (still a fixed % of this box, see
+     .home-v4-notebook below) left almost no visible desk on the right
+     edge at ordinary laptop widths, reading as a cropped photo rather
+     than an object sitting on a surface. */
   .home-v4-scene {
     margin-bottom: 0;
     padding: 0;
-    width: min(1180px, 82vw);
-    height: clamp(480px, calc(100svh - 220px), 680px);
+    width: min(1020px, 72vw);
+    height: clamp(460px, calc(100svh - 220px), 640px);
     margin: 28px auto 0;
   }
 
@@ -2819,10 +2829,14 @@ button {
     position: absolute;
   }
 
+  /* Phase 194 -- shrunk (60% -> 55% of the now-smaller scene) for the
+     same "camera further back" reason as .home-v4-scene above -- both
+     moves compound (a smaller scene alone would have kept the notebook
+     at the same 60% share of a smaller box, which still read as tight). */
   .home-v4-notebook {
     left: 30%;
     top: 3%;
-    width: 60%;
+    width: 55%;
     margin-top: 0;
     /* Explicit, lowest z-index -- note/CTA come *before* the notebook in
        DOM order, so without this the notebook would paint over them by
@@ -2839,10 +2853,14 @@ button {
     background: radial-gradient(ellipse 65% 100% at 58% 0%, rgba(30, 20, 9, 0.55), transparent 78%);
   }
 
+  /* Phase 194 -- widened (44% -> 48%) so the note's own right edge visibly
+     rests further onto the notebook's cover (overlap grew from 14 to 18
+     points of the scene, since the notebook itself now starts at the same
+     30% left as before) -- at 44% the two objects only barely grazed. */
   .home-v4-note {
     left: 0%;
     top: -1%;
-    width: 44%;
+    width: 48%;
     z-index: 2;
     transform: rotate(-2deg);
   }
@@ -2870,11 +2888,16 @@ button {
   /* Sits right under the note with almost no gap -- the two read as one
      "start here" column instead of two unrelated pieces, and its own
      right edge runs onto the notebook's left edge on purpose (fabric
-     ticket biting both the note and the cover, per the target mockup). */
+     ticket biting both the note and the cover, per the target mockup).
+     Phase 194 -- widened (35% -> 38%) for a clearer bite onto the cover,
+     matching the deeper note/notebook overlap above, and raised slightly
+     (45% -> 42%): the smaller notebook this phase (see .home-v4-notebook)
+     brought the tab rail's own top edge closer to the CTA's own bottom
+     edge in absolute terms, crowding the two at ordinary laptop widths. */
   .home-v4-cta {
     left: 0%;
-    top: 45%;
-    width: 35%;
+    top: 42%;
+    width: 38%;
     z-index: 2;
     transform: rotate(-1.5deg);
   }
@@ -2907,13 +2930,21 @@ button {
     font-size: 9.5px;
   }
 
-  /* Same left edge as the note above it, small enough gap to read as the
-     last item in that column rather than a fourth, unrelated group. */
+  /* Phase 194 -- pulled off the note/CTA's shared left:0% edge and
+     further down (4%->-2% left, 70%->75% top), with more tilt than
+     either of them: at a near-matching left edge this still read as the
+     fourth rung of one aligned column rather than a small sticker
+     someone tossed onto the desk separately, the "UI 안내 박스" look the
+     brief calls out. Width left at 15% (not shrunk further) -- narrower
+     wrapped its own text onto 3 lines once the scene itself got smaller
+     this phase (see .home-v4-scene above), trading one failure for
+     another. */
   .home-v4-privacy {
-    left: 4%;
-    top: 70%;
+    left: -2%;
+    top: 75%;
     bottom: auto;
     width: 15%;
+    transform: rotate(-6deg);
     margin: 0;
   }
 
@@ -2925,14 +2956,14 @@ button {
 
 /* At >=1440px the scene keeps growing so the notebook keeps scaling with
    the viewport instead of plateauing into a fixed-size object surrounded
-   by more and more bare desk on wide monitors. `.home-v4-shortcuts` needs
+   by more and more bare desk on wide monitors. `.home-v4-tab-rail` needs
    no override here (unlike the old per-tier `.home-v3-shortcuts` bottom%
    hacks this replaces) -- it's a % of the notebook, which keeps the same
    aspect-ratio at any scene size. */
 @media (min-width: 1440px) {
   .home-v4-scene {
-    width: min(1400px, 78vw);
-    height: clamp(560px, calc(100svh - 230px), 780px);
+    width: min(1180px, 68vw);
+    height: clamp(520px, calc(100svh - 230px), 720px);
     margin-top: 36px;
   }
 }
