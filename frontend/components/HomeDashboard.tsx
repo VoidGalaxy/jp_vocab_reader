@@ -17,7 +17,7 @@ type HomeDashboardProps = {
   sharedDeckCount: number;
   onGoToSharedDecks: () => void;
   // Reused only for a light one-word peek in the 단어장 shortcut's hint line
-  // (desktop only, see .home-v3-shortcut-hint) -- no separate "최근 담은
+  // (desktop only, see .home-v4-shortcut-hint) -- no separate "최근 담은
   // 단어" section on Home. Same /vocab-items?sort=created_desc read the 기록
   // 탭 already makes, no new API call.
   recentWords: VocabItem[];
@@ -25,17 +25,31 @@ type HomeDashboardProps = {
 
 const ASSET_BASE = "/brand/decor/home-v3";
 
-// Phase 177-185 -- structure/composition is settled (big notebook cluster,
-// note/CTA/shortcuts attached to it); this pass is background/material
-// fidelity, not layout.
-// Phase 186 (background plate integration) -- Phase 185's DOM prop cutouts
-// (leaf/washi-tape/paperclip/pen, borrowed from ../phase131/) are gone --
-// the new photographed background plate (home-v3-desk-surface-{desktop,
-// mobile}.png, applied via body:has(.home-v3) in globals.css) already
-// bakes the same plant/washi-tape/paperclip/pen into its own edges, so
-// keeping the DOM copies would have doubled them up. Nothing in this file
-// changed beyond removing that dead code -- the plate is a pure background-
-// image swap with no new DOM.
+// Phase 192 (skeleton replacement) -- reskin failed; phases 177-190 kept
+// patching the same flat `scene > [note, cta, notebook, shortcuts,
+// privacy]` sibling structure, which is exactly why the shortcut tabs'
+// "tucked into the notebook" depth cue kept breaking across breakpoints:
+// the tabs were positioned as a % of the SCENE/cluster box, but needed to
+// line up with the NOTEBOOK's own edge, and those two boxes scale
+// differently as the viewport changes (cluster height comes from an
+// svh-based clamp, notebook height from its own width via aspect-ratio).
+// This rebuilds the DOM around one rule: anything that has to line up
+// with the notebook lives INSIDE it. `.home-v4-notebook` is now a true
+// composite -- its cover image and the shortcut tab group are siblings
+// inside the SAME box, so the tabs' overlap is a % of the notebook's own
+// dimensions, not the cluster's. That makes the overlap amount constant
+// across every viewport width without any per-breakpoint tuning, and it's
+// also what makes the "hidden sliver" genuinely safe: the cover image
+// only visually covers the part of a tab that falls inside the notebook's
+// own box, so a tab's icon/label -- which live in the part deliberately
+// positioned OUTSIDE that box -- can never be covered by construction,
+// not by tuning a number to avoid it.
+// The old `home-v3-*` family is retired for Home (other tabs/asset
+// manifests are untouched) in favor of `home-v4-*`; the previous
+// `.home-v3-scene` + `.home-v3-cluster` double wrapper is also collapsed
+// into one `.home-v4-scene` root, since the two boxes had drifted into
+// doing the same job (a single positioning root for the note/CTA/
+// notebook/privacy layer).
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -66,37 +80,26 @@ export function HomeDashboard({
     sharedDeckCount > 0 ? "다른 덱도 둘러보기" : "나만의 학습 덱 만들기";
 
   return (
-    <section className="tab-panel home-dashboard home-v3" aria-live="polite">
-      <div className="home-v3-scene">
-        {/* .home-v3-cluster is the notebook-as-compound-object: every child
-            below is positioned as a % of THIS box (see globals.css), not
-            the outer scene, so the note/CTA/shortcuts read as
-            attachments of the notebook rather than independently-placed
-            stickers. DOM order is mobile's *reading* order (vertical
-            overlap flow) -- note/CTA before the notebook itself, per the
-            brief's "제목 메모를 먼저 읽히게" -- while desktop absolutely
-            positions every child by %, so this order has no effect on
-            desktop placement (z-index below keeps desktop stacking correct
-            regardless of source order). */}
-        <div className="home-v3-cluster">
-        <div className="home-v3-note">
+    <section className="tab-panel home-dashboard home-v4" aria-live="polite">
+      <div className="home-v4-scene">
+        <div className="home-v4-note">
           <img
-            className="home-v3-note-img"
+            className="home-v4-note-img"
             src={`${ASSET_BASE}/home-v3-title-note.png`}
             alt=""
             draggable={false}
           />
-          <div className="home-v3-note-content">
-            <h2 className="home-v3-title">
+          <div className="home-v4-note-content">
+            <h2 className="home-v4-title">
               오늘도 한 문장,
               <br />한 단어.
             </h2>
-            <p className="home-v3-subtitle">
+            <p className="home-v4-subtitle">
               모르는 단어를 눌러두면, 읽으면서 단어장이 자연스럽게 쌓여요.
             </p>
             <button
               type="button"
-              className="home-v3-sample"
+              className="home-v4-sample"
               onClick={onTryWithSample}
             >
               샘플로 체험
@@ -104,109 +107,113 @@ export function HomeDashboard({
           </div>
         </div>
 
-        <button type="button" className="home-v3-cta" onClick={onStartReading}>
+        <button type="button" className="home-v4-cta" onClick={onStartReading}>
           <img
-            className="home-v3-cta-img"
+            className="home-v4-cta-img"
             src={`${ASSET_BASE}/home-v3-cta-stamp.png`}
             alt=""
             draggable={false}
           />
-          <span className="home-v3-cta-content">
+          <span className="home-v4-cta-content">
             <SparkleIcon className="button-icon" />
             <span>원문 읽기 시작</span>
           </span>
         </button>
 
-        <div className="home-v3-notebook" aria-hidden="true">
+        {/* .home-v4-notebook is the notebook COMPOSITE: cover image +
+            shortcut tab group live in the same box on purpose, so the
+            tabs' overlap-with-the-cover math is a % of THIS box, not the
+            outer scene -- see the top-of-file comment for why that's the
+            actual fix this phase, not just a class rename. */}
+        <div className="home-v4-notebook">
           <img
-            className="home-v3-notebook-img"
+            className="home-v4-notebook-img"
+            aria-hidden="true"
             src={`${ASSET_BASE}/home-v3-notebook-cover.png`}
             alt=""
             draggable={false}
           />
-        </div>
-
-        <div className="home-v3-shortcuts" role="group" aria-label="바로가기">
-          <button
-            type="button"
-            className="home-v3-shortcut home-v3-shortcut--vocab"
-            onClick={onGoToVocab}
-          >
-            <img
-              className="home-v3-shortcut-img"
-              src={`${ASSET_BASE}/home-v3-shortcut-tab-yellow.png`}
-              alt=""
-              draggable={false}
-            />
-            <span className="home-v3-shortcut-content">
-              <span className="home-v3-shortcut-icon">
-                <CardFileIcon />
+          <div className="home-v4-shortcuts" role="group" aria-label="바로가기">
+            <button
+              type="button"
+              className="home-v4-shortcut home-v4-shortcut--vocab"
+              onClick={onGoToVocab}
+            >
+              <img
+                className="home-v4-shortcut-img"
+                src={`${ASSET_BASE}/home-v3-shortcut-tab-yellow.png`}
+                alt=""
+                draggable={false}
+              />
+              <span className="home-v4-shortcut-content">
+                <span className="home-v4-shortcut-icon">
+                  <CardFileIcon />
+                </span>
+                <span className="home-v4-shortcut-text">
+                  <span className="home-v4-shortcut-label">단어장</span>
+                  <span className="home-v4-shortcut-hint">{vocabHint}</span>
+                </span>
               </span>
-              <span className="home-v3-shortcut-text">
-                <span className="home-v3-shortcut-label">단어장</span>
-                <span className="home-v3-shortcut-hint">{vocabHint}</span>
+            </button>
+            <button
+              type="button"
+              className="home-v4-shortcut home-v4-shortcut--review"
+              onClick={isDevUser ? onOpenAccount : onStartTodayReview}
+            >
+              <img
+                className="home-v4-shortcut-img"
+                src={`${ASSET_BASE}/home-v3-shortcut-tab-coral.png`}
+                alt=""
+                draggable={false}
+              />
+              <span className="home-v4-shortcut-content">
+                <span className="home-v4-shortcut-icon">
+                  <CardsIcon />
+                </span>
+                <span className="home-v4-shortcut-text">
+                  <span className="home-v4-shortcut-label">복습</span>
+                  <span className="home-v4-shortcut-hint">{reviewHint}</span>
+                </span>
               </span>
-            </span>
-          </button>
-          <button
-            type="button"
-            className="home-v3-shortcut home-v3-shortcut--review"
-            onClick={isDevUser ? onOpenAccount : onStartTodayReview}
-          >
-            <img
-              className="home-v3-shortcut-img"
-              src={`${ASSET_BASE}/home-v3-shortcut-tab-coral.png`}
-              alt=""
-              draggable={false}
-            />
-            <span className="home-v3-shortcut-content">
-              <span className="home-v3-shortcut-icon">
-                <CardsIcon />
+            </button>
+            <button
+              type="button"
+              className="home-v4-shortcut home-v4-shortcut--decks"
+              onClick={onGoToSharedDecks}
+            >
+              <img
+                className="home-v4-shortcut-img"
+                src={`${ASSET_BASE}/home-v3-shortcut-tab-blue.png`}
+                alt=""
+                draggable={false}
+              />
+              <span className="home-v4-shortcut-content">
+                <span className="home-v4-shortcut-icon">
+                  <BookshelfIcon />
+                </span>
+                <span className="home-v4-shortcut-text">
+                  <span className="home-v4-shortcut-label">덱</span>
+                  <span className="home-v4-shortcut-hint">{decksHint}</span>
+                </span>
               </span>
-              <span className="home-v3-shortcut-text">
-                <span className="home-v3-shortcut-label">복습</span>
-                <span className="home-v3-shortcut-hint">{reviewHint}</span>
-              </span>
-            </span>
-          </button>
-          <button
-            type="button"
-            className="home-v3-shortcut home-v3-shortcut--decks"
-            onClick={onGoToSharedDecks}
-          >
-            <img
-              className="home-v3-shortcut-img"
-              src={`${ASSET_BASE}/home-v3-shortcut-tab-blue.png`}
-              alt=""
-              draggable={false}
-            />
-            <span className="home-v3-shortcut-content">
-              <span className="home-v3-shortcut-icon">
-                <BookshelfIcon />
-              </span>
-              <span className="home-v3-shortcut-text">
-                <span className="home-v3-shortcut-label">덱</span>
-                <span className="home-v3-shortcut-hint">{decksHint}</span>
-              </span>
-            </span>
-          </button>
+            </button>
+          </div>
         </div>
 
         {/* home-v3-privacy-label.png already bakes in its own shield badge
-            (see ASSET_MANIFEST.md), so unlike the old .home-scene-v2-privacy
-            this carries no separate DOM ShieldIcon -- one shield, not two. */}
-        <p className="home-v3-privacy">
+            (see ASSET_MANIFEST.md), so this carries no separate DOM
+            ShieldIcon -- one shield, not two. */}
+        <p className="home-v4-privacy">
           <img
-            className="home-v3-privacy-img"
+            className="home-v4-privacy-img"
             src={`${ASSET_BASE}/home-v3-privacy-label.png`}
             alt=""
             draggable={false}
           />
-          <span className="home-v3-privacy-text">
+          <span className="home-v4-privacy-text">
             원문 전체는 서버에 저장하지 않아요.
           </span>
         </p>
-        </div>
       </div>
     </section>
   );

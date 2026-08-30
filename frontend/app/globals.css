@@ -189,7 +189,7 @@
 .home-dashboard {
   --screen-accent: var(--tone-amber);
   --screen-accent-soft: #f7ecd6;
-  /* Phase 186 -- Home-only display treatment for the title (see .home-v3-
+  /* Phase 186 -- Home-only display treatment for the title (see .home-v4-
      title below), so it doesn't read as the same plain UI sans as every
      button and label around it.
      Phase 187 -- Batang (Phase 186's choice) read as a stiff, formal
@@ -202,15 +202,18 @@
      font blind. The title still needs to read as different from a plain
      web-app heading, but that distinction now comes from weight/size/
      color/letter-spacing on the same root sans stack every other Home
-     label already uses (see .home-v3-title), not from hunting for the
-     one "right" OS-bundled Korean typeface. No remote font either way. */
+     label already uses (see .home-v4-title), not from hunting for the
+     one "right" OS-bundled Korean typeface. No remote font either way.
+     Phase 192 -- the title itself is `.home-v4-title` now (Home's DOM/CSS
+     was rebuilt under a new `home-v4-*` family this phase), but this
+     styling decision carries forward unchanged. */
   display: block;
   gap: 0;
 }
 
 @media (min-width: 1024px) {
   /* Phase 177 -- the notebook scene has its own capped height (see
-     .home-v3-scene below) so it never grows into a giant hero on a tall
+     .home-v4-scene below) so it never grows into a giant hero on a tall
      monitor, but pinning it to the top of .page's own full-viewport-height
      box then left the paper surface reading as empty dead space
      underneath rather than deliberate desk margin. Centering it in
@@ -1512,49 +1515,17 @@ body {
   background-size: var(--paper-texture-size);
 }
 
-/* Phase 186 -- Phase 177-185 all tried to fake a photographed desk surface
-   with CSS (a repeated flat paper tile, then radial-gradient light pools
-   blended over it, then DOM prop cutouts pinned to the corners). Each pass
-   still read as a composite -- gradients and PNG props on a flat tile
-   never fully sold "one photographed surface" the way an actual photo
-   does. This uses the real photographed plate instead
-   (home-v3-desk-surface-{desktop,mobile}.png): warm kraft-paper grain,
-   real top-left directional light (the dappled leaf-shadow falloff), and
-   the plant/washi-tape/paperclip/pen props already baked into the photo
-   at its edges -- so there is nothing left to fake or duplicate in CSS.
-   `:has()` gives this higher specificity than the plain `body` rule above
-   and the >=1024px wood-desk `body` override further down, so it wins at
-   every width without needing !important; scoped so no other tab's
-   background policy changes. Mobile gets the portrait-cropped plate
-   (props relocated for a narrow frame) below 1024px, matching the
-   existing mobile/desktop split every other Home V3 rule already uses;
-   desktop gets the landscape plate at 1024px+. `background-position` is
-   biased right-of-center (62%) rather than plain "center": at most real
-   viewport ratios `cover` crops some width off both sides, and centering
-   evenly would crop into the pen/paperclip (near the photo's right edge)
-   as much as the plant (near its left edge) -- shifting right preserves
-   more of the right-edge props since the notebook cluster's own left
-   column (title note) already sits closest to the photo's left edge. */
-/* Phase 187 -- the plate's own contrast/saturation/light-dapple pulled
-   the eye before the notebook did (the exact "background reads first"
-   failure). A flat warm scrim, painted on top of the photo in the same
-   background-image stack (first-listed paints topmost), recedes it
-   perceptually -- lighter areas mix toward the scrim's cream and dark
-   areas lose some bite -- without touching foreground elements the way a
-   body-level `filter` would (filter on body would also wash out the
-   notebook/note/CTA sitting on top of it). Position pushed further into
-   the corner (72%/22%, was 62%/30-42%) than Phase 186's version so the
-   brightest dapple/prop cluster sits closer to the very edge instead of
-   reading as a second focal point competing with the notebook. */
-/* Phase 187 added the flat scrim to recede the photo; Phase 188 adds a
-   vignette on top of that (center clear, edges darken/warm slightly) so
-   the light-dapple pattern and edge props settle further back instead of
-   pulling the eye before the notebook does -- the vignette does the
-   "recede the busy corners" work the flat scrim alone couldn't, since a
-   uniform scrim dims everything equally rather than specifically the
-   areas competing with the cluster. Position pushed further into the
-   corner again (78%/18-26%, was 72%/22-30%) for the same reason. */
-body:has(.home-v3) {
+/* Phase 192 -- Home surface layer (see layer 1 in the phase brief: "전체
+   desk surface, 소품은 가장자리 framing만"). Unchanged in substance from
+   Phase 186-188 (a photographed desk plate, a flat warm scrim to recede
+   its own contrast, and a center-clear vignette so the corner props/light
+   dapple settle behind the notebook instead of competing with it) --
+   just re-scoped from `.home-v3` to `.home-v4` since Home's DOM moved to
+   the new class family this phase. `:has()` gives this higher specificity
+   than the plain `body` rule above and the >=1024px wood-desk `body`
+   override further down, so it wins at every width without
+   `!important`. */
+body:has(.home-v4) {
   background-color: #d9c3a0;
   background-image:
     radial-gradient(ellipse 90% 80% at 50% 42%, transparent 45%, rgba(64, 46, 26, 0.16) 100%),
@@ -1566,7 +1537,7 @@ body:has(.home-v3) {
 }
 
 @media (min-width: 1024px) {
-  body:has(.home-v3) {
+  body:has(.home-v4) {
     background-image:
       radial-gradient(ellipse 90% 80% at 50% 42%, transparent 45%, rgba(64, 46, 26, 0.16) 100%),
       linear-gradient(rgba(247, 239, 219, 0.46), rgba(247, 239, 219, 0.46)),
@@ -1659,7 +1630,7 @@ button {
    longer needs the old .library-canvas-home breakout (escaping .page's own
    padding via margin-left:50%/translateX(-50%) to reach near-full
    viewport width). The base .library-canvas rule above is enough --
-   .home-v3-scene sets its own, tighter max-width below. */
+   .home-v4-scene sets its own, tighter max-width below. */
 
 .library-canvas-reading,
 .library-canvas-shared,
@@ -2349,32 +2320,41 @@ button {
 }
 
 /* ==========================================================================
-   Phase 177-183 -- current Home regressed into a central card-frame;
-   implement the target mockup (references/mockups/home-phase184-target-
-   mockup.png) instead.
-   Phase 184 (target mockup implementation) -- `.home-v3-mat` (Phase 183) is
-   gone. `.home-v3-scene` is now the near-full-bleed surface itself: a wide,
-   low ambient wash + contact shadow (see its ::before/::after), not a
-   card's border/box-shadow, so the page reads as one lit desk the notebook
-   sits directly on. `.home-v3-cluster` keeps the Phase 183 role (the
-   notebook treated as one compound object -- note, CTA, shortcuts, Shiori,
-   privacy are independent DOM nodes for live text/handlers, but every one
-   is positioned as a % of the notebook's own cluster box), just sized much
-   bigger on desktop so the notebook is the dominant object on first paint,
-   the way the target mockup is, instead of a small scene inside a frame.
-   Each "paper" object keeps the same two-layer pattern as before: an <img>
-   (home-v3-*-img) absolutely filling the object at z-index:0, and a DOM
-   content layer (home-v3-*-content, or the button/p's own text) above it,
-   so every image still carries zero baked copy. Mobile keeps the same
-   cluster nesting; only the overlap axis changes, from desktop's absolute
-   % box to a vertical stack held together with negative-margin overlaps
-   (note over notebook's top, shortcuts over its bottom) instead of a flat
-   document flow of unrelated rows. */
-.home-v3-scene {
+   Phase 192 (skeleton replacement) -- reskin failed; phases 177-190 kept
+   patching one flat `scene > [note, cta, notebook, shortcuts, privacy]`
+   sibling structure. The recurring failure (shortcut tabs' "tucked under
+   the notebook" depth breaking across breakpoints) came from exactly that
+   flatness: the tabs had to line up with the NOTEBOOK's edge but were
+   positioned as a % of the outer SCENE/cluster box, and those two boxes
+   scale differently as the viewport changes. Rebuilt against
+   references/mockups/home-phase192-target-mockup.png with one structural
+   rule: anything that has to physically line up with the notebook now
+   LIVES inside it. See HomeDashboard.tsx's own top-of-file comment for
+   the DOM side of this; in CSS terms:
+   - `.home-v4-scene` replaces the old `.home-v3-scene` + `.home-v3-
+     cluster` pair -- one positioning root (mobile: flex column; desktop:
+     a fixed box every child is a % of), not two nested boxes doing
+     overlapping jobs.
+   - `.home-v4-notebook` is now a true composite: its cover image and
+     `.home-v4-shortcuts` are siblings in the SAME box. The tabs' overlap
+     with the cover is a % of the notebook's own width/aspect-ratio, not
+     the scene's -- constant across every viewport, not tuned per tier.
+   - The occlusion itself is just `.home-v4-notebook-img`'s own z-index
+     sitting above the nested `.home-v4-shortcuts` -- no separate slab
+     element. Wherever the tab group's box happens to fall inside the
+     notebook's own rectangle, the cover (which only exists inside that
+     same rectangle) paints over it; the part of each tab deliberately
+     positioned outside that rectangle can never be covered, by
+     construction, not by a tuned number.
+   Each "paper" object keeps the same two-layer pattern as before: an
+   <img> (home-v4-*-img) filling the object, live DOM text/content above
+   it -- every image still carries zero baked copy. */
+.home-v4-scene {
   isolation: isolate;
   position: relative;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
   margin: 0 auto;
   padding: 14px 14px 4px;
@@ -2389,64 +2369,37 @@ button {
      >=1024px below, where .page uses a different margin/min-height
      pattern this doesn't apply to. */
   margin-bottom: -16px;
-}
-
-/* Phase 185 -- the top-light wash that used to live here (`.home-v3-
-   scene::before`, a linear-gradient inset:0 on the scene box) had a hard
-   edge wherever the scene's own content-height box ended, reading as a
-   lighter rectangular panel floating over the body's paper tile rather
-   than one continuous lit surface. That wash now lives on `body:has(.home-
-   v3)` instead (see above), which actually spans the full viewport with
-   no box of its own to end at. The desktop-only broad contact-shadow pool
-   under the cluster (`::after`, below) stays here -- a blurred, low,
-   soft-edged shape has no hard boundary to read as a panel, unlike the
-   linear-gradient this replaces. */
-.home-v3-cluster {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  /* Phase 187 -- notebook/note/CTA/shortcuts/privacy were each illustrated
-     separately and composited on top of the (now photographed) desk
-     surface, so their color temperature/contrast never matched the
-     photo's warm kraft-paper cast -- the "PNG stickers on a photo" look.
-     One subtle color-grade over the whole cluster (not per-asset, so it
-     stays cheap to maintain) nudges every object toward the same warm
-     cast as the desk plate, as if lit by the same light. Kept light
-     enough that the live DOM text inside (title, hints, labels) stays
-     fully legible -- this is a tint, not a wash. */
+  /* notebook/note/CTA/shortcuts/privacy were each illustrated separately
+     and composited on top of the (photographed) desk surface, so their
+     color temperature/contrast never matched the photo's warm kraft-paper
+     cast -- the "PNG stickers on a photo" look. One subtle color-grade
+     over the whole scene (not per-asset) nudges every object toward the
+     same warm cast, as if lit by the same light. Kept light enough that
+     the live DOM text inside (title, hints, labels) stays fully legible
+     -- this is a tint, not a wash. */
   filter: sepia(0.07) saturate(1.05) brightness(1.01);
 }
 
-/* Phase 186 -- Phase 185's `.home-v3-prop` DOM cutouts (leaf/washi-tape/
-   paperclip/pen borrowed from ../phase131/) are gone. The new photographed
-   background plate (see body:has(.home-v3) above) already bakes the same
-   plant/washi-tape/paperclip/pen into its own edges -- keeping the DOM
-   copies would have doubled them up. */
-/* Phase 186/187 -- short, crisp paper-edge shadow shared by the "loose
-   paper" objects (title note, CTA stamp), unified to the background
-   plate's top-left light source: a small positive x/y offset (light from
-   upper-left casts toward lower-right) with a tight blur, unlike the
-   notebook's much bigger/softer shadow below -- these read as thin paper
-   resting a few millimeters off the desk, not a heavy object like the
-   notebook. */
-.home-v3-note,
-.home-v3-cta {
+/* Short, crisp paper-edge shadow shared by the "loose paper" objects
+   (title note, CTA ticket), unified to the background plate's top-left
+   light source: a small positive x/y offset (light from upper-left casts
+   toward lower-right) with a tight blur, unlike the notebook's much
+   bigger/softer shadow below -- these read as thin paper resting a few
+   millimeters off the desk, not a heavy object like the notebook. */
+.home-v4-note,
+.home-v4-cta {
   filter: drop-shadow(1px 2px 2px rgba(64, 43, 24, 0.14));
 }
 
-/* Phase 188 -- split off from the note/CTA rule above with an even
-   lighter shadow: at the note/CTA's size this shadow reads as "lifted
-   paper", but the shortcut tabs are smaller and sit tucked into the
-   notebook's own bottom edge (see .home-v3-shortcuts' negative bottom% ),
-   so the same shadow read as a thick dark line under a floating card
-   instead of a shallow tab crease. */
-.home-v3-shortcut {
+/* Lighter still: the shortcut tabs are smaller and sit tucked into the
+   notebook's own bottom edge, so the note/CTA shadow's size/opacity read
+   as a thick dark line under a floating card instead of a shallow tab
+   crease. */
+.home-v4-shortcut {
   filter: drop-shadow(0.5px 1px 1px rgba(64, 43, 24, 0.1));
 }
 
-.home-v3-note {
+.home-v4-note {
   position: relative;
   width: min(340px, 96%);
   aspect-ratio: 1451 / 956;
@@ -2456,7 +2409,7 @@ button {
   z-index: 3;
 }
 
-.home-v3-cta {
+.home-v4-cta {
   position: relative;
   width: min(210px, 60%);
   aspect-ratio: 1743 / 683;
@@ -2472,34 +2425,30 @@ button {
   z-index: 4;
 }
 
-.home-v3-notebook {
+/* The notebook composite. position:relative at every width (not just
+   desktop) since `.home-v4-shortcuts` is now a child positioned relative
+   to THIS box, in both the mobile and desktop layouts alike -- one
+   positioning language for the tab group at any viewport size, not a
+   mobile-flow version and a separate desktop-absolute version. */
+.home-v4-notebook {
   position: relative;
-  width: min(260px, 72%);
+  width: min(300px, 80%);
   aspect-ratio: 1183 / 860;
   margin-top: -12px;
   z-index: 1;
-  /* Phase 189 -- purely decorative (aria-hidden, no handler), and the
-     shortcut tabs now overlap up into the notebook's own box with a
-     lower z-index (see .home-v3-shortcuts) so their tucked-in top edge
-     reads as hidden behind the cover. Without this, that overlapping
-     area of the notebook -- which paints on top -- would swallow clicks
-     meant for the tab underneath it. */
-  pointer-events: none;
-  /* Phase 186 -- shadow direction unified to the new background plate's
-     top-left light source: a positive x-offset (light from upper-left
-     casts toward lower-right) instead of the old straight-down shadow.
-     Wide and low, not sharp -- the notebook is the one heavy object in
-     the scene. */
+  /* Shadow direction unified to the background plate's top-left light
+     source: a positive x-offset (light from upper-left casts toward
+     lower-right) instead of a straight-down shadow. Wide and low, not
+     sharp -- the notebook is the one heavy object in the scene. */
   filter: drop-shadow(7px 16px 16px rgba(64, 43, 24, 0.26));
 }
 
 /* A flatter contact-shadow ellipse at the spine/base edge, on top of the
-   drop-shadow above -- the "the book is actually pressing into the mat"
-   cue a cast shadow alone doesn't give. Lives at every width now (used to
-   be desktop-only), since mobile needed the same grounding cue. Center
-   shifted right of the book's own center (58% not 50%) to match the same
-   top-left light source. */
-.home-v3-notebook::after {
+   drop-shadow above -- the "the book is actually pressing into the desk"
+   cue a cast shadow alone doesn't give. Center shifted right of the
+   book's own center (58% not 50%) to match the same top-left light
+   source. */
+.home-v4-notebook::after {
   content: "";
   position: absolute;
   left: 4%;
@@ -2511,19 +2460,10 @@ button {
   pointer-events: none;
 }
 
-/* Phase 189 -- Shiori removed from Home (the shared component/asset and
-   her use on other tabs are untouched; this was Home-only decoration).
-   `.home-v3-charm` and its ground-shadow pseudo-element used to live here
-   -- deleted rather than left as dead CSS. See HomeDashboard.tsx for the
-   DOM removal and the compositional rebalance that replaced her (deeper
-   note/CTA/shortcut overlap with the notebook instead of a center
-   decoration). */
-
-.home-v3-note-img,
-.home-v3-cta-img,
-.home-v3-notebook-img,
-.home-v3-shortcut-img,
-.home-v3-privacy-img {
+.home-v4-note-img,
+.home-v4-cta-img,
+.home-v4-shortcut-img,
+.home-v4-privacy-img {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -2534,7 +2474,25 @@ button {
   user-select: none;
 }
 
-.home-v3-note-content {
+/* The cover image is the actual occluder, not a separate slab (see the
+   top-of-block comment): z-index above `.home-v4-shortcuts` (its own
+   sibling, nested inside this same .home-v4-notebook box, z-index 2
+   below) so wherever the tab group's box geometrically falls inside the
+   notebook's own rectangle, the cover paints over it. pointer-events:none
+   because it's decorative (aria-hidden in the DOM) -- also means it can
+   never swallow a click even over the sliver of a tab it visually hides. */
+.home-v4-notebook-img {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+.home-v4-note-content {
   position: relative;
   z-index: 1;
   display: flex;
@@ -2545,24 +2503,26 @@ button {
   padding: 16% 10% 4%;
 }
 
-.home-v3-title {
+.home-v4-title {
   margin: 0;
   /* Warm ink-brown, distinct from --text's slightly cooler default --
      matches the note paper's own printed-ink read rather than a UI
      heading color. */
   color: #3c2d1c;
-  /* Phase 188 -- no font-family override (see .home-dashboard's comment):
-     inherits the app's own root sans stack, same as every other Home
-     label. Medium weight (not the 700-800 a UI heading would use) plus
-     open letter-spacing/line-height is what carries the "handwritten
-     note" softness here instead of a swapped typeface. */
+  /* No font-family override: inherits the app's own root sans stack,
+     same as every other Home label (two OS-serif swaps were tried and
+     rejected in earlier phases -- see git history -- for reading as
+     stiff document/calligraphy faces instead of a handwritten note).
+     Medium weight (not the 700-800 a UI heading would use) plus open
+     letter-spacing/line-height is what carries the "handwritten note"
+     softness here instead of a swapped typeface. */
   font-size: 17px;
   font-weight: 600;
   line-height: 1.42;
   letter-spacing: 0.015em;
 }
 
-.home-v3-subtitle {
+.home-v4-subtitle {
   margin: 6px 0 0;
   max-width: 30ch;
   color: var(--muted);
@@ -2570,7 +2530,7 @@ button {
   line-height: 1.5;
 }
 
-.home-v3-sample {
+.home-v4-sample {
   display: inline-block;
   margin-top: auto;
   padding: 6px 2px 0;
@@ -2585,14 +2545,14 @@ button {
   box-shadow: none;
 }
 
-.home-v3-sample:not(:disabled):hover {
+.home-v4-sample:not(:disabled):hover {
   color: var(--text-secondary);
   text-decoration-color: var(--border-strong);
   box-shadow: none;
   transform: none;
 }
 
-.home-v3-cta-content {
+.home-v4-cta-content {
   position: relative;
   z-index: 1;
   display: flex;
@@ -2609,53 +2569,109 @@ button {
   transition: transform var(--motion-fast) var(--ease-soft);
 }
 
-.home-v3-cta:not(:disabled):hover .home-v3-cta-content {
+.home-v4-cta:not(:disabled):hover .home-v4-cta-content {
   transform: scale(1.03);
 }
 
-.home-v3-cta:not(:disabled):active .home-v3-cta-content {
+.home-v4-cta:not(:disabled):active .home-v4-cta-content {
   transform: scale(0.97);
 }
 
-.home-v3-shortcuts {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  width: min(320px, 88%);
-  /* Pulls the whole tab row up onto the notebook's own bottom edge --
-     inserted paper tabs, not a card row sitting below the book. */
-  margin-top: -22px;
+/* The shortcut tab group -- nested inside .home-v4-notebook (see
+   HomeDashboard.tsx), positioned as a % of the NOTEBOOK's own box. One
+   set of values now works at every viewport width: the notebook's own
+   aspect-ratio doesn't change with the viewport the way the old cluster/
+   scene box's height did, so there is no per-breakpoint tuning left to
+   do. right/bottom both negative -- the group sits mostly past the
+   notebook's own right and bottom edges (on the open desk, per the target
+   mockup's blue tab sitting clear of the cover), with only its own top
+   portion reaching up into the notebook's rectangle where the cover
+   image (z-index above this, see .home-v4-notebook-img) covers it. */
+.home-v4-shortcuts {
+  position: absolute;
+  right: -4%;
+  bottom: -24%;
+  width: 68%;
+  /* Every child tab is ALSO position:absolute (needed for the fan
+     rotation/overlap arrangement), and absolutely positioned children
+     never contribute to their parent's auto height -- without an
+     explicit height here this box collapses to 0, which silently breaks
+     every child's own `bottom: X%` (a % of a 0 height is 0), collapsing
+     all three tabs onto the same spot instead of fanning them out. */
+  height: 38%;
   z-index: 2;
 }
 
-.home-v3-shortcut {
-  position: relative;
+/* Phase 192 -- qualified with the parent (.home-v4-shortcuts .home-v4-
+   shortcut, not just .home-v4-shortcut) so this beats a pre-existing
+   mobile touch-target rule elsewhere in this file (`@media (max-width:
+   640px) { button { width:100% } .home-v4-sample, .home-v4-cta, .home-
+   v4-shortcut { width:auto } }`, exempting Home's own custom-width
+   buttons from the app-wide "buttons go full-width on mobile" rule).
+   That exemption sets `width:auto`, which has the SAME specificity as a
+   bare `.home-v4-shortcut` selector and sits later in the file, so it
+   silently won and put every tab back to shrink-to-fit sizing at mobile
+   widths -- confirmed by measuring the actual rendered rects (each tab a
+   different, content-driven width instead of the intended 34/41/39%),
+   not by eyeballing a screenshot. The two-class selector here has higher
+   specificity than that single-class exemption, so it wins regardless of
+   viewport width without needing to touch or remove that older rule
+   (still needed for the note's sample link and the CTA). */
+.home-v4-shortcuts .home-v4-shortcut {
+  position: absolute;
   aspect-ratio: 711 / 583;
+  width: 34%;
   border: 0;
   background: none;
   padding: 0;
   cursor: pointer;
 }
 
-.home-v3-shortcut--review {
-  aspect-ratio: 687 / 578;
-}
-
-.home-v3-shortcut--decks {
-  aspect-ratio: 714 / 559;
-  grid-column: 1 / span 2;
-  justify-self: center;
-  width: 58%;
-  /* Pulled up to overlap the vocab/review row above instead of leaving a
-     gap of bare mat -- reads as a third fanned tab tucked behind the
-     first two, not an isolated card floating below them. */
-  margin-top: -16px;
-  transform: rotate(1.5deg);
+.home-v4-shortcut--vocab {
+  left: 0;
+  bottom: 2%;
+  transform: rotate(-4deg);
   z-index: 1;
 }
 
-.home-v3-shortcut-content {
+.home-v4-shortcuts .home-v4-shortcut--review {
+  aspect-ratio: 687 / 578;
+  left: 29%;
+  bottom: 15%;
+  width: 41%;
+  transform: rotate(2.5deg);
+  z-index: 3;
+}
+
+.home-v4-shortcuts .home-v4-shortcut--decks {
+  aspect-ratio: 714 / 559;
+  right: 0;
+  bottom: 0;
+  width: 39%;
+  transform: rotate(-2deg);
+  z-index: 2;
+}
+
+.home-v4-shortcut:not(:disabled):hover {
+  /* Combined into one filter value -- a separate `filter: brightness()`
+     here would replace (not add to) the base rule's drop-shadow instead
+     of stacking with it, blanking the paper-edge shadow on hover. */
+  filter: brightness(1.04) drop-shadow(0.5px 1px 1px rgba(64, 43, 24, 0.1));
+}
+
+.home-v4-shortcut--vocab:not(:disabled):hover {
+  transform: rotate(-1.5deg) translateY(-3px);
+}
+
+.home-v4-shortcut--review:not(:disabled):hover {
+  transform: rotate(1deg) translateY(-5px);
+}
+
+.home-v4-shortcut--decks:not(:disabled):hover {
+  transform: rotate(0deg) translateY(-3px);
+}
+
+.home-v4-shortcut-content {
   position: relative;
   z-index: 1;
   display: flex;
@@ -2665,12 +2681,12 @@ button {
   justify-content: center;
   gap: 5px;
   box-sizing: border-box;
-  padding: 20% 12% 14%;
+  padding: 24% 12% 14%;
   text-align: left;
   color: var(--text);
 }
 
-.home-v3-shortcut-icon {
+.home-v4-shortcut-icon {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
@@ -2681,30 +2697,27 @@ button {
   color: #ffffff;
 }
 
-.home-v3-shortcut-icon svg {
+.home-v4-shortcut-icon svg {
   width: 11px;
   height: 11px;
 }
 
-.home-v3-shortcut--vocab .home-v3-shortcut-icon {
+.home-v4-shortcut--vocab .home-v4-shortcut-icon {
   background: var(--tone-ink-brown);
 }
 
-.home-v3-shortcut--decks .home-v3-shortcut-icon {
+.home-v4-shortcut--decks .home-v4-shortcut-icon {
   background: var(--tone-dusty-blue);
 }
 
-/* Phase 189 -- replaces the review shortcut's Shiori-character icon badge
-   (Home no longer renders Shiori at all); matches the vocab/decks rules
-   above it, coral to match this tab's own paper tone. */
-.home-v3-shortcut--review .home-v3-shortcut-icon {
+.home-v4-shortcut--review .home-v4-shortcut-icon {
   background: var(--tone-coral);
 }
 
-.home-v3-shortcut-text {
+.home-v4-shortcut-text {
   display: flex;
   flex-direction: column;
-  /* .home-v3-shortcut-content is align-items:flex-start, which shrinks a
+  /* .home-v4-shortcut-content is align-items:flex-start, which shrinks a
      column flex child to its content's own width by default -- without an
      explicit width here the (nowrap+ellipsis) label/hint below never get
      a box to actually clip against, so the hint text spills past the
@@ -2713,17 +2726,17 @@ button {
   min-width: 0;
 }
 
-.home-v3-shortcut-label {
+.home-v4-shortcut-label {
   overflow: hidden;
   font-size: 12px;
-  /* Phase 186 -- 800 read as a UI button label; a paper tab's own printed
-     label doesn't need to shout as loud as an app button does. */
+  /* A paper tab's own printed label doesn't need to shout as loud as an
+     app button does. */
   font-weight: 650;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.home-v3-shortcut-hint {
+.home-v4-shortcut-hint {
   overflow: hidden;
   color: var(--muted);
   font-size: 9.5px;
@@ -2733,19 +2746,26 @@ button {
   text-overflow: ellipsis;
 }
 
-.home-v3-privacy {
+.home-v4-privacy {
   position: relative;
   width: min(270px, 80%);
   aspect-ratio: 1457 / 414;
   align-self: flex-start;
-  /* Tucked directly under the shortcut tabs, sharing the note/CTA
-     column's left edge -- an absorbed sticker, not a fourth, unrelated
-     footnote group. */
-  margin: -8px 0 0 3%;
+  /* Tucked directly under the note/CTA column, off their shared left
+     edge and rotated more than either of them, on purpose -- a small,
+     lower-priority sticker, not the fourth rung of an aligned UI column
+     (note/CTA/privacy sharing one exact left edge read as a list, not
+     objects someone set down on a desk).
+     Positive top margin (not the tight -8px a sibling-of-notebook layout
+     would use): .home-v4-shortcuts is absolutely positioned and escapes
+     notebook's own normal-flow box, extending visually below it -- a
+     tight negative margin here put this sticker right in that zone. */
+  margin: 48px 0 0 7%;
+  transform: rotate(-3deg);
   z-index: 1;
 }
 
-.home-v3-privacy-text {
+.home-v4-privacy-text {
   position: relative;
   z-index: 1;
   display: flex;
@@ -2759,30 +2779,26 @@ button {
 }
 
 @media (min-width: 1024px) {
-  /* Desktop switches `.home-v3-cluster` from the mobile vertical stack to
-     a fixed-box desk composition: every object becomes position:absolute,
-     placed as a % of the CLUSTER (the notebook's own box), not the scene
-     -- so the cluster's own size never reflows where the note/CTA/
-     shortcuts sit relative to the notebook they're attached to.
-     Phase 184 -- the cluster box itself grows from Phase 183's 820px-wide
-     mat-constrained size to near-full-bleed (min(1360px, 96vw)) so the
-     notebook (still 58-60% of the CLUSTER, same ratio Phase 178 set) reads
-     as the dominant object on the actual screen, matching the target
-     mockup, instead of a correctly-proportioned notebook trapped inside a
-     small card. */
-  .home-v3-scene {
-    /* .page uses a different margin/min-height pattern at this width (see
-       the base rule's comment) -- the mobile-only negative margin hack is
-       not needed here. */
+  /* Desktop switches `.home-v4-scene` from the mobile vertical stack to a
+     fixed-box desk composition: every direct child becomes
+     position:absolute, placed as a % of the SCENE. Sized so the notebook
+     (60% of the scene) reads as the dominant object with real desk
+     margin around it -- "a desk scene shot from a little further back",
+     not a zoomed-in crop (the failure a too-large scene box produced in
+     earlier phases) and not a small card either. */
+  .home-v4-scene {
     margin-bottom: 0;
     padding: 0;
+    width: min(1180px, 82vw);
+    height: clamp(480px, calc(100svh - 220px), 680px);
+    margin: 28px auto 0;
   }
 
-  /* The broad, low contact-shadow pool under the whole cluster -- desktop
-     only, since the cluster is only this wide/low a shape at this
-     breakpoint. Replaces Phase 183's card box-shadow: a blurred solid
-     pool on the surface itself, not an edge around a frame. */
-  .home-v3-scene::after {
+  /* The broad, low contact-shadow pool under the whole scene -- desktop
+     only, since the scene is only this wide/low a shape at this
+     breakpoint. A blurred solid pool on the surface itself, not an edge
+     around a frame. */
+  .home-v4-scene::after {
     content: "";
     position: absolute;
     left: 14%;
@@ -2796,105 +2812,34 @@ button {
     pointer-events: none;
   }
 
-  /* Phase 188 -- 96vw/near-full-height (Phase 184/185) left almost no desk
-     margin at ordinary laptop widths (1024-1439px), reading as a zoomed-in
-     crop rather than "a desk scene shot from a little further back". Pulled
-     in to 82vw and capped lower/shorter, with a real top margin (was 6px,
-     just enough to clear the toolbar) so there's a visible landing gap
-     under nav instead of the note starting immediately below it. Notebook
-     stays the dominant object at the same % of the cluster -- only the
-     cluster's own share of the viewport shrank, not the notebook's share
-     of the cluster. */
-  .home-v3-cluster {
-    width: min(1180px, 82vw);
-    height: clamp(480px, calc(100svh - 220px), 680px);
-    margin: 28px auto 0;
-  }
-
-  .home-v3-note,
-  .home-v3-cta,
-  .home-v3-notebook,
-  .home-v3-shortcuts,
-  .home-v3-privacy {
+  .home-v4-note,
+  .home-v4-cta,
+  .home-v4-notebook,
+  .home-v4-privacy {
     position: absolute;
   }
 
-  /* Phase 178 (density pass) -- the previous composition kept every object
-     comfortably clear of its neighbors (small overlaps, generous gaps),
-     which read as calm on its own but as "assets scattered on a page"
-     once the objects themselves stayed this modest in size -- nothing was
-     big or close enough to the others to read as the scene's obvious
-     center. This pass makes the notebook unmistakably the main object
-     (+16% width) and pulls every other piece in close enough to overlap
-     it or its neighbors, so the whole cluster reads as one arrangement
-     instead of five independently-floating stickers.
-     Phase 183/184 pull every overlap in further still (note/CTA sit ON the
-     notebook's left edge, shortcuts hang past its bottom-right corner)
-     now that they're positioned against the notebook's own cluster box,
-     which itself keeps growing -- a given % keeps meaning "attached to
-     the notebook", not "somewhere on the page". */
-  .home-v3-notebook {
+  .home-v4-notebook {
     left: 30%;
     top: 3%;
     width: 60%;
     margin-top: 0;
-    /* Explicit, lowest z-index -- the note/CTA now come *before* the
-       notebook in DOM order (mobile reading order), so without this the
-       notebook would paint over them by default stacking instead of the
-       other way around. */
+    /* Explicit, lowest z-index -- note/CTA come *before* the notebook in
+       DOM order, so without this the notebook would paint over them by
+       default stacking instead of the other way around. */
     z-index: 0;
-    /* Phase 186 -- same top-left light source as the mobile rule (positive
-       x-offset), scaled up for the much bigger desktop notebook. */
     filter: drop-shadow(12px 26px 30px rgba(64, 43, 24, 0.3));
   }
 
-  /* Phase 190 -- the "tabs tucked under the cover" depth cue, replacing
-     Phase 189's negative z-index on the whole shortcut group (see its own
-     comment for why that broke). A thin cream strip -- the same tone as
-     the notebook's own baked-in page-edge sliver at its spine -- anchored
-     to the NOTEBOOK's bottom edge and sized entirely relative to the
-     notebook's own box (not the cluster), so it scales consistently with
-     the notebook across viewport widths instead of drifting the way a
-     cluster-height-relative % did. z-index above both the notebook (0)
-     and the shortcut tabs (2) so it visually sits on top of whichever
-     part of a tab falls under it; height is a deliberately small slice
-     (~10% of the notebook's own height) so it only ever covers a tab's
-     blank top margin above its icon (each tab's own content padding
-     starts 24% down, see .home-v3-shortcut-content), never the
-     icon/label/hint themselves. Inherits pointer-events:none from the
-     notebook, so it never blocks a click even over the sliver it hides. */
-  .home-v3-notebook::before {
-    content: "";
-    position: absolute;
-    left: 3%;
-    right: 3%;
-    bottom: -7%;
-    height: 11%;
-    z-index: 6;
-    background: linear-gradient(180deg, #f1e7cf 0%, #e9dab8 100%);
-    border-radius: 0 0 3px 3px;
-    box-shadow: 0 3px 5px rgba(64, 43, 24, 0.16);
-  }
-
-  /* The drop-shadow above follows the book's own silhouette (reads as an
-     object's cast shadow), which alone still looks like a shape floating
-     a little above the page. This is a separate, flatter contact-shadow
-     ellipse right at the spine/base edge -- the "the book is actually
-     pressing into the desk" cue a cast shadow alone doesn't give. Center
-     shifted right (58%) to match the plate's top-left light source. */
-  .home-v3-notebook::after {
-    content: "";
-    position: absolute;
+  .home-v4-notebook::after {
     left: 2%;
     right: 2%;
     bottom: -10%;
     height: 22%;
-    z-index: -1;
     background: radial-gradient(ellipse 65% 100% at 58% 0%, rgba(30, 20, 9, 0.55), transparent 78%);
-    pointer-events: none;
   }
 
-  .home-v3-note {
+  .home-v4-note {
     left: 0%;
     top: -1%;
     width: 44%;
@@ -2902,44 +2847,31 @@ button {
     transform: rotate(-2deg);
   }
 
-  .home-v3-note-content {
+  .home-v4-note-content {
     /* Extra bottom padding keeps the "샘플로 체험" link clear of the CTA
-       stamp's own overlap zone below (see .home-v3-cta's top% here) --
+       ticket's own overlap zone below (see .home-v4-cta's top% here) --
        without it the stamp's opaque art paints directly over the link. */
     padding: 19% 11% 20%;
   }
 
-  .home-v3-title {
+  .home-v4-title {
     font-size: clamp(23px, 2.2vw, 29px);
   }
 
-  .home-v3-subtitle {
+  .home-v4-subtitle {
     max-width: 26ch;
     font-size: clamp(12px, 1.05vw, 13.5px);
   }
 
-  .home-v3-sample {
+  .home-v4-sample {
     font-size: clamp(11.5px, 1vw, 13px);
   }
 
   /* Sits right under the note with almost no gap -- the two read as one
      "start here" column instead of two unrelated pieces, and its own
-     right edge now runs a little onto the notebook's left edge on
-     purpose (the brief explicitly allows the CTA to overlap the cover).
-     Phase 187 -- shrunk (34% -> 27%): at the cluster's Phase 184/185 full
-     width, 34% rendered as a wide banner competing with the note above it
-     instead of a stamp-sized label sitting on the note/notebook seam.
-     Phase 188 -- widened slightly again (27% -> 32%) and raised (47% ->
-     45%): at 27% wide starting from left:0%, the CTA's own right edge
-     (27%) fell short of the notebook's left edge (30%, see .home-v3-
-     notebook above) by 3 points -- it wasn't actually touching the
-     notebook at all, just sitting on bare desk next to it. 32% clears
-     that gap with a couple points of real overlap onto the cover.
-     Phase 189 -- widened once more (32% -> 35%) for a clearer bite onto
-     the cover now that Shiori (who used to occupy the cover's center)
-     is gone -- the note/CTA column reads as more firmly attached to the
-     notebook instead of just clearing the edge. */
-  .home-v3-cta {
+     right edge runs onto the notebook's left edge on purpose (fabric
+     ticket biting both the note and the cover, per the target mockup). */
+  .home-v4-cta {
     left: 0%;
     top: 45%;
     width: 35%;
@@ -2947,199 +2879,61 @@ button {
     transform: rotate(-1.5deg);
   }
 
-  .home-v3-cta-content {
+  .home-v4-cta-content {
     padding: 0 26% 5% 9%;
     font-size: clamp(13px, 1.05vw, 15px);
   }
 
-  /* Anchored past the notebook's own bottom-right corner (negative right/
-     bottom pushes the group beyond the cluster box's own edge, into the
-     scene's own side padding) rather than sitting inside the clear desk
-     space above it -- reads as tabs actually hanging off the cover's
-     edge and dipping past it, not a row that merely sits near it.
-     Phase 187 -- shrunk (50% -> 40% group, 39% -> 34% each tab) and pulled
-     down further (-2% -> -6%): at the previous size these read as a row
-     of cards sitting below the notebook rather than tabs inserted into
-     its bottom edge -- smaller and dipping further past the edge reads
-     as "tucked in", not "placed next to".
-     Phase 188 -- pulled down further still (-6% -> -10%): still read as
-     sitting just below the cover rather than tucked into it.
-     Phase 189 -- tried sending the whole group behind the notebook
-     (negative z-index) with a big positive `bottom%` so its top portion
-     fell inside the notebook's box. This broke two ways at once: the
-     overlap amount is a % of the CLUSTER's height, but the notebook's own
-     height comes from its WIDTH (aspect-ratio) -- the two scale
-     differently across viewport sizes, so the "safe" overlap tuned at one
-     width buried the icons/labels entirely at another (confirmed on an
-     actual wide screenshot). And putting the whole group behind the
-     notebook is also just the wrong tool: any occlusion depth needs to
-     stay tiny and separate from whether the tabs are z-index-foreground
-     (clickable, undimmed) at all.
-     Phase 190 -- back to a normal foreground z-index (see the shared
-     z-index below) sitting close to the notebook's bottom edge, no
-     overlap math tying it to the notebook's box. The "tucked under the
-     cover" depth cue now comes entirely from `.home-v3-notebook::before`
-     -- a thin cream strip anchored to the NOTEBOOK's own bottom edge
-     (same aspect-ratio-derived scale as the notebook itself, not the
-     cluster) that paints a fixed, small band across whatever the tab tops
-     happen to sit under. Sized to the notebook, not the cluster, so it
-     no longer drifts between viewport widths -- but the shortcut GROUP's
-     own position is still a % of the CLUSTER's height, so how close it
-     actually sits to that strip still drifts (see the two overrides
-     below for the same reason .home-v3-notebook's own bottom-edge-as-%-
-     of-cluster-height isn't constant). Tuned per-tier by taking real
-     screenshots at each rather than one value everywhere. */
-  .home-v3-shortcuts {
-    display: block;
-    right: 0%;
-    bottom: 24%;
-    width: 40%;
-  }
-
-  .home-v3-shortcut {
-    position: absolute;
-    width: 34%;
-  }
-
-  .home-v3-shortcut--vocab {
-    left: 0;
-    bottom: 2%;
-    transform: rotate(-4deg);
-    z-index: 1;
-  }
-
-  .home-v3-shortcut--review {
-    left: 29%;
-    bottom: 15%;
-    width: 41%;
-    transform: rotate(2.5deg);
-    z-index: 3;
-  }
-
-  .home-v3-shortcut--decks {
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 39%;
-    margin-left: auto;
-    margin-top: 0;
-    grid-column: auto;
-    justify-self: auto;
-    transform: rotate(-2deg);
-    z-index: 2;
-  }
-
-  .home-v3-shortcut:not(:disabled):hover {
-    /* Combined into one filter value -- a separate `filter: brightness()`
-       here would replace (not add to) the base rule's drop-shadow instead
-       of stacking with it, blanking the paper-edge shadow on hover. */
-    filter: brightness(1.04) drop-shadow(0.5px 1px 1px rgba(64, 43, 24, 0.1));
-  }
-
-  .home-v3-shortcut--vocab:not(:disabled):hover {
-    transform: rotate(-1.5deg) translateY(-3px);
-  }
-
-  .home-v3-shortcut--review:not(:disabled):hover {
-    transform: rotate(1deg) translateY(-5px);
-  }
-
-  .home-v3-shortcut--decks:not(:disabled):hover {
-    transform: rotate(0deg) translateY(-3px);
-  }
-
-  .home-v3-shortcut-content {
+  .home-v4-shortcut-content {
     padding: 24% 14% 12%;
     gap: 8px;
   }
 
-  /* Phase 187 -- scaled down with the tabs themselves (see .home-v3-
-     shortcut above, 39% -> 34%): the previous fixed px sizes were tuned
-     for the larger tab and read as oversized once the tab shrank. */
-  .home-v3-shortcut-icon {
+  .home-v4-shortcut-icon {
     width: 28px;
     height: 28px;
   }
 
-  .home-v3-shortcut-icon svg {
+  .home-v4-shortcut-icon svg {
     width: 14px;
     height: 14px;
   }
 
-  .home-v3-shortcut-label {
+  .home-v4-shortcut-label {
     font-size: 12px;
   }
 
-  .home-v3-shortcut-hint {
+  .home-v4-shortcut-hint {
     font-size: 9.5px;
   }
 
-  /* Moved from the scene's far bottom-left corner (isolated, nothing else
-     nearby) to directly under the note/CTA "start here" column instead --
-     same left edge as the note above it, small enough gap to read as the
-     last item in that column rather than a fourth, unrelated group.
-     Phase 187 -- pulled up closer to the CTA and shrunk (76% -> 70% top,
-     24% -> 19% width): the previous gap read as its own isolated footer
-     line rather than a small sticker tucked at the bottom of the note/CTA
-     pile.
-     Phase 190 -- shrunk again (19% -> 15%) and nudged off note/CTA's
-     shared left:0% (1% -> 4%) with more rotation (-1deg -> -3deg): at the
-     same left edge and a near-zero tilt, note/CTA/privacy lined up into
-     a visibly straight vertical edge -- reading as an aligned UI column,
-     not objects someone set down. Breaking that one shared edge and
-     giving it a more tossed-on angle reads as a smaller, lower-priority
-     sticker instead of the column's fourth rung. */
-  .home-v3-privacy {
+  /* Same left edge as the note above it, small enough gap to read as the
+     last item in that column rather than a fourth, unrelated group. */
+  .home-v4-privacy {
     left: 4%;
     top: 70%;
     bottom: auto;
     width: 15%;
-    transform: rotate(-3deg);
     margin: 0;
   }
 
-  .home-v3-privacy-text {
+  .home-v4-privacy-text {
     padding: 8% 6% 8% 26%;
     font-size: 10.5px;
   }
-
 }
 
-/* Phase 184 -- at >=1440px the cluster keeps growing so the notebook keeps
-   scaling with the viewport instead of plateauing into a fixed-size
-   object surrounded by more and more bare desk on wide monitors.
-   Phase 188 -- pulled in with the 1024px tier above (90vw -> 78vw) for the
-   same "camera a little further back" reason; the wide reference
-   screenshot this phase was judged against already had generous desk
-   margin at ultrawide sizes, so this tier only needed to come down
-   slightly, not as much as the 1024-1439px tier did. */
-/* Phase 190 -- the shortcut group's own overlap-into-the-notebook amount
-   (.home-v3-shortcuts' bottom%) is a % of the CLUSTER's height, while the
-   notebook's bottom edge -- what it needs to line up with -- is at a %
-   of that SAME cluster height that depends on the cluster's width/height
-   ratio, which is not constant: cluster width comes from a vw-based
-   clamp, cluster height from an svh-based one, and they grow at
-   different rates as the viewport does. One bottom% value could not fit
-   every tier -- confirmed by computing the notebook's actual bottom
-   edge position at each tier (roughly 57% of cluster height at 1024px,
-   70% at 1280px, high-80s% on very wide/short monitors) rather than
-   guessing. This tier and the 1440px one below each re-tune it against
-   that tier's own ratio. */
-@media (min-width: 1280px) {
-  .home-v3-shortcuts {
-    bottom: 8%;
-  }
-}
-
+/* At >=1440px the scene keeps growing so the notebook keeps scaling with
+   the viewport instead of plateauing into a fixed-size object surrounded
+   by more and more bare desk on wide monitors. `.home-v4-shortcuts` needs
+   no override here (unlike the old per-tier `.home-v3-shortcuts` bottom%
+   hacks this replaces) -- it's a % of the notebook, which keeps the same
+   aspect-ratio at any scene size. */
 @media (min-width: 1440px) {
-  .home-v3-cluster {
+  .home-v4-scene {
     width: min(1400px, 78vw);
     height: clamp(560px, calc(100svh - 230px), 780px);
     margin-top: 36px;
-  }
-
-  .home-v3-shortcuts {
-    bottom: -4%;
   }
 }
 
@@ -10565,9 +10359,9 @@ input.reading-vocab-sticker-toggle:checked {
     padding: 11px 14px;
   }
 
-  .home-v3-sample,
-  .home-v3-cta,
-  .home-v3-shortcut {
+  .home-v4-sample,
+  .home-v4-cta,
+  .home-v4-shortcut {
     width: auto;
     min-width: 0;
   }
