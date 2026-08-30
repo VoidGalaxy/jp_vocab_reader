@@ -111,6 +111,20 @@ const ASSET_BASE_V4 = "/brand/decor/home-v4";
 // somewhere else on Home; the now-unused `.home-v4-privacy*` CSS is
 // pruned in globals.css. Shiori's peek size also grows this phase (see
 // .home-v4-shiori-peek) -- same tape-occlusion mechanic, just bigger.
+// Phase 199 (material weight / natural contact shadow) -- 196-198's
+// incremental notebook-size/color/shadow nudges kept measuring as "close
+// enough to the previous screenshot to barely register" against this
+// phase's own before/after comparison -- confirmed by screenshot, not
+// assumed. This phase jumps to explicit target values instead of another
+// nudge (notebook width, cover color filter, Shiori peek size -- all in
+// globals.css) and replaces the scene-wide `.home-v4-scene::after` shadow
+// pool with per-object contact shadows only (`.home-v4-notebook::after`,
+// `.home-v4-tab-rail::after`), since a shadow shaped and positioned
+// against the whole scene box rather than any specific object was the
+// actual cause of the "shadow reads as a rectangle" failure a bigger
+// blur radius alone couldn't fix. No DOM change this phase -- everything
+// above is a CSS value or a CSS structural removal, not a missing
+// element.
 export function HomeDashboard({
   isDevUser,
   studyStats,

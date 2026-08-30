@@ -2494,12 +2494,24 @@ body:has(.home-v4) .app-toolbar {
      fraction the smaller size had, so growing her doesn't also expose
      more of her (which would start reading as a full mascot instead of a
      peek) -- checked against a cropped screenshot after the change, not
-     assumed from the ratio alone. */
+     assumed from the ratio alone.
+     Phase 199 -- still measured/screenshotted as "a small dot" per this
+     phase's own failure criteria -- 58px at the note's own desktop scale
+     is genuinely small next to a ~500px-wide notebook. Desktop grown to
+     this phase's exact target (58px -> 86px, top -16px -> -28px, same
+     exposed-fraction logic as Phase 198's comment above: 28/86 ≈ 33%,
+     intentionally a bit more exposed than before so head+hands both
+     clear the tape, not just the top of her head). Mobile scaled by the
+     same ~1.48x the desktop target grew by (42px -> 62px, -11px -> -19px)
+     since the brief's explicit numbers were desktop-only and leaving
+     mobile at the old, now much-smaller-looking size next to a
+     dramatically bigger desktop target would read as an oversight, not a
+     deliberate breakpoint difference. */
   left: 50%;
-  top: -11px;
+  top: -19px;
   z-index: -1;
-  width: 42px;
-  height: 42px;
+  width: 62px;
+  height: 62px;
   transform: translateX(-50%);
   pointer-events: none;
   user-select: none;
@@ -2507,9 +2519,9 @@ body:has(.home-v4) .app-toolbar {
 
 @media (min-width: 1024px) {
   .home-v4-note .home-v4-shiori-peek {
-    top: -16px;
-    width: 58px;
-    height: 58px;
+    top: -28px;
+    width: 86px;
+    height: 86px;
   }
 }
 
@@ -2556,36 +2568,42 @@ body:has(.home-v4) .app-toolbar {
   z-index: 1;
   /* Shadow direction unified to the background plate's top-left light
      source: a positive x-offset (light from upper-left casts toward
-     lower-right) instead of a straight-down shadow. Wide and low, not
-     sharp -- the notebook is the one heavy object in the scene.
-     Phase 198 -- offset/blur/alpha all increased (7/16/16/0.26 ->
-     9/20/22/0.34) as part of the brief's "책상에 닿아 보이게" contact
-     shadow pass: a bigger, darker cast shadow is what actually reads as
-     "resting on a surface" at a glance, more than the ellipse pool below
-     alone does. */
-  filter: drop-shadow(9px 20px 22px rgba(64, 43, 24, 0.34));
+     lower-right) instead of a straight-down shadow.
+     Phase 199 -- weakened to a tight alpha-silhouette shadow (see the
+     matching desktop override for the full reasoning): a bigger/darker
+     `drop-shadow()` here was doing the "book rests on the desk" job that
+     properly belongs to the ::after radial-gradient below, and at that
+     size/blur it traced the cover's own rectangle-ish silhouette instead
+     of spreading naturally onto the desk past it. */
+  filter: drop-shadow(3px 5px 5px rgba(64, 43, 24, 0.2));
 }
 
-/* A flatter contact-shadow ellipse at the spine/base edge, on top of the
-   drop-shadow above -- the "the book is actually pressing into the desk"
-   cue a cast shadow alone doesn't give. Center shifted right of the
-   book's own center (58% not 50%) to match the same top-left light
-   source.
-   Phase 198 -- widened past the notebook's own edges (4%/4% inset ->
-   -6%/-2%, asymmetric to keep following the same 58%-right-of-center
-   light source) and made taller/darker (20%/0.5 -> 26%/0.6) so the pool
-   reads as a broad, low patch of desk in shadow instead of a shadow that
-   stops exactly at the book's own silhouette -- the brief's "넓고 낮은
-   책상 접지 그림자". */
+/* A flatter contact-shadow ellipse at the spine/base edge -- the "the
+   book is actually pressing into the desk" cue a cast shadow alone
+   doesn't give. Center shifted right of the book's own center to match
+   the top-left light source.
+   Phase 199 -- exact shadow spec from this phase's brief: a three-stop
+   radial-gradient (solid core -> half-strength ring -> transparent)
+   instead of a single-stop "color then transparent" one, which reads as
+   a soft natural falloff rather than a shadow with a visible edge -- and
+   no `filter: blur()` on a separate solid layer, which is what actually
+   produced the "직사각형 박스" look this phase's brief calls out (a blur
+   filter has its own rectangular filter region that can show past the
+   gradient's own visual edge at the wrong size/position). */
 .home-v4-notebook::after {
   content: "";
   position: absolute;
-  left: -6%;
-  right: -2%;
-  bottom: -12%;
-  height: 26%;
+  left: -8%;
+  right: -5%;
+  bottom: -10%;
+  height: 20%;
   z-index: -1;
-  background: radial-gradient(ellipse 68% 100% at 58% 0%, rgba(30, 20, 9, 0.6), transparent 78%);
+  background: radial-gradient(
+    ellipse 72% 62% at 58% 42%,
+    rgba(35, 24, 12, 0.34) 0%,
+    rgba(35, 24, 12, 0.18) 38%,
+    transparent 74%
+  );
   pointer-events: none;
 }
 
@@ -2623,8 +2641,13 @@ body:has(.home-v4) .app-toolbar {
      being the scene's biggest object. Filter only on the cover image
      itself (not `.home-v4-notebook` as a whole) so it darkens/saturates
      just the fabric texture -- the emboss/tab-rail/drop-shadow siblings
-     are untouched and don't get doubly darkened. */
-  filter: saturate(1.22) brightness(0.91) contrast(1.05);
+     are untouched and don't get doubly darkened.
+     Phase 199 -- 1.22/0.91/1.05 still measured close enough to the
+     previous phase's rendered color that a before/after comparison
+     barely showed a difference (this phase's own explicit failure
+     criterion, confirmed by screenshot, not assumed). Pushed to this
+     phase's exact target instead of another incremental nudge. */
+  filter: saturate(1.45) brightness(0.78) contrast(1.12);
 }
 
 /* Phase 195 -- fills the notebook's own previously-blank lower-right cover
@@ -2762,10 +2785,16 @@ body:has(.home-v4) .app-toolbar {
    out of sync the way two independently-tuned literals eventually do.
    bottom scales by the same +30% the width did (-27% -> -35%) so a bigger
    rail keeps the same fraction of itself tucked under the cover instead
-   of either swallowing more of the notebook or exposing a taller gap. */
+   of either swallowing more of the notebook or exposing a taller gap.
+   Phase 199 -- notebook grew again this phase (62% -> 68% of the scene),
+   so the rail's own width relative to the now-bigger notebook shrank even
+   though its own declared percentage didn't change; reset to this
+   phase's exact target (96% -> 94%, -35% -> -31%) rather than
+   re-deriving a scale factor, since the brief hands both numbers down
+   directly as a matched pair for the new notebook size. */
 .home-v4-scene {
-  --rail-w: 96%;
-  --rail-bottom: -35%;
+  --rail-w: 94%;
+  --rail-bottom: -31%;
 }
 
 .home-v4-tab-rail {
@@ -2783,22 +2812,33 @@ body:has(.home-v4) .app-toolbar {
    sitting on the desk" -- the brief's own contact-shadow pass explicitly
    calls out the rail as needing a shadow separate from the notebook's own
    (a shared shadow would have to compromise between two very differently
-   shaped objects). A low, wide pool timed to the rail's own bottom edge,
-   same top-left light source (58%-right-of-center) as the notebook's
-   equivalent pool above it. z-index:-1 puts it behind the rail's own art
-   (z-index 0) and buttons (z-index 1) within the rail's own stacking
-   context; since it sits at/below the rail's already-below-the-notebook
-   bottom edge, it's already outside the notebook's own box and so is
-   never covered by the cover regardless of the notebook's higher z-index. */
+   shaped objects). z-index:-1 puts it behind the rail's own art (z-index
+   0) and buttons (z-index 1) within the rail's own stacking context;
+   since it sits at/below the rail's already-below-the-notebook bottom
+   edge, it's already outside the notebook's own box and so is never
+   covered by the cover regardless of the notebook's higher z-index.
+   Phase 199 -- exact shadow spec from this phase's brief, matching the
+   notebook's own ::after formula (three-stop radial-gradient, no blur
+   filter, so there's no separate rectangular filter region that could
+   leak a box edge onto the desk under the tabs). Narrower/lower than the
+   notebook's own pool (94%/58%/42% offsets differ slightly, matching this
+   phase's explicit rail spec) since the rail is a thinner object sitting
+   right at the desk, not a thick book -- its own contact shadow should
+   read as a smaller, tighter patch, not compete with the notebook's. */
 .home-v4-tab-rail::after {
   content: "";
   position: absolute;
-  left: -4%;
-  right: -2%;
-  bottom: -14%;
-  height: 24%;
+  left: 2%;
+  right: 4%;
+  bottom: -10%;
+  height: 18%;
   z-index: -1;
-  background: radial-gradient(ellipse 70% 100% at 58% 0%, rgba(30, 20, 9, 0.42), transparent 76%);
+  background: radial-gradient(
+    ellipse 78% 58% at 56% 40%,
+    rgba(35, 24, 12, 0.28) 0%,
+    rgba(35, 24, 12, 0.13) 42%,
+    transparent 76%
+  );
   pointer-events: none;
 }
 
@@ -3040,38 +3080,38 @@ body:has(.home-v4) .app-toolbar {
        so the extra notebook size actually registers instead of just
        eating into the same amount of "visible desk" complaint Phase 194
        pulled the camera back to fix.
-       Phase 198 -- +6% again (58% -> 62%, inside the brief's 4-8% band),
-       shifted 2 points further left (28% -> 26%) to keep roughly the same
-       margin of bare desk past the notebook's own right edge instead of
-       eating further into it. */
-    --nb-left: 26%;
-    --nb-top: 2%;
-    --nb-w: 62%;
+       Phase 198 -- +6% again (58% -> 62%).
+       Phase 199 -- 62% still measured close enough to the previous
+       screenshot that a before/after comparison barely showed a
+       difference (this phase's own explicit failure criterion). Grown
+       again to the fixed target this brief hands down directly (68%,
+       left 26% -> 23% to hold the same right-side desk margin against
+       the wider book) instead of another incremental nudge -- note/CTA
+       widths grow with it so their own overlap onto the bigger notebook
+       doesn't shrink relative to it. */
+    --nb-left: 23%;
+    --nb-top: 0%;
+    --nb-w: 68%;
     --note-left: 0%;
     --note-top: -2%;
-    --note-w: 50%;
-    --cta-left: 0%;
-    --cta-top: 41%;
-    --cta-w: 40%;
+    --note-w: 52%;
+    --cta-left: 2%;
+    --cta-top: 39%;
+    --cta-w: 42%;
   }
 
-  /* The broad, low contact-shadow pool under the whole scene -- desktop
-     only, since the scene is only this wide/low a shape at this
-     breakpoint. A blurred solid pool on the surface itself, not an edge
-     around a frame. */
-  .home-v4-scene::after {
-    content: "";
-    position: absolute;
-    left: 14%;
-    right: 8%;
-    bottom: 4%;
-    height: 30%;
-    z-index: -1;
-    background: rgba(32, 22, 10, 0.22);
-    border-radius: 50%;
-    filter: blur(60px);
-    pointer-events: none;
-  }
+  /* Phase 199 -- deleted. This was a large shared shadow "pool" sitting
+     under the ENTIRE scene box (a blurred solid-color circle spanning
+     most of the scene's own width), independent of any single object's
+     actual position or silhouette -- exactly the "공용 shadow pool"/
+     "직사각형 박스" failure this phase's brief calls out: because it was
+     sized and positioned against the scene's own box rather than any
+     object sitting on the desk, its blurred-but-still-rectangular-ish
+     footprint could show past the notebook's own edges as a generic dark
+     smudge rather than a shadow any specific object was casting. Contact
+     shadows are now entirely per-object (.home-v4-notebook::after,
+     .home-v4-tab-rail::after) -- each shaped and positioned against the
+     object actually casting it, not the outer scene box. */
 
   .home-v4-note,
   .home-v4-cta,
@@ -3092,18 +3132,38 @@ body:has(.home-v4) .app-toolbar {
        DOM order, so without this the notebook would paint over them by
        default stacking instead of the other way around. */
     z-index: 0;
-    /* Phase 198 -- same "책상에 닿아 보이게" contact-shadow strengthening
-       as the base rule above, scaled for the desktop tier's larger
-       absolute notebook size (12/26/30/0.3 -> 15/32/38/0.38). */
-    filter: drop-shadow(15px 32px 38px rgba(64, 43, 24, 0.38));
+    /* Phase 199 -- Phase 198's drop-shadow (15/32/38/0.38) was doing the
+       "book is grounded" job the ::after contact shadow below should be
+       doing instead: a `drop-shadow()` traces the PNG's own alpha
+       silhouette, which at this size/blur reads as a soft rectangle-ish
+       halo around the book rather than a shadow spreading onto the desk
+       past it -- the brief's "직사각형 박스처럼 보인다" failure. Weakened
+       to a tight alpha-silhouette shadow (mostly for the book's own
+       cut-paper edge definition) and the ::after radial-gradient below
+       now carries all of the actual "resting on the desk" cue. */
+    filter: drop-shadow(4px 6px 6px rgba(64, 43, 24, 0.22));
   }
 
+  /* Phase 199 -- exact shadow spec from this phase's brief: an ellipse
+     centered right-and-down of the book's own center (58%/42%, matching
+     the top-left light source) with a three-stop radial-gradient (solid
+     core -> half-strength ring -> transparent) instead of the previous
+     single-stop "color then transparent" gradient, which is what actually
+     reads as a soft natural falloff rather than a shadow with a visible
+     edge. No blur filter -- the gradient's own transparent tail IS the
+     soft edge, so there's no separate rectangular filter region to leak a
+     box boundary the way `filter: blur()` on a solid-color layer would. */
   .home-v4-notebook::after {
-    left: -6%;
-    right: -3%;
-    bottom: -13%;
-    height: 28%;
-    background: radial-gradient(ellipse 68% 100% at 58% 0%, rgba(30, 20, 9, 0.65), transparent 78%);
+    left: -8%;
+    right: -5%;
+    bottom: -10%;
+    height: 20%;
+    background: radial-gradient(
+      ellipse 72% 62% at 58% 42%,
+      rgba(35, 24, 12, 0.34) 0%,
+      rgba(35, 24, 12, 0.18) 38%,
+      transparent 74%
+    );
   }
 
   /* Phase 194 -- widened (44% -> 48%) so the note's own right edge visibly
