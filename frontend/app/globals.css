@@ -1534,15 +1534,22 @@ body {
    settled on the notebook. This reintroduces a scrim, but as a targeted
    radial vignette (dims the outer frame, leaves an untouched pool where
    the note/notebook/CTA cluster actually sits) instead of Phase 186-192's
-   flat full-bleed wash -- the goal is recede the frame, not dim the scene. */
+   flat full-bleed wash -- the goal is recede the frame, not dim the scene.
+   Phase 197 -- that first pass overshot: 0.58 outer alpha with the
+   transparent core stopping at 28-30% read as a stage spotlight on the
+   notebook, not a warm desk lit from one side. Alpha down to 0.32 (still
+   enough to recede the far corners, not enough to look staged) and the
+   transparent core widened to 44-46% so the dimming only starts well past
+   where the note/notebook/CTA cluster actually sits, instead of licking
+   its edges. */
 body:has(.home-v4) {
   background-color: #d9b98a;
   background-image:
     linear-gradient(rgba(255, 248, 226, 0.14), transparent 42%),
     radial-gradient(
-      ellipse 60% 54% at 46% 36%,
-      transparent 30%,
-      rgba(30, 19, 8, 0.58) 100%
+      ellipse 68% 62% at 46% 36%,
+      transparent 46%,
+      rgba(30, 19, 8, 0.32) 100%
     ),
     url("/brand/decor/home-v4/home-v4-desk-surface-mobile.png");
   background-repeat: no-repeat, no-repeat, no-repeat;
@@ -1555,9 +1562,9 @@ body:has(.home-v4) {
     background-image:
       linear-gradient(rgba(255, 248, 226, 0.14), transparent 42%),
       radial-gradient(
-        ellipse 54% 58% at 42% 38%,
-        transparent 28%,
-        rgba(30, 19, 8, 0.58) 100%
+        ellipse 62% 66% at 42% 38%,
+        transparent 44%,
+        rgba(30, 19, 8, 0.32) 100%
       ),
       url("/brand/decor/home-v4/home-v4-desk-surface-desktop.png");
     background-position: center, center, center;
@@ -2437,6 +2444,57 @@ body:has(.home-v4) .app-toolbar {
   z-index: 3;
 }
 
+/* Phase 197 -- candidate F: Shiori peeking up from behind the note's own
+   taped edge (see the HomeDashboard.tsx comment on this element for why
+   it's rendered before .home-v4-note-img in DOM order). Negative top
+   pushes most of her box above the note's own top edge -- that part can
+   never be covered by anything (nothing else occupies that space) -- while
+   z-index:-1 (below .home-v4-note-img's 0, within .home-v4-note's own
+   stacking context from its position+z-index above) guarantees the lower
+   portion, which dips back down into the note's own box, is painted over
+   by the paper/tape instead of floating in front of it. left/transform
+   center her over the tape's own position on the source art (roughly a
+   third of the way across the note, not dead center) instead of the
+   note's own horizontal center.
+   Qualified with the parent (.home-v4-note .home-v4-shiori-peek, not a
+   bare .home-v4-shiori-peek) for the same reason several other Home rules
+   already are: .shiori-asset--md sets its own width/height later in this
+   file, same 0-1-0 specificity as a bare single class here, and would win
+   the cascade by source order alone. The two-class selector here has
+   higher specificity, so the peek's own size wins regardless of where
+   Shiori.tsx's size tiers happen to sit in the file. */
+.home-v4-note .home-v4-shiori-peek {
+  position: absolute;
+  /* Phase 197 rework -- left:33%/top:-13px put her entirely above AND
+     left of the tape (`.home-v4-note-img`'s own canvas already includes
+     the tape above the torn-paper shape, so the note box's top edge
+     starts at the tape's own top, not the paper's) -- checked with a
+     cropped screenshot, not assumed: she rendered as a small sticker
+     floating loose near the note instead of behind the tape at all.
+     left:50% centers her over the tape's own measured position instead
+     of guessing from the source art's nominal proportions, and a much
+     smaller negative top now lets roughly the bottom half of her box
+     actually sink into the tape/note's own canvas (where .home-v4-
+     note-img, z-index above this, paints over it) instead of clearing
+     the tape's top edge entirely. */
+  left: 50%;
+  top: -7px;
+  z-index: -1;
+  width: 30px;
+  height: 30px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (min-width: 1024px) {
+  .home-v4-note .home-v4-shiori-peek {
+    top: -10px;
+    width: 38px;
+    height: 38px;
+  }
+}
+
 .home-v4-cta {
   position: relative;
   width: min(210px, 60%);
@@ -2906,13 +2964,25 @@ body:has(.home-v4) .app-toolbar {
     /* Privacy moves out of "stray footer" territory (-2%/75%, off on its
        own well below everything else) and up into the note/CTA/notebook
        cluster's own footprint -- left edge now shares the note/CTA
-       column's 0% instead of sitting further left of it, and top now
-       overlaps the CTA ticket's own lower third instead of sitting a
-       full scene-height below it, so it reads as one more object
-       belonging to that pile of stationery rather than a page footer
-       that happens to render inside the scene box. */
+       column's 0% instead of sitting further left of it, so it reads as
+       one more object belonging to that pile of stationery rather than a
+       page footer that happens to render inside the scene box.
+       Phase 197 -- top:58% put this INSIDE the CTA ticket's own box
+       instead of near its lower third as intended: the CTA (top:41%,
+       width:40%, its own 2014/781 aspect-ratio) runs to roughly 41% +
+       (0.40 * sceneWidth / 2.579) / sceneHeight of scene height, which at
+       ordinary desktop scene proportions lands past 70% -- well below
+       where this assumed CTA ended, so the ticket's own drop-shadow and
+       tail painted directly over the privacy label underneath it (the
+       brief's failure case, confirmed in the reported screenshot, not
+       guessed from the numbers alone). Pushed down again with a real
+       margin below that measured CTA bottom, not just enough to clear it
+       exactly -- a fixed offset from a measured edge is one adjustment
+       away from re-touching the moment either box's own size changes;
+       a visible gap has slack either box's future resize can eat into
+       without the overlap coming back. */
     --privacy-left: 3%;
-    --privacy-top: 58%;
+    --privacy-top: 76%;
   }
 
   /* The broad, low contact-shadow pool under the whole scene -- desktop
@@ -3059,13 +3129,25 @@ body:has(.home-v4) .app-toolbar {
     left: var(--privacy-left);
     top: var(--privacy-top);
     bottom: auto;
-    width: 15%;
+    /* Phase 197 -- 15% wrapped its own single sentence onto 3 lines at
+       1024px widths (the brief's "1024에서 읽기 어려우면 실패") since the
+       box was narrow enough that most words broke mid-line. Widened
+       (15% -> 20%) so the same text fits in <=2 lines instead of shrinking
+       the font, which would have hurt legibility more than it helped. */
+    width: 20%;
+    /* Belt-and-suspenders alongside the repositioning above: even a
+       correctly-placed box can end up under a neighbor's drop-shadow if
+       either one's size is retuned later without remembering this
+       relationship exists. z-index above the CTA/note/notebook's own
+       (all <=3) means the label text stays readable even if a future
+       resize brings the boxes physically closer again. */
+    z-index: 5;
     transform: rotate(-3deg);
     margin: 0;
   }
 
   .home-v4-privacy-text {
-    padding: 8% 6% 8% 26%;
+    padding: 8% 6% 8% 24%;
     font-size: 10.5px;
   }
 }

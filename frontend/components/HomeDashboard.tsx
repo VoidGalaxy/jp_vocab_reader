@@ -1,6 +1,7 @@
 "use client";
 
 import { BookshelfIcon, CardFileIcon, CardsIcon, SparkleIcon } from "./icons";
+import { ShioriCharacter } from "./Shiori";
 import type { StudyStats, VocabItem } from "./types";
 
 type HomeDashboardProps = {
@@ -123,6 +124,24 @@ export function HomeDashboard({
     <section className="tab-panel home-dashboard home-v4" aria-live="polite">
       <div className="home-v4-scene">
         <div className="home-v4-note">
+          {/* Phase 197 -- candidate F: Shiori peeking up from behind the
+              note's own taped edge, not a mascot sitting on the notebook
+              cover (that placement failed a prior phase -- see the
+              top-of-file history). Rendered BEFORE home-v4-note-img in DOM
+              order and forced below it in z-index (see
+              .home-v4-shiori-peek), so the same "occluder" trick the
+              notebook cover already uses for the tab rail applies here:
+              the note's own paper only exists inside `.home-v4-note`'s own
+              box, so the portion of her that sits above that box (where
+              she pokes out above the tape) can never be covered by
+              construction, and the portion that overlaps the box is
+              always painted over by the note -- no manual clip-path
+              tuning needed. */}
+          <ShioriCharacter
+            variant="default"
+            size="md"
+            className="home-v4-shiori-peek"
+          />
           <img
             className="home-v4-note-img"
             src={`${ASSET_BASE}/home-v3-title-note.png`}
