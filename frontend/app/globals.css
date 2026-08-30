@@ -1526,22 +1526,41 @@ body {
    higher specificity than the plain `body` rule above and the >=1024px
    wood-desk `body` override further down, so it wins at every width
    without `!important`. */
+/* Phase 196 -- Phase 195 dropped the old vignette/scrim stack entirely on
+   the theory that the new plate's manifest-clean center made it
+   unnecessary; in practice the plate's own wood grain + directional light
+   rays are still louder than the foreground objects sitting on top of it,
+   so Home read as "a desk photo with paper glued on" before the eye ever
+   settled on the notebook. This reintroduces a scrim, but as a targeted
+   radial vignette (dims the outer frame, leaves an untouched pool where
+   the note/notebook/CTA cluster actually sits) instead of Phase 186-192's
+   flat full-bleed wash -- the goal is recede the frame, not dim the scene. */
 body:has(.home-v4) {
   background-color: #d9b98a;
   background-image:
     linear-gradient(rgba(255, 248, 226, 0.14), transparent 42%),
+    radial-gradient(
+      ellipse 60% 54% at 46% 36%,
+      transparent 30%,
+      rgba(30, 19, 8, 0.58) 100%
+    ),
     url("/brand/decor/home-v4/home-v4-desk-surface-mobile.png");
-  background-repeat: no-repeat, no-repeat;
-  background-size: 100% 100%, cover;
-  background-position: center, center;
+  background-repeat: no-repeat, no-repeat, no-repeat;
+  background-size: 100% 100%, 100% 100%, cover;
+  background-position: center, center, center;
 }
 
 @media (min-width: 1024px) {
   body:has(.home-v4) {
     background-image:
       linear-gradient(rgba(255, 248, 226, 0.14), transparent 42%),
+      radial-gradient(
+        ellipse 54% 58% at 42% 38%,
+        transparent 28%,
+        rgba(30, 19, 8, 0.58) 100%
+      ),
       url("/brand/decor/home-v4/home-v4-desk-surface-desktop.png");
-    background-position: center, center;
+    background-position: center, center, center;
   }
 }
 
@@ -1692,8 +1711,14 @@ button {
    selected via `body:has(.home-v4)` the same way the background plate
    itself is scoped, rather than a Home-only toolbar variant component. */
 body:has(.home-v4) .app-toolbar {
-  background: rgba(253, 249, 238, 0.4);
+  background: rgba(253, 249, 238, 0.25);
   border-bottom-color: transparent;
+  /* Phase 196 -- the blur was the last thing still making this read as a
+     pane of glass sitting in front of the scene (i.e. chrome) rather than
+     a faint printed strip above it; dropping it flattens the toolbar back
+     into the page instead of floating over it. */
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 .app-toolbar-menu-button {
@@ -2502,14 +2527,20 @@ body:has(.home-v4) .app-toolbar {
    z-index above the cover image (4 vs 3) but still below the note/CTA/
    tab-rail (2+), and low opacity so it reads as a stamped material detail,
    not another sticker competing with the live-text objects. */
+/* Phase 196 -- 0.28/30% still read as "almost nothing" once actually
+   sitting on a photographed cover instead of a flat swatch, so the cover
+   still registered as blank at a glance (the brief's "표지가 빈 표지로
+   보이면 실패"). Bigger and darker, but still just opacity on the same
+   flat overlay (no added shadow/border/stroke) -- that distinction is
+   what keeps it a stamped material detail instead of a pasted-on sticker. */
 .home-v4-notebook-emboss {
   position: absolute;
-  right: 6%;
-  bottom: 10%;
-  width: 30%;
+  right: 4%;
+  bottom: 7%;
+  width: 40%;
   aspect-ratio: 1367 / 1150;
   z-index: 4;
-  opacity: 0.28;
+  opacity: 0.42;
   pointer-events: none;
   user-select: none;
 }
@@ -2610,12 +2641,28 @@ body:has(.home-v4) .app-toolbar {
    significantly bigger than Phase 194 (width 56% -> 74% of the notebook)
    per the brief's "25-35% 크게 복구". right:0 flush with the notebook's
    own right edge, matching the target mockup (the rail's own right edge
-   lines up with the cover's, not hanging past it onto the desk). */
+   lines up with the cover's, not hanging past it onto the desk).
+   Phase 196 -- still read as a small tucked accessory rather than a
+   primary action anchor once actually measured against the mockup's own
+   rail-to-notebook ratio, so this grows again (74% -> 96%, +30%, inside
+   the brief's 20-35% band) via a custom property on `.home-v4-scene` (see
+   the "desktop composition constants" comment on the 1024px block below)
+   instead of a bare literal here, so the rail's width and its matching
+   bottom-overlap offset stay declared next to each other and can't drift
+   out of sync the way two independently-tuned literals eventually do.
+   bottom scales by the same +30% the width did (-27% -> -35%) so a bigger
+   rail keeps the same fraction of itself tucked under the cover instead
+   of either swallowing more of the notebook or exposing a taller gap. */
+.home-v4-scene {
+  --rail-w: 96%;
+  --rail-bottom: -35%;
+}
+
 .home-v4-tab-rail {
   position: absolute;
   right: 0%;
-  bottom: -27%;
-  width: 74%;
+  bottom: var(--rail-bottom);
+  width: var(--rail-w);
   aspect-ratio: 1927 / 816;
   z-index: 2;
 }
@@ -2822,12 +2869,50 @@ body:has(.home-v4) .app-toolbar {
      .home-v4-notebook below) left almost no visible desk on the right
      edge at ordinary laptop widths, reading as a cropped photo rather
      than an object sitting on a surface. */
+  /* Phase 196 -- "desktop composition constants": every object's own
+     left/top/width literal used to live only inside that object's own
+     rule, so the six-odd numbers that actually describe ONE composition
+     (how far the note overlaps the notebook, how far the CTA overlaps
+     both) were scattered across five separate rule blocks with no
+     declared relationship between them -- each one got re-tuned in
+     isolation phase over phase (177-195) without a way to see the
+     composition as a whole. Declaring them here as custom properties on
+     the positioning root doesn't change any behavior by itself, but it
+     means the numbers that define the scene's silhouette are now read
+     (and edited) as one group next to this comment instead of hunted for
+     across the file. */
   .home-v4-scene {
     margin-bottom: 0;
     padding: 0;
     width: min(1020px, 72vw);
     height: clamp(460px, calc(100svh - 220px), 640px);
     margin: 28px auto 0;
+    /* Phase 196 -- notebook grown again (55% -> 58%) and shifted left
+       (30% -> 28%) so it reads as the scene's dominant object rather than
+       one object among several of similar visual weight -- paired with
+       the new background vignette above, which recedes the desk itself
+       so the extra notebook size actually registers instead of just
+       eating into the same amount of "visible desk" complaint Phase 194
+       pulled the camera back to fix. */
+    --nb-left: 28%;
+    --nb-top: 2%;
+    --nb-w: 58%;
+    --note-left: 0%;
+    --note-top: -2%;
+    --note-w: 50%;
+    --cta-left: 0%;
+    --cta-top: 41%;
+    --cta-w: 40%;
+    /* Privacy moves out of "stray footer" territory (-2%/75%, off on its
+       own well below everything else) and up into the note/CTA/notebook
+       cluster's own footprint -- left edge now shares the note/CTA
+       column's 0% instead of sitting further left of it, and top now
+       overlaps the CTA ticket's own lower third instead of sitting a
+       full scene-height below it, so it reads as one more object
+       belonging to that pile of stationery rather than a page footer
+       that happens to render inside the scene box. */
+    --privacy-left: 3%;
+    --privacy-top: 58%;
   }
 
   /* The broad, low contact-shadow pool under the whole scene -- desktop
@@ -2860,9 +2945,9 @@ body:has(.home-v4) .app-toolbar {
      moves compound (a smaller scene alone would have kept the notebook
      at the same 60% share of a smaller box, which still read as tight). */
   .home-v4-notebook {
-    left: 30%;
-    top: 3%;
-    width: 55%;
+    left: var(--nb-left);
+    top: var(--nb-top);
+    width: var(--nb-w);
     margin-top: 0;
     /* Explicit, lowest z-index -- note/CTA come *before* the notebook in
        DOM order, so without this the notebook would paint over them by
@@ -2884,9 +2969,9 @@ body:has(.home-v4) .app-toolbar {
      points of the scene, since the notebook itself now starts at the same
      30% left as before) -- at 44% the two objects only barely grazed. */
   .home-v4-note {
-    left: 0%;
-    top: -1%;
-    width: 48%;
+    left: var(--note-left);
+    top: var(--note-top);
+    width: var(--note-w);
     z-index: 2;
     transform: rotate(-2deg);
   }
@@ -2921,9 +3006,9 @@ body:has(.home-v4) .app-toolbar {
      brought the tab rail's own top edge closer to the CTA's own bottom
      edge in absolute terms, crowding the two at ordinary laptop widths. */
   .home-v4-cta {
-    left: 0%;
-    top: 42%;
-    width: 38%;
+    left: var(--cta-left);
+    top: var(--cta-top);
+    width: var(--cta-w);
     z-index: 2;
     transform: rotate(-1.5deg);
   }
@@ -2956,21 +3041,26 @@ body:has(.home-v4) .app-toolbar {
     font-size: 10.5px;
   }
 
-  /* Phase 194 -- pulled off the note/CTA's shared left:0% edge and
-     further down (4%->-2% left, 70%->75% top), with more tilt than
-     either of them: at a near-matching left edge this still read as the
-     fourth rung of one aligned column rather than a small sticker
-     someone tossed onto the desk separately, the "UI 안내 박스" look the
-     brief calls out. Width left at 15% (not shrunk further) -- narrower
-     wrapped its own text onto 3 lines once the scene itself got smaller
-     this phase (see .home-v4-scene above), trading one failure for
-     another. */
+  /* Phase 194 pulled this off the note/CTA's shared left edge and well
+     below everything else specifically to avoid reading as "the fourth
+     rung of an aligned UI column" -- but taken far enough, that same move
+     reads as a completely different failure instead: a page footer that
+     happens to render inside the scene box, disconnected from the note/
+     CTA/notebook pile it's supposed to belong to (the brief's "scene 밖
+     작은 footer처럼 보이는 위치"). Phase 196 -- moved back toward that
+     column (left -2% -> var(--privacy-left), sharing its 0%-ish edge) and
+     up into the CTA ticket's own lower third (top 75% -> var(--privacy-
+     top)) instead of a full scene-height below it, so it visually
+     belongs to the same pile of stationery instead of sitting apart from
+     it. Rotation eased (-6deg -> -3deg) for the same reason: a small
+     shared tilt reads as "part of the same messy desk", a much sharper
+     one on its own reads as a separate decoration. */
   .home-v4-privacy {
-    left: -2%;
-    top: 75%;
+    left: var(--privacy-left);
+    top: var(--privacy-top);
     bottom: auto;
     width: 15%;
-    transform: rotate(-6deg);
+    transform: rotate(-3deg);
     margin: 0;
   }
 

@@ -76,6 +76,20 @@ const ASSET_BASE_V4 = "/brand/decor/home-v4";
 // (opaque checkerboard baked in), so the existing transparent
 // `home-v3-notebook-cover.png` stays, with the emboss mark layered on
 // top as its own overlay image instead.
+// Phase 196 (composition lock) -- Phase 195 wired the right assets but
+// still read as a photo background with paper glued on: the desk plate's
+// own wood grain/light rays out-competed the foreground, the tab rail was
+// still small enough to read as a footnote rather than Home's three main
+// actions, the emboss was too faint to keep the cover from looking blank,
+// and privacy sat far enough from the note/CTA/notebook pile to read as a
+// page footer instead of one more object on the desk. No DOM changes this
+// phase -- every one of those is a relationship between existing objects
+// (background recede-vs-foreground contrast, rail-to-notebook size ratio,
+// emboss opacity, privacy's position relative to the note/CTA column),
+// not a missing element, so the fix lives entirely in globals.css: a
+// background vignette, a bigger rail, a stronger emboss, and privacy
+// repositioned into the note/CTA cluster (see the Phase 196 comments on
+// each of those rules).
 export function HomeDashboard({
   isDevUser,
   studyStats,
