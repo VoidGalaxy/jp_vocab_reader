@@ -24,6 +24,7 @@ type HomeDashboardProps = {
 };
 
 const ASSET_BASE = "/brand/decor/home-v3";
+const ASSET_BASE_V4 = "/brand/decor/home-v4";
 
 // Phase 192 (skeleton replacement) -- reskin failed; phases 177-190 kept
 // patching the same flat `scene > [note, cta, notebook, shortcuts,
@@ -61,6 +62,20 @@ const ASSET_BASE = "/brand/decor/home-v3";
 // name what it actually is -- no new DOM nesting was needed since
 // Phase 192's notebook-relative structure already solved the coordinate-
 // mismatch bug this exists to avoid re-introducing.
+// Phase 195 (target-mockup asset replacement) -- coordinate-only passes
+// (177-194) hit diminishing returns, so this phase is driven by newly
+// generated material instead: a photographed oak desk plate (replacing
+// the old kraft-paper plate on `body:has(.home-v4)`), one rail image
+// (`home-v4-shortcut-tab-rail-candidate.png`) replacing the three
+// separate shortcut-tab PNGs -- the DOM hit zones stay three buttons for
+// three handlers/routes, but the ART is one rail an anchor image drives,
+// not three independently-tuned card positions -- and a low-opacity
+// emboss mark filling the notebook's previously-blank lower-right cover.
+// The two "embossed notebook cover" candidates in home-v4/ are NOT wired
+// (see ASSET_MANIFEST.md in that folder): both failed alpha verification
+// (opaque checkerboard baked in), so the existing transparent
+// `home-v3-notebook-cover.png` stays, with the emboss mark layered on
+// top as its own overlay image instead.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -121,7 +136,7 @@ export function HomeDashboard({
         <button type="button" className="home-v4-cta" onClick={onStartReading}>
           <img
             className="home-v4-cta-img"
-            src={`${ASSET_BASE}/home-v3-cta-stamp.png`}
+            src={`${ASSET_BASE_V4}/home-v4-cta-ticket.png`}
             alt=""
             draggable={false}
           />
@@ -146,18 +161,39 @@ export function HomeDashboard({
             alt=""
             draggable={false}
           />
+          {/* Phase 195 -- low-opacity emboss overlay so the notebook's own
+              empty lower-right cover reads as "quiet branded material" (a
+              stamped mark, like a real fabric-cover notebook) instead of
+              unused space. See .home-v4-notebook-emboss for the opacity
+              range (0.22-0.35) the brief calls for. */}
+          <img
+            className="home-v4-notebook-emboss"
+            aria-hidden="true"
+            src={`${ASSET_BASE_V4}/home-v4-cover-emboss-mark.png`}
+            alt=""
+            draggable={false}
+          />
+          {/* Phase 195 -- the three shortcut tabs are no longer three
+              independently-coordinated PNG buttons: `home-v4-shortcut-
+              tab-rail-candidate.png` already draws all three (torn paper +
+              tape) as one rail image, so this is now one image anchor
+              (.home-v4-tab-rail-img) with three plain DOM hit zones laid
+              over even thirds of it -- icon/label/hint stay live text,
+              positioned in the safe area below the image's own baked-in
+              tape strip. */}
           <div className="home-v4-tab-rail" role="group" aria-label="바로가기">
+            <img
+              className="home-v4-tab-rail-img"
+              aria-hidden="true"
+              src={`${ASSET_BASE_V4}/home-v4-shortcut-tab-rail-candidate.png`}
+              alt=""
+              draggable={false}
+            />
             <button
               type="button"
               className="home-v4-shortcut home-v4-shortcut--vocab"
               onClick={onGoToVocab}
             >
-              <img
-                className="home-v4-shortcut-img"
-                src={`${ASSET_BASE}/home-v3-shortcut-tab-yellow.png`}
-                alt=""
-                draggable={false}
-              />
               <span className="home-v4-shortcut-content">
                 <span className="home-v4-shortcut-icon">
                   <CardFileIcon />
@@ -173,12 +209,6 @@ export function HomeDashboard({
               className="home-v4-shortcut home-v4-shortcut--review"
               onClick={isDevUser ? onOpenAccount : onStartTodayReview}
             >
-              <img
-                className="home-v4-shortcut-img"
-                src={`${ASSET_BASE}/home-v3-shortcut-tab-coral.png`}
-                alt=""
-                draggable={false}
-              />
               <span className="home-v4-shortcut-content">
                 <span className="home-v4-shortcut-icon">
                   <CardsIcon />
@@ -194,12 +224,6 @@ export function HomeDashboard({
               className="home-v4-shortcut home-v4-shortcut--decks"
               onClick={onGoToSharedDecks}
             >
-              <img
-                className="home-v4-shortcut-img"
-                src={`${ASSET_BASE}/home-v3-shortcut-tab-blue.png`}
-                alt=""
-                draggable={false}
-              />
               <span className="home-v4-shortcut-content">
                 <span className="home-v4-shortcut-icon">
                   <BookshelfIcon />

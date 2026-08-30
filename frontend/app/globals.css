@@ -1515,34 +1515,33 @@ body {
   background-size: var(--paper-texture-size);
 }
 
-/* Phase 192 -- Home surface layer (see layer 1 in the phase brief: "전체
-   desk surface, 소품은 가장자리 framing만"). Unchanged in substance from
-   Phase 186-188 (a photographed desk plate, a flat warm scrim to recede
-   its own contrast, and a center-clear vignette so the corner props/light
-   dapple settle behind the notebook instead of competing with it) --
-   just re-scoped from `.home-v3` to `.home-v4` since Home's DOM moved to
-   the new class family this phase. `:has()` gives this higher specificity
-   than the plain `body` rule above and the >=1024px wood-desk `body`
-   override further down, so it wins at every width without
-   `!important`. */
+/* Phase 195 -- Home surface layer, now the new home-v4 oak desk plate
+   (replacing the old home-v3 kraft-paper plate). The Phase 186-192 vignette
+   + scrim stack existed to recede a busier photo's own contrast/props from
+   competing with the foreground; the new plate's manifest states its
+   center safe area is already clean and props stay near the outer edges,
+   so this drops that compensating layer rather than keep fighting an
+   asset that no longer needs it -- a small top-light wash is kept for the
+   same "one lit surface" read, not to hide anything. `:has()` gives this
+   higher specificity than the plain `body` rule above and the >=1024px
+   wood-desk `body` override further down, so it wins at every width
+   without `!important`. */
 body:has(.home-v4) {
-  background-color: #d9c3a0;
+  background-color: #d9b98a;
   background-image:
-    radial-gradient(ellipse 90% 80% at 50% 42%, transparent 45%, rgba(64, 46, 26, 0.16) 100%),
-    linear-gradient(rgba(247, 239, 219, 0.46), rgba(247, 239, 219, 0.46)),
-    url("/brand/decor/home-v3/home-v3-desk-surface-mobile.png");
-  background-repeat: no-repeat, no-repeat, no-repeat;
-  background-size: 100% 100%, 100% 100%, cover;
-  background-position: center, center, 78% 18%;
+    linear-gradient(rgba(255, 248, 226, 0.14), transparent 42%),
+    url("/brand/decor/home-v4/home-v4-desk-surface-mobile.png");
+  background-repeat: no-repeat, no-repeat;
+  background-size: 100% 100%, cover;
+  background-position: center, center;
 }
 
 @media (min-width: 1024px) {
   body:has(.home-v4) {
     background-image:
-      radial-gradient(ellipse 90% 80% at 50% 42%, transparent 45%, rgba(64, 46, 26, 0.16) 100%),
-      linear-gradient(rgba(247, 239, 219, 0.46), rgba(247, 239, 219, 0.46)),
-      url("/brand/decor/home-v3/home-v3-desk-surface-desktop.png");
-    background-position: center, center, 78% 26%;
+      linear-gradient(rgba(255, 248, 226, 0.14), transparent 42%),
+      url("/brand/decor/home-v4/home-v4-desk-surface-desktop.png");
+    background-position: center, center;
   }
 }
 
@@ -1683,6 +1682,18 @@ button {
   background: rgba(253, 249, 238, 0.82);
   backdrop-filter: blur(3px);
   box-shadow: none;
+}
+
+/* Phase 195 -- Home-scoped only (other tabs' toolbar is untouched): the
+   toolbar already reads as a quiet translucent strip everywhere (see the
+   Phase 172/173 history above), but the new photographed desk plate is
+   richer than the old flat paper background, so even this strip can pull
+   focus before the scene does. Lighter background + no dashed underedge,
+   selected via `body:has(.home-v4)` the same way the background plate
+   itself is scoped, rather than a Home-only toolbar variant component. */
+body:has(.home-v4) .app-toolbar {
+  background: rgba(253, 249, 238, 0.4);
+  border-bottom-color: transparent;
 }
 
 .app-toolbar-menu-button {
@@ -2391,14 +2402,6 @@ button {
   filter: drop-shadow(1px 2px 2px rgba(64, 43, 24, 0.14));
 }
 
-/* Lighter still: the shortcut tabs are smaller and sit tucked into the
-   notebook's own bottom edge, so the note/CTA shadow's size/opacity read
-   as a thick dark line under a floating card instead of a shallow tab
-   crease. */
-.home-v4-shortcut {
-  filter: drop-shadow(0.5px 1px 1px rgba(64, 43, 24, 0.1));
-}
-
 .home-v4-note {
   position: relative;
   width: min(340px, 96%);
@@ -2412,7 +2415,9 @@ button {
 .home-v4-cta {
   position: relative;
   width: min(210px, 60%);
-  aspect-ratio: 1743 / 683;
+  /* Phase 195 -- home-v4-cta-ticket.png (2014x781) replacing home-v3-
+     cta-stamp.png (was 1743x683, close to the same ratio anyway). */
+  aspect-ratio: 2014 / 781;
   align-self: flex-start;
   /* Pulls up into the note's own bottom edge -- the "start here" column
      reads as one taped-together unit instead of two stacked rows. */
@@ -2462,7 +2467,6 @@ button {
 
 .home-v4-note-img,
 .home-v4-cta-img,
-.home-v4-shortcut-img,
 .home-v4-privacy-img {
   position: absolute;
   inset: 0;
@@ -2488,6 +2492,24 @@ button {
   width: 100%;
   height: 100%;
   display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Phase 195 -- fills the notebook's own previously-blank lower-right cover
+   with the generated open-book/leaf emboss mark instead of leaving it as
+   unused space (the brief's "notebook cover가 빈 표지로 남으면 실패").
+   z-index above the cover image (4 vs 3) but still below the note/CTA/
+   tab-rail (2+), and low opacity so it reads as a stamped material detail,
+   not another sticker competing with the live-text objects. */
+.home-v4-notebook-emboss {
+  position: absolute;
+  right: 6%;
+  bottom: 10%;
+  width: 30%;
+  aspect-ratio: 1367 / 1150;
+  z-index: 4;
+  opacity: 0.28;
   pointer-events: none;
   user-select: none;
 }
@@ -2577,37 +2599,36 @@ button {
   transform: scale(0.97);
 }
 
-/* The tab rail -- nested inside .home-v4-notebook (see HomeDashboard.tsx),
-   positioned as a % of the NOTEBOOK's own box, not the outer scene: one
-   set of values works at every viewport width because the notebook's own
-   aspect-ratio doesn't change with the viewport the way the old cluster/
-   scene box's height did. Named for what it physically is (Phase 194,
-   was `.home-v4-shortcuts`) -- the strip of the notebook's own bottom
-   edge the tabs ride along, not a floating group of buttons that happens
-   to sit nearby. right/bottom both negative -- the rail sits mostly past
-   the notebook's own right and bottom edges (on the open desk), with
-   only its own top portion reaching up into the notebook's rectangle
-   where the cover image (z-index above this, see .home-v4-notebook-img)
-   covers it.
-   Phase 194 -- pulled in (right -4%->-2%, width 68%->56%) to keep the
-   whole rail closer to the notebook's own footprint instead of sprawling
-   past its right edge, matching the target mockup's tighter tab cluster
-   -- bottom/height are untouched from Phase 192, since those specifically
-   control how deep the tabs tuck under the cover and were verified by
-   measuring rendered rects, not eyeballing a screenshot. */
+/* Phase 195 -- the tab rail is now driven by ONE image
+   (home-v4-shortcut-tab-rail-candidate.png, 1927x816: three torn-paper
+   tabs + their own tape strips + a baked-in soft shadow, already drawn as
+   one piece) instead of three independently-positioned card PNGs. Sized
+   as a real aspect-ratio box (not a hand-picked height% -- Phase 192's
+   "absolutely-positioned children never contribute to the parent's auto
+   height" trap doesn't apply here since the rail no longer NEEDS an
+   explicit height hack, aspect-ratio supplies a real one), and
+   significantly bigger than Phase 194 (width 56% -> 74% of the notebook)
+   per the brief's "25-35% 크게 복구". right:0 flush with the notebook's
+   own right edge, matching the target mockup (the rail's own right edge
+   lines up with the cover's, not hanging past it onto the desk). */
 .home-v4-tab-rail {
   position: absolute;
-  right: -2%;
-  bottom: -24%;
-  width: 56%;
-  /* Every child tab is ALSO position:absolute (needed for the fan
-     rotation/overlap arrangement), and absolutely positioned children
-     never contribute to their parent's auto height -- without an
-     explicit height here this box collapses to 0, which silently breaks
-     every child's own `bottom: X%` (a % of a 0 height is 0), collapsing
-     all three tabs onto the same spot instead of fanning them out. */
-  height: 38%;
+  right: 0%;
+  bottom: -27%;
+  width: 74%;
+  aspect-ratio: 1927 / 816;
   z-index: 2;
+}
+
+.home-v4-tab-rail-img {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* Qualified with the parent (.home-v4-tab-rail .home-v4-shortcut, not
@@ -2623,72 +2644,77 @@ button {
    screenshot. The two-class selector here has higher specificity than
    that single-class exemption, so it wins regardless of viewport width
    without needing to touch or remove that older rule (still needed for
-   the note's sample link and the CTA). */
+   the note's sample link and the CTA).
+   Each hit zone is an even third of the rail image's own width, reading
+   the tab boundaries directly off the source art (yellow ~5%-34%, coral
+   ~34%-66%, blue ~66%-98%) rather than a separately-tuned rotation/
+   aspect-ratio per tab -- no baked art of their own to position, just a
+   plain transparent click target + live text over the shared rail.
+   min-width:0 exists for a THIRD, viewport-independent reason: the
+   app-wide `button { min-width: 120px }` reset floors every button's
+   width at 120px, which beats this rule's own 31%/32%/31% widths
+   whenever a third of the rail is under 120px (any rail narrower than
+   ~390px, i.e. most of the 1024/1280 desktop tier, not just mobile) --
+   confirmed by measuring rendered widths pinned at exactly 120px
+   instead of the intended ~93-96px at 1024. The below-640px mobile
+   exemption above happens to reset min-width too, which is why this
+   only showed up once desktop widths were measured directly. */
 .home-v4-tab-rail .home-v4-shortcut {
   position: absolute;
-  aspect-ratio: 711 / 583;
-  width: 34%;
+  top: 0;
+  height: 100%;
+  min-width: 0;
   border: 0;
   background: none;
   padding: 0;
   cursor: pointer;
-}
-
-.home-v4-shortcut--vocab {
-  left: 0;
-  bottom: 2%;
-  transform: rotate(-4deg);
   z-index: 1;
 }
 
+/* Qualified with the parent for the same reason .home-v4-shortcut--review/
+   --decks already are (see the base .home-v4-tab-rail .home-v4-shortcut
+   comment) -- left unqualified here, this loses its width to the mobile
+   touch-target exemption (same specificity, later in the file), leaving
+   vocab shrink-to-fit while review/decks stayed correctly constrained.
+   Confirmed by measuring rendered rects (vocab 93px vs review/decks
+   ~63px at 390px width), not by eyeballing the screenshot. */
+.home-v4-tab-rail .home-v4-shortcut--vocab {
+  left: 4%;
+  width: 31%;
+}
+
 .home-v4-tab-rail .home-v4-shortcut--review {
-  aspect-ratio: 687 / 578;
-  left: 29%;
-  bottom: 15%;
-  width: 41%;
-  transform: rotate(2.5deg);
-  z-index: 3;
+  left: 34.5%;
+  width: 32%;
 }
 
 .home-v4-tab-rail .home-v4-shortcut--decks {
-  aspect-ratio: 714 / 559;
-  right: 0;
-  bottom: 0;
-  width: 39%;
-  transform: rotate(-2deg);
-  z-index: 2;
+  left: 67%;
+  width: 31%;
 }
 
 .home-v4-shortcut:not(:disabled):hover {
-  /* Combined into one filter value -- a separate `filter: brightness()`
-     here would replace (not add to) the base rule's drop-shadow instead
-     of stacking with it, blanking the paper-edge shadow on hover. */
-  filter: brightness(1.04) drop-shadow(0.5px 1px 1px rgba(64, 43, 24, 0.1));
+  filter: brightness(1.05);
 }
 
-.home-v4-shortcut--vocab:not(:disabled):hover {
-  transform: rotate(-1.5deg) translateY(-3px);
-}
-
-.home-v4-shortcut--review:not(:disabled):hover {
-  transform: rotate(1deg) translateY(-5px);
-}
-
-.home-v4-shortcut--decks:not(:disabled):hover {
-  transform: rotate(0deg) translateY(-3px);
-}
-
+/* Phase 195 -- the rail image's own tape strip sits in roughly its top
+   28% (measured against the 1927x816 source); padding-top biased well
+   past that (34%, vs 12% bottom) so centered content settles below the
+   tape instead of overlapping it -- the exact "text on tape" failure the
+   brief calls out. */
 .home-v4-shortcut-content {
   position: relative;
   z-index: 1;
   display: flex;
+  width: 100%;
   height: 100%;
+  min-width: 0;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   box-sizing: border-box;
-  padding: 24% 12% 14%;
+  padding: 34% 10% 12%;
   text-align: left;
   color: var(--text);
 }
@@ -2908,26 +2934,26 @@ button {
   }
 
   .home-v4-shortcut-content {
-    padding: 24% 14% 12%;
-    gap: 8px;
+    padding: 34% 8% 10%;
+    gap: 6px;
   }
 
   .home-v4-shortcut-icon {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
   }
 
   .home-v4-shortcut-icon svg {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
   }
 
   .home-v4-shortcut-label {
-    font-size: 12px;
+    font-size: 13.5px;
   }
 
   .home-v4-shortcut-hint {
-    font-size: 9.5px;
+    font-size: 10.5px;
   }
 
   /* Phase 194 -- pulled off the note/CTA's shared left:0% edge and
