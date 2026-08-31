@@ -26,6 +26,7 @@ type HomeDashboardProps = {
 
 const ASSET_BASE = "/brand/decor/home-v3";
 const ASSET_BASE_V4 = "/brand/decor/home-v4";
+const ASSET_BASE_V5 = "/brand/decor/home-v5";
 
 // Phase 192 (skeleton replacement) -- reskin failed; phases 177-190 kept
 // patching the same flat `scene > [note, cta, notebook, shortcuts,
@@ -125,6 +126,23 @@ const ASSET_BASE_V4 = "/brand/decor/home-v4";
 // blur radius alone couldn't fix. No DOM change this phase -- everything
 // above is a CSS value or a CSS structural removal, not a missing
 // element.
+// Phase 200 (V5 full scene replacement) -- 196-199's CSS filter/gradient
+// approach kept producing a notebook that measured as "still close to the
+// previous screenshot" because a `filter` on a pale source PNG can only
+// push saturation/brightness so far before the fabric texture itself
+// starts posterizing -- the actual fix was a new, pre-darkened source
+// asset (`home-v5-notebook-cover-deep-sage.png`) instead of another
+// filter tune. Same swap for the tab rail (`home-v5-shortcut-tab-rail-
+// deeper.png`, deeper tab color, same tape/torn-edge art). Both contact
+// shadows (notebook `::before`, tab rail `::after`) switch from Phase
+// 199's radial-gradient pseudo-elements to PNG-backed ones
+// (`home-v5-notebook-shadow-mockup-cast.png`, `home-v5-tab-rail-shadow-
+// attached.png`) generated directly from each object's own alpha
+// silhouette -- a gradient can only approximate a contact seam + cast
+// shadow with a handful of stops; an asset generated from the actual
+// object edge doesn't need that approximation. No DOM change beyond the
+// two image src swaps above -- everything else is CSS geometry/asset
+// wiring.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -224,7 +242,7 @@ export function HomeDashboard({
           <img
             className="home-v4-notebook-img"
             aria-hidden="true"
-            src={`${ASSET_BASE}/home-v3-notebook-cover.png`}
+            src={`${ASSET_BASE_V5}/home-v5-notebook-cover-deep-sage.png`}
             alt=""
             draggable={false}
           />
@@ -252,7 +270,7 @@ export function HomeDashboard({
             <img
               className="home-v4-tab-rail-img"
               aria-hidden="true"
-              src={`${ASSET_BASE_V4}/home-v4-shortcut-tab-rail-candidate.png`}
+              src={`${ASSET_BASE_V5}/home-v5-shortcut-tab-rail-deeper.png`}
               alt=""
               draggable={false}
             />

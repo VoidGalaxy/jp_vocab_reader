@@ -2401,6 +2401,23 @@ body:has(.home-v4) .app-toolbar {
 .home-v4-scene {
   isolation: isolate;
   position: relative;
+  /* Phase 200 -- the new notebook contact-shadow PNG (`::before` on
+     .home-v4-notebook, see below) is deliberately wider than the
+     notebook itself (left:-12.7%, width:153.2%, per the implementation
+     kit) so the shadow can spread onto the desk past the book's own
+     right edge. Since the notebook sits close to the scene's own right
+     edge (nb-left + nb-w = 92%, only 8% margin), that shadow's right
+     side extends well past the scene's own box -- confirmed as a real
+     `documentElement.scrollWidth > clientWidth` page-level horizontal
+     overflow at every breakpoint, not just a visual guess. `overflow-x:
+     clip` (not `hidden`) specifically because `hidden` on one axis forces
+     the OTHER axis's `visible` to compute as `auto` per the CSS Overflow
+     spec, which would risk clipping/scroll-hiding Shiori's peek (she
+     deliberately renders above this box's own top edge -- see
+     .home-v4-shiori-peek's negative top). `clip` doesn't carry that
+     paired-axis side effect, so overflow-y stays genuinely visible. */
+  overflow-x: clip;
+  overflow-y: visible;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2506,12 +2523,16 @@ body:has(.home-v4) .app-toolbar {
      since the brief's explicit numbers were desktop-only and leaving
      mobile at the old, now much-smaller-looking size next to a
      dramatically bigger desktop target would read as an oversight, not a
-     deliberate breakpoint difference. */
+     deliberate breakpoint difference.
+     Phase 200 -- implementation kit gives explicit values for BOTH tiers
+     this time (mobile 56px/-22px, desktop 90px/-32px), replacing Phase
+     199's own desktop numbers and the mobile values this file derived by
+     scaling them. */
   left: 50%;
-  top: -19px;
+  top: -22px;
   z-index: -1;
-  width: 62px;
-  height: 62px;
+  width: 56px;
+  height: 56px;
   transform: translateX(-50%);
   pointer-events: none;
   user-select: none;
@@ -2519,9 +2540,9 @@ body:has(.home-v4) .app-toolbar {
 
 @media (min-width: 1024px) {
   .home-v4-note .home-v4-shiori-peek {
-    top: -28px;
-    width: 86px;
-    height: 86px;
+    top: -32px;
+    width: 90px;
+    height: 90px;
   }
 }
 
@@ -2559,51 +2580,49 @@ body:has(.home-v4) .app-toolbar {
    mobile-flow version and a separate desktop-absolute version. */
 .home-v4-notebook {
   position: relative;
-  /* Phase 198 -- +6-7% (300px/80% -> 320px/84%) per the brief's "4-8%만
-     키운다": enough to read as a stronger, more grounded object, not
-     enough to re-crop the desk the way Phase 194 corrected for. */
-  width: min(320px, 84%);
+  /* Phase 200 -- mobile target from the implementation kit: `min(350px,
+     88%)`, larger than Phase 198's `min(320px, 84%)` on top of the new,
+     visibly darker cover asset (see .home-v4-notebook-img below) --
+     size and color both need to read as changed, not just one of them. */
+  width: min(350px, 88%);
   aspect-ratio: 1183 / 860;
   margin-top: -12px;
   z-index: 1;
-  /* Shadow direction unified to the background plate's top-left light
-     source: a positive x-offset (light from upper-left casts toward
-     lower-right) instead of a straight-down shadow.
-     Phase 199 -- weakened to a tight alpha-silhouette shadow (see the
-     matching desktop override for the full reasoning): a bigger/darker
-     `drop-shadow()` here was doing the "book rests on the desk" job that
-     properly belongs to the ::after radial-gradient below, and at that
-     size/blur it traced the cover's own rectangle-ish silhouette instead
-     of spreading naturally onto the desk past it. */
-  filter: drop-shadow(3px 5px 5px rgba(64, 43, 24, 0.2));
+  /* Phase 200 -- no drop-shadow filter here any more. Phase 199's tight
+     alpha-silhouette shadow was already an admission that a `filter` on
+     this box doubles as a second, competing shadow source once a real
+     PNG contact shadow exists (see ::before below) -- two overlapping
+     shadow sources is exactly what risks the "reads like a box" failure
+     mode this phase's brief calls out. The PNG shadow now carries 100%
+     of the grounding cue. */
 }
 
-/* A flatter contact-shadow ellipse at the spine/base edge -- the "the
-   book is actually pressing into the desk" cue a cast shadow alone
-   doesn't give. Center shifted right of the book's own center to match
-   the top-left light source.
-   Phase 199 -- exact shadow spec from this phase's brief: a three-stop
-   radial-gradient (solid core -> half-strength ring -> transparent)
-   instead of a single-stop "color then transparent" one, which reads as
-   a soft natural falloff rather than a shadow with a visible edge -- and
-   no `filter: blur()` on a separate solid layer, which is what actually
-   produced the "직사각형 박스" look this phase's brief calls out (a blur
-   filter has its own rectangular filter region that can show past the
-   gradient's own visual edge at the wrong size/position). */
-.home-v4-notebook::after {
+/* Phase 200 -- V5 shadow method: a PNG generated from the notebook's own
+   alpha silhouette (bottom edge, right edge, lower-right corner weight)
+   instead of a CSS gradient approximating those same features with a
+   handful of radial stops. `::before` (not `::after`, which the tab rail
+   below still uses for its own shadow) per the implementation kit --
+   arbitrary otherwise, just keeps the two objects' shadow pseudo-elements
+   on different sides so neither comment set has to say "the other one".
+   Percentages are the kit's own suggested values, sized against the
+   shadow PNG's real proportions (1813x1470 vs the notebook's 1183x860)
+   so the seam drawn near the PNG's own top edge lands on the notebook's
+   actual bottom-right, not the pseudo-element's own box corner. z-index
+   -2 (below the notebook-img's 3 and the tab-rail's 2, and below the tab
+   rail's own -1 shadow) keeps this the furthest-back layer in the
+   notebook's stacking context. */
+.home-v4-notebook::before {
   content: "";
   position: absolute;
-  left: -8%;
-  right: -5%;
-  bottom: -10%;
-  height: 20%;
-  z-index: -1;
-  background: radial-gradient(
-    ellipse 72% 62% at 58% 42%,
-    rgba(35, 24, 12, 0.34) 0%,
-    rgba(35, 24, 12, 0.18) 38%,
-    transparent 74%
-  );
+  left: -12.7%;
+  top: -17.4%;
+  width: 153.2%;
+  height: 170.9%;
+  z-index: -2;
+  background-image: url("/brand/decor/home-v5/home-v5-notebook-shadow-mockup-cast.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  opacity: 0.9;
   pointer-events: none;
 }
 
@@ -2635,19 +2654,17 @@ body:has(.home-v4) .app-toolbar {
   display: block;
   pointer-events: none;
   user-select: none;
-  /* Phase 198 -- material grounding: the cover read as a slightly pale/
-     washed-out sage next to the vignette-recede background, part of why
-     the notebook still felt weaker than its surroundings despite already
-     being the scene's biggest object. Filter only on the cover image
-     itself (not `.home-v4-notebook` as a whole) so it darkens/saturates
-     just the fabric texture -- the emboss/tab-rail/drop-shadow siblings
-     are untouched and don't get doubly darkened.
-     Phase 199 -- 1.22/0.91/1.05 still measured close enough to the
-     previous phase's rendered color that a before/after comparison
-     barely showed a difference (this phase's own explicit failure
-     criterion, confirmed by screenshot, not assumed). Pushed to this
-     phase's exact target instead of another incremental nudge. */
-  filter: saturate(1.45) brightness(0.78) contrast(1.12);
+  /* Phase 198-199 -- darkened this pale source PNG with a progressively
+     stronger CSS filter (saturate/brightness/contrast) across two
+     phases, and it kept measuring as "still close to the previous
+     screenshot" -- a filter on a pale fabric texture can only push so
+     far before the weave itself starts posterizing instead of reading as
+     a deeper material color.
+     Phase 200 -- filter removed entirely. `home-v5-notebook-cover-deep-
+     sage.png` is a new source asset with the deep olive/forest tone
+     already baked in, not a filter target -- the brief is explicit that
+     re-darkening a correctly-colored asset with a heavy filter is itself
+     a failure mode here, not just unnecessary. */
 }
 
 /* Phase 195 -- fills the notebook's own previously-blank lower-right cover
@@ -2791,10 +2808,14 @@ body:has(.home-v4) .app-toolbar {
    though its own declared percentage didn't change; reset to this
    phase's exact target (96% -> 94%, -35% -> -31%) rather than
    re-deriving a scale factor, since the brief hands both numbers down
-   directly as a matched pair for the new notebook size. */
+   directly as a matched pair for the new notebook size.
+   Phase 200 -- the implementation kit gives DIFFERENT mobile (92%/-30%)
+   and desktop (94%/-31%) targets, so this base rule (mobile-first, no
+   media query) now holds the mobile pair; the desktop override below
+   sets the slightly larger desktop pair. */
 .home-v4-scene {
-  --rail-w: 94%;
-  --rail-bottom: -31%;
+  --rail-w: 92%;
+  --rail-bottom: -30%;
 }
 
 .home-v4-tab-rail {
@@ -2817,28 +2838,31 @@ body:has(.home-v4) .app-toolbar {
    since it sits at/below the rail's already-below-the-notebook bottom
    edge, it's already outside the notebook's own box and so is never
    covered by the cover regardless of the notebook's higher z-index.
-   Phase 199 -- exact shadow spec from this phase's brief, matching the
-   notebook's own ::after formula (three-stop radial-gradient, no blur
-   filter, so there's no separate rectangular filter region that could
-   leak a box edge onto the desk under the tabs). Narrower/lower than the
-   notebook's own pool (94%/58%/42% offsets differ slightly, matching this
-   phase's explicit rail spec) since the rail is a thinner object sitting
-   right at the desk, not a thick book -- its own contact shadow should
-   read as a smaller, tighter patch, not compete with the notebook's. */
+   Phase 199 -- switched to a three-stop radial-gradient (no blur filter),
+   which fixed the "box edge" problem but still approximated three
+   separate tab feet with one shared ellipse, so the shadow could read as
+   closer to one shape spanning all three tabs than three individual
+   contact points.
+   Phase 200 -- V5 shadow method: `home-v5-tab-rail-shadow-attached.png`
+   was generated directly from each tab's own lower torn edge (three
+   separate cast pools baked into one PNG, same width/origin as the rail
+   art itself), so each tab's shadow is genuinely tied to that tab's own
+   silhouette instead of one gradient covering the group. Kit's exact
+   suggested placement: left/top:0, 100% width, 131.9% height (the
+   shadow PNG's own extra canvas height below the rail art), same
+   z-index -1 this pseudo-element already had. */
 .home-v4-tab-rail::after {
   content: "";
   position: absolute;
-  left: 2%;
-  right: 4%;
-  bottom: -10%;
-  height: 18%;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 131.9%;
   z-index: -1;
-  background: radial-gradient(
-    ellipse 78% 58% at 56% 40%,
-    rgba(35, 24, 12, 0.28) 0%,
-    rgba(35, 24, 12, 0.13) 42%,
-    transparent 76%
-  );
+  background-image: url("/brand/decor/home-v5/home-v5-tab-rail-shadow-attached.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  opacity: 0.9;
   pointer-events: none;
 }
 
@@ -3070,7 +3094,11 @@ body:has(.home-v4) .app-toolbar {
   .home-v4-scene {
     margin-bottom: 0;
     padding: 0;
-    width: min(1020px, 72vw);
+    /* Phase 200 -- implementation kit's fixed target (`min(1120px, 78vw)`,
+       up from `min(1020px, 72vw)`): more scene width for the now-bigger
+       notebook to sit inside without eating further into the desk margin
+       around it. */
+    width: min(1120px, 78vw);
     height: clamp(460px, calc(100svh - 220px), 640px);
     margin: 28px auto 0;
     /* Phase 196 -- notebook grown again (55% -> 58%) and shifted left
@@ -3088,16 +3116,25 @@ body:has(.home-v4) .app-toolbar {
        left 26% -> 23% to hold the same right-side desk margin against
        the wider book) instead of another incremental nudge -- note/CTA
        widths grow with it so their own overlap onto the bigger notebook
-       doesn't shrink relative to it. */
-    --nb-left: 23%;
+       doesn't shrink relative to it.
+       Phase 200 -- implementation kit's exact fixed composition target:
+       68% -> 70%, left 23% -> 22% (holding the same right-side margin
+       logic against the now even-wider book). note/CTA/rail values below
+       already matched the kit's target from Phase 199's numbers, so only
+       the notebook's own two vars move this phase. */
+    --nb-left: 22%;
     --nb-top: 0%;
-    --nb-w: 68%;
+    --nb-w: 70%;
     --note-left: 0%;
     --note-top: -2%;
     --note-w: 52%;
     --cta-left: 2%;
     --cta-top: 39%;
     --cta-w: 42%;
+    /* Phase 200 -- desktop half of the kit's mobile/desktop rail-var
+       split (see the base .home-v4-scene rule's Phase 200 comment). */
+    --rail-w: 94%;
+    --rail-bottom: -31%;
   }
 
   /* Phase 199 -- deleted. This was a large shared shadow "pool" sitting
@@ -3132,38 +3169,11 @@ body:has(.home-v4) .app-toolbar {
        DOM order, so without this the notebook would paint over them by
        default stacking instead of the other way around. */
     z-index: 0;
-    /* Phase 199 -- Phase 198's drop-shadow (15/32/38/0.38) was doing the
-       "book is grounded" job the ::after contact shadow below should be
-       doing instead: a `drop-shadow()` traces the PNG's own alpha
-       silhouette, which at this size/blur reads as a soft rectangle-ish
-       halo around the book rather than a shadow spreading onto the desk
-       past it -- the brief's "직사각형 박스처럼 보인다" failure. Weakened
-       to a tight alpha-silhouette shadow (mostly for the book's own
-       cut-paper edge definition) and the ::after radial-gradient below
-       now carries all of the actual "resting on the desk" cue. */
-    filter: drop-shadow(4px 6px 6px rgba(64, 43, 24, 0.22));
-  }
-
-  /* Phase 199 -- exact shadow spec from this phase's brief: an ellipse
-     centered right-and-down of the book's own center (58%/42%, matching
-     the top-left light source) with a three-stop radial-gradient (solid
-     core -> half-strength ring -> transparent) instead of the previous
-     single-stop "color then transparent" gradient, which is what actually
-     reads as a soft natural falloff rather than a shadow with a visible
-     edge. No blur filter -- the gradient's own transparent tail IS the
-     soft edge, so there's no separate rectangular filter region to leak a
-     box boundary the way `filter: blur()` on a solid-color layer would. */
-  .home-v4-notebook::after {
-    left: -8%;
-    right: -5%;
-    bottom: -10%;
-    height: 20%;
-    background: radial-gradient(
-      ellipse 72% 62% at 58% 42%,
-      rgba(35, 24, 12, 0.34) 0%,
-      rgba(35, 24, 12, 0.18) 38%,
-      transparent 74%
-    );
+    /* Phase 200 -- no drop-shadow filter at this tier either; see the
+       base rule's Phase 200 comment. The PNG shadow (::before) is a
+       single asset shared at every breakpoint via percentage sizing, so
+       there's no separate desktop-tier shadow override below any more
+       either. */
   }
 
   /* Phase 194 -- widened (44% -> 48%) so the note's own right edge visibly
@@ -3253,7 +3263,11 @@ body:has(.home-v4) .app-toolbar {
    aspect-ratio at any scene size. */
 @media (min-width: 1440px) {
   .home-v4-scene {
-    width: min(1180px, 68vw);
+    /* Phase 200 -- scaled by the same ratio the 1024px tier's own width
+       grew by this phase (1020px/72vw -> 1120px/78vw), so there's no
+       discontinuity where crossing 1440px suddenly makes the notebook a
+       SMALLER share of the viewport than it was at 1024-1439px. */
+    width: min(1300px, 74vw);
     height: clamp(520px, calc(100svh - 230px), 720px);
     margin-top: 36px;
   }
