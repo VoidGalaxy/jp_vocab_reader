@@ -1,7 +1,6 @@
 "use client";
 
 import { BookshelfIcon, CardFileIcon, CardsIcon, SparkleIcon } from "./icons";
-import { ShioriCharacter } from "./Shiori";
 import type { StudyStats, VocabItem } from "./types";
 
 type HomeDashboardProps = {
@@ -26,7 +25,7 @@ type HomeDashboardProps = {
 
 const ASSET_BASE = "/brand/decor/home-v3";
 const ASSET_BASE_V4 = "/brand/decor/home-v4";
-const ASSET_BASE_V5 = "/brand/decor/home-v5";
+const ASSET_BASE_V7 = "/brand/decor/home-v7";
 
 // Phase 192 (skeleton replacement) -- reskin failed; phases 177-190 kept
 // patching the same flat `scene > [note, cta, notebook, shortcuts,
@@ -126,23 +125,27 @@ const ASSET_BASE_V5 = "/brand/decor/home-v5";
 // blur radius alone couldn't fix. No DOM change this phase -- everything
 // above is a CSS value or a CSS structural removal, not a missing
 // element.
-// Phase 200 (V5 full scene replacement) -- 196-199's CSS filter/gradient
-// approach kept producing a notebook that measured as "still close to the
-// previous screenshot" because a `filter` on a pale source PNG can only
-// push saturation/brightness so far before the fabric texture itself
-// starts posterizing -- the actual fix was a new, pre-darkened source
-// asset (`home-v5-notebook-cover-deep-sage.png`) instead of another
-// filter tune. Same swap for the tab rail (`home-v5-shortcut-tab-rail-
-// deeper.png`, deeper tab color, same tape/torn-edge art). Both contact
-// shadows (notebook `::before`, tab rail `::after`) switch from Phase
-// 199's radial-gradient pseudo-elements to PNG-backed ones
-// (`home-v5-notebook-shadow-mockup-cast.png`, `home-v5-tab-rail-shadow-
-// attached.png`) generated directly from each object's own alpha
-// silhouette -- a gradient can only approximate a contact seam + cast
-// shadow with a handful of stops; an asset generated from the actual
-// object edge doesn't need that approximation. No DOM change beyond the
-// two image src swaps above -- everything else is CSS geometry/asset
-// wiring.
+// Phase 200 (superseded) proved that recoloring a pale notebook and
+// approximating contact shadows as separate layers still left the scene
+// looking composited. Those experimental assets were removed in the Home
+// V7 cleanup; the durable version below is the baked plate.
+// Phase 213 (final implementation / baked scene plate) -- 195-200's model
+// (separate notebook-cover image + separate tab-rail image + CSS-drawn
+// contact shadows, composited via z-index/percentage math) kept producing
+// shadows that looked disconnected from what cast them and tab colors
+// that could bleed at their shared edges, because three independently-
+// positioned layers have no way to guarantee they agree on geometry.
+// `.home-v4-notebook` is now a single baked plate
+// (home-v7-notebook-tabs-shadow-plate.png) with the cover, ribbon, emboss,
+// all three tabs, and every contact shadow painted together under one
+// light source -- the DOM keeps exactly the three shortcut buttons as
+// plain hit zones over the plate's own tab row (see ASSET_MANIFEST.md in
+// home-v7/ for the pixel-measured geometry those percentages come from),
+// nothing else changed about how live text/click targets work. Shiori
+// also moves to her confirmed final pose (candidate 3, holding a small
+// open book) as a Home-only cropped asset instead of the generic
+// ShioriCharacter default variant -- see the .home-v4-shiori-peek comment
+// below.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -188,11 +191,23 @@ export function HomeDashboard({
               she pokes out above the tape) can never be covered by
               construction, and the portion that overlaps the box is
               always painted over by the note -- no manual clip-path
-              tuning needed. */}
-          <ShioriCharacter
-            variant="default"
-            size="md"
+              tuning needed.
+              Phase 213 (final implementation) -- swapped the generic
+              default-variant ShioriCharacter for the confirmed pose
+              (candidate 3: holding a small open book, charm ring above her
+              head -- see references/mockups/home-v7-shiori-selected-
+              reading-peek.png), rendered as a plain <img> instead of
+              through ShioriCharacter. This is a Home-only cropped asset
+              (home-v7-shiori-reading-peek.png, see its own
+              ASSET_MANIFEST.md entry) that isn't in Shiori.tsx's
+              SHIORI_ASSET_MAP, so every other ShioriCharacter/ShioriMark/
+              ShioriStamp call site elsewhere in the app is untouched. */}
+          <img
             className="home-v4-shiori-peek"
+            aria-hidden="true"
+            src={`${ASSET_BASE_V7}/home-v7-shiori-reading-peek.png`}
+            alt=""
+            draggable={false}
           />
           <img
             className="home-v4-note-img"
@@ -231,95 +246,77 @@ export function HomeDashboard({
           </span>
         </button>
 
-        {/* .home-v4-notebook is the notebook COMPOSITE: cover image +
-            tab rail live in the same box on purpose, so the tabs'
-            overlap-with-the-cover math is a % of THIS box, not the outer
-            scene. `.home-v4-tab-rail` (was `.home-v4-shortcuts`) names
-            what it actually is: the strip of the notebook's own bottom
-            edge the tabs ride along and poke out from, not a generic
-            "group of shortcut buttons" floating near the notebook. */}
+        {/* Phase 213 (final implementation) -- .home-v4-notebook is now a
+            single baked scene plate (notebook cover + bookmark ribbon +
+            emboss + all three shortcut tabs + every contact shadow, one
+            PNG under one consistent light source) instead of separately
+            layered cover/tab-rail images plus CSS-drawn shadow
+            pseudo-elements. That separate-layers approach (Phases 195-200)
+            is exactly what kept producing tab-color bleed and shadows that
+            read as a rectangle: three independently-composited layers
+            can't guarantee the shadow lines up with the tab it's supposed
+            to be cast by. A plate generated from the actual final geometry
+            doesn't have that failure mode -- see ASSET_MANIFEST.md in
+            home-v7/ for the measured tab hit-zone pixel geometry the
+            three buttons below are positioned from. The three buttons stay
+            plain DOM hit zones (icon/label/hint live text) over even
+            thirds of the plate's own tab row, same "live text over baked
+            art" pattern every Home phase has used since 195 -- only the
+            art itself is now one flat image instead of a layered
+            composite. */}
         <div className="home-v4-notebook">
           <img
             className="home-v4-notebook-img"
             aria-hidden="true"
-            src={`${ASSET_BASE_V5}/home-v5-notebook-cover-deep-sage.png`}
+            src={`${ASSET_BASE_V7}/home-v7-notebook-tabs-shadow-plate.png`}
             alt=""
             draggable={false}
           />
-          {/* Phase 195 -- low-opacity emboss overlay so the notebook's own
-              empty lower-right cover reads as "quiet branded material" (a
-              stamped mark, like a real fabric-cover notebook) instead of
-              unused space. See .home-v4-notebook-emboss for the opacity
-              range (0.22-0.35) the brief calls for. */}
-          <img
-            className="home-v4-notebook-emboss"
-            aria-hidden="true"
-            src={`${ASSET_BASE_V4}/home-v4-cover-emboss-mark.png`}
-            alt=""
-            draggable={false}
-          />
-          {/* Phase 195 -- the three shortcut tabs are no longer three
-              independently-coordinated PNG buttons: `home-v4-shortcut-
-              tab-rail-candidate.png` already draws all three (torn paper +
-              tape) as one rail image, so this is now one image anchor
-              (.home-v4-tab-rail-img) with three plain DOM hit zones laid
-              over even thirds of it -- icon/label/hint stay live text,
-              positioned in the safe area below the image's own baked-in
-              tape strip. */}
-          <div className="home-v4-tab-rail" role="group" aria-label="바로가기">
-            <img
-              className="home-v4-tab-rail-img"
-              aria-hidden="true"
-              src={`${ASSET_BASE_V5}/home-v5-shortcut-tab-rail-deeper.png`}
-              alt=""
-              draggable={false}
-            />
-            <button
-              type="button"
-              className="home-v4-shortcut home-v4-shortcut--vocab"
-              onClick={onGoToVocab}
-            >
-              <span className="home-v4-shortcut-content">
-                <span className="home-v4-shortcut-icon">
-                  <CardFileIcon />
-                </span>
-                <span className="home-v4-shortcut-text">
-                  <span className="home-v4-shortcut-label">단어장</span>
-                  <span className="home-v4-shortcut-hint">{vocabHint}</span>
-                </span>
+          <button
+            type="button"
+            className="home-v4-shortcut home-v4-shortcut--vocab"
+            onClick={onGoToVocab}
+          >
+            <span className="home-v4-shortcut-content">
+              <span className="home-v4-shortcut-icon">
+                <CardFileIcon />
               </span>
-            </button>
-            <button
-              type="button"
-              className="home-v4-shortcut home-v4-shortcut--review"
-              onClick={isDevUser ? onOpenAccount : onStartTodayReview}
-            >
-              <span className="home-v4-shortcut-content">
-                <span className="home-v4-shortcut-icon">
-                  <CardsIcon />
-                </span>
-                <span className="home-v4-shortcut-text">
-                  <span className="home-v4-shortcut-label">복습</span>
-                  <span className="home-v4-shortcut-hint">{reviewHint}</span>
-                </span>
+              <span className="home-v4-shortcut-text">
+                <span className="home-v4-shortcut-label">단어장</span>
+                <span className="home-v4-shortcut-hint">{vocabHint}</span>
               </span>
-            </button>
-            <button
-              type="button"
-              className="home-v4-shortcut home-v4-shortcut--decks"
-              onClick={onGoToSharedDecks}
-            >
-              <span className="home-v4-shortcut-content">
-                <span className="home-v4-shortcut-icon">
-                  <BookshelfIcon />
-                </span>
-                <span className="home-v4-shortcut-text">
-                  <span className="home-v4-shortcut-label">덱</span>
-                  <span className="home-v4-shortcut-hint">{decksHint}</span>
-                </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-v4-shortcut home-v4-shortcut--review"
+            onClick={isDevUser ? onOpenAccount : onStartTodayReview}
+          >
+            <span className="home-v4-shortcut-content">
+              <span className="home-v4-shortcut-icon">
+                <CardsIcon />
               </span>
-            </button>
-          </div>
+              <span className="home-v4-shortcut-text">
+                <span className="home-v4-shortcut-label">복습</span>
+                <span className="home-v4-shortcut-hint">{reviewHint}</span>
+              </span>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="home-v4-shortcut home-v4-shortcut--decks"
+            onClick={onGoToSharedDecks}
+          >
+            <span className="home-v4-shortcut-content">
+              <span className="home-v4-shortcut-icon">
+                <BookshelfIcon />
+              </span>
+              <span className="home-v4-shortcut-text">
+                <span className="home-v4-shortcut-label">덱</span>
+                <span className="home-v4-shortcut-hint">{decksHint}</span>
+              </span>
+            </span>
+          </button>
         </div>
       </div>
     </section>

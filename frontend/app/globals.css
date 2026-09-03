@@ -2395,27 +2395,36 @@ body:has(.home-v4) .app-toolbar {
      same rectangle) paints over it; the part of each tab deliberately
      positioned outside that rectangle can never be covered, by
      construction, not by a tuned number.
+   Phase 213 -- this z-index occlusion trick is gone: the tabs are baked
+   into the same plate image as the cover now (see .home-v4-notebook-img
+   below), so there's no separate tab-rail LAYER left for the cover to
+   need to occlude. The three shortcut buttons are plain hit zones with no
+   art of their own, sitting on top of the plate at the tab row's own
+   measured position -- see the .home-v4-notebook .home-v4-shortcut
+   comment further down.
    Each "paper" object keeps the same two-layer pattern as before: an
    <img> (home-v4-*-img) filling the object, live DOM text/content above
    it -- every image still carries zero baked copy. */
 .home-v4-scene {
   isolation: isolate;
   position: relative;
-  /* Phase 200 -- the new notebook contact-shadow PNG (`::before` on
-     .home-v4-notebook, see below) is deliberately wider than the
-     notebook itself (left:-12.7%, width:153.2%, per the implementation
-     kit) so the shadow can spread onto the desk past the book's own
-     right edge. Since the notebook sits close to the scene's own right
-     edge (nb-left + nb-w = 92%, only 8% margin), that shadow's right
-     side extends well past the scene's own box -- confirmed as a real
-     `documentElement.scrollWidth > clientWidth` page-level horizontal
-     overflow at every breakpoint, not just a visual guess. `overflow-x:
-     clip` (not `hidden`) specifically because `hidden` on one axis forces
-     the OTHER axis's `visible` to compute as `auto` per the CSS Overflow
+  /* Phase 200 -- a separate notebook contact-shadow PNG used to extend
+     well past the notebook's own right edge (deliberately, so the shadow
+     could spread onto the desk), which bled past the scene's own box and
+     caused a real page-level `scrollWidth > clientWidth` horizontal
+     overflow at every breakpoint. `overflow-x: clip` (not `hidden`)
+     fixed it without touching overflow-y: `hidden` on one axis forces the
+     OTHER axis's `visible` to compute as `auto` per the CSS Overflow
      spec, which would risk clipping/scroll-hiding Shiori's peek (she
      deliberately renders above this box's own top edge -- see
-     .home-v4-shiori-peek's negative top). `clip` doesn't carry that
-     paired-axis side effect, so overflow-y stays genuinely visible. */
+     .home-v4-shiori-peek's negative top); `clip` doesn't carry that
+     paired-axis side effect.
+     Phase 213 -- the shadow that originally caused the overflow is gone
+     (baked into .home-v4-notebook-img's own plate now, sized to exactly
+     the notebook's own box), but this safety net is kept: it costs
+     nothing and guards against the same class of bug if a future change
+     ever adds an object that visually extends past the notebook's own
+     right edge again. */
   overflow-x: clip;
   overflow-y: visible;
   display: flex;
@@ -2527,10 +2536,31 @@ body:has(.home-v4) .app-toolbar {
      Phase 200 -- implementation kit gives explicit values for BOTH tiers
      this time (mobile 56px/-22px, desktop 90px/-32px), replacing Phase
      199's own desktop numbers and the mobile values this file derived by
-     scaling them. */
+     scaling them.
+     Phase 213 -- swapped the generic ShioriCharacter default-variant art
+     for the confirmed reading-pose crop (home-v7-shiori-reading-peek.png,
+     see HomeDashboard.tsx's comment on this element) and switched from
+     the shared ShioriCharacter component to a plain <img>, so this rule
+     now also carries the object-fit/drop-shadow that component's own
+     `.shiori-asset-img` class used to supply.
+     Phase 213 rework -- kept Phase 200's top offset (-22px/-32px) as a
+     starting point and it was wrong for this specific asset: the crop's
+     own canvas spends its top ~20-25% on the charm ring/cord with the
+     head not starting until well below that (unlike the old
+     ShioriCharacter default art, which filled most of its own frame with
+     the character), so only the bare ring cleared the tape -- confirmed
+     with a cropped screenshot, not assumed. Top pushed much further
+     negative (roughly -70% of her own rendered height, not ~-33%) so
+     ring+head+book+hands all clear the note's top edge and only a small
+     sliver near the bottom of the crop dips behind the tape, matching
+     the reference (home-v7-shiori-selected-reading-peek.png) where
+     she reads as mostly sitting ABOVE the tape, not peeking out from deep
+     behind it. */
   left: 50%;
-  top: -22px;
+  top: -43px;
   z-index: -1;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 6px rgba(120, 98, 40, 0.16));
   width: 56px;
   height: 56px;
   transform: translateX(-50%);
@@ -2540,7 +2570,7 @@ body:has(.home-v4) .app-toolbar {
 
 @media (min-width: 1024px) {
   .home-v4-note .home-v4-shiori-peek {
-    top: -32px;
+    top: -70px;
     width: 90px;
     height: 90px;
   }
@@ -2573,11 +2603,13 @@ body:has(.home-v4) .app-toolbar {
   filter: drop-shadow(2px 4px 4px rgba(64, 43, 24, 0.24));
 }
 
-/* The notebook composite. position:relative at every width (not just
-   desktop) since `.home-v4-tab-rail` is now a child positioned relative
-   to THIS box, in both the mobile and desktop layouts alike -- one
-   positioning language for the tab rail at any viewport size, not a
-   mobile-flow version and a separate desktop-absolute version. */
+/* Phase 213 -- .home-v4-notebook is now sized to the baked scene plate's
+   OWN aspect ratio (1298x1007 -- cover + ribbon + emboss + all three
+   tabs + every contact shadow, one image) instead of the cover-only
+   aspect-ratio (1183x860) a separately-layered tab rail used to hang off
+   of via a negative bottom offset. position:relative still matters at
+   every width since the three shortcut buttons below are positioned
+   relative to THIS box either way (mobile flow or desktop absolute). */
 .home-v4-notebook {
   position: relative;
   /* Phase 200 -- mobile target from the implementation kit: `min(350px,
@@ -2585,45 +2617,14 @@ body:has(.home-v4) .app-toolbar {
      visibly darker cover asset (see .home-v4-notebook-img below) --
      size and color both need to read as changed, not just one of them. */
   width: min(350px, 88%);
-  aspect-ratio: 1183 / 860;
+  aspect-ratio: 1298 / 1007;
   margin-top: -12px;
   z-index: 1;
-  /* Phase 200 -- no drop-shadow filter here any more. Phase 199's tight
-     alpha-silhouette shadow was already an admission that a `filter` on
-     this box doubles as a second, competing shadow source once a real
-     PNG contact shadow exists (see ::before below) -- two overlapping
-     shadow sources is exactly what risks the "reads like a box" failure
-     mode this phase's brief calls out. The PNG shadow now carries 100%
-     of the grounding cue. */
-}
-
-/* Phase 200 -- V5 shadow method: a PNG generated from the notebook's own
-   alpha silhouette (bottom edge, right edge, lower-right corner weight)
-   instead of a CSS gradient approximating those same features with a
-   handful of radial stops. `::before` (not `::after`, which the tab rail
-   below still uses for its own shadow) per the implementation kit --
-   arbitrary otherwise, just keeps the two objects' shadow pseudo-elements
-   on different sides so neither comment set has to say "the other one".
-   Percentages are the kit's own suggested values, sized against the
-   shadow PNG's real proportions (1813x1470 vs the notebook's 1183x860)
-   so the seam drawn near the PNG's own top edge lands on the notebook's
-   actual bottom-right, not the pseudo-element's own box corner. z-index
-   -2 (below the notebook-img's 3 and the tab-rail's 2, and below the tab
-   rail's own -1 shadow) keeps this the furthest-back layer in the
-   notebook's stacking context. */
-.home-v4-notebook::before {
-  content: "";
-  position: absolute;
-  left: -12.7%;
-  top: -17.4%;
-  width: 153.2%;
-  height: 170.9%;
-  z-index: -2;
-  background-image: url("/brand/decor/home-v5/home-v5-notebook-shadow-mockup-cast.png");
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  opacity: 0.9;
-  pointer-events: none;
+  /* No drop-shadow filter here: the plate's own baked-in contact shadow
+     (bottom edge, right edge, and each tab's own table cast) is the only
+     shadow source for this object, so there's nothing for a CSS filter to
+     double up with -- unlike Phase 199-200, where a `filter` here and a
+     separate PNG/gradient shadow pseudo-element could visually compete. */
 }
 
 .home-v4-note-img,
@@ -2638,59 +2639,21 @@ body:has(.home-v4) .app-toolbar {
   user-select: none;
 }
 
-/* The cover image is the actual occluder, not a separate slab (see the
-   top-of-block comment): z-index above `.home-v4-tab-rail` (its own
-   sibling, nested inside this same .home-v4-notebook box, z-index 2
-   below) so wherever the tab rail's box geometrically falls inside the
-   notebook's own rectangle, the cover paints over it. pointer-events:none
-   because it's decorative (aria-hidden in the DOM) -- also means it can
-   never swallow a click even over the sliver of a tab it visually hides. */
+/* Phase 213 -- this <img> is now the whole baked scene plate (cover,
+   ribbon, emboss, all three tabs, every contact shadow), not just the
+   cover -- there's no separate tab-rail image or emboss image left to
+   occlude/layer against, so this no longer needs to out-rank a sibling
+   in z-index the way it did through Phase 200. pointer-events:none
+   because it's decorative (aria-hidden in the DOM) -- the three shortcut
+   buttons below sit above it in DOM order/z-index and remain fully
+   clickable over their own hit zones. */
 .home-v4-notebook-img {
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: 0;
   width: 100%;
   height: 100%;
   display: block;
-  pointer-events: none;
-  user-select: none;
-  /* Phase 198-199 -- darkened this pale source PNG with a progressively
-     stronger CSS filter (saturate/brightness/contrast) across two
-     phases, and it kept measuring as "still close to the previous
-     screenshot" -- a filter on a pale fabric texture can only push so
-     far before the weave itself starts posterizing instead of reading as
-     a deeper material color.
-     Phase 200 -- filter removed entirely. `home-v5-notebook-cover-deep-
-     sage.png` is a new source asset with the deep olive/forest tone
-     already baked in, not a filter target -- the brief is explicit that
-     re-darkening a correctly-colored asset with a heavy filter is itself
-     a failure mode here, not just unnecessary. */
-}
-
-/* Phase 195 -- fills the notebook's own previously-blank lower-right cover
-   with the generated open-book/leaf emboss mark instead of leaving it as
-   unused space (the brief's "notebook cover가 빈 표지로 남으면 실패").
-   z-index above the cover image (4 vs 3) but still below the note/CTA/
-   tab-rail (2+), and low opacity so it reads as a stamped material detail,
-   not another sticker competing with the live-text objects. */
-/* Phase 196 -- 0.28/30% still read as "almost nothing" once actually
-   sitting on a photographed cover instead of a flat swatch, so the cover
-   still registered as blank at a glance (the brief's "표지가 빈 표지로
-   보이면 실패"). Bigger and darker, but still just opacity on the same
-   flat overlay (no added shadow/border/stroke) -- that distinction is
-   what keeps it a stamped material detail instead of a pasted-on sticker.
-   Phase 198 -- the cover underneath got darker/more saturated this phase
-   (see .home-v4-notebook-img's own filter), which ate back some of the
-   emboss's contrast against it; nudged up again (0.42 -> 0.48) to hold
-   the same visible strength against the new, darker base. */
-.home-v4-notebook-emboss {
-  position: absolute;
-  right: 4%;
-  bottom: 7%;
-  width: 40%;
-  aspect-ratio: 1367 / 1150;
-  z-index: 4;
-  opacity: 0.48;
   pointer-events: none;
   user-select: none;
 }
@@ -2780,135 +2743,29 @@ body:has(.home-v4) .app-toolbar {
   transform: scale(0.97);
 }
 
-/* Phase 195 -- the tab rail is now driven by ONE image
-   (home-v4-shortcut-tab-rail-candidate.png, 1927x816: three torn-paper
-   tabs + their own tape strips + a baked-in soft shadow, already drawn as
-   one piece) instead of three independently-positioned card PNGs. Sized
-   as a real aspect-ratio box (not a hand-picked height% -- Phase 192's
-   "absolutely-positioned children never contribute to the parent's auto
-   height" trap doesn't apply here since the rail no longer NEEDS an
-   explicit height hack, aspect-ratio supplies a real one), and
-   significantly bigger than Phase 194 (width 56% -> 74% of the notebook)
-   per the brief's "25-35% 크게 복구". right:0 flush with the notebook's
-   own right edge, matching the target mockup (the rail's own right edge
-   lines up with the cover's, not hanging past it onto the desk).
-   Phase 196 -- still read as a small tucked accessory rather than a
-   primary action anchor once actually measured against the mockup's own
-   rail-to-notebook ratio, so this grows again (74% -> 96%, +30%, inside
-   the brief's 20-35% band) via a custom property on `.home-v4-scene` (see
-   the "desktop composition constants" comment on the 1024px block below)
-   instead of a bare literal here, so the rail's width and its matching
-   bottom-overlap offset stay declared next to each other and can't drift
-   out of sync the way two independently-tuned literals eventually do.
-   bottom scales by the same +30% the width did (-27% -> -35%) so a bigger
-   rail keeps the same fraction of itself tucked under the cover instead
-   of either swallowing more of the notebook or exposing a taller gap.
-   Phase 199 -- notebook grew again this phase (62% -> 68% of the scene),
-   so the rail's own width relative to the now-bigger notebook shrank even
-   though its own declared percentage didn't change; reset to this
-   phase's exact target (96% -> 94%, -35% -> -31%) rather than
-   re-deriving a scale factor, since the brief hands both numbers down
-   directly as a matched pair for the new notebook size.
-   Phase 200 -- the implementation kit gives DIFFERENT mobile (92%/-30%)
-   and desktop (94%/-31%) targets, so this base rule (mobile-first, no
-   media query) now holds the mobile pair; the desktop override below
-   sets the slightly larger desktop pair. */
-.home-v4-scene {
-  --rail-w: 92%;
-  --rail-bottom: -30%;
-}
-
-.home-v4-tab-rail {
+/* Phase 213 -- the three shortcut buttons are now plain hit zones
+   positioned directly against `.home-v4-notebook` (the whole baked
+   plate), not against a separate `.home-v4-tab-rail` sub-box hanging off
+   the notebook's bottom edge via a negative-percent offset. That
+   intermediate box existed only to let the tab rail's own image/shadow
+   scale and tuck independently of the notebook cover; now that the plate
+   already draws the tabs tucked under the cover at their own fixed
+   geometry, the buttons only need to sit on top of where the art already
+   is. Percentages below are pixel-measured against the plate's own
+   1298x1007 canvas (see ASSET_MANIFEST.md in home-v7/), not eyeballed:
+   the tab row spans y 850-990 (of 1007) across every breakpoint, since
+   it's one flat image scaling as a whole -- no separate mobile/desktop
+   split is needed the way the old rail-width custom properties required.
+   min-width:0 still matters for the same reason it always has: the
+   app-wide `button { min-width: 120px }` reset would otherwise floor
+   these well below their intended ~15%-of-notebook-width, and the
+   below-640px mobile touch-target exemption elsewhere in this file only
+   covers viewports under 640px, not the desktop tier. z-index:1 (above
+   the plate image's own 0) keeps every button clickable/hoverable. */
+.home-v4-notebook .home-v4-shortcut {
   position: absolute;
-  right: 0%;
-  bottom: var(--rail-bottom);
-  width: var(--rail-w);
-  aspect-ratio: 1927 / 816;
-  z-index: 2;
-}
-
-/* Phase 198 -- the rail image carries its own baked-in shadow (see the
-   Phase 195 comment above), but that shadow is soft/tight enough to read
-   as "the paper tabs have some thickness", not "this whole rail is
-   sitting on the desk" -- the brief's own contact-shadow pass explicitly
-   calls out the rail as needing a shadow separate from the notebook's own
-   (a shared shadow would have to compromise between two very differently
-   shaped objects). z-index:-1 puts it behind the rail's own art (z-index
-   0) and buttons (z-index 1) within the rail's own stacking context;
-   since it sits at/below the rail's already-below-the-notebook bottom
-   edge, it's already outside the notebook's own box and so is never
-   covered by the cover regardless of the notebook's higher z-index.
-   Phase 199 -- switched to a three-stop radial-gradient (no blur filter),
-   which fixed the "box edge" problem but still approximated three
-   separate tab feet with one shared ellipse, so the shadow could read as
-   closer to one shape spanning all three tabs than three individual
-   contact points.
-   Phase 200 -- V5 shadow method: `home-v5-tab-rail-shadow-attached.png`
-   was generated directly from each tab's own lower torn edge (three
-   separate cast pools baked into one PNG, same width/origin as the rail
-   art itself), so each tab's shadow is genuinely tied to that tab's own
-   silhouette instead of one gradient covering the group. Kit's exact
-   suggested placement: left/top:0, 100% width, 131.9% height (the
-   shadow PNG's own extra canvas height below the rail art), same
-   z-index -1 this pseudo-element already had. */
-.home-v4-tab-rail::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 131.9%;
-  z-index: -1;
-  background-image: url("/brand/decor/home-v5/home-v5-tab-rail-shadow-attached.png");
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-  opacity: 0.9;
-  pointer-events: none;
-}
-
-.home-v4-tab-rail-img {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  pointer-events: none;
-  user-select: none;
-}
-
-/* Qualified with the parent (.home-v4-tab-rail .home-v4-shortcut, not
-   just .home-v4-shortcut) so this beats a pre-existing mobile
-   touch-target rule elsewhere in this file (`@media (max-width: 640px) {
-   button { width:100% } .home-v4-sample, .home-v4-cta, .home-v4-shortcut
-   { width:auto } }`, exempting Home's own custom-width buttons from the
-   app-wide "buttons go full-width on mobile" rule). That exemption sets
-   `width:auto`, which has the SAME specificity as a bare .home-v4-
-   shortcut selector and sits later in the file, so it silently won and
-   put every tab back to shrink-to-fit sizing at mobile widths --
-   confirmed by measuring the actual rendered rects, not by eyeballing a
-   screenshot. The two-class selector here has higher specificity than
-   that single-class exemption, so it wins regardless of viewport width
-   without needing to touch or remove that older rule (still needed for
-   the note's sample link and the CTA).
-   Each hit zone is an even third of the rail image's own width, reading
-   the tab boundaries directly off the source art (yellow ~5%-34%, coral
-   ~34%-66%, blue ~66%-98%) rather than a separately-tuned rotation/
-   aspect-ratio per tab -- no baked art of their own to position, just a
-   plain transparent click target + live text over the shared rail.
-   min-width:0 exists for a THIRD, viewport-independent reason: the
-   app-wide `button { min-width: 120px }` reset floors every button's
-   width at 120px, which beats this rule's own 31%/32%/31% widths
-   whenever a third of the rail is under 120px (any rail narrower than
-   ~390px, i.e. most of the 1024/1280 desktop tier, not just mobile) --
-   confirmed by measuring rendered widths pinned at exactly 120px
-   instead of the intended ~93-96px at 1024. The below-640px mobile
-   exemption above happens to reset min-width too, which is why this
-   only showed up once desktop widths were measured directly. */
-.home-v4-tab-rail .home-v4-shortcut {
-  position: absolute;
-  top: 0;
-  height: 100%;
+  top: 84.4%;
+  height: 13.9%;
   min-width: 0;
   border: 0;
   background: none;
@@ -2917,26 +2774,19 @@ body:has(.home-v4) .app-toolbar {
   z-index: 1;
 }
 
-/* Qualified with the parent for the same reason .home-v4-shortcut--review/
-   --decks already are (see the base .home-v4-tab-rail .home-v4-shortcut
-   comment) -- left unqualified here, this loses its width to the mobile
-   touch-target exemption (same specificity, later in the file), leaving
-   vocab shrink-to-fit while review/decks stayed correctly constrained.
-   Confirmed by measuring rendered rects (vocab 93px vs review/decks
-   ~63px at 390px width), not by eyeballing the screenshot. */
-.home-v4-tab-rail .home-v4-shortcut--vocab {
-  left: 4%;
-  width: 31%;
+.home-v4-notebook .home-v4-shortcut--vocab {
+  left: 28.3%;
+  width: 15%;
 }
 
-.home-v4-tab-rail .home-v4-shortcut--review {
-  left: 34.5%;
-  width: 32%;
+.home-v4-notebook .home-v4-shortcut--review {
+  left: 44.8%;
+  width: 15.1%;
 }
 
-.home-v4-tab-rail .home-v4-shortcut--decks {
-  left: 67%;
-  width: 31%;
+.home-v4-notebook .home-v4-shortcut--decks {
+  left: 61.6%;
+  width: 15.1%;
 }
 
 .home-v4-shortcut:not(:disabled):hover {
@@ -2947,7 +2797,17 @@ body:has(.home-v4) .app-toolbar {
    28% (measured against the 1927x816 source); padding-top biased well
    past that (34%, vs 12% bottom) so centered content settles below the
    tape instead of overlapping it -- the exact "text on tape" failure the
-   brief calls out. */
+   brief calls out.
+   Phase 213 -- icon-above-text (flex-direction:column) was tuned for the
+   old tab rail's own per-tab proportions, where each tab was noticeably
+   TALLER relative to its width. The new baked plate's tabs are wider and
+   shorter (measured ~105x75px at a 1280px viewport, vs the old rail's
+   per-tab shape), so stacking a 32px icon above a two-line text block no
+   longer fits the available height even with padding trimmed -- confirmed
+   by measuring the hint span's own rendered rect extending ~10px past its
+   button's own bottom edge, not by eyeballing a screenshot. Icon-beside-
+   text (row) fits a wide-short box far better: vertical space only needs
+   to hold the TALLER of (icon, two-line text column), not their sum. */
 .home-v4-shortcut-content {
   position: relative;
   z-index: 1;
@@ -2955,12 +2815,12 @@ body:has(.home-v4) .app-toolbar {
   width: 100%;
   height: 100%;
   min-width: 0;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
   box-sizing: border-box;
-  padding: 34% 10% 12%;
+  padding: 28% 8% 8%;
   text-align: left;
   color: var(--text);
 }
@@ -2970,8 +2830,8 @@ body:has(.home-v4) .app-toolbar {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   color: #ffffff;
 }
@@ -2997,54 +2857,60 @@ body:has(.home-v4) .app-toolbar {
    `--tone-*` design tokens those tokens' own consumers elsewhere in the
    app still use unchanged -- Home's own tab colors needed to be more
    specific than a token meant to be reused screen-to-screen anyway.
-   Qualified with `.home-v4-tab-rail` (matching this block's other
-   selectors) for consistency, not because any exemption rule collides
-   with these specifically. */
-.home-v4-tab-rail .home-v4-shortcut--vocab .home-v4-shortcut-icon {
+   Qualified with `.home-v4-notebook` (matching this block's other
+   selectors, see .home-v4-notebook .home-v4-shortcut above) for
+   consistency, not because any exemption rule collides with these
+   specifically. */
+.home-v4-notebook .home-v4-shortcut--vocab .home-v4-shortcut-icon {
   background: #4a3520;
 }
 
-.home-v4-tab-rail .home-v4-shortcut--vocab .home-v4-shortcut-label {
+.home-v4-notebook .home-v4-shortcut--vocab .home-v4-shortcut-label {
   color: #3d2f14;
 }
 
-.home-v4-tab-rail .home-v4-shortcut--vocab .home-v4-shortcut-hint {
+.home-v4-notebook .home-v4-shortcut--vocab .home-v4-shortcut-hint {
   color: #6b5a35;
 }
 
-.home-v4-tab-rail .home-v4-shortcut--decks .home-v4-shortcut-icon {
+.home-v4-notebook .home-v4-shortcut--decks .home-v4-shortcut-icon {
   background: #25455a;
 }
 
-.home-v4-tab-rail .home-v4-shortcut--decks .home-v4-shortcut-label {
+.home-v4-notebook .home-v4-shortcut--decks .home-v4-shortcut-label {
   color: #1c3444;
 }
 
-.home-v4-tab-rail .home-v4-shortcut--decks .home-v4-shortcut-hint {
+.home-v4-notebook .home-v4-shortcut--decks .home-v4-shortcut-hint {
   color: #4a6575;
 }
 
-.home-v4-tab-rail .home-v4-shortcut--review .home-v4-shortcut-icon {
+.home-v4-notebook .home-v4-shortcut--review .home-v4-shortcut-icon {
   background: #7a3320;
 }
 
-.home-v4-tab-rail .home-v4-shortcut--review .home-v4-shortcut-label {
+.home-v4-notebook .home-v4-shortcut--review .home-v4-shortcut-label {
   color: #5c2415;
 }
 
-.home-v4-tab-rail .home-v4-shortcut--review .home-v4-shortcut-hint {
+.home-v4-notebook .home-v4-shortcut--review .home-v4-shortcut-hint {
   color: #8a5040;
 }
 
 .home-v4-shortcut-text {
   display: flex;
   flex-direction: column;
-  /* .home-v4-shortcut-content is align-items:flex-start, which shrinks a
-     column flex child to its content's own width by default -- without an
-     explicit width here the (nowrap+ellipsis) label/hint below never get
-     a box to actually clip against, so the hint text spills past the
-     tab's own edge into its neighbor instead of truncating. */
-  width: 100%;
+  /* Phase 213 -- `.home-v4-shortcut-content` switched from a column to a
+     row (icon beside text instead of icon above text, see that rule's own
+     comment), so this is now a ROW flex item next to the icon, not a
+     column child filling the container's own width. `width:100%` would
+     make it claim 100% of the ROW's width on top of the icon's own space,
+     overflowing past the tab's right edge; `flex:1 1 auto` instead lets
+     it fill whatever width remains after the icon+gap, which is what the
+     nowrap+ellipsis label/hint below actually need a real box to clip
+     against (without it, they'd spill into the neighboring tab exactly
+     the way they did before this class had any explicit width). */
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -3131,24 +2997,17 @@ body:has(.home-v4) .app-toolbar {
     --cta-left: 2%;
     --cta-top: 39%;
     --cta-w: 42%;
-    /* Phase 200 -- desktop half of the kit's mobile/desktop rail-var
-       split (see the base .home-v4-scene rule's Phase 200 comment). */
-    --rail-w: 94%;
-    --rail-bottom: -31%;
   }
 
-  /* Phase 199 -- deleted. This was a large shared shadow "pool" sitting
-     under the ENTIRE scene box (a blurred solid-color circle spanning
-     most of the scene's own width), independent of any single object's
-     actual position or silhouette -- exactly the "공용 shadow pool"/
-     "직사각형 박스" failure this phase's brief calls out: because it was
-     sized and positioned against the scene's own box rather than any
-     object sitting on the desk, its blurred-but-still-rectangular-ish
-     footprint could show past the notebook's own edges as a generic dark
-     smudge rather than a shadow any specific object was casting. Contact
-     shadows are now entirely per-object (.home-v4-notebook::after,
-     .home-v4-tab-rail::after) -- each shaped and positioned against the
-     object actually casting it, not the outer scene box. */
+  /* Phase 199 -- deleted the old scene-wide shared shadow pool (a blurred
+     solid-color circle sized against the whole scene box, independent of
+     any object's actual position/silhouette) in favor of per-object CSS
+     contact shadows.
+     Phase 213 -- those per-object CSS shadow pseudo-elements are gone
+     too: the notebook/tab contact shadows are now baked directly into
+     `.home-v4-notebook-img`'s own plate image (see ASSET_MANIFEST.md in
+     home-v7/), so there is no shadow-specific CSS left at any tier to
+     override here. */
 
   .home-v4-note,
   .home-v4-cta,
@@ -3230,23 +3089,31 @@ body:has(.home-v4) .app-toolbar {
     font-size: clamp(13px, 1.05vw, 15px);
   }
 
+  /* Phase 213 -- same fit problem as the base rule's own Phase 213
+     comment, just measured at the desktop tier: a 32px icon stacked
+     above a two-line text block needed ~97px+ of vertical room inside a
+     button box measured at 75px tall (1280px viewport), so the hint
+     text's own rendered rect extended ~10px past the button's bottom
+     edge. Icon shrunk (32px -> 24px) and padding trimmed (34%/10% ->
+     26%/8%) to fit the row layout's real vertical budget with margin to
+     spare, confirmed by re-measuring rendered rects after the change. */
   .home-v4-shortcut-content {
-    padding: 34% 8% 10%;
-    gap: 6px;
+    padding: 26% 8% 8%;
+    gap: 8px;
   }
 
   .home-v4-shortcut-icon {
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
   }
 
   .home-v4-shortcut-icon svg {
-    width: 16px;
-    height: 16px;
+    width: 12px;
+    height: 12px;
   }
 
   .home-v4-shortcut-label {
-    font-size: 13.5px;
+    font-size: 13px;
   }
 
   .home-v4-shortcut-hint {
@@ -3257,10 +3124,9 @@ body:has(.home-v4) .app-toolbar {
 
 /* At >=1440px the scene keeps growing so the notebook keeps scaling with
    the viewport instead of plateauing into a fixed-size object surrounded
-   by more and more bare desk on wide monitors. `.home-v4-tab-rail` needs
-   no override here (unlike the old per-tier `.home-v3-shortcuts` bottom%
-   hacks this replaces) -- it's a % of the notebook, which keeps the same
-   aspect-ratio at any scene size. */
+   by more and more bare desk on wide monitors. The shortcut buttons need
+   no override here -- they're a % of `.home-v4-notebook`, which keeps the
+   same aspect-ratio (the plate's own 1298:1007) at any scene size. */
 @media (min-width: 1440px) {
   .home-v4-scene {
     /* Phase 200 -- scaled by the same ratio the 1024px tier's own width
