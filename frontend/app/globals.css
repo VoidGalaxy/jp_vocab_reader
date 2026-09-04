@@ -2620,11 +2620,45 @@ body:has(.home-v4) .app-toolbar {
   aspect-ratio: 1298 / 1007;
   margin-top: -12px;
   z-index: 1;
-  /* No drop-shadow filter here: the plate's own baked-in contact shadow
-     (bottom edge, right edge, and each tab's own table cast) is the only
-     shadow source for this object, so there's nothing for a CSS filter to
-     double up with -- unlike Phase 199-200, where a `filter` here and a
-     separate PNG/gradient shadow pseudo-element could visually compete. */
+  /* Home v7 shadow grounding fix -- no drop-shadow filter here. A
+     from-scratch attempt at fixing grounding by adding
+     `filter: drop-shadow(...)` directly to `.home-v4-notebook-img` was
+     tried and rejected: a CSS filter on the whole plate image traces its
+     opaque rectangle-ish silhouette (page edge, ribbon corner, tab
+     corners) rather than following the actual soft falloff a real contact
+     shadow needs, and tuning it also required compensating `--cta-top`/
+     note-padding shifts elsewhere that broke the CTA ribbon's visibility
+     on mobile 390 -- confirmed broken, not assumed. See ::before below
+     for the shadow this object actually uses instead. */
+}
+
+/* Home v7 shadow grounding fix -- table contact shadow as its own
+   shadow-only transparent PNG (home-v7-notebook-tabs-contact-shadow.png),
+   not a CSS filter and not a separate solid-color/gradient div. Generated
+   directly from the cleaned plate's own alpha silhouette (see
+   ASSET_MANIFEST.md in home-v7/): two blurred, down-right-offset copies
+   of the plate's alpha channel (a tight small-radius blur for a darker
+   near-contact seam, a wider soft-radius blur for the broader outward
+   fade), combined and rendered in one dark warm-brown PNG at the exact
+   same 1298x1007 canvas as the plate itself -- so `background-size:100%
+   100%` lines it up with the plate without any separate position/scale
+   math. `::before` (behind `.home-v4-notebook-img`'s `z-index:0` within
+   this element's own stacking context) means the plate paints over
+   whatever part of the shadow falls under the opaque book/tabs; only the
+   part that peeks out past their real edges is visible, which is what
+   reads as "the book and tabs are actually resting on the desk" instead
+   of a rectangular plate sitting behind them. pointer-events:none (it's
+   decorative, and the shortcut buttons need their own clicks to land on
+   them, not this). */
+.home-v4-notebook::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: url("/brand/decor/home-v7/home-v7-notebook-tabs-contact-shadow.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
 }
 
 .home-v4-note-img,
