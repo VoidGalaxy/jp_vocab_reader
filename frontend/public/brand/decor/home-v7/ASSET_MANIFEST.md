@@ -47,34 +47,64 @@ scene plate, plus the confirmed Shiori reading-peek pose.
     - tab row: y 850 (tape top) - 990 (torn bottom edge), of 1007 total
     - notebook cover alone (excluding tabs): x 20-1276, y 20-816
 
-- `home-v7-notebook-tabs-contact-shadow.png`
+- `home-v7-notebook-tabs-contact-shadow.png` -- SUPERSEDED, not wired.
   - 1298x1007, transparent PNG, alpha preserved, same canvas size/origin
     as `home-v7-notebook-tabs-shadow-plate.png` so `background-size:100%
-    100%` lines the two up without any separate offset math in CSS.
+    100%` lined the two up without any separate offset math in CSS.
   - Home v7 shadow grounding fix -- generated (not hand-drawn) from the
     cleaned plate's own alpha channel: two blurred, down-right-offset
-    copies of the plate's silhouette combined into one shadow --
-    a tight small-radius blur (offset ~5-7px) for a darker near-contact
-    seam, and a wider soft-radius blur (offset ~18-26px) for the broader
-    outward fade, unioned together and rendered as one dark warm-brown
-    (RGB 32,22,11) layer. Because the shadow comes from the plate's own
-    silhouette, the notebook's bottom/right edge AND each of the three
-    tabs' own lower torn edges get individually-shaped shadows in one
-    pass -- no separate per-tab assets needed, and no risk of the shadow's
-    shape disagreeing with the object casting it the way a hand-tuned
-    CSS gradient could.
+    copies of the plate's silhouette combined into one shadow -- a tight
+    small-radius blur (offset ~5-7px) for a darker near-contact seam, and
+    a wider soft-radius blur (offset ~18-26px) for the broader outward
+    fade, unioned together and rendered as one dark warm-brown (RGB
+    32,22,11) layer.
+  - Home v7 target mockup parity pass -- superseded by
+    `home-v7-notebook-tabs-contact-shadow-target.png` below: pixel-sampled
+    side by side against the confirmed target mockup
+    (`home-v7-baked-scene-target.png`), this file's shadow measured
+    noticeably weaker and narrower than the target's own (target's
+    near-contact brightness dropped to ~60-70 out of a ~140 desk baseline
+    over a visibly wide spread; this file's equivalent zone was only a
+    few px wide before fading). Its own same-size-as-plate canvas also
+    clipped its wider soft layer's tail before it reached zero alpha
+    (alpha was still ~33/255 at the very last row). Left on disk for
+    reference/audit, not deleted, but no longer referenced from
+    globals.css.
+
+- `home-v7-notebook-tabs-contact-shadow-target.png` -- current, wired.
+  - 1458x1167 (1298+160 x 1007+160), transparent PNG, alpha preserved.
+    Canvas is the plate's own 1298x1007 PLUS an 80px padding margin on
+    every side -- see below for why.
+  - Home v7 target mockup parity pass -- same generation method as the
+    superseded file above (two blurred, down-right-offset copies of the
+    cleaned plate's alpha channel, tight seam + soft falloff, unioned into
+    one dark warm-brown layer), with two changes calibrated against pixel
+    samples taken directly from the confirmed target mockup rather than
+    guessed: larger blur radii and offsets (tight ~10-14px, soft
+    ~38-52px) so the falloff distance/darkness matches the target's own
+    measured profile, and an 80px padding margin baked into the canvas so
+    that larger spread has room to fully fade to transparent instead of
+    being clipped at a same-size-as-plate canvas edge (the exact defect
+    found in the superseded file).
   - Applied via `.home-v4-notebook::before` (globals.css), behind
     `.home-v4-notebook-img`'s z-index so only the part that peeks out past
     the plate's own opaque edges is visible -- `pointer-events:none`, does
-    not affect the three shortcut buttons' own click targets.
-  - Rejected approach: a `filter: drop-shadow(...)` added directly to
-    `.home-v4-notebook-img` was tried first and discarded -- a CSS filter
-    on the whole plate traces its opaque rectangle-ish silhouette rather
-    than a true soft falloff, and tuning it required compensating
+    not affect the three shortcut buttons' own click targets. Because the
+    canvas now has an 80px margin the plate itself doesn't have, the CSS
+    rule's own box is NOT `inset:0` any more -- it's offset/sized by that
+    80px expressed as a percentage of `.home-v4-notebook`'s box (80/1298 ≈
+    6.163% horizontally, 80/1007 ≈ 7.945% vertically; see the CSS comment
+    on `.home-v4-notebook::before` for the exact values), not a
+    hand-picked number.
+  - Rejected approach (unchanged from the prior pass): a
+    `filter: drop-shadow(...)` added directly to `.home-v4-notebook-img`
+    traces the whole plate's opaque rectangle-ish silhouette rather than a
+    true soft falloff, and tuning it previously required compensating
     `--cta-top`/note-padding shifts elsewhere that broke the CTA ribbon's
-    visibility on mobile 390 (confirmed broken via screenshot, not
-    assumed). This asset avoids that failure mode entirely since it's a
-    static shadow layer with no effect on any other element's layout.
+    visibility on mobile 390 (confirmed broken via screenshot in an
+    earlier pass, not assumed). A static shadow-only image avoids that
+    failure mode entirely since it has no effect on any other element's
+    layout.
 
 - `home-v7-shiori-reading-peek.png`
   - 1024x1050, transparent PNG, alpha preserved.

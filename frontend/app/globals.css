@@ -2632,30 +2632,52 @@ body:has(.home-v4) .app-toolbar {
      for the shadow this object actually uses instead. */
 }
 
-/* Home v7 shadow grounding fix -- table contact shadow as its own
-   shadow-only transparent PNG (home-v7-notebook-tabs-contact-shadow.png),
-   not a CSS filter and not a separate solid-color/gradient div. Generated
-   directly from the cleaned plate's own alpha silhouette (see
-   ASSET_MANIFEST.md in home-v7/): two blurred, down-right-offset copies
-   of the plate's alpha channel (a tight small-radius blur for a darker
-   near-contact seam, a wider soft-radius blur for the broader outward
-   fade), combined and rendered in one dark warm-brown PNG at the exact
-   same 1298x1007 canvas as the plate itself -- so `background-size:100%
-   100%` lines it up with the plate without any separate position/scale
-   math. `::before` (behind `.home-v4-notebook-img`'s `z-index:0` within
+/* Home v7 target mockup parity -- table contact shadow as its own
+   shadow-only transparent PNG, not a CSS filter and not a separate
+   solid-color/gradient div. Generated directly from the cleaned plate's
+   own alpha silhouette (see ASSET_MANIFEST.md in home-v7/): two blurred,
+   down-right-offset copies of the plate's alpha channel (a tight
+   small-radius blur for a darker near-contact seam, a wider soft-radius
+   blur for the broader outward fade), combined into one dark warm-brown
+   layer. `::before` (behind `.home-v4-notebook-img`'s `z-index:0` within
    this element's own stacking context) means the plate paints over
    whatever part of the shadow falls under the opaque book/tabs; only the
    part that peeks out past their real edges is visible, which is what
    reads as "the book and tabs are actually resting on the desk" instead
    of a rectangular plate sitting behind them. pointer-events:none (it's
    decorative, and the shortcut buttons need their own clicks to land on
-   them, not this). */
+   them, not this).
+   Target-parity pass -- the first version of this asset
+   (home-v7-notebook-tabs-contact-shadow.png, same-size canvas as the
+   plate, small ~5-7px/18-26px offsets) measured noticeably weaker/
+   narrower than the confirmed target mockup's own shadow when the two
+   were pixel-sampled side by side (target's near-contact brightness
+   dropped to ~60-70 out of a ~140 baseline over a visibly wider spread;
+   this file's own equivalent zone was only a few px wide). Two things
+   were undersized, not just the opacity: the blur/offset amounts, and
+   the CANVAS itself -- the old file was cropped to the plate's own
+   1298x1007 bounds, which clipped the wider spread's own soft tail
+   before it reached zero alpha (confirmed: alpha was still ~33/255 at
+   the very last row instead of fading out). This replacement
+   (home-v7-notebook-tabs-contact-shadow-target.png, new filename per
+   the brief so browser cache can't serve the old one) fixes both: larger
+   offsets/blur radii for a spread that matches the target's own measured
+   falloff, AND an 80px padding margin baked into the canvas
+   (1458x1167 = 1298+160 x 1007+160) so that wider spread has room to
+   fully fade to transparent instead of hitting a hard canvas edge.
+   The padding is why this rule's own box no longer matches the plate's
+   box 1:1 -- offsets/size below are that 80px expressed as a percentage
+   of `.home-v4-notebook`'s own box (80/1298 ≈ 6.163%, 80/1007 ≈ 7.945%),
+   not a hand-picked value. */
 .home-v4-notebook::before {
   content: "";
   position: absolute;
-  inset: 0;
+  left: -6.163%;
+  top: -7.945%;
+  width: 112.33%;
+  height: 115.89%;
   z-index: -1;
-  background-image: url("/brand/decor/home-v7/home-v7-notebook-tabs-contact-shadow.png");
+  background-image: url("/brand/decor/home-v7/home-v7-notebook-tabs-contact-shadow-target.png");
   background-size: 100% 100%;
   background-repeat: no-repeat;
   pointer-events: none;
