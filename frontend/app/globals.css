@@ -2605,76 +2605,38 @@ body:has(.home-v4) .app-toolbar {
   filter: drop-shadow(2px 4px 4px rgba(64, 43, 24, 0.24));
 }
 
-/* Phase 213 -- .home-v4-notebook is now sized to the baked scene plate's
-   OWN aspect ratio (1298x1007 -- cover + ribbon + emboss + all three
-   tabs, one image) instead of the cover-only
-   aspect-ratio (1183x860) a separately-layered tab rail used to hang off
-   of via a negative bottom offset. position:relative still matters at
-   every width since the three shortcut buttons below are positioned
-   relative to THIS box either way (mobile flow or desktop absolute). */
+/* Phase 214 (v8 asset-first replacement) -- .home-v4-notebook is now sized
+   to the v8 plate's OWN canvas (1538x1247), not the v7 plate's tighter
+   1298x1007 cover-only canvas. The extra ~240px in each dimension is not
+   more notebook -- it's the transparent shadow-bleed margin the v8 plate
+   bakes its own contact shadow into (see build_home_v8_plate_candidate.py),
+   so this box is now "notebook + its own shadow", same as the v7 box was
+   "notebook" alone. The book's own cover is 1298/1538 = 84.4% of this
+   box's width, so holding the box at the same visual footprint as the v7
+   cover-only box would render the book itself ~16% smaller. Width scaled
+   up by that same 1538/1298 factor from `min(350px, 88%)`/`--nb-w: 70%`
+   to `min(415px, 104%)`/`--nb-w: 83%` (desktop override below) instead,
+   so the book renders at its previous size with the shadow bleed as pure
+   extra margin around it -- confirmed by re-measuring the rendered
+   `.home-v4-notebook-img` (not just this box) after the change, since a
+   scaled-up box alone doesn't prove the book itself grew back. Any excess
+   past 100% only eats into the plate's own transparent shadow-bleed
+   margin (`.home-v4-scene`'s `overflow-x: clip` still guards against a
+   real horizontal scrollbar), never the book's own opaque pixels. */
 .home-v4-notebook {
   position: relative;
-  /* Phase 200 -- mobile target from the implementation kit: `min(350px,
-     88%)`, larger than Phase 198's `min(320px, 84%)` on top of the new,
-     visibly darker cover asset (see .home-v4-notebook-img below) --
-     size and color both need to read as changed, not just one of them. */
-  width: min(350px, 88%);
-  aspect-ratio: 1298 / 1007;
+  width: min(415px, 104%);
+  aspect-ratio: 1538 / 1247;
   margin-top: -12px;
   z-index: 1;
-  /* Home v7 shadow grounding fix -- no drop-shadow filter here. A
-     from-scratch attempt at fixing grounding by adding
-     `filter: drop-shadow(...)` directly to `.home-v4-notebook-img` was
-     tried and rejected: a CSS filter on the whole plate image traces its
-     opaque rectangle-ish silhouette (page edge, ribbon corner, tab
-     corners) rather than following the actual soft falloff a real contact
-     shadow needs, and tuning it also required compensating `--cta-top`/
-     note-padding shifts elsewhere that broke the CTA ribbon's visibility
-     on mobile 390 -- confirmed broken, not assumed. See ::before below
-     for the shadow this object actually uses instead. */
-}
-
-/* Surface-map shadow pass -- the previous shadow-only PNG was removed
-   from the render path because its large transparent canvas could become
-   visible as a rectangular layer boundary on the wood surface. These
-   pseudo-elements draw only contact zones: book bottom, book right edge,
-   and each tab's underside. The actual plate still paints above them, so
-   the shadow that falls under the book is hidden and only the grounded
-   falloff around the touching edges remains visible. */
-.home-v4-notebook::before {
-  content: "";
-  position: absolute;
-  left: -2%;
-  top: 50%;
-  width: 106%;
-  height: 48%;
-  z-index: -1;
-  background:
-    radial-gradient(ellipse 58% 20% at 66% 70%, rgba(38, 25, 12, 0.34) 0%, rgba(38, 25, 12, 0.22) 38%, rgba(38, 25, 12, 0.09) 66%, transparent 86%),
-    radial-gradient(ellipse 20% 12% at 42% 88%, rgba(38, 25, 12, 0.28) 0%, rgba(38, 25, 12, 0.13) 58%, transparent 82%),
-    radial-gradient(ellipse 20% 12% at 57% 88%, rgba(38, 25, 12, 0.27) 0%, rgba(38, 25, 12, 0.12) 58%, transparent 82%),
-    radial-gradient(ellipse 20% 12% at 72% 88%, rgba(38, 25, 12, 0.27) 0%, rgba(38, 25, 12, 0.12) 58%, transparent 82%);
-  filter: blur(9px);
-  transform: translate(14px, 18px);
-  opacity: 0.88;
-  pointer-events: none;
-}
-
-.home-v4-notebook::after {
-  content: "";
-  position: absolute;
-  left: 2%;
-  top: 65%;
-  width: 99%;
-  height: 27%;
-  z-index: -1;
-  background:
-    linear-gradient(90deg, transparent 0%, rgba(18, 12, 6, 0.22) 16%, rgba(18, 12, 6, 0.34) 52%, rgba(18, 12, 6, 0.28) 86%, transparent 100%),
-    linear-gradient(90deg, transparent 0%, transparent 88%, rgba(18, 12, 6, 0.24) 93%, rgba(18, 12, 6, 0.11) 97%, transparent 100%);
-  filter: blur(5px);
-  transform: translate(8px, 12px);
-  opacity: 0.72;
-  pointer-events: none;
+  /* No drop-shadow filter and no shadow pseudo-elements here -- the v8
+     plate bakes its own contact shadow (book bottom/right edge, each tab's
+     underside) directly into the asset under one light source. The prior
+     `.home-v4-notebook::before/::after` surface-map shadow (radial/linear
+     gradients approximating contact zones) is deleted outright: it kept
+     reading as a shadow shape independent of the book casting it, which is
+     an asset-geometry problem CSS gradients can't solve -- see
+     references/mockups/home-v8-prep/CLAUDE_HANDOFF.md. */
 }
 
 .home-v4-note-img,
@@ -2796,29 +2758,25 @@ body:has(.home-v4) .app-toolbar {
   transform: scale(0.97);
 }
 
-/* Phase 213 -- the three shortcut buttons are now plain hit zones
-   positioned directly against `.home-v4-notebook` (the whole baked
-   plate), not against a separate `.home-v4-tab-rail` sub-box hanging off
-   the notebook's bottom edge via a negative-percent offset. That
-   intermediate box existed only to let the tab rail's own image/shadow
-   scale and tuck independently of the notebook cover; now that the plate
-   already draws the tabs tucked under the cover at their own fixed
-   geometry, the buttons only need to sit on top of where the art already
-   is. Percentages below are pixel-measured against the plate's own
-   1298x1007 canvas (see ASSET_MANIFEST.md in home-v7/), not eyeballed:
-   the tab row spans y 850-990 (of 1007) across every breakpoint, since
-   it's one flat image scaling as a whole -- no separate mobile/desktop
-   split is needed the way the old rail-width custom properties required.
+/* Phase 214 (v8 asset-first replacement) -- the three shortcut buttons are
+   still plain hit zones positioned directly against `.home-v4-notebook`
+   (the whole baked plate, shadow margin included), but the percentages are
+   now re-measured against the v8 plate's own 1538x1247 canvas (see
+   measure_plate_tabs.py / ASSET_MANIFEST.md in home-v8/), not reused from
+   the old v7 1298x1007 plate -- the two canvases don't share an origin
+   (v8's shadow-bleed padding shifts every tab's coordinates), so the old
+   percentages would have sat over the wrong pixels. Each tab now gets its
+   own top/height as well as left/width (the v8 measurement pass found the
+   three tabs are not perfectly level -- yellow y 998-1092, coral y
+   996-1092, blue y 999-1092 -- unlike the v7 plate's single shared row).
    min-width:0 still matters for the same reason it always has: the
    app-wide `button { min-width: 120px }` reset would otherwise floor
-   these well below their intended ~15%-of-notebook-width, and the
+   these well below their intended ~13%-of-notebook-width, and the
    below-640px mobile touch-target exemption elsewhere in this file only
    covers viewports under 640px, not the desktop tier. z-index:1 (above
    the plate image's own 0) keeps every button clickable/hoverable. */
 .home-v4-notebook .home-v4-shortcut {
   position: absolute;
-  top: 84.4%;
-  height: 13.9%;
   min-width: 0;
   border: 0;
   background: none;
@@ -2828,18 +2786,24 @@ body:has(.home-v4) .app-toolbar {
 }
 
 .home-v4-notebook .home-v4-shortcut--vocab {
-  left: 28.3%;
-  width: 15%;
+  left: 31.73%;
+  top: 80.03%;
+  width: 12.61%;
+  height: 7.54%;
 }
 
 .home-v4-notebook .home-v4-shortcut--review {
-  left: 44.8%;
-  width: 15.1%;
+  left: 45.64%;
+  top: 79.87%;
+  width: 12.68%;
+  height: 7.70%;
 }
 
 .home-v4-notebook .home-v4-shortcut--decks {
-  left: 61.6%;
-  width: 15.1%;
+  left: 59.75%;
+  top: 80.11%;
+  width: 12.81%;
+  height: 7.46%;
 }
 
 .home-v4-shortcut:not(:disabled):hover {
@@ -2987,6 +2951,53 @@ body:has(.home-v4) .app-toolbar {
   text-overflow: ellipsis;
 }
 
+/* Phase 214 (v8 asset-first replacement) -- the v8 plate's own tabs are
+   narrower than the v7 rail was at these widths (~32-43px wide at
+   320-390px, measured via getBoundingClientRect after wiring the new
+   hit-zone percentages -- see the .home-v4-notebook .home-v4-shortcut
+   comment above), because the hit zones now match the plate's own
+   painted tab width instead of a tunable rail. icon(20px) + gap alone
+   left label/hint almost no room, and at 320px specifically the label
+   rendered as a single illegible sliver of a character -- confirmed by a
+   cropped screenshot, not assumed. Below 480px the label/hint pair is
+   visually hidden (kept in the DOM and readable to screen readers/AT via
+   the same clip-rect technique `.sr-only-label` elsewhere in this file
+   uses, not `display: none`, since the live copy itself must stay
+   -- the tab's own icon + its background color already carry vocab/
+   review/decks visually at this size, matching the "icon-only chip"
+   pattern touch-target-sized icon buttons already use elsewhere in the
+   app, and each button still exposes its associated text to a screen
+   reader instead of announcing only "button". */
+@media (max-width: 479px) {
+  .home-v4-shortcut-content {
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+  }
+
+  .home-v4-shortcut-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .home-v4-shortcut-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .home-v4-shortcut-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
 @media (min-width: 1024px) {
   /* Desktop switches `.home-v4-scene` from the mobile vertical stack to a
      fixed-box desk composition: every direct child becomes
@@ -3040,10 +3051,23 @@ body:has(.home-v4) .app-toolbar {
        68% -> 70%, left 23% -> 22% (holding the same right-side margin
        logic against the now even-wider book). note/CTA/rail values below
        already matched the kit's target from Phase 199's numbers, so only
-       the notebook's own two vars move this phase. */
-    --nb-left: 22%;
+       the notebook's own two vars move this phase.
+       Phase 214 (v8 asset-first replacement) -- 70%/22% sized the v7
+       plate's tight 1298x1007 cover-only canvas. The v8 plate's canvas
+       (1538x1247) spends ~240px of extra width/height on its own baked
+       shadow-bleed margin (see the .home-v4-notebook comment above) --
+       the cover itself is only 1298/1538 = 84.4% of this box, so holding
+       70% would render the book itself ~16% smaller than before. Scaled
+       by the same 1538/1298 factor as the base rule's mobile width
+       (70% -> 83%), shifted left by half the growth (22% -> 16%) to stay
+       centered on roughly the same midpoint rather than preserving the
+       exact right edge, so the book reads at its previous size with the
+       shadow bleed as extra margin, not instead of book size -- confirmed
+       by re-measuring the rendered `.home-v4-notebook-img` at this tier
+       after the change. */
+    --nb-left: 16%;
     --nb-top: 0%;
-    --nb-w: 70%;
+    --nb-w: 83%;
     --note-left: 0%;
     --note-top: -2%;
     --note-w: 52%;
@@ -3056,10 +3080,11 @@ body:has(.home-v4) .app-toolbar {
      solid-color circle sized against the whole scene box, independent of
      any object's actual position/silhouette) in favor of per-object CSS
      contact shadows.
-     Surface-map pass -- failed shadow PNGs are gone from the render path;
-     `.home-v4-notebook::before/::after` now draw only visible contact
-     zones behind the baked plate, so there is no desktop-specific shadow
-     asset to override here. */
+     Phase 214 (v8 asset-first replacement) -- those per-object contact
+     shadows (`.home-v4-notebook::before/::after`) are now deleted too: the
+     v8 plate bakes its own contact shadow into the asset (see the base
+     `.home-v4-notebook` rule above), so there is no shadow-drawing CSS
+     left to override at this or any tier. */
 
   .home-v4-note,
   .home-v4-cta,
@@ -3067,10 +3092,6 @@ body:has(.home-v4) .app-toolbar {
     position: absolute;
   }
 
-  /* Phase 194 -- shrunk (60% -> 55% of the now-smaller scene) for the
-     same "camera further back" reason as .home-v4-scene above -- both
-     moves compound (a smaller scene alone would have kept the notebook
-     at the same 60% share of a smaller box, which still read as tight). */
   .home-v4-notebook {
     left: var(--nb-left);
     top: var(--nb-top);
@@ -3080,8 +3101,8 @@ body:has(.home-v4) .app-toolbar {
        DOM order, so without this the notebook would paint over them by
        default stacking instead of the other way around. */
     z-index: 0;
-    /* No drop-shadow filter at this tier either; see the base rule. The
-       surface-map pseudo-elements are shared at every breakpoint via
+    /* No drop-shadow filter at this tier either; see the base rule -- the
+       v8 plate's baked-in shadow is shared at every breakpoint via
        percentage sizing, so there is no separate desktop shadow override. */
   }
 

@@ -26,6 +26,7 @@ type HomeDashboardProps = {
 const ASSET_BASE = "/brand/decor/home-v3";
 const ASSET_BASE_V4 = "/brand/decor/home-v4";
 const ASSET_BASE_V7 = "/brand/decor/home-v7";
+const ASSET_BASE_V8 = "/brand/decor/home-v8";
 
 // Phase 192 (skeleton replacement) -- reskin failed; phases 177-190 kept
 // patching the same flat `scene > [note, cta, notebook, shortcuts,
@@ -145,6 +146,27 @@ const ASSET_BASE_V7 = "/brand/decor/home-v7";
 // into `.home-v4-notebook::before/::after` so they can ground only the
 // visible bottom/right/tab underside zones without exposing a rectangular
 // shadow canvas. Nothing else changed about how live text/click targets work.
+// Phase 214 (v8 asset-first replacement) -- the v7 plate still carried
+// border-connected white/gray matte along its right/bottom edge, and the
+// `::before`/`::after` CSS shadow pseudo-elements (surface-map pass, see
+// their own removal note in globals.css) kept reading as a rectangular
+// shadow rather than a shadow attached to the book, no matter how the
+// gradients were tuned -- both are asset-shaped problems that CSS can't
+// fix. Per references/mockups/home-v8-prep/CLAUDE_HANDOFF.md, the fix
+// replaces the plate itself: `home-v8-notebook-tabs-grounded-plate.png`
+// (validated by validate_home_v8_plate.py: RGBA, transparent corners, no
+// border matte residue) has the matte removed and a directional contact
+// shadow baked into its own alpha, under the cover+ribbon+emboss+tabs, so
+// the book, its shadow, and each tab's shadow are guaranteed to agree on
+// geometry -- there is nothing left for CSS to draw. The `::before`/
+// `::after` shadow rules are deleted outright (no shadow-drawing CSS on
+// `.home-v4-notebook` at all now) and the three shortcut hit zones are
+// repositioned from the new plate's own pixel measurements (see
+// ASSET_MANIFEST.md in home-v8/), not the old v7 percentages. Shiori
+// (below) is untouched -- no v8 replacement asset was prepared for her,
+// only a pose reference (home-v8-shiori-selected-reference.png) confirming
+// the existing home-v7-shiori-reading-peek.png crop is still the right
+// pose.
 // Shiori
 // also moves to her confirmed final pose (candidate 3, holding a small
 // open book) as a Home-only cropped asset instead of the generic
@@ -250,32 +272,23 @@ export function HomeDashboard({
           </span>
         </button>
 
-        {/* Phase 213 (final implementation) -- .home-v4-notebook is now a
-            single baked scene plate (notebook cover + bookmark ribbon +
-            emboss + all three shortcut tabs, one PNG under one consistent
-            light source) instead of separately
-            layered cover/tab-rail images plus CSS-drawn shadow
-            pseudo-elements. That separate-layers approach (Phases 195-200)
-            is exactly what kept producing tab-color bleed and shadows that
-            read as a rectangle: three independently-composited layers
-            can't guarantee the shadow lines up with the tab it's supposed
-            to be cast by. A plate generated from the actual final geometry
-            doesn't have that failure mode -- see ASSET_MANIFEST.md in
-            home-v7/ for the measured tab hit-zone pixel geometry the
-            three buttons below are positioned from. The current contact
-            shadow is drawn by `.home-v4-notebook::before/::after` as
-            visible bottom/right/tab underside zones, not by a shadow PNG.
-            The three buttons stay
-            plain DOM hit zones (icon/label/hint live text) over even
-            thirds of the plate's own tab row, same "live text over baked
-            art" pattern every Home phase has used since 195 -- only the
-            art itself is now one flat image instead of a layered
-            composite. */}
+        {/* Phase 214 (v8 asset-first replacement) -- swapped the v7 plate
+            (matte residue on its right/bottom edge, no baked shadow) for
+            `home-v8-notebook-tabs-grounded-plate.png`: notebook cover +
+            bookmark ribbon + emboss + all three shortcut tabs + baked
+            contact shadow, one PNG under one consistent light source, with
+            no CSS shadow layered behind or on top of it (the old
+            `.home-v4-notebook::before/::after` shadow pseudo-elements are
+            deleted, not just superseded -- see globals.css). The three
+            buttons below stay plain DOM hit zones (icon/label/hint live
+            text) positioned from the new plate's own pixel-measured tab
+            geometry -- see ASSET_MANIFEST.md in home-v8/ -- not the old
+            v7 percentages. */}
         <div className="home-v4-notebook">
           <img
             className="home-v4-notebook-img"
             aria-hidden="true"
-            src={`${ASSET_BASE_V7}/home-v7-notebook-tabs-shadow-plate.png`}
+            src={`${ASSET_BASE_V8}/home-v8-notebook-tabs-grounded-plate.png`}
             alt=""
             draggable={false}
           />
