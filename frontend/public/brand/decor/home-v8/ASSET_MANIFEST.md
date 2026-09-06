@@ -33,6 +33,7 @@ Status:
 - Wired into Home as the notebook plate.
 - Browser check confirmed the old v7 plate URL is not requested and `.home-v4-notebook::before/::after` shadow pseudo-elements are not active.
 - The first Claude-wired v8 candidate failed visual review because the baked shadow read as a broad support slab and the bookmark ribbon center was cut out. The generator now preserves the ribbon and builds shadow only from the notebook/tab bottom and right contact edges.
+- A follow-up visual pass strengthened the contact-edge shadow after the deployed view showed almost no grounding. The current generator keeps the contact-only mask, thickens it slightly, and uses stronger soft falloff so the book and tabs read as resting on the table without returning to a rectangular support slab.
 
 Prepared tab measurements:
 
