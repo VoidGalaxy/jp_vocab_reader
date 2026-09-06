@@ -2478,20 +2478,20 @@ body:has(.home-v4) .app-toolbar {
   margin-left: 2%;
   transform: rotate(-2deg);
   z-index: 3;
+  pointer-events: none;
 }
 
 /* Phase 197 -- candidate F: Shiori peeking up from behind the note's own
    taped edge (see the HomeDashboard.tsx comment on this element for why
    it's rendered before .home-v4-note-img in DOM order). Negative top
-   pushes most of her box above the note's own top edge -- that part can
-   never be covered by anything (nothing else occupies that space) -- while
-   z-index:-1 (below .home-v4-note-img's 0, within .home-v4-note's own
-   stacking context from its position+z-index above) guarantees the lower
-   portion, which dips back down into the note's own box, is painted over
-   by the paper/tape instead of floating in front of it. left/transform
-   center her over the tape's own position on the source art (roughly a
-   third of the way across the note, not dead center) instead of the
-   note's own horizontal center.
+   pushes most of her box above the note's own top edge. The first
+   implementation hid her behind the note image with z-index:-1, but that
+   made the confirmed reading pose look like a tiny mark. The surface-map
+   pass keeps the same anchor while raising her above the note art so the
+   face, hands, and book read clearly. left/transform center her over the
+   tape's own position on the source art (roughly a third of the way
+   across the note, not dead center) instead of the note's own horizontal
+   center.
    Qualified with the parent (.home-v4-note .home-v4-shiori-peek, not a
    bare .home-v4-shiori-peek) for the same reason several other Home rules
    already are: .shiori-asset--md sets its own width/height later in this
@@ -2556,13 +2556,13 @@ body:has(.home-v4) .app-toolbar {
      the reference (home-v7-shiori-selected-reading-peek.png) where
      she reads as mostly sitting ABOVE the tape, not peeking out from deep
      behind it. */
-  left: 50%;
-  top: -43px;
-  z-index: -1;
+  left: 48%;
+  top: -54px;
+  z-index: 1;
   object-fit: contain;
-  filter: drop-shadow(0 3px 6px rgba(120, 98, 40, 0.16));
-  width: 56px;
-  height: 56px;
+  filter: drop-shadow(0 4px 7px rgba(94, 76, 34, 0.2));
+  width: 68px;
+  height: 68px;
   transform: translateX(-50%);
   pointer-events: none;
   user-select: none;
@@ -2570,9 +2570,10 @@ body:has(.home-v4) .app-toolbar {
 
 @media (min-width: 1024px) {
   .home-v4-note .home-v4-shiori-peek {
-    top: -70px;
-    width: 90px;
-    height: 90px;
+    left: 48%;
+    top: -52px;
+    width: 106px;
+    height: 106px;
   }
 }
 
@@ -2592,6 +2593,7 @@ body:has(.home-v4) .app-toolbar {
   cursor: pointer;
   transform: rotate(-1.5deg);
   z-index: 4;
+  pointer-events: none;
   /* Phase 198 -- previously shared the note's own 1px/2px paper shadow,
      which read as slightly *too* weightless once the notebook/rail next
      to it got heavier, stronger contact shadows this same phase (the
@@ -2605,7 +2607,7 @@ body:has(.home-v4) .app-toolbar {
 
 /* Phase 213 -- .home-v4-notebook is now sized to the baked scene plate's
    OWN aspect ratio (1298x1007 -- cover + ribbon + emboss + all three
-   tabs + every contact shadow, one image) instead of the cover-only
+   tabs, one image) instead of the cover-only
    aspect-ratio (1183x860) a separately-layered tab rail used to hang off
    of via a negative bottom offset. position:relative still matters at
    every width since the three shortcut buttons below are positioned
@@ -2632,54 +2634,46 @@ body:has(.home-v4) .app-toolbar {
      for the shadow this object actually uses instead. */
 }
 
-/* Home v7 target mockup parity -- table contact shadow as its own
-   shadow-only transparent PNG, not a CSS filter and not a separate
-   solid-color/gradient div. Generated directly from the cleaned plate's
-   own alpha silhouette (see ASSET_MANIFEST.md in home-v7/): two blurred,
-   down-right-offset copies of the plate's alpha channel (a tight
-   small-radius blur for a darker near-contact seam, a wider soft-radius
-   blur for the broader outward fade), combined into one dark warm-brown
-   layer. `::before` (behind `.home-v4-notebook-img`'s `z-index:0` within
-   this element's own stacking context) means the plate paints over
-   whatever part of the shadow falls under the opaque book/tabs; only the
-   part that peeks out past their real edges is visible, which is what
-   reads as "the book and tabs are actually resting on the desk" instead
-   of a rectangular plate sitting behind them. pointer-events:none (it's
-   decorative, and the shortcut buttons need their own clicks to land on
-   them, not this).
-   Home v7 final-target parity pass -- `home-v7-notebook-tabs-contact-
-   shadow-target.png` (the previous asset here) still measured as
-   invisible in practice: isolating `::before` alone (hiding the opaque
-   plate image and screenshotting just the shadow) showed the shadow's
-   own silhouette sitting almost exactly UNDER the plate's real edges, so
-   only a ~15px blurred ring peeked out past the opaque cover -- at the
-   notebook's real ~0.54x render scale (1280px viewport) that shrank to a
-   few px, confirmed invisible by a cropped screenshot of the bottom-right
-   corner showing bare desk. The offsets it used (10-14px tight/38-52px
-   soft, in the plate's own 1298px-wide coordinate space) were simply too
-   small relative to the plate to survive being scaled down to its real
-   on-screen size, no matter how dark the fill color was.
-   `home-v7-notebook-tabs-contact-shadow-v4.png` replaces it with much
-   larger offsets/blur (see ASSET_MANIFEST.md in home-v7/ for the exact
-   numbers), tuned by iterating against real notebook-scale screenshots
-   rather than the plate's native resolution, and a bigger 240px canvas
-   padding margin (1778x1487 = 1298+480 x 1007+480, up from 80px) so that
-   wider spread still fully fades to transparent before the canvas edge.
-   The padding is why this rule's own box doesn't match the plate's box
-   1:1 -- offsets/size below are that 240px expressed as a percentage of
-   `.home-v4-notebook`'s own box (240/1298 ≈ 18.49%, 240/1007 ≈ 23.833%),
-   not a hand-picked value. */
+/* Surface-map shadow pass -- the previous shadow-only PNG was removed
+   from the render path because its large transparent canvas could become
+   visible as a rectangular layer boundary on the wood surface. These
+   pseudo-elements draw only contact zones: book bottom, book right edge,
+   and each tab's underside. The actual plate still paints above them, so
+   the shadow that falls under the book is hidden and only the grounded
+   falloff around the touching edges remains visible. */
 .home-v4-notebook::before {
   content: "";
   position: absolute;
-  left: -18.49%;
-  top: -23.833%;
-  width: 136.98%;
-  height: 147.666%;
+  left: -2%;
+  top: 50%;
+  width: 106%;
+  height: 48%;
   z-index: -1;
-  background-image: url("/brand/decor/home-v7/home-v7-notebook-tabs-contact-shadow-v4.png");
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
+  background:
+    radial-gradient(ellipse 58% 20% at 66% 70%, rgba(38, 25, 12, 0.34) 0%, rgba(38, 25, 12, 0.22) 38%, rgba(38, 25, 12, 0.09) 66%, transparent 86%),
+    radial-gradient(ellipse 20% 12% at 42% 88%, rgba(38, 25, 12, 0.28) 0%, rgba(38, 25, 12, 0.13) 58%, transparent 82%),
+    radial-gradient(ellipse 20% 12% at 57% 88%, rgba(38, 25, 12, 0.27) 0%, rgba(38, 25, 12, 0.12) 58%, transparent 82%),
+    radial-gradient(ellipse 20% 12% at 72% 88%, rgba(38, 25, 12, 0.27) 0%, rgba(38, 25, 12, 0.12) 58%, transparent 82%);
+  filter: blur(9px);
+  transform: translate(14px, 18px);
+  opacity: 0.88;
+  pointer-events: none;
+}
+
+.home-v4-notebook::after {
+  content: "";
+  position: absolute;
+  left: 2%;
+  top: 65%;
+  width: 99%;
+  height: 27%;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, transparent 0%, rgba(18, 12, 6, 0.22) 16%, rgba(18, 12, 6, 0.34) 52%, rgba(18, 12, 6, 0.28) 86%, transparent 100%),
+    linear-gradient(90deg, transparent 0%, transparent 88%, rgba(18, 12, 6, 0.24) 93%, rgba(18, 12, 6, 0.11) 97%, transparent 100%);
+  filter: blur(5px);
+  transform: translate(8px, 12px);
+  opacity: 0.72;
   pointer-events: none;
 }
 
@@ -2696,7 +2690,7 @@ body:has(.home-v4) .app-toolbar {
 }
 
 /* Phase 213 -- this <img> is now the whole baked scene plate (cover,
-   ribbon, emboss, all three tabs, every contact shadow), not just the
+   ribbon, emboss, all three tabs), not just the
    cover -- there's no separate tab-rail image or emboss image left to
    occlude/layer against, so this no longer needs to out-rank a sibling
    in z-index the way it did through Phase 200. pointer-events:none
@@ -2754,7 +2748,7 @@ body:has(.home-v4) .app-toolbar {
 
 .home-v4-sample {
   display: inline-block;
-  margin-top: auto;
+  margin-top: 10px;
   padding: 6px 2px 0;
   border: none;
   background: none;
@@ -2765,6 +2759,7 @@ body:has(.home-v4) .app-toolbar {
   text-underline-offset: 3px;
   text-decoration-color: var(--border);
   box-shadow: none;
+  pointer-events: auto;
 }
 
 .home-v4-sample:not(:disabled):hover {
@@ -2775,19 +2770,21 @@ body:has(.home-v4) .app-toolbar {
 }
 
 .home-v4-cta-content {
-  position: relative;
+  position: absolute;
   z-index: 1;
   display: flex;
-  height: 100%;
+  inset: 18% 30% 24% 10%;
+  height: auto;
   align-items: center;
   justify-content: center;
   gap: 6px;
   box-sizing: border-box;
-  padding: 0 30% 6% 8%;
+  padding: 0;
   color: #ffffff;
   font-size: 13.5px;
   font-weight: 700;
   white-space: nowrap;
+  pointer-events: auto;
   transition: transform var(--motion-fast) var(--ease-soft);
 }
 
@@ -3050,20 +3047,19 @@ body:has(.home-v4) .app-toolbar {
     --note-left: 0%;
     --note-top: -2%;
     --note-w: 52%;
-    --cta-left: 2%;
+    --cta-left: 10%;
     --cta-top: 39%;
-    --cta-w: 42%;
+    --cta-w: 36%;
   }
 
   /* Phase 199 -- deleted the old scene-wide shared shadow pool (a blurred
      solid-color circle sized against the whole scene box, independent of
      any object's actual position/silhouette) in favor of per-object CSS
      contact shadows.
-     Phase 213 -- those per-object CSS shadow pseudo-elements are gone
-     too: the notebook/tab contact shadows are now baked directly into
-     `.home-v4-notebook-img`'s own plate image (see ASSET_MANIFEST.md in
-     home-v7/), so there is no shadow-specific CSS left at any tier to
-     override here. */
+     Surface-map pass -- failed shadow PNGs are gone from the render path;
+     `.home-v4-notebook::before/::after` now draw only visible contact
+     zones behind the baked plate, so there is no desktop-specific shadow
+     asset to override here. */
 
   .home-v4-note,
   .home-v4-cta,
@@ -3084,11 +3080,9 @@ body:has(.home-v4) .app-toolbar {
        DOM order, so without this the notebook would paint over them by
        default stacking instead of the other way around. */
     z-index: 0;
-    /* Phase 200 -- no drop-shadow filter at this tier either; see the
-       base rule's Phase 200 comment. The PNG shadow (::before) is a
-       single asset shared at every breakpoint via percentage sizing, so
-       there's no separate desktop-tier shadow override below any more
-       either. */
+    /* No drop-shadow filter at this tier either; see the base rule. The
+       surface-map pseudo-elements are shared at every breakpoint via
+       percentage sizing, so there is no separate desktop shadow override. */
   }
 
   /* Phase 194 -- widened (44% -> 48%) so the note's own right edge visibly
@@ -3141,7 +3135,8 @@ body:has(.home-v4) .app-toolbar {
   }
 
   .home-v4-cta-content {
-    padding: 0 26% 5% 9%;
+    inset: 18% 28% 24% 12%;
+    padding: 0;
     font-size: clamp(13px, 1.05vw, 15px);
   }
 

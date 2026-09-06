@@ -137,11 +137,15 @@ const ASSET_BASE_V7 = "/brand/decor/home-v7";
 // positioned layers have no way to guarantee they agree on geometry.
 // `.home-v4-notebook` is now a single baked plate
 // (home-v7-notebook-tabs-shadow-plate.png) with the cover, ribbon, emboss,
-// all three tabs, and every contact shadow painted together under one
-// light source -- the DOM keeps exactly the three shortcut buttons as
+// and all three tabs under one light source. The DOM keeps exactly the
+// three shortcut buttons as
 // plain hit zones over the plate's own tab row (see ASSET_MANIFEST.md in
-// home-v7/ for the pixel-measured geometry those percentages come from),
-// nothing else changed about how live text/click targets work. Shiori
+// home-v7/ for the pixel-measured geometry those percentages come from).
+// A later surface-map pass moved contact shadows out of raster assets and
+// into `.home-v4-notebook::before/::after` so they can ground only the
+// visible bottom/right/tab underside zones without exposing a rectangular
+// shadow canvas. Nothing else changed about how live text/click targets work.
+// Shiori
 // also moves to her confirmed final pose (candidate 3, holding a small
 // open book) as a Home-only cropped asset instead of the generic
 // ShioriCharacter default variant -- see the .home-v4-shiori-peek comment
@@ -248,8 +252,8 @@ export function HomeDashboard({
 
         {/* Phase 213 (final implementation) -- .home-v4-notebook is now a
             single baked scene plate (notebook cover + bookmark ribbon +
-            emboss + all three shortcut tabs + every contact shadow, one
-            PNG under one consistent light source) instead of separately
+            emboss + all three shortcut tabs, one PNG under one consistent
+            light source) instead of separately
             layered cover/tab-rail images plus CSS-drawn shadow
             pseudo-elements. That separate-layers approach (Phases 195-200)
             is exactly what kept producing tab-color bleed and shadows that
@@ -258,7 +262,10 @@ export function HomeDashboard({
             to be cast by. A plate generated from the actual final geometry
             doesn't have that failure mode -- see ASSET_MANIFEST.md in
             home-v7/ for the measured tab hit-zone pixel geometry the
-            three buttons below are positioned from. The three buttons stay
+            three buttons below are positioned from. The current contact
+            shadow is drawn by `.home-v4-notebook::before/::after` as
+            visible bottom/right/tab underside zones, not by a shadow PNG.
+            The three buttons stay
             plain DOM hit zones (icon/label/hint live text) over even
             thirds of the plate's own tab row, same "live text over baked
             art" pattern every Home phase has used since 195 -- only the
