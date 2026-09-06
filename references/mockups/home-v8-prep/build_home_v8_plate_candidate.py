@@ -123,17 +123,22 @@ def contact_mask(alpha: Image.Image) -> Image.Image:
 
 
 def build_shadow(alpha: Image.Image, canvas_size: tuple[int, int], pad: int) -> Image.Image:
-    contact = contact_mask(alpha)
-    tight = offset_alpha(contact, (pad + 8, pad + 10), canvas_size).filter(ImageFilter.GaussianBlur(8))
-    soft = offset_alpha(contact, (pad + 24, pad + 30), canvas_size).filter(ImageFilter.GaussianBlur(32))
-    tab_soft = offset_alpha(contact, (pad + 14, pad + 18), canvas_size).filter(ImageFilter.GaussianBlur(16))
+    contact = contact_mask(alpha).filter(ImageFilter.MaxFilter(7))
+    # Keep the shadow physically attached: only the actual bottom/right/tab
+    # contact edges cast visible shadow. A full-object cast produced a broad
+    # support-slab shape, while the first contact-only pass was too faint at
+    # browser scale. These stronger layers restore visible grounding without
+    # reintroducing the rectangle/slab failure.
+    contact_dark = offset_alpha(contact, (pad + 8, pad + 10), canvas_size).filter(ImageFilter.GaussianBlur(12))
+    contact_mid = offset_alpha(contact, (pad + 20, pad + 25), canvas_size).filter(ImageFilter.GaussianBlur(28))
+    contact_wide = offset_alpha(contact, (pad + 36, pad + 45), canvas_size).filter(ImageFilter.GaussianBlur(52))
 
-    tight = tight.point(lambda value: int(value * 0.30))
-    soft = soft.point(lambda value: int(value * 0.11))
-    tab_soft = tab_soft.point(lambda value: int(value * 0.16))
-    merged = ImageChops.lighter(ImageChops.lighter(tight, soft), tab_soft)
+    contact_dark = contact_dark.point(lambda value: min(255, int(value * 2.15)))
+    contact_mid = contact_mid.point(lambda value: min(255, int(value * 1.28)))
+    contact_wide = contact_wide.point(lambda value: min(255, int(value * 0.62)))
+    merged = ImageChops.lighter(ImageChops.lighter(contact_dark, contact_mid), contact_wide)
 
-    shadow = Image.new("RGBA", canvas_size, (31, 20, 9, 0))
+    shadow = Image.new("RGBA", canvas_size, (18, 11, 5, 0))
     shadow.putalpha(merged)
     return shadow
 
