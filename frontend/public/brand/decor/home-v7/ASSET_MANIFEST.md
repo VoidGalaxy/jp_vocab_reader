@@ -71,7 +71,7 @@ scene plate, plus the confirmed Shiori reading-peek pose.
     reference/audit, not deleted, but no longer referenced from
     globals.css.
 
-- `home-v7-notebook-tabs-contact-shadow-target.png` -- current, wired.
+- `home-v7-notebook-tabs-contact-shadow-target.png` -- SUPERSEDED, not wired.
   - 1458x1167 (1298+160 x 1007+160), transparent PNG, alpha preserved.
     Canvas is the plate's own 1298x1007 PLUS an 80px padding margin on
     every side -- see below for why.
@@ -105,6 +105,56 @@ scene plate, plus the confirmed Shiori reading-peek pose.
     earlier pass, not assumed). A static shadow-only image avoids that
     failure mode entirely since it has no effect on any other element's
     layout.
+  - Home v7 final-target parity pass -- superseded by
+    `home-v7-notebook-tabs-contact-shadow-v4.png` below: isolated (hiding
+    `.home-v4-notebook-img` and screenshotting `::before` alone), this
+    file rendered as a near-opaque copy of the plate's own silhouette with
+    only a thin blurred RING around its edge -- i.e. almost the entire
+    shadow sat exactly UNDER the opaque plate (invisible by construction,
+    since the plate paints over it) and only a ~15px-wide ring peeked out,
+    which at the notebook's real render scale (~0.54x at a 1280px
+    viewport) shrank to a handful of pixels -- confirmed via a cropped
+    screenshot of the notebook's bottom-right corner showing bare desk
+    with no visible darkening at all. This is the same "shadow reads as a
+    rectangle"/near-invisible failure the brief warned against, just
+    baked into a PNG instead of drawn in CSS -- the offset (10-14px tight,
+    38-52px soft, in the plate's own 1298px-wide coordinate space) was
+    simply too small relative to the plate to read at typical render
+    size. Left on disk for audit, no longer referenced from globals.css.
+
+- `home-v7-notebook-tabs-contact-shadow-v4.png` -- current, wired.
+  - 1778x1487 (1298+480 x 1007+480), transparent PNG, alpha preserved.
+    Canvas is the plate's own 1298x1007 plus a 240px padding margin on
+    every side (up from the superseded file's 80px -- the larger
+    offset/blur below need more room to fully fade to transparent before
+    hitting the canvas edge).
+  - Home v7 final-target parity pass -- generated with headless Chrome's
+    own Canvas 2D API (`document.createElement('canvas')` + `source-in`
+    compositing + `ctx.filter = 'blur(Npx)'`) rather than by hand or via
+    an image-editing tool, since neither PIL/Pillow nor ImageMagick was
+    available in this environment -- see the generation script referenced
+    from this pass's own report for the exact technique. Built from two
+    offset+blurred copies of the plate's own alpha silhouette (same
+    two-layer method as the superseded file: a tight near-contact seam
+    plus a wide soft falloff, unioned into one dark warm-brown layer), but
+    with substantially larger offsets and blur radii, tuned by iterating
+    against real notebook-scale screenshots (not the plate's own native
+    resolution) until the shadow was clearly visible along the bottom and
+    right edges, and under each tab individually, at a normal 1280px
+    screenshot: tight layer offset (30,40)px / blur 22px / `rgba(15,9,5,
+    0.85)`, soft layer offset (125,155)px / blur 85px / `rgba(20,13,7,
+    0.58)`. Because the mask comes directly from the plate's own alpha
+    channel (including the gaps cut between the three tabs), the
+    generated shadow naturally shows each tab with its own separated
+    contact shadow rather than one connected rail/bar underneath all
+    three.
+  - Applied the same way as the superseded file: via
+    `.home-v4-notebook::before`, behind `.home-v4-notebook-img`'s
+    z-index, `pointer-events:none`. The CSS box's left/top/width/height
+    percentages changed to match this file's own 240px-of-1298px /
+    240px-of-1007px padding ratio (see the rule's own comment in
+    globals.css for the exact values) -- they are NOT the same numbers as
+    the superseded file's, since the canvas padding changed.
 
 - `home-v7-shiori-reading-peek.png`
   - 1024x1050, transparent PNG, alpha preserved.

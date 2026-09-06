@@ -2647,37 +2647,37 @@ body:has(.home-v4) .app-toolbar {
    of a rectangular plate sitting behind them. pointer-events:none (it's
    decorative, and the shortcut buttons need their own clicks to land on
    them, not this).
-   Target-parity pass -- the first version of this asset
-   (home-v7-notebook-tabs-contact-shadow.png, same-size canvas as the
-   plate, small ~5-7px/18-26px offsets) measured noticeably weaker/
-   narrower than the confirmed target mockup's own shadow when the two
-   were pixel-sampled side by side (target's near-contact brightness
-   dropped to ~60-70 out of a ~140 baseline over a visibly wider spread;
-   this file's own equivalent zone was only a few px wide). Two things
-   were undersized, not just the opacity: the blur/offset amounts, and
-   the CANVAS itself -- the old file was cropped to the plate's own
-   1298x1007 bounds, which clipped the wider spread's own soft tail
-   before it reached zero alpha (confirmed: alpha was still ~33/255 at
-   the very last row instead of fading out). This replacement
-   (home-v7-notebook-tabs-contact-shadow-target.png, new filename per
-   the brief so browser cache can't serve the old one) fixes both: larger
-   offsets/blur radii for a spread that matches the target's own measured
-   falloff, AND an 80px padding margin baked into the canvas
-   (1458x1167 = 1298+160 x 1007+160) so that wider spread has room to
-   fully fade to transparent instead of hitting a hard canvas edge.
-   The padding is why this rule's own box no longer matches the plate's
-   box 1:1 -- offsets/size below are that 80px expressed as a percentage
-   of `.home-v4-notebook`'s own box (80/1298 ≈ 6.163%, 80/1007 ≈ 7.945%),
+   Home v7 final-target parity pass -- `home-v7-notebook-tabs-contact-
+   shadow-target.png` (the previous asset here) still measured as
+   invisible in practice: isolating `::before` alone (hiding the opaque
+   plate image and screenshotting just the shadow) showed the shadow's
+   own silhouette sitting almost exactly UNDER the plate's real edges, so
+   only a ~15px blurred ring peeked out past the opaque cover -- at the
+   notebook's real ~0.54x render scale (1280px viewport) that shrank to a
+   few px, confirmed invisible by a cropped screenshot of the bottom-right
+   corner showing bare desk. The offsets it used (10-14px tight/38-52px
+   soft, in the plate's own 1298px-wide coordinate space) were simply too
+   small relative to the plate to survive being scaled down to its real
+   on-screen size, no matter how dark the fill color was.
+   `home-v7-notebook-tabs-contact-shadow-v4.png` replaces it with much
+   larger offsets/blur (see ASSET_MANIFEST.md in home-v7/ for the exact
+   numbers), tuned by iterating against real notebook-scale screenshots
+   rather than the plate's native resolution, and a bigger 240px canvas
+   padding margin (1778x1487 = 1298+480 x 1007+480, up from 80px) so that
+   wider spread still fully fades to transparent before the canvas edge.
+   The padding is why this rule's own box doesn't match the plate's box
+   1:1 -- offsets/size below are that 240px expressed as a percentage of
+   `.home-v4-notebook`'s own box (240/1298 ≈ 18.49%, 240/1007 ≈ 23.833%),
    not a hand-picked value. */
 .home-v4-notebook::before {
   content: "";
   position: absolute;
-  left: -6.163%;
-  top: -7.945%;
-  width: 112.33%;
-  height: 115.89%;
+  left: -18.49%;
+  top: -23.833%;
+  width: 136.98%;
+  height: 147.666%;
   z-index: -1;
-  background-image: url("/brand/decor/home-v7/home-v7-notebook-tabs-contact-shadow-target.png");
+  background-image: url("/brand/decor/home-v7/home-v7-notebook-tabs-contact-shadow-v4.png");
   background-size: 100% 100%;
   background-repeat: no-repeat;
   pointer-events: none;
@@ -3152,28 +3152,56 @@ body:has(.home-v4) .app-toolbar {
      text's own rendered rect extended ~10px past the button's bottom
      edge. Icon shrunk (32px -> 24px) and padding trimmed (34%/10% ->
      26%/8%) to fit the row layout's real vertical budget with margin to
-     spare, confirmed by re-measuring rendered rects after the change. */
+     spare, confirmed by re-measuring rendered rects after the change.
+     Home v7 final-target pass -- padding/gap trimmed again (8%/8px ->
+     6%/6px) and the icon shrunk once more (24px -> 20px) to claw back
+     horizontal room for the text column: at a ~105px-wide tab (1280px
+     viewport) the old 8%+8px+24px budget left only ~56px for label/hint,
+     which is what forced the hint into a single ellipsized line (the
+     "no ellipsis at 1280" failure this pass fixes). See
+     .home-v4-shortcut-hint below for the other half of the fix (allowing
+     a second line instead of only shrinking padding). */
   .home-v4-shortcut-content {
-    padding: 26% 8% 8%;
-    gap: 8px;
+    padding: 24% 6% 8%;
+    gap: 6px;
   }
 
   .home-v4-shortcut-icon {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
   }
 
   .home-v4-shortcut-icon svg {
-    width: 12px;
-    height: 12px;
+    width: 11px;
+    height: 11px;
   }
 
   .home-v4-shortcut-label {
-    font-size: 13px;
+    font-size: 12.5px;
   }
 
+  /* Home v7 final-target pass -- was `white-space:nowrap` +
+     `text-overflow:ellipsis` (see the base rule below), which at this
+     tier's real ~66px text-column width truncated every hint to "모은
+     단어..."/"로그인하..."/"나만의 학..." -- exactly the "read as cramped
+     UI buttons" failure the brief calls out, and this tier has enough
+     vertical room (~50px, per the Phase 213 comment above) for a second
+     line. `-webkit-line-clamp:2` replaces the single-line ellipsis with a
+     2-line clamp -- normal-length hint copy now fits in full with no
+     ellipsis at all, and only a pathological over-length string (e.g. a
+     very long saved-word surface fed into the vocab hint) would still
+     ellipsize on line 2, as a safety net rather than the common case.
+     `word-break:keep-all` wraps at word (어절) boundaries instead of
+     mid-syllable, matching how Korean line breaks are normally read. */
   .home-v4-shortcut-hint {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    word-break: keep-all;
+    overflow-wrap: break-word;
     font-size: 10.5px;
+    line-height: 1.22;
   }
 
 }
