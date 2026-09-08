@@ -2538,33 +2538,31 @@ body:has(.home-v4) .app-toolbar {
      199's own desktop numbers and the mobile values this file derived by
      scaling them.
      Phase 213 -- swapped the generic ShioriCharacter default-variant art
-     for the confirmed reading-pose crop and switched from the shared
-     ShioriCharacter component to a plain <img>, so this rule now also
-     carries the object-fit/sizing that component's own `.shiori-asset-img`
-     class used to supply.
-     Phase 215 (v9) -- swapped the crop again (home-v9-shiori-reading-
-     peek.png, see HomeDashboard.tsx's Phase 215 comment) and DROPPED the
-     `filter: drop-shadow` this rule used to carry: that filter approximated
-     a contact shadow with a generic floating drop-shadow, which is the
-     "pasted on, not tucked in" look the v9 brief calls out as a failure.
-     The new crop is diff-matted straight from the approved mockup, so her
-     own contact shadow (onto the tape/flap beneath her) is real alpha
-     baked into the asset, not a CSS approximation -- no shadow-drawing CSS
-     on this element at all now. The new crop is also tightly bounding-
-     boxed around her actual silhouette (not the generously-padded canvas
-     the old crop used). Top was first tried at roughly -90% of her own
-     rendered height (matching how tightly the crop is bound), but a real
-     screenshot showed a visible gap between her feet/flap and the note's
-     own tape instead of the "tucked in" contact the v9 brief wants --
-     confirmed by screenshot, not assumed from the crop's padding alone.
-     Brought back down to ~-73%, which closes that gap without re-hiding
-     her behind the tape the way Phase 200's old ~-33% ratio did. */
+     for the confirmed reading-pose crop (home-v7-shiori-reading-peek.png,
+     see HomeDashboard.tsx's comment on this element) and switched from
+     the shared ShioriCharacter component to a plain <img>, so this rule
+     now also carries the object-fit/drop-shadow that component's own
+     `.shiori-asset-img` class used to supply.
+     Phase 213 rework -- kept Phase 200's top offset (-22px/-32px) as a
+     starting point and it was wrong for this specific asset: the crop's
+     own canvas spends its top ~20-25% on the charm ring/cord with the
+     head not starting until well below that (unlike the old
+     ShioriCharacter default art, which filled most of its own frame with
+     the character), so only the bare ring cleared the tape -- confirmed
+     with a cropped screenshot, not assumed. Top pushed much further
+     negative (roughly -70% of her own rendered height, not ~-33%) so
+     ring+head+book+hands all clear the note's top edge and only a small
+     sliver near the bottom of the crop dips behind the tape, matching
+     the reference (home-v7-shiori-selected-reading-peek.png) where
+     she reads as mostly sitting ABOVE the tape, not peeking out from deep
+     behind it. */
   left: 48%;
-  top: -51px;
+  top: -54px;
   z-index: 1;
   object-fit: contain;
-  width: 70px;
-  height: 70px;
+  filter: drop-shadow(0 4px 7px rgba(94, 76, 34, 0.2));
+  width: 68px;
+  height: 68px;
   transform: translateX(-50%);
   pointer-events: none;
   user-select: none;
@@ -2573,9 +2571,9 @@ body:has(.home-v4) .app-toolbar {
 @media (min-width: 1024px) {
   .home-v4-note .home-v4-shiori-peek {
     left: 48%;
-    top: -80px;
-    width: 110px;
-    height: 110px;
+    top: -52px;
+    width: 106px;
+    height: 106px;
   }
 }
 
@@ -2607,31 +2605,38 @@ body:has(.home-v4) .app-toolbar {
   filter: drop-shadow(2px 4px 4px rgba(64, 43, 24, 0.24));
 }
 
-/* Phase 215 (v9 grounded-scene replacement) -- .home-v4-notebook is now
-   sized to the v9 plate's own canvas (968x796). Unlike the v8 plate, this
-   canvas is not "book + symmetric shadow-bleed margin" -- it's a complete,
-   standalone book cover: the small area the title note and CTA sit on top
-   of (at the >=1024px tier) is filled with real sampled cover color
-   rather than punched out as a transparent notch (see the
-   HomeDashboard.tsx Phase 215 comment for why), so this single asset
-   looks correct as a whole book both where it's partly covered by other
-   objects (desktop) and where it stands alone (mobile, where note/CTA
-   stack above it in flow instead of overlapping it). Width/aspect-ratio
-   come directly from the plate's own pixel dimensions, no compensation
-   factor needed the way v8's shadow-bleed margin required one. */
+/* Phase 214 (v8 asset-first replacement) -- .home-v4-notebook is now sized
+   to the v8 plate's OWN canvas (1538x1247), not the v7 plate's tighter
+   1298x1007 cover-only canvas. The extra ~240px in each dimension is not
+   more notebook -- it's the transparent shadow-bleed margin the v8 plate
+   bakes its own contact shadow into (see build_home_v8_plate_candidate.py),
+   so this box is now "notebook + its own shadow", same as the v7 box was
+   "notebook" alone. The book's own cover is 1298/1538 = 84.4% of this
+   box's width, so holding the box at the same visual footprint as the v7
+   cover-only box would render the book itself ~16% smaller. Width scaled
+   up by that same 1538/1298 factor from `min(350px, 88%)`/`--nb-w: 70%`
+   to `min(415px, 104%)`/`--nb-w: 83%` (desktop override below) instead,
+   so the book renders at its previous size with the shadow bleed as pure
+   extra margin around it -- confirmed by re-measuring the rendered
+   `.home-v4-notebook-img` (not just this box) after the change, since a
+   scaled-up box alone doesn't prove the book itself grew back. Any excess
+   past 100% only eats into the plate's own transparent shadow-bleed
+   margin (`.home-v4-scene`'s `overflow-x: clip` still guards against a
+   real horizontal scrollbar), never the book's own opaque pixels. */
 .home-v4-notebook {
   position: relative;
-  width: min(375px, 95%);
-  aspect-ratio: 968 / 796;
+  width: min(415px, 104%);
+  aspect-ratio: 1538 / 1247;
   margin-top: -12px;
   z-index: 1;
-  /* No drop-shadow filter and no shadow pseudo-elements here -- the v9
+  /* No drop-shadow filter and no shadow pseudo-elements here -- the v8
      plate bakes its own contact shadow (book bottom/right edge, each tab's
-     underside) directly into the asset under one light source, diff-matted
-     straight from the approved mockup rather than derived from the old
-     v7/v8 raster. No shadow-drawing CSS is layered on top of or behind it
-     at any breakpoint -- see references/mockups/home-v9-prep/
-     CLAUDE_HANDOFF.md. */
+     underside) directly into the asset under one light source. The prior
+     `.home-v4-notebook::before/::after` surface-map shadow (radial/linear
+     gradients approximating contact zones) is deleted outright: it kept
+     reading as a shadow shape independent of the book casting it, which is
+     an asset-geometry problem CSS gradients can't solve -- see
+     references/mockups/home-v8-prep/CLAUDE_HANDOFF.md. */
 }
 
 .home-v4-note-img,
@@ -2753,19 +2758,20 @@ body:has(.home-v4) .app-toolbar {
   transform: scale(0.97);
 }
 
-/* Phase 215 (v9 grounded-scene replacement) -- the three shortcut buttons
-   are still plain hit zones positioned directly against `.home-v4-notebook`
-   (the whole plate), but the percentages are now re-measured against the
-   v9 plate's own 968x796 canvas (see measure_tabs4.js / ASSET_MANIFEST.md
-   in home-v9/), not reused from the v8 1538x1247 plate -- the two
-   canvases don't share an origin or scale, so the old percentages would
-   have sat over the wrong pixels (and the new tabs are simply bigger and
-   further apart, per the v9 brief's "tabs read as small/UI-like" failure
-   call-out). Each tab keeps its own top/height as well as left/width (the
-   v9 measurement pass again found the three tabs aren't perfectly level).
+/* Phase 214 (v8 asset-first replacement) -- the three shortcut buttons are
+   still plain hit zones positioned directly against `.home-v4-notebook`
+   (the whole baked plate, shadow margin included), but the percentages are
+   now re-measured against the v8 plate's own 1538x1247 canvas (see
+   measure_plate_tabs.py / ASSET_MANIFEST.md in home-v8/), not reused from
+   the old v7 1298x1007 plate -- the two canvases don't share an origin
+   (v8's shadow-bleed padding shifts every tab's coordinates), so the old
+   percentages would have sat over the wrong pixels. Each tab now gets its
+   own top/height as well as left/width (the v8 measurement pass found the
+   three tabs are not perfectly level -- yellow y 998-1092, coral y
+   996-1092, blue y 999-1092 -- unlike the v7 plate's single shared row).
    min-width:0 still matters for the same reason it always has: the
    app-wide `button { min-width: 120px }` reset would otherwise floor
-   these well below their intended ~15%-of-notebook-width, and the
+   these well below their intended ~13%-of-notebook-width, and the
    below-640px mobile touch-target exemption elsewhere in this file only
    covers viewports under 640px, not the desktop tier. z-index:1 (above
    the plate image's own 0) keeps every button clickable/hoverable. */
@@ -2780,24 +2786,24 @@ body:has(.home-v4) .app-toolbar {
 }
 
 .home-v4-notebook .home-v4-shortcut--vocab {
-  left: 27.89%;
-  top: 81.16%;
-  width: 15.81%;
-  height: 10.55%;
+  left: 31.73%;
+  top: 80.03%;
+  width: 12.61%;
+  height: 7.54%;
 }
 
 .home-v4-notebook .home-v4-shortcut--review {
-  left: 46.28%;
-  top: 81.16%;
-  width: 15.50%;
-  height: 10.55%;
+  left: 45.64%;
+  top: 79.87%;
+  width: 12.68%;
+  height: 7.70%;
 }
 
 .home-v4-notebook .home-v4-shortcut--decks {
-  left: 64.05%;
-  top: 81.66%;
-  width: 15.39%;
-  height: 10.05%;
+  left: 59.75%;
+  top: 80.11%;
+  width: 12.81%;
+  height: 7.46%;
 }
 
 .home-v4-shortcut:not(:disabled):hover {
@@ -3022,24 +3028,8 @@ body:has(.home-v4) .app-toolbar {
        up from `min(1020px, 72vw)`): more scene width for the now-bigger
        notebook to sit inside without eating further into the desk margin
        around it. */
-    /* Phase 215 (v9 grounded-scene replacement) -- was `min(1120px, 78vw)`
-       with an independent `height: clamp(460px, calc(100svh - 220px),
-       640px)`, sized without regard to the notebook/note/CTA
-       composition's own proportions. Since those three are now positioned
-       as % of THIS box using percentages measured off the approved v9
-       mockup (see --nb-left etc. below), the box's own aspect ratio has
-       to match the mockup's cluster bounding box (1082x795) for those
-       percentages to land where they were measured -- a mismatched box
-       ratio was stretching the notebook (whose own height comes from
-       `aspect-ratio` on ITS width, not from this box) past the scene's
-       bottom edge, which desynced note/CTA's vertical position from the
-       notebook's real bottom/tab-row edge. A third `min()` branch (the
-       short-viewport budget converted to an equivalent width via the same
-       1082/795 ratio) replaces the old separate `height`/`max-height`
-       constraint, so the short-viewport safety net now shrinks width and
-       height TOGETHER at the fixed ratio instead of fighting it. */
-    width: min(1120px, 78vw, calc((100svh - 220px) * 1082 / 795));
-    aspect-ratio: 1082 / 795;
+    width: min(1120px, 78vw);
+    height: clamp(460px, calc(100svh - 220px), 640px);
     margin: 28px auto 0;
     /* Phase 196 -- notebook grown again (55% -> 58%) and shifted left
        (30% -> 28%) so it reads as the scene's dominant object rather than
@@ -3062,44 +3052,28 @@ body:has(.home-v4) .app-toolbar {
        logic against the now even-wider book). note/CTA/rail values below
        already matched the kit's target from Phase 199's numbers, so only
        the notebook's own two vars move this phase.
-       Phase 215 (v9 grounded-scene replacement) -- 70%/83%/16%-style
-       tuning (Phase 200/214) treated note/CTA/notebook as three
-       independently-eyeballed boxes, re-nudged number by number across a
-       dozen-plus phases. This phase instead measures all three directly
-       off the same approved v9 mockup pixel canvas (1672x940) the new
-       plate was diff-matted from: a "cluster" bounding box around the
-       union of note+CTA+notebook's own measured rects
-       (x 345-1427, y 87-882 -- see references/mockups/home-v9-prep/
-       CLAUDE_HANDOFF.md and the grid-overlay measurements it was checked
-       against), then each object's left/top/width as a % of that cluster
-       box's own width/height. This is why the numbers below land close to
-       (not identical to) the old tuned values -- both approaches were
-       converging on the same real composition, one by repeated visual
-       nudges, this one by measuring the composition that was already
-       approved. --nb-top stays 0% because the notebook is the cluster's
-       own topmost object either way. */
-    --nb-left: 10.6%;
+       Phase 214 (v8 asset-first replacement) -- 70%/22% sized the v7
+       plate's tight 1298x1007 cover-only canvas. The v8 plate's canvas
+       (1538x1247) spends ~240px of extra width/height on its own baked
+       shadow-bleed margin (see the .home-v4-notebook comment above) --
+       the cover itself is only 1298/1538 = 84.4% of this box, so holding
+       70% would render the book itself ~16% smaller than before. Scaled
+       by the same 1538/1298 factor as the base rule's mobile width
+       (70% -> 83%), shifted left by half the growth (22% -> 16%) to stay
+       centered on roughly the same midpoint rather than preserving the
+       exact right edge, so the book reads at its previous size with the
+       shadow bleed as extra margin, not instead of book size -- confirmed
+       by re-measuring the rendered `.home-v4-notebook-img` at this tier
+       after the change. */
+    --nb-left: 16%;
     --nb-top: 0%;
-    --nb-w: 89.5%;
+    --nb-w: 83%;
     --note-left: 0%;
-    --note-top: 15.5%;
-    --note-w: 46%;
-    --cta-left: 5.5%;
-    /* 45.5% (the raw cluster measurement) left too little headroom above
-       it for the note's own title/subtitle/sample-link column to clear
-       both the note's deckled-edge top margin and the CTA's own top edge
-       at every breakpoint (see .home-v4-note-content's comment) -- 50%
-       still overlapped the sample link by a few px at 1024px specifically
-       (measured, not assumed -- the exact overlap varies with the title's
-       own clamp() font size per breakpoint), so pushed further to 54% for
-       a real margin at every checked width, not just the widest one. */
-    --cta-top: 54%;
-    /* 39.5% (the raw cluster measurement) left the CTA ribbon's own bottom
-       edge short of the plate's own filled note/CTA area underneath it,
-       showing a thin sliver of that fill color below the ribbon --
-       confirmed by screenshot. Grown to close that gap (re-checked after
-       the --cta-top move above). */
-    --cta-w: 46%;
+    --note-top: -2%;
+    --note-w: 52%;
+    --cta-left: 10%;
+    --cta-top: 39%;
+    --cta-w: 36%;
   }
 
   /* Phase 199 -- deleted the old scene-wide shared shadow pool (a blurred
@@ -3147,28 +3121,8 @@ body:has(.home-v4) .app-toolbar {
   .home-v4-note-content {
     /* Extra bottom padding keeps the "샘플로 체험" link clear of the CTA
        ticket's own overlap zone below (see .home-v4-cta's top% here) --
-       without it the stamp's opaque art paints directly over the link.
-       Phase 215 (v9) -- padding-bottom doesn't actually do this job in a
-       top-aligned flex column with more height than its content needs
-       (confirmed by measuring the live rect: growing it to 40% didn't
-       move the sample link at all, since the column just leaves the extra
-       space after the content instead of pushing the content up). The
-       v9 cluster-measured --cta-top starts noticeably higher up the
-       note's own box than before, leaving far less headroom above it.
-       padding-top alone can't be pushed arbitrarily low to compensate,
-       though: the note's own deckled-edge artwork is transparent above
-       roughly its own top 15% (torn-paper corners, not a clean
-       rectangle -- confirmed by sampling the source PNG's alpha channel),
-       so a too-small padding-top let the title render ABOVE the actual
-       paper shape at some breakpoints, showing the notebook cover through
-       the gap instead of sitting on cream paper -- confirmed by
-       screenshot at 1024px specifically (this asset/box combination
-       happened to clear at 1280px but not at 1024px). Settled on 10%
-       (safely past the deckled zone) paired with a lower --cta-top below
-       (45.5% -> 50%, see that comment) to reopen enough headroom for both
-       constraints at once, rather than fighting the deckled-edge floor
-       with an ever-smaller padding-top. */
-    padding: 10% 11% 4%;
+       without it the stamp's opaque art paints directly over the link. */
+    padding: 19% 11% 20%;
   }
 
   .home-v4-title {
@@ -3272,22 +3226,15 @@ body:has(.home-v4) .app-toolbar {
    the viewport instead of plateauing into a fixed-size object surrounded
    by more and more bare desk on wide monitors. The shortcut buttons need
    no override here -- they're a % of `.home-v4-notebook`, which keeps the
-   same aspect-ratio (the plate's own 968:796) at any scene size. */
+   same aspect-ratio (the plate's own 1298:1007) at any scene size. */
 @media (min-width: 1440px) {
   .home-v4-scene {
     /* Phase 200 -- scaled by the same ratio the 1024px tier's own width
        grew by this phase (1020px/72vw -> 1120px/78vw), so there's no
        discontinuity where crossing 1440px suddenly makes the notebook a
-       SMALLER share of the viewport than it was at 1024-1439px.
-       Phase 215 (v9) -- no `height` override here any more (was
-       `clamp(520px, calc(100svh - 230px), 720px)`): the 1024px tier's own
-       `aspect-ratio: 1082/795` already applies at this width too (both
-       media blocks are simultaneously active), and re-introducing an
-       explicit height here would fight that ratio the same way the old
-       independent height clamp did. The short-viewport budget is folded
-       into `width` itself (matching the base rule's own third `min()`
-       branch) so it shrinks width/height together at the fixed ratio. */
-    width: min(1300px, 74vw, calc((100svh - 230px) * 1082 / 795));
+       SMALLER share of the viewport than it was at 1024-1439px. */
+    width: min(1300px, 74vw);
+    height: clamp(520px, calc(100svh - 230px), 720px);
     margin-top: 36px;
   }
 }

@@ -25,7 +25,8 @@ type HomeDashboardProps = {
 
 const ASSET_BASE = "/brand/decor/home-v3";
 const ASSET_BASE_V4 = "/brand/decor/home-v4";
-const ASSET_BASE_V9 = "/brand/decor/home-v9";
+const ASSET_BASE_V7 = "/brand/decor/home-v7";
+const ASSET_BASE_V8 = "/brand/decor/home-v8";
 
 // Phase 192 (skeleton replacement) -- reskin failed; phases 177-190 kept
 // patching the same flat `scene > [note, cta, notebook, shortcuts,
@@ -145,34 +146,32 @@ const ASSET_BASE_V9 = "/brand/decor/home-v9";
 // into `.home-v4-notebook::before/::after` so they can ground only the
 // visible bottom/right/tab underside zones without exposing a rectangular
 // shadow canvas. Nothing else changed about how live text/click targets work.
-// Phase 215 (v9 grounded-scene replacement) -- the v8 plate (baked shadow
-// on the v7 cover geometry) still failed the brief's own review: the
-// contact shadow either vanished or read as a hard dark bar/line rather
-// than a soft table-contact falloff, Shiori (a separate small PNG peeking
-// above the note's tape) looked pasted on rather than physically tucked
-// into the paper, and the three tabs read as small/UI-like rather than
-// large paper tabs resting on the desk with their own shadow. Per
-// references/mockups/home-v9-prep/CLAUDE_HANDOFF.md, tuning the v8 plate
-// further was explicitly rejected as a "failed derivative pipeline" --
-// the fix is a from-scratch foreground plate
-// (`home-v9-foreground-grounded-plate.png`) built by difference-matting
-// the approved `home-v9-composited-target-mockup.png` against the
-// production desk background it was composited over
-// (`home-v4-desk-surface-desktop.png`, pixel-identical to the mockup's
-// own desk layer), which recovers true alpha (including soft shadow
-// falloff, since a shadow is just the desk darkened under real alpha, not
-// a flat rectangle) directly from the approved artwork instead of
-// re-deriving it from the old v7/v8 raster. Same technique isolates a new
-// Shiori crop (`home-v9-shiori-reading-peek.png`, diffed against
-// `home-v9-approved-scene-target.png` -- the same composition with only a
-// small placeholder mark instead of her -- so the diff is exactly her
-// silhouette plus the contact shadow she casts on the tape beneath),
-// replacing the old flat `filter: drop-shadow` peek with one that has a
-// real baked contact shadow. See the .home-v4-shiori-peek comment below
-// for why she stays a separate DOM element (not baked into the notebook
-// plate itself, despite the asset manifest's literal wording) and
-// ASSET_MANIFEST.md in home-v9/ for the pixel-measured tab geometry the
-// three buttons further down are positioned from.
+// Phase 214 (v8 asset-first replacement) -- the v7 plate still carried
+// border-connected white/gray matte along its right/bottom edge, and the
+// `::before`/`::after` CSS shadow pseudo-elements (surface-map pass, see
+// their own removal note in globals.css) kept reading as a rectangular
+// shadow rather than a shadow attached to the book, no matter how the
+// gradients were tuned -- both are asset-shaped problems that CSS can't
+// fix. Per references/mockups/home-v8-prep/CLAUDE_HANDOFF.md, the fix
+// replaces the plate itself: `home-v8-notebook-tabs-grounded-plate.png`
+// (validated by validate_home_v8_plate.py: RGBA, transparent corners, no
+// border matte residue) has the matte removed and a directional contact
+// shadow baked into its own alpha, under the cover+ribbon+emboss+tabs, so
+// the book, its shadow, and each tab's shadow are guaranteed to agree on
+// geometry -- there is nothing left for CSS to draw. The `::before`/
+// `::after` shadow rules are deleted outright (no shadow-drawing CSS on
+// `.home-v4-notebook` at all now) and the three shortcut hit zones are
+// repositioned from the new plate's own pixel measurements (see
+// ASSET_MANIFEST.md in home-v8/), not the old v7 percentages. Shiori
+// (below) is untouched -- no v8 replacement asset was prepared for her,
+// only a pose reference (home-v8-shiori-selected-reference.png) confirming
+// the existing home-v7-shiori-reading-peek.png crop is still the right
+// pose.
+// Shiori
+// also moves to her confirmed final pose (candidate 3, holding a small
+// open book) as a Home-only cropped asset instead of the generic
+// ShioriCharacter default variant -- see the .home-v4-shiori-peek comment
+// below.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -219,40 +218,20 @@ export function HomeDashboard({
               construction, and the portion that overlaps the box is
               always painted over by the note -- no manual clip-path
               tuning needed.
-              Phase 213 -- swapped the generic default-variant
-              ShioriCharacter for the confirmed reading pose, rendered as a
-              plain <img> instead of through ShioriCharacter -- a Home-only
-              cropped asset that isn't in Shiori.tsx's SHIORI_ASSET_MAP, so
-              every other ShioriCharacter/ShioriMark/ShioriStamp call site
-              elsewhere in the app is untouched.
-              Phase 215 (v9) -- swapped the crop again
-              (home-v9-shiori-reading-peek.png, diff-matted from the
-              approved mockup -- see the top-of-file Phase 215 comment) and
-              dropped the CSS `filter: drop-shadow` this element used to
-              carry: that filter was approximating a contact shadow with a
-              generic floating drop-shadow, which is exactly the "pasted
-              on" look the v9 brief calls out. The new crop has a real
-              contact shadow (her + the flap she sits on, shading onto the
-              tape beneath) baked into its own alpha, so no CSS shadow is
-              layered on top of it at all now.
-              This still stays a separate element positioned against
-              `.home-v4-note` (not baked into the notebook plate, even
-              though the v9 asset manifest's literal wording lists Shiori
-              as notebook-plate content): `.home-v4-note` and
-              `.home-v4-notebook` are independently-positioned siblings
-              that only visually overlap at the >=1024px tier (see
-              `.home-v4-scene`'s absolute-position rules) -- below that,
-              they stack in normal flow with no overlap at all, so baking
-              her into the notebook plate would leave her sitting on the
-              notebook's own top-left corner at mobile (wherever that
-              happens to render, below the note and CTA) instead of tucked
-              into the note's own tape as the approved mockup shows. Kept
-              on the note (which she visually integrates with at every
-              breakpoint, exactly as approved) instead. */}
+              Phase 213 (final implementation) -- swapped the generic
+              default-variant ShioriCharacter for the confirmed pose
+              (candidate 3: holding a small open book, charm ring above her
+              head -- see references/mockups/home-v7-shiori-selected-
+              reading-peek.png), rendered as a plain <img> instead of
+              through ShioriCharacter. This is a Home-only cropped asset
+              (home-v7-shiori-reading-peek.png, see its own
+              ASSET_MANIFEST.md entry) that isn't in Shiori.tsx's
+              SHIORI_ASSET_MAP, so every other ShioriCharacter/ShioriMark/
+              ShioriStamp call site elsewhere in the app is untouched. */}
           <img
             className="home-v4-shiori-peek"
             aria-hidden="true"
-            src={`${ASSET_BASE_V9}/home-v9-shiori-reading-peek.png`}
+            src={`${ASSET_BASE_V7}/home-v7-shiori-reading-peek.png`}
             alt=""
             draggable={false}
           />
@@ -293,29 +272,23 @@ export function HomeDashboard({
           </span>
         </button>
 
-        {/* Phase 215 (v9 grounded-scene replacement) -- swapped the v8
-            plate for `home-v9-foreground-grounded-plate.png`, a from-
-            scratch difference-matted extraction from the approved v9
-            mockup (see the top-of-file Phase 215 comment): notebook cover
-            + bookmark ribbon + emboss + all three tabs + tape + baked
-            contact shadow, with no CSS shadow layered behind or on top of
-            it anywhere (no `.home-v4-notebook::before/::after`, no
-            `filter: drop-shadow`, no gradient). The plate is a complete,
-            standalone book cover -- the small area the title note and CTA
-            sit on top of at the >=1024px tier is filled with real sampled
-            cover color rather than left as a transparent notch, so the
-            plate still reads as a whole book (not a book with a bite
-            taken out of it) at <1024px, where the note/CTA stack above it
-            in normal flow instead of overlapping it. The three buttons
-            below stay plain DOM hit zones (icon/label/hint live text)
-            positioned from this plate's own pixel-measured tab geometry --
-            see ASSET_MANIFEST.md in home-v9/ -- not the old v8
-            percentages. */}
+        {/* Phase 214 (v8 asset-first replacement) -- swapped the v7 plate
+            (matte residue on its right/bottom edge, no baked shadow) for
+            `home-v8-notebook-tabs-grounded-plate.png`: notebook cover +
+            bookmark ribbon + emboss + all three shortcut tabs + baked
+            contact shadow, one PNG under one consistent light source, with
+            no CSS shadow layered behind or on top of it (the old
+            `.home-v4-notebook::before/::after` shadow pseudo-elements are
+            deleted, not just superseded -- see globals.css). The three
+            buttons below stay plain DOM hit zones (icon/label/hint live
+            text) positioned from the new plate's own pixel-measured tab
+            geometry -- see ASSET_MANIFEST.md in home-v8/ -- not the old
+            v7 percentages. */}
         <div className="home-v4-notebook">
           <img
             className="home-v4-notebook-img"
             aria-hidden="true"
-            src={`${ASSET_BASE_V9}/home-v9-foreground-grounded-plate.png`}
+            src={`${ASSET_BASE_V8}/home-v8-notebook-tabs-grounded-plate.png`}
             alt=""
             draggable={false}
           />
