@@ -1504,11 +1504,8 @@ body {
 }
 
 /* Home V10.1 (full scene replacement) -- the desk (wood grain, plant,
-   light) is now baked into the single opaque `.home-v10-scene` photo
-   itself (see HomeDashboard.tsx), so there is no separate desk-plate
-   image or vignette left for the page background to supply. A flat
-   fallback color is enough for the sliver of page background that can
-   show around the scene's own max-width/aspect-ratio box. */
+   light) is baked into the single opaque `.home-v10-scene` photo itself
+   (see HomeDashboard.tsx), so there is no separate desk plate or vignette. */
 body:has(.home-v10) {
   background-color: #d9b98a;
 }
@@ -1517,7 +1514,15 @@ body:has(.home-v10) {
    paper page. Keeping the page flush prevents fallback paper from framing
    the opaque scene at its top, sides, or bottom. */
 body:has(.home-v10) .page {
+  width: 100%;
+  max-width: none;
   padding: 0;
+  margin: 0;
+}
+
+body:has(.home-v10) .library-canvas-home {
+  width: 100%;
+  max-width: none;
   margin: 0;
 }
 
@@ -1600,11 +1605,9 @@ button {
   margin: 0 auto;
 }
 
-/* Home is a centered, max-width object scene, not a full-bleed photo
-   frame, so it doesn't need a .library-canvas-home breakout (escaping
-   .page's own padding to reach near-full viewport width). The base
-   .library-canvas rule above is enough -- .home-v10-scene sets its own,
-   tighter max-width below. */
+/* Home V10 owns a full-bleed photographed canvas. Its Home-only breakout
+   lives beside the body/page reset above; other tabs retain this shared
+   content-width cap. */
 
 .library-canvas-reading,
 .library-canvas-shared,
@@ -2340,9 +2343,11 @@ body:has(.home-v10) .app-toolbar {
   isolation: isolate;
   overflow: hidden;
   width: 100%;
-  height: calc(100svh - 70px);
+  height: var(--scene-height);
   margin: 0;
+  --scene-height: calc(100svh - 70px);
   --scene-art-ratio: 941 / 1672;
+  --scene-art-width: max(100vw, calc(56.28svh - 39.4px));
   /* Mobile coordinate set -- percentages measured directly against the
      941x1672 mobile target mockup. */
   --title-left: 9%;
@@ -2381,8 +2386,9 @@ body:has(.home-v10) .app-toolbar {
 
 @media (min-width: 768px) {
   .home-v10-scene {
-    height: calc(100svh - 64px);
+    --scene-height: calc(100svh - 64px);
     --scene-art-ratio: 1672 / 940;
+    --scene-art-width: max(100vw, calc(177.87svh - 113.84px));
     /* Desktop coordinate set -- percentages measured directly against the
        1672x940 desktop target mockup. */
     --title-left: 30.4%;
@@ -2422,12 +2428,12 @@ body:has(.home-v10) .app-toolbar {
 .home-v10-scene-art,
 .home-v10-overlay-plane {
   position: absolute;
-  top: 0;
+  top: 50%;
   left: 50%;
-  width: auto;
-  height: 100%;
+  width: var(--scene-art-width);
+  height: auto;
   aspect-ratio: var(--scene-art-ratio);
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
 }
 
 .home-v10-scene-art {
