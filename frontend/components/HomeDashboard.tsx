@@ -23,7 +23,7 @@ type HomeDashboardProps = {
   recentWords: VocabItem[];
 };
 
-const ASSET_BASE_V10_1 = "/brand/decor/home-v10.1";
+const ASSET_BASE_V10_2 = "/brand/decor/home-v10.2";
 
 // Home V10.1 (full scene replacement) -- every prior Home iteration
 // (home-v3/v4/v7/v8) stacked separately-illustrated objects (title note,
@@ -37,18 +37,22 @@ const ASSET_BASE_V10_1 = "/brand/decor/home-v10.1";
 // phase-by-phase record of that failing approach.
 // This rebuild throws away every Home-only object image and the CSS that
 // positioned/shadowed them, and replaces the whole thing with ONE opaque,
-// pre-composited scene photo per breakpoint (`home-v10.1-scene-desktop.png`,
-// `home-v10.1-scene-mobile.png`) in which the notebook, title note, CTA
-// ticket, Shiori charm, index tabs, and every shadow are already baked in
-// by the source art under one light source. There is nothing left for CSS
-// to draw: `.home-v10-scene` is a single relative positioning root holding
-// that one decorative <picture> (aria-hidden, pointer-events:none, natural
-// aspect ratio preserved -- never object-fit:cover) plus plain DOM overlay
-// buttons/text positioned as a % of the scene, matching the pixel
-// coordinates measured directly off the target mockups (see
-// references/mockups/home-v10.1-prep/DESIGN_DELTA.md). No box-shadow,
-// drop-shadow, filter, gradient, or ::before/::after is used anywhere in
-// this scene -- every visual object, shadow included, lives in the image.
+// pre-composited scene photo per breakpoint. V10.2 (`home-v10.2-scene-desktop.png`,
+// `home-v10.2-scene-mobile.png`) is the same V10.1 scene with three desk
+// props (washi tape, paperclip, pen) baked into the same photo at the same
+// 1672x940 / 941x1672 size and aspect ratio, so no overlay coordinate below
+// changes -- notebook, title note, CTA ticket, Shiori charm, index tabs,
+// props, and every shadow are already baked in by the source art under one
+// light source. There is nothing left for CSS to draw: `.home-v10-scene` is
+// a single relative positioning root holding that one decorative <picture>
+// (aria-hidden, pointer-events:none, natural aspect ratio preserved --
+// never object-fit:cover) plus plain DOM overlay buttons/text positioned as
+// a % of the scene, matching the pixel coordinates measured directly off
+// the target mockups (see references/mockups/home-v10.1-prep/DESIGN_DELTA.md
+// for the base scene, references/mockups/home-v10.2-prep/ for the prop
+// composite). No box-shadow, drop-shadow, filter, gradient, or
+// ::before/::after is used anywhere in this scene -- every visual object,
+// shadow included, lives in the image.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -84,12 +88,12 @@ export function HomeDashboard({
         <picture className="home-v10-scene-art">
           <source
             media="(min-width: 768px)"
-            srcSet={`${ASSET_BASE_V10_1}/home-v10.1-scene-desktop.png`}
+            srcSet={`${ASSET_BASE_V10_2}/home-v10.2-scene-desktop.png`}
           />
           <img
             className="home-v10-scene-img"
             aria-hidden="true"
-            src={`${ASSET_BASE_V10_1}/home-v10.1-scene-mobile.png`}
+            src={`${ASSET_BASE_V10_2}/home-v10.2-scene-mobile.png`}
             alt=""
             draggable={false}
           />
