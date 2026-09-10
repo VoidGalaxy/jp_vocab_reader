@@ -2349,19 +2349,20 @@ body:has(.home-v10) .app-toolbar {
   --scene-art-ratio: 941 / 1672;
   --scene-art-width: max(100vw, calc(56.28svh - 39.4px));
   /* Mobile coordinate set -- percentages measured directly against the
-     941x1672 mobile target mockup. */
+     approved 941x1672 V10.3 mobile target mockup (references/mockups/
+     home-v10.3-prep/COORDINATE_CONTRACT.md). */
   --title-left: 9%;
-  --title-top: 37.1%;
-  --title-w: 25%;
-  --title-h: 7.8%;
-  --sample-left: 15.4%;
-  --sample-top: 45%;
-  --sample-w: 13.3%;
-  --sample-h: 2.2%;
+  --title-top: 37.4%;
+  --title-w: 27.1%;
+  --title-h: 6.9%;
+  --sample-left: 10.1%;
+  --sample-top: 45.5%;
+  --sample-w: 14.9%;
+  --sample-h: 2.1%;
   --cta-left: 8.5%;
-  --cta-top: 47.1%;
-  --cta-w: 32%;
-  --cta-h: 5.5%;
+  --cta-top: 47.3%;
+  --cta-w: 31.9%;
+  --cta-h: 5.4%;
   /* CTA visible content is positioned as a % of the CTA hit zone itself
      (not the scene) -- converted from the mockup's scene-relative "CTA
      visible content" box into a box-relative one so the icon/label sit
@@ -2370,55 +2371,56 @@ body:has(.home-v10) .app-toolbar {
   --cta-content-top: 34.55%;
   --cta-content-w: 58.13%;
   --cta-content-h: 32.73%;
-  --tab-vocab-left: 45.2%;
+  --tab-vocab-left: 45.1%;
   --tab-vocab-top: 66.3%;
-  --tab-vocab-w: 13%;
-  --tab-vocab-h: 5.3%;
-  --tab-review-left: 60.5%;
+  --tab-vocab-w: 12.9%;
+  --tab-vocab-h: 5%;
+  --tab-review-left: 60.4%;
   --tab-review-top: 66.3%;
   --tab-review-w: 13%;
-  --tab-review-h: 5.3%;
+  --tab-review-h: 5%;
   --tab-decks-left: 75.5%;
   --tab-decks-top: 66.3%;
-  --tab-decks-w: 13.1%;
-  --tab-decks-h: 5.3%;
+  --tab-decks-w: 12.9%;
+  --tab-decks-h: 5%;
 }
 
 @media (min-width: 768px) {
   .home-v10-scene {
     --scene-height: calc(100svh - 64px);
-    --scene-art-ratio: 1672 / 940;
-    --scene-art-width: max(100vw, calc(177.87svh - 113.84px));
+    --scene-art-ratio: 1774 / 887;
+    --scene-art-width: max(100vw, calc(200svh - 128px));
     /* Desktop coordinate set -- percentages measured directly against the
-       1672x940 desktop target mockup. */
-    --title-left: 30.4%;
-    --title-top: 28.5%;
-    --title-w: 14.2%;
-    --title-h: 14.6%;
-    --sample-left: 31.1%;
-    --sample-top: 44.2%;
-    --sample-w: 8%;
-    --sample-h: 3.8%;
-    --cta-left: 30.5%;
-    --cta-top: 48.4%;
-    --cta-w: 19%;
-    --cta-h: 10.5%;
-    --cta-content-left: 17.9%;
-    --cta-content-top: 30.48%;
-    --cta-content-w: 51.58%;
-    --cta-content-h: 35.24%;
-    --tab-vocab-left: 53.8%;
-    --tab-vocab-top: 77%;
-    --tab-vocab-w: 8.8%;
-    --tab-vocab-h: 10.4%;
-    --tab-review-left: 64%;
-    --tab-review-top: 77%;
-    --tab-review-w: 8.6%;
-    --tab-review-h: 10.4%;
-    --tab-decks-left: 73.9%;
-    --tab-decks-top: 77%;
-    --tab-decks-w: 8.8%;
-    --tab-decks-h: 10.4%;
+       approved 1774x887 V10.3 desktop target mockup (references/mockups/
+       home-v10.3-prep/COORDINATE_CONTRACT.md). */
+    --title-left: 26.8%;
+    --title-top: 26.5%;
+    --title-w: 14.1%;
+    --title-h: 11.8%;
+    --sample-left: 26.5%;
+    --sample-top: 43.4%;
+    --sample-w: 6.8%;
+    --sample-h: 4%;
+    --cta-left: 26.3%;
+    --cta-top: 45.7%;
+    --cta-w: 22%;
+    --cta-h: 13%;
+    --cta-content-left: 24%;
+    --cta-content-top: 35%;
+    --cta-content-w: 56%;
+    --cta-content-h: 39%;
+    --tab-vocab-left: 44.3%;
+    --tab-vocab-top: 76.4%;
+    --tab-vocab-w: 7.7%;
+    --tab-vocab-h: 11.3%;
+    --tab-review-left: 53.4%;
+    --tab-review-top: 76.4%;
+    --tab-review-w: 7.8%;
+    --tab-review-h: 11.3%;
+    --tab-decks-left: 62.6%;
+    --tab-decks-top: 76.4%;
+    --tab-decks-w: 7.6%;
+    --tab-decks-h: 11.3%;
   }
 }
 
