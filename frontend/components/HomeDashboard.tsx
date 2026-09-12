@@ -23,8 +23,8 @@ type HomeDashboardProps = {
   recentWords: VocabItem[];
 };
 
-const ASSET_BASE_V10_3 = "/brand/decor/home-v10.3";
 const ASSET_BASE_V10_4 = "/brand/decor/home-v10.4";
+const ASSET_BASE_V10_5 = "/brand/decor/home-v10.5";
 
 // Home V10.3 (approved full-scene rebuild) -- every prior Home iteration
 // (home-v3/v4/v7/v8) stacked separately-illustrated objects (title note,
@@ -95,7 +95,7 @@ export function HomeDashboard({
           <img
             className="home-v10-scene-img"
             aria-hidden="true"
-            src={`${ASSET_BASE_V10_3}/home-v10.3-scene-mobile.png`}
+            src={`${ASSET_BASE_V10_5}/home-v10.5-scene-mobile.png`}
             alt=""
             draggable={false}
           />

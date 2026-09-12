@@ -2346,43 +2346,48 @@ body:has(.home-v10) .app-toolbar {
   height: var(--scene-height);
   margin: 0;
   --scene-height: calc(100svh - 70px);
-  --scene-art-ratio: 941 / 1672;
-  --scene-art-width: max(100vw, calc(56.28svh - 39.4px));
+  /* V10.5.1 keeps the approved V1 center composition pixel-identical and
+     extends only the desk above/below it. Its 850x2090 ratio fits the full
+     source width at 320x844, so the notebook and all three tabs no longer
+     rely on a horizontal nudge to survive the mobile crop. */
+  --scene-art-ratio: 850 / 2090;
+  --scene-art-width: max(100vw, calc(40.67svh - 28.47px));
+  --scene-art-shift-x: 0px;
   /* Mobile coordinate set -- percentages measured directly against the
-     approved 941x1672 V10.3 mobile target mockup (references/mockups/
-     home-v10.3-prep/COORDINATE_CONTRACT.md). */
-  --title-left: 9%;
-  --title-top: 37.4%;
-  --title-w: 27.1%;
-  --title-h: 6.9%;
-  --sample-left: 10.1%;
-  --sample-top: 45.5%;
-  --sample-w: 14.9%;
-  --sample-h: 2.1%;
-  --cta-left: 8.5%;
-  --cta-top: 47.3%;
-  --cta-w: 31.9%;
-  --cta-h: 5.4%;
+     approved 850x1850 V10.5 V1 candidate (references/mockups/
+     home-v10.5-prep/home-v10.5-mobile-candidate-v1.png), not reused from
+     the old 941x1672 V10.3 mobile percentages. */
+  --title-left: 6.3%;
+  --title-top: 37.8%;
+  --title-w: 39%;
+  --title-h: 5.74%;
+  --sample-left: 6.82%;
+  --sample-top: 42.92%;
+  --sample-w: 17.65%;
+  --sample-h: 1.91%;
+  --cta-left: 9.18%;
+  --cta-top: 45.02%;
+  --cta-w: 30.12%;
+  --cta-h: 3.59%;
   /* CTA visible content is positioned as a % of the CTA hit zone itself
-     (not the scene) -- converted from the mockup's scene-relative "CTA
-     visible content" box into a box-relative one so the icon/label sit
-     inside the ticket regardless of the hit zone's own scene position. */
-  --cta-content-left: 21.56%;
-  --cta-content-top: 34.55%;
-  --cta-content-w: 58.13%;
-  --cta-content-h: 32.73%;
-  --tab-vocab-left: 45.1%;
-  --tab-vocab-top: 66.3%;
-  --tab-vocab-w: 12.9%;
-  --tab-vocab-h: 5%;
-  --tab-review-left: 60.4%;
-  --tab-review-top: 66.3%;
-  --tab-review-w: 13%;
-  --tab-review-h: 5%;
-  --tab-decks-left: 75.5%;
-  --tab-decks-top: 66.3%;
-  --tab-decks-w: 12.9%;
-  --tab-decks-h: 5%;
+     (not the scene) -- keeps the icon/label inside the ticket regardless
+     of the hit zone's own scene position. */
+  --cta-content-left: 6%;
+  --cta-content-top: 12%;
+  --cta-content-w: 76%;
+  --cta-content-h: 76%;
+  --tab-vocab-left: 45.18%;
+  --tab-vocab-top: 59.04%;
+  --tab-vocab-w: 12.47%;
+  --tab-vocab-h: 3.06%;
+  --tab-review-left: 60.24%;
+  --tab-review-top: 59.04%;
+  --tab-review-w: 12.47%;
+  --tab-review-h: 3.06%;
+  --tab-decks-left: 75.18%;
+  --tab-decks-top: 59.36%;
+  --tab-decks-w: 12.47%;
+  --tab-decks-h: 2.73%;
 }
 
 @media (min-width: 768px) {
@@ -2441,7 +2446,9 @@ body:has(.home-v10) .app-toolbar {
 .home-v10-overlay-plane {
   position: absolute;
   top: 50%;
-  left: 50%;
+  /* --scene-art-shift-x is shared by both planes through this identical
+     left calculation -- never move the image and overlay independently. */
+  left: calc(50% + var(--scene-art-shift-x));
   width: var(--scene-art-width);
   height: auto;
   aspect-ratio: var(--scene-art-ratio);
@@ -2521,7 +2528,7 @@ body:has(.home-v10) .app-toolbar {
   overflow-wrap: break-word;
   color: var(--muted);
   font-size: clamp(7.5px, 2.1vw, 11.5px);
-  line-height: 1.32;
+  line-height: 1.28;
 }
 
 @media (min-width: 768px) {
@@ -2531,6 +2538,7 @@ body:has(.home-v10) .app-toolbar {
 
   .home-v10-subtitle {
     font-size: clamp(9.5px, 0.85vw, 12.5px);
+    line-height: 1.32;
   }
 }
 
