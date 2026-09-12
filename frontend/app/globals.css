@@ -311,8 +311,24 @@
     aspect-ratio: 1672 / 941;
   }
 
+  /* Home Nav V1.1 seam repair (references/mockups/home-nav-prep/
+     CLAUDE_SCENE_SEAM_FIX.md) -- the desktop toolbar's own paper strip is
+     now the only torn-paper edge above every scene, and it already
+     duplicates this label as the active "읽기" nav tab. The eyebrow's
+     translateY(-60%) pushed it up past the frame's own top edge into
+     that seam (a real double boundary, not just visual noise), so this
+     is a role removal, not a hidden protrusion: the element renders
+     nowhere on desktop, it isn't painted-over. Mobile is unaffected --
+     it never sat inside this media query. */
+  .reading-scene-v2-eyebrow {
+    display: none;
+  }
+
+  /* Top corners must read as flush with the paper's torn lower edge, not
+     as a second rounded frame boundary -- only the lower corners (the
+     photographed book's own resting corners) keep their radius. */
   .reading-scene-v2-media-img {
-    border-radius: 26px;
+    border-radius: 0 0 26px 26px;
   }
 }
 
@@ -938,8 +954,18 @@
     aspect-ratio: 1672 / 941;
   }
 
+  /* Home Nav V1.1 seam repair -- same reasoning as
+     .reading-scene-v2-eyebrow above: the toolbar's own paper strip
+     already carries this label as the active "덱" nav tab, and the
+     eyebrow's translateY(-60%) pushed it above the frame into the nav
+     seam. Removed from the desktop render tree entirely; mobile (outside
+     this media query) is unaffected. */
+  .shared-scene-v2-eyebrow {
+    display: none;
+  }
+
   .shared-scene-v2-media-img {
-    border-radius: 26px;
+    border-radius: 0 0 26px 26px;
   }
 }
 
@@ -1168,8 +1194,18 @@
     aspect-ratio: 1672 / 941;
   }
 
+  /* Home Nav V1.1 seam repair -- same reasoning as
+     .reading-scene-v2-eyebrow above: the toolbar's own paper strip
+     already carries this label as the active "통계" nav tab, and the
+     eyebrow's translateY(-60%) pushed it above the frame into the nav
+     seam. Removed from the desktop render tree entirely; mobile (outside
+     this media query) is unaffected. */
+  .stats-scene-v2-eyebrow {
+    display: none;
+  }
+
   .stats-scene-v2-media-img {
-    border-radius: 26px;
+    border-radius: 0 0 26px 26px;
   }
 }
 
@@ -4618,6 +4654,10 @@ select {
     background-image: url("/brand/decor/v2/v2-study-felt-board-desktop-16x9.webp");
     background-size: cover;
     background-position: center;
+    /* Home Nav V1.1 seam repair -- top corners must read flush with the
+       toolbar's own torn paper edge, not as a second rounded frame
+       boundary. Only the lower corners keep their radius. */
+    border-radius: 0 0 28px 28px;
   }
 }
 
@@ -6456,6 +6496,21 @@ input.reading-vocab-sticker-toggle:checked {
   .classify-v2-scene {
     aspect-ratio: 1672 / 941;
     background-image: url("/brand/decor/v2/v2-classify-card-desk-desktop-16x9.webp");
+    /* Home Nav V1.1 seam repair -- top corners must read flush with the
+       toolbar's own torn paper edge, not as a second rounded frame
+       boundary. Only the lower corners (the photographed desk card's own
+       resting corners) keep their radius. */
+    border-radius: 0 0 18px 18px;
+  }
+
+  /* Home Nav V1.1 seam repair -- the toolbar's own paper strip already
+     carries this label as the active "분류" nav tab, and the tag's
+     top:4px + translateY(-60%) pushed it above .classify-v2-root (the
+     un-clipped wrapper it's positioned against) into the nav seam.
+     Removed from the desktop render tree entirely; mobile (outside this
+     media query) is unaffected. */
+  .classify-v2-title-tag {
+    display: none;
   }
 }
 
@@ -9322,16 +9377,21 @@ input.reading-vocab-sticker-toggle:checked {
     object-fit: fill;
     pointer-events: none;
     user-select: none;
-    border-radius: 10px;
+    /* Home Nav V1.1 seam repair -- top corners must read flush with the
+       toolbar's own torn paper edge, not as a second rounded frame
+       boundary. Only the lower corners (the photographed notebook's own
+       resting corners) keep their radius. */
+    border-radius: 0 0 10px 10px;
     box-shadow: 0 18px 36px rgba(37, 43, 30, 0.22);
   }
 
+  /* Home Nav V1.1 seam repair -- the toolbar's own paper strip already
+     carries this label as the active "단어" nav tab, and top:-3% pushed
+     it above .vocab-v3-scene into the nav seam. Removed from the desktop
+     render tree entirely; mobile (outside this media query) is
+     unaffected. */
   .vocab-v3-title-tag {
-    position: absolute;
-    z-index: 3;
-    left: 4%;
-    top: -3%;
-    transform: rotate(-2deg);
+    display: none;
   }
 
   /* Sticks out past the photo's own left cover edge, exactly where the
