@@ -2043,21 +2043,29 @@ body:has(.home-v10) .app-toolbar {
     padding: 0;
   }
 
-  /* Home nav v1 -- a single physical paper strip shared by every desktop
-     tab. The generated paper edge is the surface; live DOM labels and
-     icons remain interactive above it. Match the Home-scoped selector so
-     its earlier translucent-background rule cannot erase this asset. */
+  /* Home nav v1.1 -- density/grounding pass (references/mockups/
+     home-nav-prep/CLAUDE_DENSITY_PASS.md): the v1 strip (56px host + 8px
+     overlap, 106x40 slots, 106x40 active linen, 12x36 dividers) read as
+     too thick and too bright next to the Home scene. The host itself
+     shrinks to 50px; the paper asset stays a 56px image but now overlaps
+     the scene by only 6px, and every interactive slot drops to 106x36 to
+     match. A single physical paper strip is still shared by every
+     desktop tab -- live DOM labels/icons remain interactive above it.
+     Match the Home-scoped selector so its earlier translucent-background
+     rule cannot erase this asset. */
   .app-toolbar,
   body:has(.home-v10) .app-toolbar {
     position: sticky;
     top: 0;
     z-index: 20;
     isolation: isolate;
+    display: flex;
+    align-items: center;
     margin: 0;
     width: 100%;
-    height: 56px;
-    min-height: 56px;
-    padding: 6px 10px 10px;
+    height: 50px;
+    min-height: 50px;
+    padding: 0 10px;
     border-radius: 0;
     border: none;
     background: transparent;
@@ -2069,9 +2077,9 @@ body:has(.home-v10) .app-toolbar {
   body:has(.home-v10) .app-toolbar::before {
     content: "";
     position: absolute;
-    inset: 0 0 -8px;
+    inset: 0 0 -6px;
     z-index: 0;
-    background: transparent url("/brand/decor/home-nav-v1/home-nav-paper-strip.png") center top / 100% 64px no-repeat;
+    background: transparent url("/brand/decor/home-nav-v1.1/home-nav-paper-strip.png") center top / 100% 56px no-repeat;
     pointer-events: none;
   }
 
@@ -2090,7 +2098,10 @@ body:has(.home-v10) .app-toolbar {
     align-items: center;
     gap: 2px;
     min-width: 0;
-    margin-left: 4px;
+    /* Toolbar padding-left (10px) + this margin (10px) = ~20px first-tab
+       left edge, identical at every desktop width in this tier (no
+       per-breakpoint override), per CLAUDE_DENSITY_PASS.md. */
+    margin-left: 10px;
     overflow: hidden;
   }
 
@@ -2100,19 +2111,21 @@ body:has(.home-v10) .app-toolbar {
 
   .app-toolbar-end {
     position: relative;
+    display: flex;
+    align-items: center;
     gap: 2px;
-    height: 40px;
+    height: 36px;
     padding-left: 18px;
   }
 
   .app-toolbar-end::before {
     content: "";
     position: absolute;
-    top: 2px;
-    left: 2px;
-    width: 12px;
-    height: 36px;
-    background: url("/brand/decor/home-nav-v1/home-nav-divider-emboss.png") center / 12px 36px no-repeat;
+    top: 3px;
+    left: 4px;
+    width: 10px;
+    height: 30px;
+    background: url("/brand/decor/home-nav-v1.1/home-nav-divider-emboss.png") center / 10px 30px no-repeat;
     pointer-events: none;
   }
 
@@ -2124,15 +2137,15 @@ body:has(.home-v10) .app-toolbar {
     justify-content: center;
     gap: 6px;
     width: 106px;
-    height: 40px;
+    height: 36px;
     min-width: 106px;
-    min-height: 40px;
+    min-height: 36px;
     padding: 0 10px;
     border-radius: 4px;
     color: #493a2c;
     background: transparent;
     font-weight: 700;
-    font-size: 13px;
+    font-size: 12.5px;
     letter-spacing: 0;
     box-shadow: none;
     white-space: nowrap;
@@ -2142,11 +2155,11 @@ body:has(.home-v10) .app-toolbar {
   .app-toolbar-link:not(:first-child)::before {
     content: "";
     position: absolute;
-    top: 2px;
-    left: -7px;
-    width: 12px;
-    height: 36px;
-    background: url("/brand/decor/home-nav-v1/home-nav-divider-emboss.png") center / 12px 36px no-repeat;
+    top: 3px;
+    left: -6px;
+    width: 10px;
+    height: 30px;
+    background: url("/brand/decor/home-nav-v1.1/home-nav-divider-emboss.png") center / 10px 30px no-repeat;
     pointer-events: none;
   }
 
@@ -2164,19 +2177,19 @@ body:has(.home-v10) .app-toolbar {
 
   .app-toolbar-link-icon {
     flex: 0 0 auto;
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
   }
 
   .app-toolbar-link-active {
     color: #f7ecd8;
-    background: transparent url("/brand/decor/home-nav-v1/home-nav-active-linen.png") center / 106px 40px no-repeat;
+    background: transparent url("/brand/decor/home-nav-v1.1/home-nav-active-linen.png") center / 98px 36px no-repeat;
     box-shadow: none;
   }
 
   .app-toolbar-link-active:not(:disabled):hover {
     color: #fff8e9;
-    background: transparent url("/brand/decor/home-nav-v1/home-nav-active-linen.png") center / 106px 40px no-repeat;
+    background: transparent url("/brand/decor/home-nav-v1.1/home-nav-active-linen.png") center / 98px 36px no-repeat;
   }
 
   .app-toolbar-link-active::before {
@@ -2184,7 +2197,7 @@ body:has(.home-v10) .app-toolbar {
   }
 
   .ghost-button.app-topbar-feedback-button {
-    height: 40px;
+    height: 36px;
     padding: 0 10px;
     border: none;
     border-radius: 0;
@@ -2198,7 +2211,7 @@ body:has(.home-v10) .app-toolbar {
   }
 
   .account-menu-trigger {
-    height: 40px;
+    height: 36px;
     padding-top: 0;
     padding-bottom: 0;
     color: #493a2c;
