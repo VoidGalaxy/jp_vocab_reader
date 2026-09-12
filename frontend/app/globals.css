@@ -2017,11 +2017,30 @@ body:has(.home-v10) .app-toolbar {
      margin/offset shaved down again to match the toolbar's own smaller
      footprint below, so the scene occupies as much of the first viewport
      as the toolbar leaves available. No page.tsx changes needed. */
+  /* The toolbar belongs to the viewport-wide shell, while each scene owns
+     its content width. Keeping the cap on .page made the paper strip shrink
+     and jump whenever a tab changed between Home's full-bleed page and a
+     capped scene. Move that cap one level down so navigation geometry is
+     identical on every desktop tab. */
   .page {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .app-shell-content {
+    width: 100%;
     max-width: min(1680px, 97vw);
-    margin: 6px auto 0;
-    min-height: calc(100vh - 6px);
+    margin: 0 auto;
     padding: 0 14px 24px;
+  }
+
+  body:has(.home-v10) .app-shell-content {
+    max-width: none;
+    margin: 0;
+    padding: 0;
   }
 
   /* Home nav v1 -- a single physical paper strip shared by every desktop
@@ -2033,16 +2052,32 @@ body:has(.home-v10) .app-toolbar {
     position: sticky;
     top: 0;
     z-index: 20;
-    margin: 0 0 8px;
+    isolation: isolate;
+    margin: 0;
     width: 100%;
     height: 56px;
     min-height: 56px;
     padding: 6px 10px 10px;
     border-radius: 0;
     border: none;
-    background: transparent url("/brand/decor/home-nav-v1/home-nav-paper-strip.png") center top / 100% 64px no-repeat;
+    background: transparent;
     backdrop-filter: none;
     box-shadow: none;
+  }
+
+  .app-toolbar::before,
+  body:has(.home-v10) .app-toolbar::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 -8px;
+    z-index: 0;
+    background: transparent url("/brand/decor/home-nav-v1/home-nav-paper-strip.png") center top / 100% 64px no-repeat;
+    pointer-events: none;
+  }
+
+  .app-toolbar > * {
+    position: relative;
+    z-index: 1;
   }
 
   .app-toolbar-menu-button {
