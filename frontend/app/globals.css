@@ -2388,39 +2388,49 @@ body:has(.home-v10) .app-toolbar {
 @media (min-width: 768px) {
   .home-v10-scene {
     --scene-height: calc(100svh - 64px);
-    --scene-art-ratio: 1774 / 887;
-    --scene-art-width: max(100vw, calc(200svh - 128px));
+    /* V10.4 desktop-only replacement (references/mockups/home-v10.4-prep/
+       CLAUDE_HANDOFF.md) -- the 1774x887 V10.3 art enlarged to fill the
+       wider ~2.14:1 content plane, cropping ~30px off the top and bottom
+       and softening material detail. The approved 1888x833 candidate
+       becomes the desktop source plane instead; --scene-art-width is
+       solved so the art plane's height still equals `--scene-height`
+       (100svh - 64px) at this ratio, so only horizontal desk margin is
+       ever cropped, never the notebook's top/bottom. Mobile keeps its own
+       V10.3 ratio/width/coordinates below, untouched. */
+    --scene-art-ratio: 1888 / 833;
+    --scene-art-width: max(100vw, calc(226.65svh - 145.06px));
     /* Desktop coordinate set -- percentages measured directly against the
-       approved 1774x887 V10.3 desktop target mockup (references/mockups/
-       home-v10.3-prep/COORDINATE_CONTRACT.md). */
-    --title-left: 26.8%;
-    --title-top: 26.5%;
-    --title-w: 14.1%;
-    --title-h: 11.8%;
-    --sample-left: 26.5%;
-    --sample-top: 43.4%;
-    --sample-w: 6.8%;
-    --sample-h: 4%;
-    --cta-left: 26.3%;
-    --cta-top: 45.7%;
-    --cta-w: 22%;
-    --cta-h: 13%;
-    --cta-content-left: 24%;
-    --cta-content-top: 35%;
-    --cta-content-w: 56%;
-    --cta-content-h: 39%;
-    --tab-vocab-left: 44.3%;
-    --tab-vocab-top: 76.4%;
-    --tab-vocab-w: 7.7%;
-    --tab-vocab-h: 11.3%;
-    --tab-review-left: 53.4%;
-    --tab-review-top: 76.4%;
-    --tab-review-w: 7.8%;
-    --tab-review-h: 11.3%;
-    --tab-decks-left: 62.6%;
-    --tab-decks-top: 76.4%;
-    --tab-decks-w: 7.6%;
-    --tab-decks-h: 11.3%;
+       approved 1888x833 V10.4 desktop candidate (references/mockups/
+       home-v10.4-prep/home-v10.4-wide-candidate-v1.png), not reused or
+       estimated from the old 1774x887 V10.3 desktop percentages. */
+    --title-left: 27.55%;
+    --title-top: 28.45%;
+    --title-w: 13.25%;
+    --title-h: 12.6%;
+    --sample-left: 27.3%;
+    --sample-top: 40.94%;
+    --sample-w: 6.5%;
+    --sample-h: 4.44%;
+    --cta-left: 27.22%;
+    --cta-top: 47.54%;
+    --cta-w: 19.54%;
+    --cta-h: 12.48%;
+    --cta-content-left: 6%;
+    --cta-content-top: 12%;
+    --cta-content-w: 76%;
+    --cta-content-h: 76%;
+    --tab-vocab-left: 43.64%;
+    --tab-vocab-top: 81.87%;
+    --tab-vocab-w: 6.73%;
+    --tab-vocab-h: 7.8%;
+    --tab-review-left: 51.96%;
+    --tab-review-top: 81.75%;
+    --tab-review-w: 6.73%;
+    --tab-review-h: 8.04%;
+    --tab-decks-left: 60.33%;
+    --tab-decks-top: 82.23%;
+    --tab-decks-w: 6.78%;
+    --tab-decks-h: 7.56%;
   }
 }
 
