@@ -99,9 +99,6 @@ export function AppShell({
               aria-current={item.isActive ? "page" : undefined}
               onClick={item.onClick}
             >
-              {item.isActive ? (
-                <span className="app-toolbar-pin" aria-hidden="true" />
-              ) : null}
               <item.icon className="app-toolbar-link-icon" />
               <span>{item.shortLabel ?? item.label}</span>
             </button>

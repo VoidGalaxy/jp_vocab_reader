@@ -2024,31 +2024,24 @@ body:has(.home-v10) .app-toolbar {
     padding: 0 14px 24px;
   }
 
-  /* Phase 113 -- the mockup's single rounded toolbar sitting on top of the
-     scene: every tab as a text link + feedback/account, one row, no
-     separate sidebar.
-     Phase 172 -- was a solid var(--panel-bg) pill with a hairline border
-     and its own drop shadow, real chrome weight competing with the scene
-     right below it for attention. Lightened to a translucent strip (Phase
-     118's old Home-only "minimalChrome" skin, unconditional).
-     Phase 173 -- still read as a rounded floating capsule (border-radius:
-     999px + its own frosted background), a shape strong enough to be the
-     first thing the eye picks out. Flattened into a plain paper-tab strip:
-     no capsule shape, a hairline dashed underedge (the same "torn paper
-     edge" language .study-board-tag-row/.app-nav-drawer-footer already use
-     elsewhere) instead of a filled pill, and a smaller sticky offset to
-     match .page's own smaller top margin above. */
-  .app-toolbar {
+  /* Home nav v1 -- a single physical paper strip shared by every desktop
+     tab. The generated paper edge is the surface; live DOM labels and
+     icons remain interactive above it. Match the Home-scoped selector so
+     its earlier translucent-background rule cannot erase this asset. */
+  .app-toolbar,
+  body:has(.home-v10) .app-toolbar {
     position: sticky;
-    top: 6px;
+    top: 0;
     z-index: 20;
     margin: 0 0 8px;
-    padding: 6px 10px;
+    width: 100%;
+    height: 56px;
+    min-height: 56px;
+    padding: 6px 10px 10px;
     border-radius: 0;
     border: none;
-    border-bottom: 1px dashed rgba(120, 98, 40, 0.16);
-    background: rgba(253, 249, 238, 0.6);
-    backdrop-filter: blur(3px);
+    background: transparent url("/brand/decor/home-nav-v1/home-nav-paper-strip.png") center top / 100% 64px no-repeat;
+    backdrop-filter: none;
     box-shadow: none;
   }
 
@@ -2062,79 +2055,123 @@ body:has(.home-v10) .app-toolbar {
     align-items: center;
     gap: 2px;
     min-width: 0;
-    margin-left: 6px;
-    overflow-x: auto;
+    margin-left: 4px;
+    overflow: hidden;
   }
 
   .app-toolbar-end .app-topbar-feedback-button {
     display: inline-flex;
   }
 
+  .app-toolbar-end {
+    position: relative;
+    gap: 2px;
+    height: 40px;
+    padding-left: 18px;
+  }
+
+  .app-toolbar-end::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 12px;
+    height: 36px;
+    background: url("/brand/decor/home-nav-v1/home-nav-divider-emboss.png") center / 12px 36px no-repeat;
+    pointer-events: none;
+  }
+
   .app-toolbar-link {
     position: relative;
     display: inline-flex;
-    flex: 0 0 auto;
+    flex: 0 0 106px;
     align-items: center;
+    justify-content: center;
     gap: 6px;
-    min-width: 0;
-    padding: 6px 10px;
+    width: 106px;
+    height: 40px;
+    min-width: 106px;
+    min-height: 40px;
+    padding: 0 10px;
     border-radius: 4px;
-    color: var(--text-secondary);
+    color: #493a2c;
     background: transparent;
     font-weight: 700;
-    font-size: 12.5px;
+    font-size: 13px;
+    letter-spacing: 0;
     box-shadow: none;
     white-space: nowrap;
     transition: color var(--motion-fast) var(--ease-soft);
   }
 
-  /* Phase 173 -- was a filled var(--soft-bg) pill on hover, the same
-     capsule shape the container itself just lost -- a color shift alone
-     (no fill, no shadow) keeps a tab reading as a paper tab, not a button. */
+  .app-toolbar-link:not(:first-child)::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: -7px;
+    width: 12px;
+    height: 36px;
+    background: url("/brand/decor/home-nav-v1/home-nav-divider-emboss.png") center / 12px 36px no-repeat;
+    pointer-events: none;
+  }
+
   .app-toolbar-link:not(:disabled):hover {
     background: transparent;
-    color: var(--text);
+    color: #241b14;
     box-shadow: none;
     transform: none;
   }
 
-  .app-toolbar-link-icon {
-    flex: 0 0 auto;
-    width: 15px;
-    height: 15px;
+  .app-toolbar-link:focus-visible {
+    outline: 2px solid rgba(49, 76, 45, 0.72);
+    outline-offset: 1px;
   }
 
-  /* Was a strong solid-primary fill + white text, the same "stuck-on
-     bookmark tab" treatment the old rail's active link used -- a pill that
-     easily out-weighed the quieter Phase 172 toolbar around it, let alone
-     the scene below it. Phase 172 -- lighter soft-fill + tinted text
-     instead (same language .app-nav-drawer-link-active already uses for
-     this exact state in the mobile drawer).
-     Phase 173 -- even the soft-fill pill still read as a highlighted
-     capsule sitting above the scene; dropped to plain tinted text, so the
-     only "you are here" markers left are that color and the existing
-     .app-toolbar-pin dot -- a stamp/dot, not a fill. */
+  .app-toolbar-link-icon {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+  }
+
   .app-toolbar-link-active {
-    color: var(--primary-dark);
-    background: transparent;
+    color: #f7ecd8;
+    background: transparent url("/brand/decor/home-nav-v1/home-nav-active-linen.png") center / 106px 40px no-repeat;
     box-shadow: none;
   }
 
   .app-toolbar-link-active:not(:disabled):hover {
-    background: transparent;
+    color: #fff8e9;
+    background: transparent url("/brand/decor/home-nav-v1/home-nav-active-linen.png") center / 106px 40px no-repeat;
   }
 
-  .app-toolbar-pin {
-    position: absolute;
-    top: 1px;
-    left: 50%;
-    z-index: 1;
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    transform: translateX(-50%);
+  .app-toolbar-link-active::before {
+    display: none;
+  }
+
+  .ghost-button.app-topbar-feedback-button {
+    height: 40px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: #493a2c;
+  }
+
+  .ghost-button.app-topbar-feedback-button:not(:disabled):hover {
+    background: transparent;
+    color: #241b14;
+  }
+
+  .account-menu-trigger {
+    height: 40px;
+    padding-top: 0;
+    padding-bottom: 0;
+    color: #493a2c;
+  }
+
+  .account-menu-trigger:not(:disabled):hover {
+    background: transparent;
+    color: #241b14;
   }
 
   /* Drawer/hamburger are mobile/tablet-only -- guards against a drawer
