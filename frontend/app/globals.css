@@ -2109,13 +2109,24 @@ body:has(.home-v10) .app-toolbar {
     box-shadow: none;
   }
 
+  /* Home Nav V1.2 -- natural paper edge (references/mockups/home-nav-prep/
+     CLAUDE_EDGE_FINISH_V1_2*.md): V1.1's paper strip baked its edge
+     darkening inside the opaque paper silhouette, so it read as a flat
+     dark contour against every scene regardless of background. V1.2's
+     asset keeps the identical 56px opaque paper body (the toolbar box
+     itself is still exactly 50px; the paper still visually overlaps the
+     scene by 6px) and adds 8px of transparent padding below it holding a
+     separate, low-opacity warm cast shadow outside the paper's own alpha
+     -- so the box needs 14px of extension (6px overlap + 8px shadow
+     padding) to show the asset's full 64px canvas without cropping the
+     shadow tail. Active linen and divider assets are untouched V1.1. */
   .app-toolbar::before,
   body:has(.home-v10) .app-toolbar::before {
     content: "";
     position: absolute;
-    inset: 0 0 -6px;
+    inset: 0 0 -14px;
     z-index: 0;
-    background: transparent url("/brand/decor/home-nav-v1.1/home-nav-paper-strip.png") center top / 100% 56px no-repeat;
+    background: transparent url("/brand/decor/home-nav-v1.2/home-nav-paper-strip.png") center top / 100% 64px no-repeat;
     pointer-events: none;
   }
 
