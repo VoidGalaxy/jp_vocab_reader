@@ -2524,18 +2524,18 @@ body:has(.home-v10) .app-toolbar {
 
 @media (min-width: 768px) {
   .home-v10-scene {
-    --scene-height: calc(100svh - 64px);
+    --scene-height: calc(100svh - 50px);
     /* V10.4 desktop-only replacement (references/mockups/home-v10.4-prep/
        CLAUDE_HANDOFF.md) -- the 1774x887 V10.3 art enlarged to fill the
        wider ~2.14:1 content plane, cropping ~30px off the top and bottom
        and softening material detail. The approved 1888x833 candidate
        becomes the desktop source plane instead; --scene-art-width is
        solved so the art plane's height still equals `--scene-height`
-       (100svh - 64px) at this ratio, so only horizontal desk margin is
+       (100svh - 50px) at this ratio, so only horizontal desk margin is
        ever cropped, never the notebook's top/bottom. Mobile keeps its own
        V10.3 ratio/width/coordinates below, untouched. */
     --scene-art-ratio: 1888 / 833;
-    --scene-art-width: max(100vw, calc(226.65svh - 145.06px));
+    --scene-art-width: max(100vw, calc(226.65svh - 113.33px));
     /* Desktop coordinate set -- percentages measured directly against the
        approved 1888x833 V10.4 desktop candidate (references/mockups/
        home-v10.4-prep/home-v10.4-wide-candidate-v1.png), not reused or
@@ -2884,7 +2884,7 @@ body:has(.home-v10) .app-toolbar {
   .home-v10-tab-content {
     justify-content: flex-start;
     gap: 6px;
-    padding: 24% 8% 8% 10%;
+    padding: 18% 8% 14% 10%;
     text-align: left;
   }
 
