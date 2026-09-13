@@ -72,17 +72,17 @@ export function HomeDashboard({
 
   const vocabHint =
     recentWords.length > 0
-      ? `${recentWords[0].surface} 등 모은 단어 보기`
-      : "모은 단어 스티커 보기";
+      ? "최근 모은 단어 보기"
+      : "단어 모으기";
   const reviewHint = isDevUser
-    ? "로그인하고 기록 저장하기"
+    ? "로그인해 기록 저장"
     : isStudyStatsLoading
-      ? "확인하는 중..."
+      ? "복습 확인 중"
       : dueTodayCount > 0
-        ? "잊기 전에 다시 보기"
-        : "오늘은 복습이 없어요";
+        ? `${dueTodayCount}개 복습하기`
+        : "오늘 복습 완료";
   const decksHint =
-    sharedDeckCount > 0 ? "다른 덱도 둘러보기" : "나만의 학습 덱 만들기";
+    sharedDeckCount > 0 ? `${sharedDeckCount}개 덱 둘러보기` : "학습 덱 만들기";
 
   return (
     <section className="tab-panel home-dashboard home-v10" aria-live="polite">
