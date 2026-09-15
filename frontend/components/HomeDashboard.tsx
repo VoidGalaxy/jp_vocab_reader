@@ -24,7 +24,7 @@ type HomeDashboardProps = {
 };
 
 const ASSET_BASE_V10_5 = "/brand/decor/home-v10.5";
-const ASSET_BASE_V10_9 = "/brand/decor/home-v10.9";
+const ASSET_BASE_V10_10 = "/brand/decor/home-v10.10";
 
 // Home V10.3 (approved full-scene rebuild) -- every prior Home iteration
 // (home-v3/v4/v7/v8) stacked separately-illustrated objects (title note,
@@ -90,7 +90,7 @@ export function HomeDashboard({
         <picture className="home-v10-scene-art">
           <source
             media="(min-width: 768px)"
-            srcSet={`${ASSET_BASE_V10_9}/home-v10.9-scene-desktop.png`}
+            srcSet={`${ASSET_BASE_V10_10}/home-v10.10-scene-desktop.png`}
           />
           <img
             className="home-v10-scene-img"
