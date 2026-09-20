@@ -96,8 +96,36 @@ export function ReadingSourceSlip({
 }: ReadingSourceSlipProps) {
   const hasChunkProgress = isAnalyzing && !!analyzeProgress && analyzeProgress.total > 1;
 
+  // Reading V3 Gate 2 -- the deck-load failure used to swap the deck
+  // selector's own slot for <DeckLoadRecovery>, a boxed red-bordered panel
+  // (exactly the "form card on the photo" look the whole redesign exists to
+  // remove) and left the message sitting *below* the privacy/count row
+  // instead of the one line directly above it DESIGN_SPEC.md calls for.
+  // Folding it into the same one-line error slot analyzeHint already uses
+  // fixes both at once: the deck <select> now always renders in its own
+  // slot (it already has its own "사용할 수 있는 덱이 없어요" empty state),
+  // and there is exactly one error line, in exactly one fixed-height slot,
+  // above metadata, whichever message is active.
+  const errorLine = needsDeckRecovery
+    ? `${deckLoadError} 읽기 덱이 없어 분석을 시작할 수 없어요.`
+    : analyzeHint;
+
   return (
     <form className="reading-slip-form" onSubmit={onAnalyze}>
+      {/* Reading V3 Gate B -- desktop-only header (hidden on mobile, see
+          .reading-slip-head in globals.css): title/supporting copy written
+          directly on the page, matching reading-v3-input-approved.png. Kept
+          the same fixed block height as ReaderMode's .reading-progress-tag-wrap
+          so the editor/reader text below both start at the same y origin
+          regardless of which header is showing (see DESIGN_SPEC.md's State
+          Continuity section). */}
+      <div className="reading-slip-head">
+        <h2 className="reading-slip-title">원문 입력</h2>
+        <p className="reading-slip-subtitle">
+          일본어 원문을 붙여넣고 함께 읽어보세요.
+        </p>
+      </div>
+
       <label htmlFor="reading-source-text" className="sr-only-label">
         원문
       </label>
@@ -106,7 +134,7 @@ export function ReadingSourceSlip({
           id="reading-source-text"
           value={text}
           onChange={(event) => onTextChange(event.target.value)}
-          placeholder="彼は闇の中で声を聞いた。少女は約束を思い出した。"
+          placeholder="여기에 일본어 원문을 붙여넣으세요."
           rows={6}
         />
         {!text.trim() ? (
@@ -121,14 +149,30 @@ export function ReadingSourceSlip({
         ) : null}
       </div>
 
+      {/* Reading V3 Gate 2B -- status lives in .reading-slip-status, an
+          always-reserved grid row (see globals.css), not a block that
+          appears/pushes siblings. The long descriptive label is kept for
+          screen readers only (sr-only-label) so the visible row fits count
+          + cancel side by side within that reserved height -- Gate 2's
+          position:absolute version put this whole block below the visible
+          fold, which is the exact regression this restructure fixes. */}
       {hasChunkProgress ? (
         <div className="reading-analyze-progress" role="status" aria-live="polite">
-          <p className="reading-analyze-progress-label">
+          <p className="reading-analyze-progress-label sr-only-label">
             긴 원문을 문단·문장 단위로 나눠 분석하고 있습니다.
           </p>
-          <p className="reading-analyze-progress-count">
-            {analyzeProgress!.current} / {analyzeProgress!.total} 조각 분석 중
-          </p>
+          <div className="reading-analyze-progress-row">
+            <p className="reading-analyze-progress-count">
+              {analyzeProgress!.current} / {analyzeProgress!.total} 조각 분석 중
+            </p>
+            <button
+              type="button"
+              className="ghost-button compact-button reading-analyze-progress-cancel"
+              onClick={onCancelAnalyze}
+            >
+              분석 취소
+            </button>
+          </div>
           <div
             className="reading-analyze-progress-bar"
             role="progressbar"
@@ -145,9 +189,6 @@ export function ReadingSourceSlip({
               }}
             />
           </div>
-          <button type="button" className="ghost-button compact-button" onClick={onCancelAnalyze}>
-            분석 취소
-          </button>
         </div>
       ) : isAnalyzing ? (
         <p className="sr-only-label" role="status">
@@ -156,35 +197,51 @@ export function ReadingSourceSlip({
       ) : null}
 
       <div className="reading-slip-controls">
+        {/* Reading V3 Gate 2 -- mobile keeps its exact pre-Gate-2 look: the
+            recovery box replaces the picker in this slot (hidden at
+            desktop, see .reading-slip-controls .reading-deck-recovery
+            below -- scoped to *this* slot only, so the unrelated standalone
+            <DeckLoadRecovery> ReadingTab.tsx renders elsewhere, for the
+            collapsed-session case, is untouched). Desktop instead always
+            shows the compact selector (hidden on mobile while recovery is
+            active, same as before) -- its own disabled/empty option already
+            reads "사용할 수 있는 덱이 없어요", so the slot never needs a
+            second, boxed explanation next to it; the actual error message
+            now lives once, in .reading-slip-error-row below. */}
         {needsDeckRecovery ? (
           <DeckLoadRecovery
             message={deckLoadError}
             isRetrying={isLoadingDecks}
             onRetry={onRetryLoadDecks}
           />
-        ) : (
-          <label className="reading-deck-picker">
-            <FolderIcon className="reading-deck-picker-icon" />
-            <select
-              value={selectedDeckId}
-              onChange={(event) => onSelectedDeckChange(event.target.value)}
-              aria-label="읽기 덱"
-              disabled={hasNoDecks}
-            >
-              {hasNoDecks ? (
-                <option value="">
-                  {isLoadingDecks ? "덱을 불러오는 중..." : "사용할 수 있는 덱이 없어요"}
+        ) : null}
+        <label
+          className={
+            needsDeckRecovery
+              ? "reading-deck-picker reading-deck-picker--desktop-fallback"
+              : "reading-deck-picker"
+          }
+        >
+          <FolderIcon className="reading-deck-picker-icon" />
+          <select
+            value={selectedDeckId}
+            onChange={(event) => onSelectedDeckChange(event.target.value)}
+            aria-label="읽기 덱"
+            disabled={hasNoDecks}
+          >
+            {hasNoDecks ? (
+              <option value="">
+                {isLoadingDecks ? "덱을 불러오는 중..." : "사용할 수 있는 덱이 없어요"}
+              </option>
+            ) : (
+              decks.map((deck) => (
+                <option key={deck.id} value={String(deck.id)}>
+                  {deck.name}
                 </option>
-              ) : (
-                decks.map((deck) => (
-                  <option key={deck.id} value={String(deck.id)}>
-                    {deck.name}
-                  </option>
-                ))
-              )}
-            </select>
-          </label>
-        )}
+              ))
+            )}
+          </select>
+        </label>
         <button
           type="submit"
           className="reader-bookmark-button reading-slip-cta"
@@ -200,12 +257,55 @@ export function ReadingSourceSlip({
           )}
         </button>
       </div>
-      {analyzeHint ? <p className="action-hint">{analyzeHint}</p> : null}
 
-      <p className="muted-text copyright-note reading-slip-copyright">
-        <ShieldIcon className="copyright-note-icon" />
-        <span>원문 전체는 서버에 저장하지 않아요.</span>
-      </p>
+      {/* Reading V3 Gate 2 -- one fixed-height slot, always rendered (even
+          with nothing to say), so the metadata row below never shifts when
+          an error/hint appears or disappears. One line only: long deck
+          errors ellipsize (see .reading-slip-error-text) instead of
+          wrapping into a second line or a bordered panel.
+          The recovery variant is desktop-only (see globals.css): on mobile
+          that same message already shows inside <DeckLoadRecovery> above,
+          so showing it again here would duplicate it -- a plain hint
+          (analyzeHint, not deck recovery) has no other home and keeps
+          showing on every width, matching its pre-Gate-2 behavior. */}
+      <div
+        className={
+          needsDeckRecovery
+            ? "reading-slip-error-row reading-slip-error-row--recovery"
+            : "reading-slip-error-row"
+        }
+      >
+        {errorLine ? (
+          <>
+            <p className="reading-slip-error-text" title={errorLine}>
+              {errorLine}
+            </p>
+            {needsDeckRecovery ? (
+              <button
+                type="button"
+                className="reading-slip-error-action"
+                onClick={onRetryLoadDecks}
+                disabled={isLoadingDecks}
+              >
+                {isLoadingDecks ? "불러오는 중..." : "다시 불러오기"}
+              </button>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+
+      <div className="reading-slip-meta">
+        <p className="muted-text copyright-note reading-slip-copyright">
+          <ShieldIcon className="copyright-note-icon" />
+          <span className="reading-slip-copyright-text">
+            원문 전체는 서버에 저장하지 않아요.
+          </span>
+        </p>
+        {/* Desktop-only (see .reading-slip-charcount in globals.css) --
+            purely presentational, derived from the same `text` prop
+            everything else here already reads; no new state or behavior. */}
+        <span className="reading-slip-charcount">문자 수 {text.length}</span>
+      </div>
       {storageWarning ? (
         <p className="muted-text reading-storage-warning">{storageWarning}</p>
       ) : null}

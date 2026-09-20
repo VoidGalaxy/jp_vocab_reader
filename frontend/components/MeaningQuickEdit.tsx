@@ -13,6 +13,14 @@ type MeaningQuickEditProps = {
   onDraftChange: (value: string) => void;
   onSave: () => void;
   onCancel: () => void;
+  // Reading V3 Gate 3 -- the reading-tab dictionary ledger's footer needs
+  // this same trigger to read as one of its own small icon+text row items
+  // ("뜻 수정") rather than the longer "내 단어장 뜻 수정" label/className
+  // every other caller (vocab list, study card) already relies on.
+  // Optional and default to the exact previous values, so no existing
+  // caller's rendered output changes.
+  triggerLabel?: string;
+  triggerClassName?: string;
 };
 
 // Shared by the vocab list, reading-tab word detail, and study card --
@@ -29,15 +37,13 @@ export function MeaningQuickEdit({
   onDraftChange,
   onSave,
   onCancel,
+  triggerLabel = "내 단어장 뜻 수정",
+  triggerClassName = "ghost-button compact-button meaning-quick-edit-trigger",
 }: MeaningQuickEditProps) {
   if (!isEditing) {
     return (
-      <button
-        type="button"
-        className="ghost-button compact-button meaning-quick-edit-trigger"
-        onClick={onStartEdit}
-      >
-        내 단어장 뜻 수정
+      <button type="button" className={triggerClassName} onClick={onStartEdit}>
+        {triggerLabel}
       </button>
     );
   }

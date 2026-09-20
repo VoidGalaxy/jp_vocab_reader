@@ -307,8 +307,27 @@
 }
 
 @media (min-width: 1024px) {
+  /* Reading V3 Recovery Gate 1C -- Gate 1B gave the wide bucket its own
+     width-driven `height:auto; aspect-ratio:1849/851` override, which
+     silently reintroduced a *bottom* strip: at a viewport wider than
+     1849:851 the width-driven height comes out shorter than the available
+     `100svh - 50px`, leaving a gap between the frame's bottom and the
+     viewport's (26px at 1920x960, 114px at 1600x900 under the old >=16/9
+     threshold -- Gate 1B's own sceneTopBottomGap check only ever compared
+     the frame to the image *inside* it, which are always equal by
+     construction, so it could never have caught this).
+     Fix: height-driven sizing is now the ONLY sizing model at >=1024px,
+     for both scenes. Neither scene ever gets `height:auto` again --
+     object-fit:cover (base rule below) does all the cropping, so the
+     frame's bottom always lands exactly at `100svh - 50px` regardless of
+     which photo loaded. Which photo loads still forks at >=1500px and
+     >=2/1 (see the page-safe-zone block and <picture> below) -- only the
+     page-content coordinates differ per photo now, not the frame's own
+     size. */
   .reading-scene-v2-frame {
-    aspect-ratio: 1672 / 941;
+    aspect-ratio: auto;
+    width: 100%;
+    height: calc(100svh - 50px);
   }
 
   /* Home Nav V1.1 seam repair (references/mockups/home-nav-prep/
@@ -329,6 +348,7 @@
      photographed book's own resting corners) keep their radius. */
   .reading-scene-v2-media-img {
     border-radius: 0 0 26px 26px;
+    object-position: center;
   }
 }
 
@@ -361,19 +381,72 @@
 }
 
 @media (min-width: 1024px) {
+  /* Reading V3 Recovery Gate 1B -- tall-scene default. Remeasured
+     independently against v3-reading-open-book-desktop-tall.png's own
+     paper edges (1536x1024 native): same paper-vs-cover/wood row-sampling
+     method as the wide set below, not a reuse or estimate from it (the
+     two photos have different notebook scale/position). Percentages are
+     of the full source image; the tall frame's own height always equals
+     the rendered image height exactly (object-fit:cover never crops that
+     axis when the viewport is narrower than 1536:1024, which covers
+     1024x768 and 1280x900), and the small symmetric width/height crop
+     cover applies at the other tested ratios lands inside the safety
+     margin already built into these numbers (verified via gate1b-qa
+     screenshots at all three required tall viewports, not assumed). */
   .reading-page--left {
-    left: 8%;
-    top: 8%;
-    width: 39%;
-    height: 82%;
+    left: 18.2%;
+    top: 20%;
+    width: 29%;
+    height: 50.8%;
+    padding: 14px 18px;
   }
 
   .reading-page--right {
     display: block;
-    left: 53%;
-    top: 8%;
-    width: 39%;
-    height: 82%;
+    left: 50.5%;
+    top: 20%;
+    width: 30.3%;
+    height: 50.8%;
+    padding: 14px 18px;
+  }
+
+  /* The old center-the-compact-form behavior fights the new slip layout,
+     which needs to fill the full page height itself (header pinned top,
+     controls pinned bottom, only the editor scrolling in between -- see
+     .reading-slip-form below). */
+  .reading-page--start {
+    display: block;
+  }
+}
+
+@media (min-width: 1500px) and (min-aspect-ratio: 2/1) {
+  /* Reading V3 Recovery Gate 1C -- threshold raised from 16/9 (1.778) to
+     2/1 so 1600x900 (exactly 16:9) now falls to the tall bucket instead
+     of forcing the panoramic photo into a window it doesn't fill without
+     a bottom gap (see the frame-sizing comment above). At the remaining
+     wide viewports the frame is now height-driven like every other
+     breakpoint, so object-fit:cover crops a small amount off the *sides*
+     of the 1849x851 photo instead of leaving it un-cropped at its native
+     ratio. These coordinates are that side-crop projected onto the
+     Gate B safe-zone box (not a fresh eyeball placement): scale = max(
+     frameWidth/1849, frameHeight/851), renderedWidth = 1849*scale, cropX =
+     (renderedWidth-frameWidth)/2, screenX = origX*scale - cropX -- solved
+     at 1920x960 (frameHeight = 960-50 = 910), the only required wide
+     viewport. Y is untouched (0 crop at this ratio: height is the
+     scale-driving axis), which is why top/height match Gate B's original
+     10.6%/69.3% exactly; only left/width shift with the horizontal crop. */
+  .reading-page--left {
+    left: 17.46%;
+    top: 10.6%;
+    width: 27.8%;
+    height: 69.3%;
+  }
+
+  .reading-page--right {
+    left: 50.62%;
+    top: 10.6%;
+    width: 31.72%;
+    height: 69.3%;
   }
 }
 
@@ -413,6 +486,30 @@
   gap: 10px;
 }
 
+/* Reading V3 Gate B -- desktop-only title/supporting-copy block (JSX in
+   ReadingSourceSlip.tsx). Hidden on mobile: the mobile silhouette keeps its
+   pre-Gate-B look (no title row), untouched. Fixed min-height matches
+   .reading-progress-tag-wrap's own desktop min-height below so the input
+   editor and the analyzed reader text start at the same y regardless of
+   which header is showing (measured against screenshots, not guessed). */
+.reading-slip-head {
+  display: none;
+}
+
+.reading-slip-title {
+  margin: 0;
+  color: var(--screen-accent, var(--primary-dark));
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.reading-slip-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  word-break: keep-all;
+}
+
 .reading-slip {
   position: relative;
   border-radius: 3px 16px 3px 16px;
@@ -442,6 +539,12 @@
 .reading-slip textarea::placeholder {
   color: var(--muted);
   opacity: 0.7;
+  /* Korean guidance text ("여기에 일본어 원문을 붙여넣으세요.") was breaking
+     mid-syllable-block ("붙여넣으세" / "요.") at the narrow end of the
+     desktop range -- keep-all only changes where *this* placeholder can
+     wrap, not the textarea's actual Japanese content (Japanese wraps at
+     any character by convention; keep-all is a Korean-text fix only). */
+  word-break: keep-all;
 }
 
 /* Small taped sticker pinned to the slip's corner (same quiet-link language
@@ -481,6 +584,52 @@
   gap: 10px 14px;
 }
 
+/* Reading V3 Gate 2 -- desktop always shows the compact selector even
+   during a deck-load failure (its own disabled/empty option already says
+   so); mobile keeps the pre-Gate-2 boxed <DeckLoadRecovery> in that slot
+   instead, so this fallback copy of the picker stays hidden there.
+   Compound selector (not just the modifier class alone): the base
+   .reading-deck-picker rule (display:inline-flex) is declared much later
+   in this file at equal specificity and would otherwise win the cascade
+   over a single-class override here, exactly like button.reading-slip-cta
+   above. */
+.reading-deck-picker.reading-deck-picker--desktop-fallback {
+  display: none;
+}
+
+/* Base (mobile-shared): plain quiet text, same tone/weight as the old
+   .action-hint it replaces -- a non-deck hint (analyzeHint) still shows on
+   every width exactly as before. The recovery variant is hidden here (see
+   --recovery below) because mobile already shows that same message inside
+   <DeckLoadRecovery> in the controls row above; showing it twice would be
+   new mobile content, not presentation-only. */
+.reading-slip-error-row {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reading-slip-error-row--recovery {
+  display: none;
+}
+
+.reading-slip-error-text {
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+.reading-slip-error-action {
+  margin: 4px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
 .reading-slip-cta {
   width: auto;
   min-width: 0;
@@ -491,10 +640,559 @@
   margin-top: -2px;
 }
 
+/* Base (mobile-shared): plain block so wrapping the existing copyright
+   paragraph in this new element changes nothing visually pre-desktop --
+   .reading-slip-charcount stays display:none until the desktop override. */
+.reading-slip-meta {
+  display: block;
+}
+
+.reading-slip-charcount {
+  display: none;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
 @media (min-width: 1024px) {
   .reading-slip textarea {
     min-height: 210px;
     font-size: 16px;
+  }
+
+  /* ---------------------------------------------------------------------
+     Reading V3 Gate B desktop rebuild -- replaces the torn-paper-card slip
+     with the approved direct-on-page editor (reading-v3-input-approved.png).
+     .reading-slip-form becomes the positioning root and a flex column so
+     `order` can put every child in the mockup's visual sequence (head,
+     editor, hint, meta, progress, controls) independent of DOM order --
+     DOM order itself is left exactly as it was pre-Gate-B so mobile's
+     display:grid (normal flow) still renders in its original, unchanged
+     sequence. Only the editor's own textarea scrolls internally for long
+     text (native textarea behavior, not a new scroll region); title,
+     metadata, deck selector, and the analyze/progress action never move.
+     --------------------------------------------------------------------- */
+  /* Fallback shape for the *other* mount of this same component -- the
+     collapsed re-edit tray (.reading-page-reedit-slip, see ReaderMode.tsx)
+     sitting above already-analyzed reader text. That context isn't part of
+     this gate (Gate 3/ReaderMode territory); it keeps the simple order-based
+     flex column Gate 2 used everywhere, auto-height, nothing pinned to a
+     reserved status row. .reading-page--start below fully overrides this
+     for the first-visit slip, which is what this gate actually covers. */
+  .reading-slip-form {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .reading-slip-head {
+    display: block;
+    order: 10;
+    min-height: 54px;
+    margin-bottom: 14px;
+  }
+
+  .reading-slip {
+    order: 20;
+    min-height: 0;
+    position: static;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    transform: none;
+    /* Slim sage rule marking the editor's left edge (DESIGN_SPEC.md Input
+       State Contract); :focus-within stands in for "the active paragraph"
+       -- a plain <textarea> has no per-paragraph DOM to target individually,
+       so the whole rule strengthening while the editor has focus is the
+       closest honest equivalent without inventing a contenteditable editor. */
+    border-left: 2px solid rgba(122, 148, 110, 0.45);
+    padding-left: 16px;
+    transition: border-color var(--motion-fast) var(--ease-soft);
+  }
+
+  /* ---------------------------------------------------------------------
+     Reading V3 Gate 2B -- the first-visit slip (which owns the whole
+     .reading-page--left pane) becomes an explicit grid instead of a plain
+     flex column. Gate 2's fix for "progress/storage-warning appearing
+     shifts controls" was position:absolute; top:100% -- correct that
+     nothing above it moved, but it also meant that content rendered below
+     the page pane's own fixed height, invisible without scrolling (Gate
+     2B's regression report). A named-area grid with status as its OWN
+     fixed-height row (not `auto`) solves both at once: editor is
+     minmax(0,1fr) so it still absorbs whatever space status/controls/meta
+     don't use, but status's row height never depends on whether it has
+     content -- so editor (and therefore everything below it) never
+     resizes when analysis starts/ends, and status renders in-flow, in
+     view, with no scrolling required. grid-area (not source order) maps
+     each child, so DOM order stays exactly what it was pre-Gate-2 (mobile,
+     a plain flex/grid child list with no named areas, is unaffected). */
+  .reading-page--start .reading-slip-form {
+    display: grid;
+    grid-template-areas:
+      "head"
+      "editor"
+      "error"
+      "meta"
+      "controls"
+      "status";
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto 84px;
+    height: 100%;
+  }
+
+  /* Grid items default to min-width:auto (like flex items) -- without
+     this, a row's own natural/unshrunk content width (deck picker +
+     CTA's combined min-content at 1024px, well past the page column's
+     actual width) forced the "editor"/"controls" grid track wider than
+     the pane, producing a real horizontal scrollbar on .reading-page--left
+     (caught via screenshot, not assumed). Applied to every row so none of
+     them can do this. */
+  .reading-page--start .reading-slip-form > * {
+    min-width: 0;
+  }
+
+  .reading-page--start .reading-slip-head {
+    grid-area: head;
+  }
+
+  .reading-page--start .reading-slip {
+    grid-area: editor;
+    min-height: 0;
+  }
+
+  .reading-slip:focus-within {
+    border-left-color: rgba(90, 122, 79, 0.85);
+  }
+
+  .reading-slip textarea {
+    /* The global bare `textarea { padding: 14px; }` reset (see far below)
+       has lower specificity than this rule but was never overridden here,
+       so it was still applying -- textarea content sat 14px lower than
+       .reader-text's (0 padding), breaking the shared y origin. Measured
+       via getBoundingClientRect against .reader-line, not guessed. */
+    padding: 0;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+    /* Matches .reader-text/.reader-line below exactly -- same desktop
+       font-family/size/line-height so submitting text swaps editor
+       semantics for tokenized reader semantics without the first line
+       visibly shifting (DESIGN_SPEC.md State Continuity). */
+    font-size: 16px;
+    line-height: 1.9;
+  }
+
+  .reading-page--start .reading-slip textarea {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .reading-slip-sample {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    left: auto;
+    bottom: auto;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    transform: none;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: rgba(217, 122, 74, 0.7);
+    text-underline-offset: 3px;
+  }
+
+  .reading-slip-sample:not(:disabled):hover {
+    background: none;
+    box-shadow: none;
+    transform: none;
+    text-decoration-color: var(--accent);
+  }
+
+  /* Contract says text-only, no icon or dot. */
+  .reading-slip-sample .button-icon {
+    display: none;
+  }
+
+  /* Reading V3 Gate 2 -- one fixed-height slot (never taller than one
+     line) directly above metadata, whichever message is active. Fixed
+     height (not just min-height) is deliberate: unlike the old
+     .action-hint, this slot exists in the layout even when empty, so
+     metadata/controls below it never shift by even the row's own margin
+     when an error/hint appears or disappears mid-session. */
+  .reading-page--start .reading-slip-error-row {
+    grid-area: error;
+  }
+
+  .reading-slip-error-row {
+    order: 30;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /* 12px text needs ~17-18px for its own line box; 16px clipped the tops
+       of descender-free glyphs (measured against a screenshot, not
+       guessed). line-height:1 on the text itself (below) plus a little
+       vertical padding keeps the box centered without relying on exact
+       font metrics matching a bare height. */
+    height: 20px;
+    margin: 10px 0 0;
+    overflow: hidden;
+  }
+
+  .reading-slip-error-row--recovery {
+    display: flex;
+  }
+
+  .reading-slip-error-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .reading-slip-error-action {
+    flex: 0 0 auto;
+    margin: 0;
+    font-size: 12px;
+  }
+
+  /* Desktop always shows the compact selector, even mid deck-load-failure
+     (see the matching JSX comment) -- the boxed mobile recovery panel is
+     scoped out here rather than hidden globally, so the unrelated
+     standalone <DeckLoadRecovery> ReadingTab.tsx renders elsewhere for the
+     collapsed-session case is untouched. */
+  .reading-slip-controls .reading-deck-recovery {
+    display: none;
+  }
+
+  .reading-deck-picker.reading-deck-picker--desktop-fallback {
+    display: inline-flex;
+  }
+
+  .reading-page--start .reading-slip-meta {
+    grid-area: meta;
+  }
+
+  .reading-slip-meta {
+    order: 40;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .reading-slip-copyright {
+    margin-top: 0;
+    /* Was wrapping to a second line at the narrow end of the desktop
+       range and visually colliding with 문자 수 sitting to its right
+       (both align-items:baseline in the same row, no room reserved for
+       wrapped text). .copyright-note (shared class, declared later in
+       this file) makes this <p> its own flex row of [icon, text] --
+       nowrap/ellipsis on the <p> itself only clipped the text hard with
+       no "...", because the actual text lives in the child span, not
+       here. flex:1 1 auto + min-width:0 here just lets the whole row
+       shrink inside .reading-slip-meta. */
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .reading-slip-copyright-text {
+    /* The ellipsis itself belongs on this span, not the flex-row <p> --
+       min-width:0 overrides the flex default (min-width:auto) that was
+       blocking it from shrinking past its own content size at all. */
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .reading-slip-charcount {
+    display: inline;
+    flex: 0 0 auto;
+  }
+
+  .reading-page--start .reading-slip-controls {
+    grid-area: controls;
+  }
+
+  .reading-slip-controls {
+    order: 60;
+    margin-top: 14px;
+    /* Reading V3 Gate 2B -- was flex-wrap:wrap (Gate 2's fix for the same
+       narrow-column problem), which wrapped the row to two lines at
+       1024-1280px and ate into the reserved status area below. nowrap
+       forces one row always; the deck picker (flex:1 1 auto, min-width:0
+       below) is the one that yields width, shrinking with ellipsis, while
+       the CTA (flex:0 0 auto -- shrink:0) never shrinks or wraps its own
+       label. Gap tightened from 14px to 8px to give the picker a little
+       more room at the narrow end. */
+    flex-wrap: nowrap;
+    gap: 10px 8px;
+  }
+
+  /* Descendant selector (not the bare class): the base .reading-deck-picker
+     rule sets max-width:100% and is declared later in this file at equal
+     specificity, which was winning the cascade over a plain class override
+     here -- same bug shape as button.reading-slip-cta and
+     .reading-deck-picker--desktop-fallback above. */
+  .reading-slip-controls .reading-deck-picker {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 160px;
+    /* Matches the CTA's own 44px exactly -- the base rule's padding alone
+       renders taller (~56px), and .reading-slip-controls's align-items:
+       center then centered the two at visibly different heights (6px
+       offset between their tops, though both were already one row). */
+    height: 44px;
+    box-sizing: border-box;
+  }
+
+  .reading-deck-picker select {
+    /* The <select>'s own text (deck name, or the disabled "사용할 수 있는
+       덱이 없어요"/"덱을 불러오는 중..." placeholder) must never wrap --
+       the picker's own max-width already clips it, but only if the text
+       itself is nowrap+ellipsis rather than reflowing to two lines first. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Plain rounded CTA (not the shared notched bookmark shape) with one
+     subtle inner border and no outer shadow/double border. Height matches
+     spec exactly; width is content-hugging within the 168-176px range
+     instead of a rigid value, and never shrinks or wraps its own label --
+     at the narrow end of the desktop range this can sit under 168px, but
+     that reads better than distorted button text.
+     Selector is `button.reading-slip-cta` (element+class), not just the
+     class alone: .reader-bookmark-button's own clip-path/box-shadow rule
+     is declared much later in this file at equal specificity and was
+     winning the cascade over a plain `.reading-slip-cta` override.
+     Background is a dedicated dark green, not the shared --screen-accent
+     (#3f6b4a): sampled against reading-v3-input-approved.png's own CTA
+     (~#1c381e), the shared accent alone read closer to a muted olive/
+     brownish tone next to it, not the confident forest green the mockup
+     shows as the page's primary action. */
+  button.reading-slip-cta {
+    width: auto;
+    min-width: 0;
+    max-width: 176px;
+    height: 44px;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    justify-content: center;
+    clip-path: none;
+    border-radius: 8px;
+    background: #1e3a20;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: none;
+  }
+
+  /* Disabled (no text/deck yet, or mid-analyze) previously fell through to
+     .reader-bookmark-button's shared #a89a80 -- a generic warm beige-gray
+     with no trace of the page's own forest-green identity, one of Gate 2's
+     named failure conditions. A desaturated dark green reads as "this
+     button, just inactive" instead of "a generic disabled button". */
+  button.reading-slip-cta:disabled {
+    background: #5c6b5c;
+    color: #f0f0ec;
+  }
+
+  /* Fallback order for the re-edit-tray mount (not this gate's scope --
+     see the .reading-slip-form comment above): sits between editor and
+     the error line, roughly matching where it lived before Gate 2. */
+  .reading-analyze-progress {
+    order: 25;
+  }
+
+  .reading-storage-warning {
+    order: 65;
+  }
+
+  /* ---------------------------------------------------------------------
+     Reading V3 Gate 2B -- both status children share one grid-area
+     ("status"), a fixed 84px row on .reading-page--start .reading-slip-form
+     (see above) that exists whether or not either has content. Gate 2's
+     position:absolute; top:100% kept controls from moving but rendered
+     this content *below the page pane's own height*, invisible without
+     scrolling the pane -- the exact regression this fixes. align-self
+     start/end pins progress to the top of the shared cell and the warning
+     to the bottom, so the one case both appear together still can't
+     overlap (the failure Gate 2's plain stacking risked); when only one
+     shows, the empty rest of the fixed cell is silent reserved space, not
+     a visible box (no border/background here, unlike the mobile/shared
+     base rule above, which stays a bordered card there untouched). */
+  .reading-page--start .reading-analyze-progress {
+    grid-area: status;
+    align-self: start;
+    position: static;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+  }
+
+  .reading-analyze-progress-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .reading-page--start .reading-analyze-progress-count {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .reading-analyze-progress-cancel {
+    flex: 0 0 auto;
+  }
+
+  .reading-page--start .reading-analyze-progress-bar {
+    margin-top: 6px;
+    height: 4px;
+  }
+
+  .reading-page--start .reading-storage-warning {
+    grid-area: status;
+    align-self: end;
+    position: static;
+    margin: 0;
+  }
+
+  button.reading-slip-cta:not(:disabled):hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* -------------------------------------------------------------------
+     Reading V3 Gate 3C -- the re-edit mode's ReadingSourceSlip used the
+     "Fallback shape" comment above describes (plain flex column, auto
+     height, relying on .reading-page-reedit-slip's own overflow-y:auto to
+     catch whatever didn't fit) -- fine when that wrapper was free to grow
+     with the page, but Gate 3B pinned it into the shared "text" grid area
+     at a *fixed* height instead, so anything past that height (at
+     1024x768: the deck selector and "원문 펼치기" CTA) fell below the
+     fold with no visible affordance to reach it, and the wrapper's own
+     scroll was the only way down -- reintroducing exactly the "user has
+     to scroll to find the analyze control" failure Gate 2 already fixed
+     once for the first-visit slip. Same fix, same recipe: the form
+     becomes its own named-area grid instead of relying on the wrapper's
+     scroll, with only "editor" (the textarea) as minmax(0,1fr) --
+     head/error/meta/controls/status all stay fixed rows, so they're
+     always fully visible and only the textarea's own content scrolls
+     (native textarea overflow, not a new scroll region). Mirrors
+     .reading-page--start's grid exactly (same child grid-area map, same
+     84px status row) -- the two contexts render the same component, so
+     they get the same layout contract, just scoped separately since
+     .reading-page--start's own rules don't reach into a re-edit mount. */
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-form {
+    display: grid;
+    grid-template-areas:
+      "head"
+      "editor"
+      "error"
+      "meta"
+      "controls"
+      "status";
+    grid-template-rows: auto minmax(0, 1fr) auto auto auto 84px;
+    height: 100%;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-form > * {
+    min-width: 0;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-head {
+    grid-area: head;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip {
+    grid-area: editor;
+    min-height: 0;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip textarea {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-error-row {
+    grid-area: error;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-meta {
+    grid-area: meta;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-controls {
+    grid-area: controls;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-analyze-progress {
+    grid-area: status;
+    align-self: start;
+    position: static;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-analyze-progress-count {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-analyze-progress-bar {
+    margin-top: 6px;
+    height: 4px;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-storage-warning {
+    grid-area: status;
+    align-self: end;
+    position: static;
+    margin: 0;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279px) {
+  /* Gate 3C -- 1024-1279px only, and only in re-edit mode: the same
+     84px-status + auto-head/meta/controls budget Gate 2B tuned against a
+     1280-wide column leaves noticeably less room for the textarea at
+     1024px (measured: ~365px total page height there vs ~432px at 1280).
+     Trims head/meta/controls spacing a little instead of the font sizes
+     themselves ("폰트 크기를 과도하게 줄이지 마세요") -- 1280's own layout
+     (this rule doesn't apply above 1279px) is untouched either way. */
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-head {
+    min-height: 44px;
+    margin-bottom: 8px;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-meta {
+    margin-top: 8px;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-controls {
+    margin-top: 8px;
   }
 }
 
@@ -509,6 +1207,18 @@
   position: relative;
   display: inline-block;
   margin-bottom: 10px;
+}
+
+@media (min-width: 1024px) {
+  /* Reading V3 Gate B -- matches .reading-slip-head's own desktop
+     min-height/margin exactly (see near .reading-slip-form above) so the
+     analyzed reader's first line starts at the same y as the input
+     editor's first line, whichever header is actually showing. */
+  .reading-progress-tag-wrap {
+    display: block;
+    min-height: 54px;
+    margin-bottom: 14px;
+  }
 }
 
 .reading-progress-tag {
@@ -543,7 +1253,20 @@
   transform: rotate(180deg);
 }
 
-.reading-progress-tag-wrap .reader-mode-toggles {
+/* Reading V3 Gate 3 moved the popover markup out from inside
+   .reading-progress-tag-wrap into its own sibling anchor
+   (.reading-options-popover-anchor, see ReaderMode.tsx and its desktop
+   grid-area:footer override further below), but this selector was never
+   updated to match -- it silently stopped matching anything (the ancestor
+   relationship it names no longer exists), so the mobile popover has been
+   rendering unpositioned (static, in normal flow, pushing the footer
+   below it down) instead of floating below the trigger pill since Gate 3.
+   Retargeted to the anchor's actual current wrapper. */
+.reading-options-popover-anchor {
+  position: relative;
+}
+
+.reading-options-popover-anchor .reader-mode-toggles {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -616,54 +1339,379 @@
 }
 
 /* ---------------------------------------------------------------------
-   Save memo -- a small receipt-like tag pinned to the scene, not a docked
-   admin bar under the book. Absolutely positioned within the frame itself
-   (not inside a scrolling .reading-page), so it stays reachable regardless
-   of how far the reader has scrolled the source text.
+   Reading V3 Gate 3 -- Analyzed state and in-place continuity.
+   ReaderMode.tsx. Replaces the old floating .reading-save-memo receipt tag
+   (a small card pinned over the scene regardless of what the right page
+   was showing -- one of the "floating card" failures this gate exists to
+   remove) with two book-page footers that are part of the page geometry
+   itself: a small printed tool row at the bottom of the left page (원문
+   편집/표시 옵션/문자 수, plus a physical page-corner "읽기 진행률" marker),
+   and the dictionary ledger's own footer at the bottom of the right page
+   (basket/meaning-edit/report for the active word, plus the Save Tray's
+   selection count and save button -- previously that same floating card).
+   Both pages become a 3-row grid at desktop (header/restored-chip, the
+   actual scrolling content, and this fixed footer) so only the content
+   between scrolls -- same recipe Gate 2B already used for the input
+   slip's own fixed controls -- while mobile (<1024px) is untouched: no
+   grid, no footer rows, the pre-Gate-3 flow layout and top progress pill.
    --------------------------------------------------------------------- */
-.reading-save-memo {
-  position: absolute;
-  z-index: 3;
-  right: 3%;
-  bottom: 3%;
-  width: min(210px, 42%);
-  display: grid;
-  gap: 6px;
-  padding: 10px 12px;
-  border-radius: 3px 14px 14px 3px;
-  background: rgba(253, 249, 238, 0.96);
-  box-shadow: 0 10px 22px rgba(120, 98, 40, 0.2);
-  font-size: 11px;
+.reading-left-footer,
+.reading-right-footer-wrap {
+  display: none;
+}
+
+.reading-progress-flag {
+  display: none;
+}
+
+/* Reading V3 Gate 3B -- desktop-only options mode, see ReaderMode.tsx;
+   mobile never shows this element (it keeps using the separate
+   .reader-mode-toggles popover instead), regardless of isOptionsOpen. */
+.reading-options-inline {
+  display: none;
 }
 
 @media (min-width: 1024px) {
-  .reading-save-memo {
-    width: 210px;
+  /* Reading V3 Gate 3B -- reading/options/re-edit are one grid ("text"
+     area) shared by three mutually-exclusive contents, picked by
+     data-left-mode (set in ReaderMode.tsx from the same isOptionsOpen/
+     showSlip state the buttons already drove). Previously re-edit skipped
+     the grid entirely (:not(.reading-page--reader-editing)) and fell back
+     to plain flow, which was exactly the bug report: reader-scroll-region
+     never actually left flow, so the re-edit slip rendered *in front of*
+     it, not *instead of* it -- both visible, reading as duplicated/ghosted
+     text. Grid now applies unconditionally; only which "text"-area child
+     is shown differs per mode. */
+  .reading-page--reader {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "head" "text" "footer";
+    /* No height here -- .reading-page--left/--right (base + their own
+       breakpoint-scoped rules) already set the page pane's real height
+       (the Gate 1B/1C safe-zone percentages, different per scene). Adding
+       a competing height:100% here previously won the cascade (two
+       classes beats one) and silently overrode those percentages, making
+       the pane taller than its scene photo -- which pushed the whole
+       document past the viewport and triggered a page-level scrollbar,
+       which shifted every percentage-based left:% position and broke
+       Gate 3's own x-continuity check. This element's height comes
+       entirely from those existing rules; grid only changes how its
+       content is arranged inside that height. */
+    /* The grid's own middle row scrolls instead -- overflow here would
+       create a second, nested scrollbar. */
+    overflow-y: visible;
+  }
+
+  .reading-page--reader > .reading-restored-chip {
+    grid-area: head;
+    align-self: start;
+  }
+
+  /* All three mode contents share one grid cell -- exactly one is
+     display:block at a time (below), the other two are display:none, so
+     there is never more than one visible region and never duplicated
+     text, without unmounting reader-scroll-region (mobile always needs it
+     mounted regardless of mode -- see its own comment in ReaderMode.tsx). */
+  .reading-page--reader > .reader-scroll-region,
+  .reading-page--reader > .reading-options-inline,
+  .reading-page--reader > .reading-page-reedit-slip {
+    grid-area: text;
+    min-height: 0;
+  }
+
+  .reading-page--reader > .reader-scroll-region {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .reading-page--reader > .reading-options-inline,
+  .reading-page--reader > .reading-page-reedit-slip {
+    overflow-y: auto;
+    display: none;
+  }
+
+  .reading-page--reader:not([data-left-mode="reading"]) > .reader-scroll-region {
+    display: none;
+  }
+
+  .reading-page--reader[data-left-mode="options"] > .reading-options-inline {
+    display: block;
+  }
+
+  /* Reading V3 Gate 3B -- printed directly on the page in place of the
+     reader (same paper, same grid cell), not a popover card: no
+     background, border, or shadow of its own. .reader-mode-toggles-section
+     (shared with the mobile popover) already reads as a plain dashed-
+     divider list rather than a bordered form, so it needs no extra
+     desktop-only skin here beyond a bit of breathing room. */
+  .reading-options-inline {
+    padding-top: 2px;
+    color: var(--text);
+  }
+
+  .reading-options-inline .reader-mode-hint {
+    margin: 0 0 4px;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+
+  .reading-options-inline .reader-mode-toggles-section {
+    font-size: 13px;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] > .reading-page-reedit-slip {
+    display: block;
+    /* ReadingSourceSlip already carries its own .reading-slip-head (the
+       same 54px+14px block reading mode's 68px margin below stands in
+       for) -- re-edit needs no extra top offset of its own. */
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  /* Old top pill/popover trigger (mobile-only from here on, see
+     .reading-progress-tag-wrap's own base rule) -- the reserved 54px +
+     14px margin it used to contribute above the reader text (matching
+     .reading-slip-head's own desktop box exactly, for state continuity)
+     moves to .reader-scroll-region's margin-top below instead, so the
+     analyzed text keeps the exact same y origin without this element
+     needing to stay in flow to produce it. */
+  .reading-progress-tag-wrap {
+    display: none;
+  }
+
+  .reading-page--reader[data-left-mode="reading"] > .reader-scroll-region {
+    /* 54px (.reading-slip-head min-height) + 14px (its margin-bottom) --
+       see the comment above. Reading mode only: options has no header
+       block of its own to match, and re-edit already gets the same
+       spacing for free from ReadingSourceSlip's own head (see above). */
+    margin-top: 68px;
+  }
+
+  .reading-left-footer {
+    grid-area: footer;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    margin-top: 12px;
+    padding-top: 10px;
+    /* Clears .reading-progress-flag, a page-corner overlay positioned
+       independently of this row's own flow (see below). */
+    padding-left: 66px;
+    border-top: 1px dashed var(--paper-border);
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-left-footer,
+  .reading-page--reader[data-left-mode="reedit"] .reading-progress-flag {
+    display: none;
+  }
+
+  .reading-left-footer-btn {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 4px;
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 4px 2px;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: none;
+  }
+
+  .reading-left-footer-btn:not(:disabled):hover {
+    color: var(--screen-accent, var(--accent));
+    background: none;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .reading-left-footer-btn .button-icon {
+    width: 13px;
+    height: 13px;
+  }
+
+  .reading-left-footer-btn-icon {
+    width: 12px;
+    height: 12px;
+    transition: transform var(--motion-fast) var(--ease-soft);
+  }
+
+  .reading-left-footer-btn-icon-open {
+    transform: rotate(180deg);
+  }
+
+  .reading-left-footer-charcount {
+    margin-left: auto;
+    color: var(--muted);
+  }
+
+  /* Reading V3 Gate 3B -- desktop's options mode is .reading-options-inline
+     now (an in-place render region, see above), not this popover anymore
+     (that was itself only ever a CSS-repositioned version of the mobile
+     popover, and the "cover the reader instead of replacing it" pattern
+     is exactly what this gate exists to remove). The anchor + its popover
+     stay mounted (isOptionsOpen still drives them for mobile) but paint
+     nothing at this breakpoint. */
+  .reading-options-popover-anchor {
+    display: none;
+  }
+
+  /* Reading V3 Gate 3B -- a bookmark-ribbon tab hanging off the page's
+     bottom-left corner (reading-v3-analyzed-reference.png's forest-green
+     folded-corner marker), not a rounded pill/card: flat top and sides,
+     with the bottom edge notched to a point via clip-path so it reads as
+     a ribbon end rather than a rectangular badge. Sits flush against
+     .reading-left-footer's own top border (same bottom:0 anchor, and the
+     footer's padding-left clears its width, see .reading-left-footer
+     above) so the two read as one connected printed strip along the
+     page's bottom edge, not two separate floating chips. No image asset
+     -- clip-path only. */
+  .reading-progress-flag {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    z-index: 2;
+    width: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1px;
+    padding: 7px 4px 16px;
+    background: var(--tone-ink-green);
+    color: #f0f0ec;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-align: center;
+    line-height: 1.15;
+    clip-path: polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%);
+  }
+
+  .reading-progress-flag-label {
+    word-break: keep-all;
+  }
+
+  .reading-progress-flag strong {
+    font-size: 14px;
+    font-weight: 800;
   }
 }
 
-.reading-save-memo-count {
+/* ---------------------------------------------------------------------
+   Dictionary ledger footer -- ReaderMode.tsx, right page. One small
+   icon+text tool row (never a big CTA or pill cluster): per-word actions
+   for whichever word is active (basket/meaning-edit/report, hidden when
+   nothing is selected) plus the Save Tray's selection count and save
+   button, which apply regardless of the active word.
+   --------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  .reading-right-footer-wrap {
+    grid-area: footer;
+    display: block;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--paper-border);
+  }
+}
+
+.reading-right-footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
-  color: var(--text-secondary);
-  font-weight: 600;
+  gap: 6px 12px;
 }
 
-.reading-save-memo-count strong {
+.reading-right-footer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-bg);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.reading-right-footer-btn .button-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.reading-right-footer-btn:not(:disabled):hover {
+  color: var(--screen-accent, var(--accent));
+  background: var(--soft-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.reading-right-footer-btn-active {
+  border-color: var(--tone-coral);
+  color: var(--tone-coral);
+  background: #f7e9e2;
+}
+
+.reading-right-footer-link {
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  box-shadow: none;
+}
+
+.reading-right-footer-link:not(:disabled):hover {
+  color: var(--screen-accent, var(--accent));
+  background: none;
+  box-shadow: none;
+  transform: none;
+}
+
+.reading-right-footer-link:disabled {
+  opacity: 0.5;
+}
+
+.reading-right-footer-spacer {
+  flex: 1 1 auto;
+}
+
+.reading-right-footer-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reading-right-footer-count strong {
   color: var(--screen-accent, var(--primary-dark));
   font-size: 13px;
 }
 
-.reading-save-memo-icon {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  color: var(--screen-accent, var(--accent));
-}
-
-.reading-save-memo-saveable {
+.reading-right-footer-saveable {
   padding: 1px 7px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -674,63 +1722,200 @@
   white-space: nowrap;
 }
 
-.reading-save-memo-hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: 10px;
+.reading-right-footer-save {
+  width: auto;
+  min-width: 0;
+  padding: 7px 14px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
-.reading-save-memo-message {
-  margin: 0;
-  font-size: 10.5px;
+.reading-right-footer-message {
+  margin: 6px 0 0;
+  font-size: 11px;
   font-weight: 600;
 }
 
-.reading-save-memo-message--success {
+.reading-right-footer-message--success {
   color: var(--success);
 }
 
-.reading-save-memo-message--error {
+.reading-right-footer-message--error {
   color: var(--danger);
 }
 
-.reading-save-memo-message--info {
+.reading-right-footer-message--info {
   color: var(--muted);
   font-weight: 500;
 }
 
-.reading-save-memo-button {
-  width: 100%;
-  justify-content: center;
-  padding: 8px 14px;
+.reading-right-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------------
+   Dictionary ledger content -- TokenDetailSheet.tsx's TokenDetailLedger
+   (desktop-only "pinned" replacement, see its own comment there). One
+   quiet manuscript face: header/nav pinned above the scrolling ledger
+   body (headword -> reading+POS -> meaning -> example -> status), no card
+   chrome, no "자세히" fold (unlike the mobile modal, height here isn't
+   constrained, so nothing needs to hide behind a disclosure).
+   --------------------------------------------------------------------- */
+.token-ledger {
+  display: flex;
+  flex-direction: column;
+}
+
+.token-ledger-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+}
+
+.token-ledger-eyebrow {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.token-ledger-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.token-ledger-nav-button {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--panel-bg);
+  box-shadow: none;
+}
+
+.token-ledger-nav-button::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid var(--text-secondary);
+  border-right: 1.5px solid var(--text-secondary);
+}
+
+.token-ledger-nav-prev::before {
+  transform: translate(-30%, -50%) rotate(-135deg);
+}
+
+.token-ledger-nav-next::before {
+  transform: translate(-70%, -50%) rotate(45deg);
+}
+
+.token-ledger-nav-button:disabled {
+  opacity: 0.35;
+}
+
+.token-ledger-nav-button:not(:disabled):hover {
+  background: var(--soft-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.token-ledger-position {
+  min-width: 40px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.token-ledger-word-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.token-ledger-word {
+  color: var(--text);
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.token-ledger-reading {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.token-ledger-pos {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--soft-bg);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.token-ledger-meaning {
+  flex: 0 0 auto;
+  margin: 10px 0 0;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.token-ledger-meta {
+  flex: 0 0 auto;
+  margin: 6px 0 0;
+  color: var(--muted);
   font-size: 12px;
 }
 
-.reading-save-memo-study {
-  background: var(--tone-ink-green);
+.token-ledger-example {
+  flex: 0 0 auto;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--paper-border);
 }
 
-.reading-save-memo-link {
-  justify-self: start;
-  width: auto;
-  min-width: 0;
-  min-height: 0;
-  padding: 2px;
-  border: none;
-  background: none;
+.token-ledger-example-label {
+  display: block;
+  margin-bottom: 4px;
   color: var(--muted);
-  font-size: 10.5px;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  box-shadow: none;
+  font-size: 11.5px;
+  font-weight: 700;
 }
 
-.reading-save-memo-link:not(:disabled):hover {
-  color: var(--screen-accent, var(--accent));
-  background: transparent;
-  box-shadow: none;
-  transform: none;
+.token-ledger-example-text {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.token-ledger-example-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.token-ledger-stamps {
+  flex: 0 0 auto;
+  margin-top: 16px;
 }
 
 /* ---------------------------------------------------------------------
@@ -1645,10 +2830,22 @@ button {
    lives beside the body/page reset above; other tabs retain this shared
    content-width cap. */
 
-.library-canvas-reading,
 .library-canvas-shared,
 .library-canvas-vocab {
   width: min(1640px, 100%);
+}
+
+/* Reading V3 Recovery Gate 1 -- Reading's approved wide scene is meant to
+   fill the desktop surface (that is the whole reason Gate A/B replaced the
+   old capped 1672x941 plate), but this room still inherited the same
+   1640px content-width cap as 단어장/공유 (text-column rooms with no
+   full-bleed scene of their own to fill). At 1920px that left a flat
+   ~140px strip of bare shell background on each side -- the original
+   defect the redesign was supposed to remove, just moved one level up the
+   cascade. No cap here; .app-shell-content's own cap (overridden for
+   Reading below) is what still bounds it on very wide screens. */
+.library-canvas-reading {
+  width: 100%;
 }
 
 /* Phase 113 -- App Shell structural replacement. The old shell paired a
@@ -2074,6 +3271,18 @@ body:has(.home-v10) .app-toolbar {
   }
 
   body:has(.home-v10) .app-shell-content {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Reading V3 Recovery Gate 1 -- same reasoning as the Home override
+     above: .app-shell-content's shared 1680px/97vw cap was the second of
+     the two stacked constraints producing the side-strip defect (the
+     other was .library-canvas-reading's own 1640px cap, removed above).
+     Toolbar geometry is untouched -- .app-toolbar is .app-shell-content's
+     sibling, not its child, so this rule cannot reach it. */
+  body:has(.library-canvas-reading) .app-shell-content {
     max-width: none;
     margin: 0;
     padding: 0;
@@ -10709,11 +11918,14 @@ input.reading-vocab-sticker-toggle:checked {
 /* Phase 169 -- lives directly inside .reading-page--left now (the book's
    own page pane already constrains width/scroll), so this no longer needs
    its own max-width/centering the way it did sitting inside a much wider
-   .reader-paper. The soft translucent wash behind the words (>=1024px
-   only) is unchanged from Phase 150's original reasoning: the ruled photo
-   shows straight through the pane's own transparent padding, so the text
-   still wants its own clearly-lighter reading surface, not a hard-edged
-   card. */
+   .reader-paper.
+   Reading V3 Gate B -- the desktop translucent card wash (padding/radius/
+   background/shadow) below was itself a small instance of the "translucent
+   form card on a photo" failure DESIGN_SPEC.md calls out: text directly on
+   the approved scene's own paper reads better and matches
+   reading-v3-analyzed-reference.png, which shows no card behind the
+   paragraphs. Desktop font-family/size/line-height now match
+   .reading-slip textarea exactly (same Mincho stack) for state continuity. */
 .reader-text {
   display: flex;
   flex-direction: column;
@@ -10725,11 +11937,16 @@ input.reading-vocab-sticker-toggle:checked {
 
 @media (min-width: 1024px) {
   .reader-text {
-    padding: 14px 16px;
-    border-radius: 12px;
-    background: rgba(253, 249, 238, 0.65);
-    box-shadow: inset 0 1px 2px rgba(37, 43, 30, 0.06);
-    font-size: 15px;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+    font-size: 16px;
+    line-height: 1.9;
+    /* Same sage rule + inset as .reading-slip textarea (see near
+       .reading-slip-form above) -- without it here too, the analyzed
+       text's left edge sat 18px left of the editor's, breaking the shared
+       x origin DESIGN_SPEC.md requires (measured via
+       getBoundingClientRect, not eyeballed). */
+    border-left: 2px solid rgba(122, 148, 110, 0.45);
+    padding-left: 16px;
   }
 }
 
@@ -10742,6 +11959,35 @@ input.reading-vocab-sticker-toggle:checked {
      line breaks are already split into separate .reader-line elements by
      buildReaderLayout, so this only needs to protect in-line whitespace). */
   white-space: pre-wrap;
+}
+
+@media (min-width: 1024px) {
+  /* Reading V3 Gate 3D -- the base keep-all above is correct for Korean UI
+     text elsewhere in this file (e.g. .reading-slip-subtitle) and is left
+     untouched for mobile (out of this gate's scope), but is wrong for
+     this Japanese running text: Japanese sentences have no spaces, so
+     keep-all's "only break at whitespace/word boundaries" rule left
+     entire sentences as one unbreakable run, wider than
+     .reader-scroll-region and clipped at its right edge (confirmed via
+     .reader-text/.reader-line scrollWidth vs the region's own
+     clientWidth, not assumed -- hiding it with overflow-x:hidden would
+     have left the clipping, just invisible). `normal` restores standard
+     CJK line-breaking (UAX#14 -- browsers already break between most
+     adjacent Japanese characters under it), which is what this content
+     actually needs; overflow-wrap is a fallback only, for the rare
+     non-CJK unbreakable run (e.g. a pasted URL) that normal's own CJK
+     break opportunities wouldn't catch. TokenChip itself is
+     display:inline with no white-space override (see .token-chip), so it
+     was never the source of the overflow and needs no change; real line
+     breaks/whitespace runs still come from white-space:pre-wrap,
+     untouched here. Declared after the base rule (not just inside this
+     media query) so it actually wins the cascade at equal specificity --
+     see this file's other word-break/max-width fixes for the same
+     source-order gotcha. */
+  .reader-line {
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
 }
 
 .reader-unmatched-row {

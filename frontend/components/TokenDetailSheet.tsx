@@ -334,6 +334,178 @@ function TokenDetailContent({
   );
 }
 
+// Reading V3 Gate 3 -- the pinned desktop presentation used to reuse
+// TokenDetailContent verbatim (same interior as the mobile floating card,
+// just a different outer shell). The approved analyzed-state reference
+// wants a genuinely different interior for the desktop right page -- a
+// single dictionary-ledger manuscript face (header/nav -> headword ->
+// reading+POS -> meaning -> example -> status, in that order, no "자세히"
+// fold, no basket/meaning-edit/report/save actions of its own -- those
+// move into the right page's own persistent footer, see ReaderMode.tsx,
+// since they aren't per-word so much as per-session). Mobile's
+// TokenDetailContent/modal presentation above is untouched by this --
+// same props, same handlers, same rendered output as before Gate 3.
+type TokenDetailLedgerProps = Pick<
+  TokenDetailSheetProps,
+  | "token"
+  | "onClose"
+  | "onStatusChange"
+  | "onPrevious"
+  | "onNext"
+  | "canGoPrevious"
+  | "canGoNext"
+  | "positionLabel"
+>;
+
+export function TokenDetailLedger({
+  token,
+  onClose,
+  onStatusChange,
+  onPrevious,
+  onNext,
+  canGoPrevious,
+  canGoNext,
+  positionLabel,
+}: TokenDetailLedgerProps) {
+  const label = token.surface || token.base_form;
+  const displayedMeaning = token.savedMeaningKo || token.meaning_ko;
+  const exampleSentence = token.savedExampleSentence || token.example_sentence;
+
+  const metaParts: string[] = [];
+  if (token.base_form && token.base_form !== label) {
+    metaParts.push(`기본형 ${token.base_form}`);
+  }
+  metaParts.push(`${token.occurrence_count || 1}회 등장`);
+  if (token.jlpt_level) {
+    metaParts.push(`JLPT 추천 ${token.jlpt_level}`);
+  }
+
+  return (
+    <div
+      className="token-ledger"
+      aria-label={`${label} 단어 정보`}
+      aria-live="polite"
+    >
+      <div className="token-ledger-header">
+        <span className="token-ledger-eyebrow">선택한 단어</span>
+        <div className="token-ledger-nav" role="group" aria-label="단어 이동">
+          <button
+            type="button"
+            className="token-ledger-nav-button token-ledger-nav-prev"
+            onClick={onPrevious}
+            disabled={!canGoPrevious}
+            aria-label="이전 단어"
+          />
+          {positionLabel ? (
+            <span className="token-ledger-position">{positionLabel}</span>
+          ) : null}
+          <button
+            type="button"
+            className="token-ledger-nav-button token-ledger-nav-next"
+            onClick={onNext}
+            disabled={!canGoNext}
+            aria-label="다음 단어"
+          />
+        </div>
+        <button
+          type="button"
+          className="token-sheet-close"
+          onClick={onClose}
+          aria-label="단어 카드 닫기"
+        >
+          <CloseIcon className="token-sheet-close-icon" />
+        </button>
+      </div>
+
+      <div className="token-ledger-word-row">
+        <span className="token-ledger-word">{label}</span>
+        {token.reading && token.reading !== label ? (
+          <span className="token-ledger-reading">{token.reading}</span>
+        ) : null}
+        {token.part_of_speech ? (
+          <span className="token-ledger-pos">{token.part_of_speech}</span>
+        ) : null}
+      </div>
+
+      <p className="token-ledger-meaning">{getDisplayMeaning(displayedMeaning)}</p>
+      {metaParts.length > 0 ? (
+        <p className="token-ledger-meta">{metaParts.join(" · ")}</p>
+      ) : null}
+      {token.jlpt_level ? (
+        <p className="jlpt-detail-hint">
+          JLPT 추천 어휘 기준이며, 비공식 참고용 표시입니다.
+        </p>
+      ) : null}
+
+      <div className="token-ledger-example">
+        <span className="token-ledger-example-label">예문</span>
+        {exampleSentence ? (
+          <p className="token-ledger-example-text">
+            <HighlightedExample
+              sentence={exampleSentence}
+              surface={token.surface}
+              baseForm={token.base_form}
+              normalizedForm={token.normalized_form}
+            />
+          </p>
+        ) : (
+          <p className="token-ledger-example-hint">
+            이 단어가 포함된 문장을 찾지 못했어요.
+          </p>
+        )}
+      </div>
+
+      <div
+        className="token-note-stamps token-ledger-stamps"
+        role="group"
+        aria-label="단어 상태 변경"
+      >
+        <button
+          type="button"
+          className="token-note-stamp success-button"
+          aria-pressed={token.status === "known"}
+          data-active={token.status === "known"}
+          onClick={() => onStatusChange("known")}
+        >
+          {stampLabels.known}
+        </button>
+        <button
+          type="button"
+          className="token-note-stamp warning-button"
+          aria-pressed={token.status === "uncertain"}
+          data-active={token.status === "uncertain"}
+          onClick={() => onStatusChange("uncertain")}
+        >
+          {stampLabels.uncertain}
+        </button>
+        <button
+          type="button"
+          className="token-note-stamp danger-button"
+          aria-pressed={token.status === "unknown"}
+          data-active={token.status === "unknown"}
+          onClick={() => onStatusChange("unknown")}
+        >
+          {stampLabels.unknown}
+        </button>
+        <button
+          type="button"
+          className="token-note-stamp secondary-button"
+          aria-pressed={token.status === "unclassified"}
+          data-active={token.status === "unclassified"}
+          onClick={() => onStatusChange("unclassified")}
+        >
+          {stampLabels.unclassified}
+        </button>
+      </div>
+      {token.status === "unclassified" ? (
+        <p className="token-note-stamp-hint">
+          모르는·헷갈리는 단어는 자동 저장돼요
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function TokenDetailSheet({
   presentation,
   ...contentProps

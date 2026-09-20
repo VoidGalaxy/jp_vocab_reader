@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
 import { TokenChip } from "./TokenChip";
-import { TokenDetailSheet } from "./TokenDetailSheet";
+import { TokenDetailSheet, TokenDetailLedger } from "./TokenDetailSheet";
+import { MeaningQuickEdit } from "./MeaningQuickEdit";
 import { ShioriGuideCard, ShioriMark } from "./Shiori";
 import { ReadingSourceSlip } from "./ReadingSourceSlip";
 import type { ReadingSourceSlipProps } from "./ReadingSourceSlip";
 import { buildReaderLayout, getNavigableTokenIndexes } from "./readerLayout";
 import { getTokenGroupKey } from "./coverageUtils";
-import { ChevronDownIcon } from "./icons";
+import type { MessageTone } from "./coverageUtils";
+import { BookmarkIcon, ChevronDownIcon, FolderIcon, InfoIcon, PencilIcon } from "./icons";
 
 // Reading-progress percentage is derived from how far the reader has
 // scrolled through the .reader-text container relative to the viewport,
@@ -91,6 +93,23 @@ type ReaderModeProps = {
   isTokenInBasket: (token: TokenWithStatus) => boolean;
   canAddToBasket: (token: TokenWithStatus) => boolean;
   onToggleBasket: (token: TokenWithStatus) => void;
+  // Reading V3 Gate 3 -- the Save Tray (selection count + "선택한 단어
+  // 저장") used to be its own floating card (.reading-save-memo) pinned
+  // over the scene regardless of what the right page was showing. The
+  // approved analyzed-state reference folds it into the right page's own
+  // footer instead, alongside the per-word basket/meaning-edit/report
+  // actions -- so it needs the same summary data ReadingTab already
+  // computes for that card. No behavior change: same selection Set, same
+  // save handler, same message/tone, just rendered in a different place.
+  selectedCount: number;
+  saveableCount: number;
+  isSavingBatch: boolean;
+  onSaveSelected: () => void;
+  saveMessage: string;
+  saveMessageTone: MessageTone;
+  recentlySavedCount: number;
+  onStartStudyFromSaved: () => void;
+  onGoToVocab: () => void;
   // Session management -- previously ReadingTab's own top-of-screen
   // "원문 관리" toolbar (a separate row above this card). Folded in here
   // instead: the restore notice as a small chip in the header, the
@@ -134,6 +153,15 @@ export function ReaderMode({
   isTokenInBasket,
   canAddToBasket,
   onToggleBasket,
+  selectedCount,
+  saveableCount,
+  isSavingBatch,
+  onSaveSelected,
+  saveMessage,
+  saveMessageTone,
+  recentlySavedCount,
+  onStartStudyFromSaved,
+  onGoToVocab,
   isSessionRestored,
   onDismissRestoredNotice,
   isTextCollapsed,
@@ -182,6 +210,21 @@ export function ReaderMode({
   // scrolls -- drives the progress bar/percent display.
   const [scrollProgress, setScrollProgress] = useState(0);
   const readerTextRef = useRef<HTMLDivElement | null>(null);
+  // Reading V3 Gate 3B -- the actual scrolling element for reading mode
+  // (.reader-scroll-region, overflow-y:auto at desktop; readerTextRef above
+  // points at .reader-text, a non-scrolling child of it). Desktop's
+  // options/re-edit modes now unmount this region entirely (mutually
+  // exclusive render regions, not an overlay on top of it), so its own
+  // scrollTop resets to 0 on remount unless explicitly saved/restored --
+  // these two refs are that save/restore channel, plus a deferred-action
+  // slot for the options panel's "맨 위로"/"선택 단어로 이동" buttons, which
+  // can't act on a currently-unmounted reader directly. Desktop-only
+  // (gated on isDesktopPinned in every handler/effect that touches them):
+  // mobile never unmounts the reader for options/re-edit (same simultaneous
+  // overlay it always had), so it needs none of this.
+  const readerScrollRegionRef = useRef<HTMLDivElement | null>(null);
+  const savedReaderScrollTopRef = useRef(0);
+  const pendingReaderNavActionRef = useRef<null | "top" | "bookmark">(null);
   const scrollProgressThrottleRef = useRef<number | null>(null);
   // Frozen at mount: the "last read position" bookmark from the restored
   // session, kept separate from the live scrollProgress state above (which
@@ -235,6 +278,57 @@ export function ReaderMode({
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
+
+  // Reading V3 Gate 3B -- the left page's desktop render region is exactly
+  // one of these three at a time (reedit takes priority over options: if
+  // re-edit is opened while options happens to still be flagged open
+  // underneath, the mode must land on "reedit", not draw both). Mobile
+  // ignores this value entirely (its CSS never reads data-left-mode), so
+  // isTextCollapsed/isOptionsOpen keep their pre-Gate-3B simultaneous
+  // mobile behavior untouched.
+  const leftMode: "reading" | "options" | "reedit" = showSlip
+    ? "reedit"
+    : isOptionsOpen
+      ? "options"
+      : "reading";
+
+  // Restores the reading-region scroll position saved just before switching
+  // away from it (see handleOpenOptions/handleToggleTextCollapsed below) --
+  // fires whenever the mode returns to "reading", which covers both
+  // "options closed" and "re-edit closed/submitted" the same way, since
+  // both land back on leftMode "reading".
+  useEffect(() => {
+    if (!isDesktopPinned || leftMode !== "reading") {
+      return;
+    }
+    const container = readerScrollRegionRef.current;
+    if (container) {
+      container.scrollTop = savedReaderScrollTopRef.current;
+    }
+  }, [isDesktopPinned, leftMode]);
+
+  // A "맨 위로"/"선택 단어로 이동" click inside the desktop options panel
+  // can't act on the reader directly (it's unmounted while options is the
+  // active mode) -- it queues the action here and closes options instead;
+  // once leftMode flips back to "reading" and the reader remounts, this
+  // effect runs it (small timeout so layout/refs are settled first, same
+  // reasoning as the existing initial-scroll-restore effect above).
+  useEffect(() => {
+    if (!isDesktopPinned || leftMode !== "reading" || !pendingReaderNavActionRef.current) {
+      return;
+    }
+    const action = pendingReaderNavActionRef.current;
+    pendingReaderNavActionRef.current = null;
+    const timeoutId = window.setTimeout(() => {
+      if (action === "top") {
+        scrollToTop();
+      } else {
+        scrollToBookmark();
+      }
+    }, 50);
+    return () => window.clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDesktopPinned, leftMode]);
 
   const layout = useMemo(
     () => buildReaderLayout(originalText, tokens),
@@ -507,10 +601,74 @@ export function ReaderMode({
     }
   }
 
+  // Reading V3 Gate 3B -- desktop's three left-page modes are mutually
+  // exclusive, so opening options or re-edit needs to remember where
+  // reading mode's scroll was (see the restore effect above) before the
+  // reader unmounts; mobile's reader never unmounts for either, so these
+  // wrappers only do the extra bookkeeping when isDesktopPinned.
+  function handleOpenOptions() {
+    if (isDesktopPinned && readerScrollRegionRef.current) {
+      savedReaderScrollTopRef.current = readerScrollRegionRef.current.scrollTop;
+    }
+    setIsOptionsOpen(true);
+  }
+
+  function handleToggleOptions() {
+    if (isOptionsOpen) {
+      setIsOptionsOpen(false);
+    } else {
+      handleOpenOptions();
+    }
+  }
+
+  function handleToggleTextCollapsed() {
+    if (isDesktopPinned) {
+      if (!showSlip && readerScrollRegionRef.current) {
+        // About to open re-edit (currently in reading mode) -- remember
+        // the scroll position the same way handleOpenOptions does.
+        savedReaderScrollTopRef.current = readerScrollRegionRef.current.scrollTop;
+      }
+      // re-edit and options are mutually exclusive on desktop -- without
+      // this, closing re-edit again could land on leftMode "options"
+      // instead of back on "reading" (isOptionsOpen would still be true
+      // from before re-edit opened, even though its panel was hidden
+      // the whole time re-edit was showing).
+      setIsOptionsOpen(false);
+    }
+    onToggleTextCollapsed();
+  }
+
+  // "맨 위로"/"선택 단어로 이동" inside the options panel: on desktop the
+  // reader is unmounted while options is the active mode, so these defer
+  // to the pending-action effect above instead of calling scrollToTop/
+  // scrollToBookmark directly. Mobile's reader is never unmounted, so it
+  // keeps calling them immediately, exactly as before.
+  function handleScrollToTopFromOptions() {
+    if (isDesktopPinned) {
+      pendingReaderNavActionRef.current = "top";
+      setIsOptionsOpen(false);
+    } else {
+      scrollToTop();
+    }
+  }
+
+  function handleScrollToBookmarkFromOptions() {
+    if (isDesktopPinned) {
+      pendingReaderNavActionRef.current = "bookmark";
+      setIsOptionsOpen(false);
+    } else {
+      scrollToBookmark();
+    }
+  }
+
   const progressPercent = Math.round(scrollProgress * 100);
   const activeToken = activeIndex !== null ? tokens[activeIndex] : null;
   const hasNextUnknown = findNextUnknownPosition() !== -1;
   const isAtFirstOccurrence = activeSegmentKey === null;
+  // Narrowed once here (not re-read off activeToken.savedVocabItemId inside
+  // the footer's closures below) so TypeScript can actually track that it's
+  // non-null wherever onStartEdit captures it.
+  const activeVocabItemId = activeToken?.savedVocabItemId ?? null;
 
   // Built once and reused by both the pinned (desktop) and modal (mobile)
   // TokenDetailSheet renders below, so the two presentations can never
@@ -551,9 +709,15 @@ export function ReaderMode({
       }
     : null;
 
-  const optionsPopover = isOptionsOpen ? (
-    <div className="reader-mode-toggles">
-      <p className="reader-mode-hint">모르는 단어를 눌러보세요.</p>
+  // Reading V3 Gate 3B -- shared between the mobile popover (unchanged
+  // shell/behavior, .reader-mode-toggles) and desktop's own inline options
+  // mode (new shell, .reading-options-inline, see the return JSX below) so
+  // there is exactly one copy of this content/handlers, not two drifting
+  // copies. The nav buttons call the desktop-aware wrappers above, which
+  // fall back to the exact previous direct scrollToTop/scrollToBookmark
+  // calls on mobile (isDesktopPinned false there).
+  const optionsSections = (
+    <>
       {/* 3 clearly separated groups (dashed divider + small label, same
           recipe the manage row already used) instead of one long
           undifferentiated stack -- easier to scan than a single flat list. */}
@@ -604,24 +768,54 @@ export function ReaderMode({
         ) : null}
         <div className="reader-progress-actions">
           {bookmarkButtonLabel ? (
-            <button type="button" className="ghost-button compact-button" onClick={scrollToBookmark}>
+            <button
+              type="button"
+              className="ghost-button compact-button"
+              onClick={handleScrollToBookmarkFromOptions}
+            >
               {bookmarkButtonLabel}
             </button>
           ) : null}
-          <button type="button" className="ghost-button compact-button" onClick={scrollToTop}>
+          <button
+            type="button"
+            className="ghost-button compact-button"
+            onClick={handleScrollToTopFromOptions}
+          >
             맨 위로
           </button>
         </div>
       </div>
       <div className="reader-mode-toggles-section">
         <span className="reader-mode-toggles-section-label">원문 관리</span>
-        <button type="button" className="ghost-button compact-button" onClick={onToggleTextCollapsed}>
+        {/* Reading V3 Gate 3 -- desktop now has its own dedicated "원문
+            편집" footer button calling this exact same handler (see
+            .reading-left-footer below), so this row would be a second,
+            redundant way to do the same thing there. Mobile has no such
+            footer, so it keeps this as its only entry point (hidden at
+            desktop only, see globals.css). */}
+        <button
+          type="button"
+          className="ghost-button compact-button reader-mode-toggle-textcollapse"
+          onClick={handleToggleTextCollapsed}
+        >
           {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
         </button>
         <button type="button" className="ghost-button compact-button" onClick={onResetSession}>
           새 원문
         </button>
       </div>
+    </>
+  );
+
+  // Mobile-only shell (unchanged from before Gate 3B): an absolute-
+  // positioned popover under the top progress pill, reader still visible
+  // and interactive behind/around it -- see .reader-mode-toggles in
+  // globals.css (base rules, no @media(min-width:1024px) gate on the
+  // popover itself; the pill it hangs off of is desktop-hidden instead).
+  const optionsPopover = isOptionsOpen ? (
+    <div className="reader-mode-toggles">
+      <p className="reader-mode-hint">모르는 단어를 눌러보세요.</p>
+      {optionsSections}
     </div>
   ) : null;
 
@@ -634,7 +828,10 @@ export function ReaderMode({
           in .reader-desk-scene/.reader-paper/.reader-toolbar now lives here
           as ordinary scrollable page content instead of a bordered card
           layered on a wallpaper photo. */}
-      <div className="reading-page reading-page--left">
+      <div
+        className="reading-page reading-page--left reading-page--reader"
+        data-left-mode={leftMode}
+      >
         {isSessionRestored ? (
           <span className="reading-restored-chip">
             이전 작업 복원됨
@@ -659,14 +856,20 @@ export function ReaderMode({
             line of text. Shrunk to the small page-marker/bookmark-tag the
             brief asks for: one pill showing the read percentage, which is
             also the trigger for the exact same options popover (display
-            toggles, legend, nav, session management) this always had --
-            content unchanged, just a much smaller trigger and no dedicated
-            progress-bar row above the text. */}
+            toggles, legend, nav, session management) this always had.
+            Reading V3 Gate 3 -- desktop replaces this top pill with a
+            small printed tool row at the page's own bottom edge (see
+            .reading-left-footer below) instead, matching
+            reading-v3-analyzed-reference.png; this trigger/popover pair
+            stays exactly as-is for mobile, which keeps its pre-Gate-3
+            look untouched (hidden at >=1024px purely via CSS, see
+            globals.css -- same isOptionsOpen state either way, so opening
+            it from either trigger can never desync). */}
         <div className="reading-progress-tag-wrap">
           <button
             type="button"
             className="reading-progress-tag"
-            onClick={() => setIsOptionsOpen((value) => !value)}
+            onClick={handleToggleOptions}
             aria-expanded={isOptionsOpen}
             aria-label={`읽기 진행률 ${progressPercent}%, 옵션 ${isOptionsOpen ? "닫기" : "열기"}`}
           >
@@ -677,73 +880,262 @@ export function ReaderMode({
               className={`reading-progress-tag-icon${isOptionsOpen ? " reading-progress-tag-icon-open" : ""}`}
             />
           </button>
-          {optionsPopover}
         </div>
 
-        <div className="reader-text" ref={readerTextRef}>
-          {layout.lines.map((line, lineIndex) => (
-            <p className="reader-line" key={`line-${lineIndex}`}>
-              {line.length > 0
-                ? line.map((segment) =>
-                    segment.type === "token" ? (
-                      <TokenChip
-                        key={segment.key}
-                        token={tokens[segment.tokenIndex]}
-                        tokenIndex={segment.tokenIndex}
-                        segmentKey={segment.key}
-                        isActive={activeIndex === segment.tokenIndex}
-                        focusMode={focusMode}
-                        showJlptTags={showJlptTags}
-                        onSelect={() => selectToken(segment.tokenIndex, segment.key)}
-                      />
-                    ) : (
-                      <span key={segment.key}>{segment.content}</span>
-                    ),
-                  )
-                : " "}
-            </p>
-          ))}
-        </div>
-        {layout.unmatchedTokenIndexes.length > 0 ? (
-          <div className="reader-unmatched-row">
-            <span className="reader-unmatched-label">
-              원문 위치를 찾지 못한 단어
-            </span>
-            <div className="reader-unmatched-chips">
-              {layout.unmatchedTokenIndexes.map((tokenIndex) => (
-                <TokenChip
-                  key={`unmatched-${tokenIndex}`}
-                  token={tokens[tokenIndex]}
-                  tokenIndex={tokenIndex}
-                  isActive={activeIndex === tokenIndex}
-                  focusMode={focusMode}
-                  showJlptTags={showJlptTags}
-                  onSelect={() => selectToken(tokenIndex)}
-                />
-              ))}
+        {/* Mobile's popover anchor: kept right after the trigger pill above
+            (normal flow) so it floats directly below it -- see
+            .reading-options-popover-anchor in globals.css. Desktop
+            overrides this element's position entirely via
+            grid-area:footer (CSS Grid placement ignores DOM source order),
+            so moving this here doesn't affect the desktop footer's own
+            layout at all. */}
+        <div className="reading-options-popover-anchor">{optionsPopover}</div>
+
+        {/* Reading V3 Gate 3 -- only the reading region itself scrolls for
+            long text (DESIGN_SPEC.md State Continuity); the footer below
+            stays fixed at the page's bottom edge (desktop only -- see the
+            .reading-page--reader grid rules in globals.css, same recipe
+            Gate 2B already used for the input slip's own fixed controls).
+            Reading V3 Gate 3B -- reading/options/re-edit are mutually
+            exclusive left-page *modes* on desktop now (data-left-mode
+            above), not a stack of overlays: this region stays mounted
+            (mobile always shows it regardless of mode, exactly as before
+            Gate 3B -- it never had this conflict) but is display:none'd at
+            desktop whenever data-left-mode isn't "reading" -- see
+            globals.css. Kept mounted rather than conditionally rendered
+            specifically so mobile's simultaneous reader+popover overlay
+            (its own, separate, intentional pattern) never has to change. */}
+        <div className="reader-scroll-region" ref={readerScrollRegionRef}>
+          <div className="reader-text" ref={readerTextRef}>
+            {layout.lines.map((line, lineIndex) => (
+              <p className="reader-line" key={`line-${lineIndex}`}>
+                {line.length > 0
+                  ? line.map((segment) =>
+                      segment.type === "token" ? (
+                        <TokenChip
+                          key={segment.key}
+                          token={tokens[segment.tokenIndex]}
+                          tokenIndex={segment.tokenIndex}
+                          segmentKey={segment.key}
+                          isActive={activeIndex === segment.tokenIndex}
+                          focusMode={focusMode}
+                          showJlptTags={showJlptTags}
+                          onSelect={() => selectToken(segment.tokenIndex, segment.key)}
+                        />
+                      ) : (
+                        <span key={segment.key}>{segment.content}</span>
+                      ),
+                    )
+                  : " "}
+              </p>
+            ))}
+          </div>
+          {layout.unmatchedTokenIndexes.length > 0 ? (
+            <div className="reader-unmatched-row">
+              <span className="reader-unmatched-label">
+                원문 위치를 찾지 못한 단어
+              </span>
+              <div className="reader-unmatched-chips">
+                {layout.unmatchedTokenIndexes.map((tokenIndex) => (
+                  <TokenChip
+                    key={`unmatched-${tokenIndex}`}
+                    token={tokens[tokenIndex]}
+                    tokenIndex={tokenIndex}
+                    isActive={activeIndex === tokenIndex}
+                    focusMode={focusMode}
+                    showJlptTags={showJlptTags}
+                    onSelect={() => selectToken(tokenIndex)}
+                  />
+                ))}
+              </div>
             </div>
+          ) : null}
+        </div>
+
+        {/* Reading V3 Gate 3B -- desktop's options *mode*: printed directly
+            in the same reading region the reader itself occupies (same
+            grid-area, see globals.css), not a popover floating over it.
+            JSX-conditional (not just CSS-hidden) since -- unlike
+            reader-scroll-region above -- mobile has no use for this
+            element at all; it keeps using the separate, unchanged
+            optionsPopover/.reading-progress-tag-wrap pairing instead. */}
+        {isOptionsOpen ? (
+          <div className="reading-options-inline">
+            <p className="reader-mode-hint">모르는 단어를 눌러보세요.</p>
+            {optionsSections}
           </div>
         ) : null}
+
+        {/* Desktop-only small printed tool row (reading-v3-analyzed-reference.png's
+            bottom-left "원문 편집 / 표시 옵션 / 문자 수" row). Stays fixed and
+            visible in every left-page mode (Gate 3B: closing options or
+            re-edit needs this same row still there to land back on). */}
+        <div className="reading-left-footer">
+          <button
+            type="button"
+            className="reading-left-footer-btn"
+            onClick={handleToggleTextCollapsed}
+          >
+            <PencilIcon className="button-icon" />
+            원문 편집
+          </button>
+          <button
+            type="button"
+            className="reading-left-footer-btn"
+            onClick={handleToggleOptions}
+            aria-expanded={isOptionsOpen}
+          >
+            <ChevronDownIcon
+              className={`reading-left-footer-btn-icon${isOptionsOpen ? " reading-left-footer-btn-icon-open" : ""}`}
+            />
+            표시 옵션
+          </button>
+          <span className="reading-left-footer-charcount">
+            문자 수 {originalText.length}
+          </span>
+        </div>
+
+        {/* Small physical page-corner marker (reading-v3-analyzed-reference.png's
+            forest-green folded corner), desktop only -- a passive readout,
+            not an interactive trigger (그 역할은 이제 "표시 옵션" 버튼). */}
+        <span className="reading-progress-flag" aria-hidden="true">
+          <span className="reading-progress-flag-label">읽기 진행률</span>
+          <strong>{progressPercent}%</strong>
+        </span>
       </div>
 
       {/* Desktop-only opposite page: always mounted (an idle Shiori guide
-          when nothing is selected, or the pinned word note) so the book
-          never shows a lopsided single page with empty space beside it.
-          Hidden below 1024px via .reading-page--right's own display:none
-          (see globals.css); mobile instead gets the floating card TokenDetailSheet
-          renders itself in its "modal" presentation, further down. */}
-      <div className="reading-page reading-page--right">
-        {tokenDetailProps && isDesktopPinned ? (
-          <TokenDetailSheet presentation="pinned" {...tokenDetailProps} />
-        ) : (
-          <div className="reading-page-idle">
-            <ShioriGuideCard
-              variant="reading"
-              size="md"
-              message="단어를 누르면 이 자리에서 뜻과 예문을 볼 수 있어요."
-            />
-          </div>
-        )}
+          when nothing is selected, or the pinned dictionary ledger) so the
+          book never shows a lopsided single page with empty space beside
+          it. Hidden below 1024px via .reading-page--right's own
+          display:none (see globals.css); mobile instead gets the floating
+          card TokenDetailSheet renders itself in its "modal" presentation,
+          further down. Reading V3 Gate 3 -- the footer row (basket/meaning
+          edit/report + the Save Tray's selection count and save button,
+          previously the separate floating .reading-save-memo card) is now
+          part of this same page, always present once a result exists, so
+          the right page always ends in one small tidy footer row instead
+          of a floating card layered on top of the scene. */}
+      <div className="reading-page reading-page--right reading-page--reader">
+        <div className="reader-scroll-region">
+          {tokenDetailProps && isDesktopPinned ? (
+            <TokenDetailLedger {...tokenDetailProps} />
+          ) : (
+            <div className="reading-page-idle">
+              <ShioriGuideCard
+                variant="reading"
+                size="md"
+                message="단어를 누르면 이 자리에서 뜻과 예문을 볼 수 있어요."
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="reading-right-footer-wrap">
+        <div className="reading-right-footer">
+          {activeToken ? (
+            <>
+              {canAddToBasket(activeToken) ? (
+                <button
+                  type="button"
+                  className={`reading-right-footer-btn${
+                    isTokenInBasket(activeToken) ? " reading-right-footer-btn-active" : ""
+                  }`}
+                  onClick={() => onToggleBasket(activeToken)}
+                  aria-pressed={isTokenInBasket(activeToken)}
+                >
+                  <BookmarkIcon className="button-icon" />
+                  {isTokenInBasket(activeToken) ? "어휘 노트 담기 해제" : "어휘 노트 담기"}
+                </button>
+              ) : null}
+              {activeVocabItemId !== null ? (
+                <MeaningQuickEdit
+                  isEditing={meaningEditItemId === activeVocabItemId}
+                  draftValue={meaningEditDraft}
+                  isSaving={isSavingMeaningEdit}
+                  message={
+                    meaningEditItemId === activeVocabItemId ? meaningEditMessage : ""
+                  }
+                  onStartEdit={() =>
+                    onStartMeaningEdit(
+                      activeVocabItemId,
+                      activeToken.savedMeaningKo || activeToken.meaning_ko,
+                    )
+                  }
+                  onDraftChange={onMeaningEditDraftChange}
+                  onSave={onSaveMeaningEdit}
+                  onCancel={onCancelMeaningEdit}
+                  triggerLabel="뜻 수정"
+                  triggerClassName="reading-right-footer-btn"
+                />
+              ) : null}
+              <button
+                type="button"
+                className="reading-right-footer-btn"
+                onClick={() => onReportMeaning(activeToken)}
+              >
+                <InfoIcon className="button-icon" />
+                신고
+              </button>
+              {hasNextUnknown ? (
+                <button
+                  type="button"
+                  className="reading-right-footer-link"
+                  onClick={goToNextUnknown}
+                >
+                  모르는 단어로
+                </button>
+              ) : null}
+              {activeToken.occurrence_count > 1 && !isAtFirstOccurrence ? (
+                <button
+                  type="button"
+                  className="reading-right-footer-link"
+                  onClick={goToFirstOccurrence}
+                >
+                  첫 등장으로
+                </button>
+              ) : null}
+            </>
+          ) : null}
+          <span className="reading-right-footer-spacer" />
+          <span className="reading-right-footer-count">
+            선택 <strong>{selectedCount}</strong>개
+            <span className="reading-right-footer-saveable">
+              저장 가능 {saveableCount}개
+            </span>
+          </span>
+          {selectedCount > 0 ? (
+            <button
+              type="button"
+              className="reader-bookmark-button reading-right-footer-save"
+              onClick={onSaveSelected}
+              disabled={isSavingBatch}
+            >
+              <FolderIcon className="button-icon" />
+              {isSavingBatch ? "저장 중..." : `선택한 단어 저장 (${selectedCount})`}
+            </button>
+          ) : null}
+        </div>
+        {saveMessage ? (
+          <p className={`reading-right-footer-message reading-right-footer-message--${saveMessageTone}`}>
+            {saveMessage}
+          </p>
+        ) : null}
+        <div className="reading-right-footer-links">
+          {recentlySavedCount > 0 ? (
+            <button
+              type="button"
+              className="reading-right-footer-link"
+              onClick={onStartStudyFromSaved}
+            >
+              저장한 단어 {recentlySavedCount}개 복습
+            </button>
+          ) : null}
+          <button type="button" className="reading-right-footer-link" onClick={onGoToVocab}>
+            어휘 노트 보기
+          </button>
+        </div>
+        </div>
       </div>
 
       {tokenDetailProps && !isDesktopPinned ? (
