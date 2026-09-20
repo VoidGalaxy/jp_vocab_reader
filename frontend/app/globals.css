@@ -1430,7 +1430,7 @@
     display: none;
   }
 
-  .reading-page--reader:not([data-left-mode="reading"]) > .reader-scroll-region {
+  .reading-page--left.reading-page--reader:not([data-left-mode="reading"]) > .reader-scroll-region {
     display: none;
   }
 
