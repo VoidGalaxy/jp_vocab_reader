@@ -427,14 +427,62 @@ export function TokenDetailLedger({
         ) : null}
       </div>
 
+      <span className="token-ledger-meaning-label">뜻</span>
       <p className="token-ledger-meaning">{getDisplayMeaning(displayedMeaning)}</p>
+
+      <div
+        className="token-ledger-status"
+        role="group"
+        aria-label="단어 상태 변경"
+      >
+        <button
+          type="button"
+          className="token-ledger-status-item"
+          data-tone="known"
+          aria-pressed={token.status === "known"}
+          data-active={token.status === "known"}
+          onClick={() => onStatusChange("known")}
+        >
+          <span className="token-ledger-status-dot" aria-hidden="true" />
+          <span className="token-ledger-status-label">{stampLabels.known}</span>
+        </button>
+        <button
+          type="button"
+          className="token-ledger-status-item"
+          data-tone="uncertain"
+          aria-pressed={token.status === "uncertain"}
+          data-active={token.status === "uncertain"}
+          onClick={() => onStatusChange("uncertain")}
+        >
+          <span className="token-ledger-status-dot" aria-hidden="true" />
+          <span className="token-ledger-status-label">{stampLabels.uncertain}</span>
+        </button>
+        <button
+          type="button"
+          className="token-ledger-status-item"
+          data-tone="unknown"
+          aria-pressed={token.status === "unknown"}
+          data-active={token.status === "unknown"}
+          onClick={() => onStatusChange("unknown")}
+        >
+          <span className="token-ledger-status-dot" aria-hidden="true" />
+          <span className="token-ledger-status-label">{stampLabels.unknown}</span>
+        </button>
+        <button
+          type="button"
+          className="token-ledger-status-item"
+          data-tone="unclassified"
+          aria-pressed={token.status === "unclassified"}
+          data-active={token.status === "unclassified"}
+          onClick={() => onStatusChange("unclassified")}
+        >
+          <span className="token-ledger-status-dot" aria-hidden="true" />
+          <span className="token-ledger-status-label">{stampLabels.unclassified}</span>
+        </button>
+      </div>
+
       {metaParts.length > 0 ? (
         <p className="token-ledger-meta">{metaParts.join(" · ")}</p>
-      ) : null}
-      {token.jlpt_level ? (
-        <p className="jlpt-detail-hint">
-          JLPT 추천 어휘 기준이며, 비공식 참고용 표시입니다.
-        </p>
       ) : null}
 
       <div className="token-ledger-example">
@@ -455,48 +503,11 @@ export function TokenDetailLedger({
         )}
       </div>
 
-      <div
-        className="token-note-stamps token-ledger-stamps"
-        role="group"
-        aria-label="단어 상태 변경"
-      >
-        <button
-          type="button"
-          className="token-note-stamp success-button"
-          aria-pressed={token.status === "known"}
-          data-active={token.status === "known"}
-          onClick={() => onStatusChange("known")}
-        >
-          {stampLabels.known}
-        </button>
-        <button
-          type="button"
-          className="token-note-stamp warning-button"
-          aria-pressed={token.status === "uncertain"}
-          data-active={token.status === "uncertain"}
-          onClick={() => onStatusChange("uncertain")}
-        >
-          {stampLabels.uncertain}
-        </button>
-        <button
-          type="button"
-          className="token-note-stamp danger-button"
-          aria-pressed={token.status === "unknown"}
-          data-active={token.status === "unknown"}
-          onClick={() => onStatusChange("unknown")}
-        >
-          {stampLabels.unknown}
-        </button>
-        <button
-          type="button"
-          className="token-note-stamp secondary-button"
-          aria-pressed={token.status === "unclassified"}
-          data-active={token.status === "unclassified"}
-          onClick={() => onStatusChange("unclassified")}
-        >
-          {stampLabels.unclassified}
-        </button>
-      </div>
+      {token.jlpt_level ? (
+        <p className="jlpt-detail-hint">
+          JLPT 추천 어휘 기준이며, 비공식 참고용 표시입니다.
+        </p>
+      ) : null}
       {token.status === "unclassified" ? (
         <p className="token-note-stamp-hint">
           모르는·헷갈리는 단어는 자동 저장돼요

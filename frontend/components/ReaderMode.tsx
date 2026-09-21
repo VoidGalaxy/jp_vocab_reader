@@ -31,6 +31,23 @@ function computeScrollProgress(container: HTMLElement | null): number {
   return scrolled / total;
 }
 
+// Reading V3 Gate C correction -- desktop's actual scrolling element is
+// .reader-scroll-region itself (overflow-y:auto, see globals.css), not the
+// window (window never scrolls at this breakpoint -- confirmed via
+// body.scrollHeight === window.innerHeight in Gate B/C QA). The
+// window-scroll-based computeScrollProgress above is correct for mobile
+// (where the page itself scrolls) but silently never advances past its
+// initial value on desktop, which is why the progress ribbon stayed stuck.
+// scrollTop / max(scrollHeight - clientHeight, 1), clamped to 0..1.
+function computeReaderRegionProgress(region: HTMLElement | null): number {
+  if (!region) {
+    return 0;
+  }
+  const total = Math.max(region.scrollHeight - region.clientHeight, 1);
+  const scrolled = Math.min(Math.max(region.scrollTop, 0), total);
+  return scrolled / total;
+}
+
 // scrollIntoView/scrollTo's explicit `behavior: "smooth"` option bypasses
 // the CSS `scroll-behavior: auto !important` the app's global
 // prefers-reduced-motion rule sets (that CSS property only governs "auto"
@@ -304,6 +321,11 @@ export function ReaderMode({
     const container = readerScrollRegionRef.current;
     if (container) {
       container.scrollTop = savedReaderScrollTopRef.current;
+      // Reading V3 Gate C correction -- recompute immediately rather than
+      // waiting for the native "scroll" event this assignment triggers, so
+      // the progress ribbon's number is never stale even for one frame
+      // right after returning from options/re-edit.
+      setScrollProgress(computeReaderRegionProgress(container));
     }
   }, [isDesktopPinned, leftMode]);
 
@@ -426,27 +448,51 @@ export function ReaderMode({
   // inactive tabs, some headless/low-power contexts), which would leave the
   // progress bar stuck. A ~50ms timer is imperceptible for a position
   // indicator and fires reliably regardless of paint state.
+  //
+  // Reading V3 Gate C correction -- desktop (isDesktopPinned) subscribes to
+  // .reader-scroll-region's own "scroll" event and computes from its
+  // scrollTop/scrollHeight/clientHeight (see computeReaderRegionProgress);
+  // that element, not the window, is what actually scrolls at this
+  // breakpoint. Mobile keeps subscribing to window "scroll" exactly as
+  // before -- untouched behavior, untouched formula.
   useEffect(() => {
-    function handleScroll() {
+    function recompute() {
       if (scrollProgressThrottleRef.current !== null) {
         return;
       }
       scrollProgressThrottleRef.current = window.setTimeout(() => {
         scrollProgressThrottleRef.current = null;
-        setScrollProgress(computeScrollProgress(readerTextRef.current));
+        setScrollProgress(
+          isDesktopPinned
+            ? computeReaderRegionProgress(readerScrollRegionRef.current)
+            : computeScrollProgress(readerTextRef.current),
+        );
       }, 50) as unknown as number;
     }
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
+    recompute();
+    const scrollTarget: EventTarget = isDesktopPinned
+      ? readerScrollRegionRef.current ?? window
+      : window;
+    scrollTarget.addEventListener("scroll", recompute, { passive: true });
+    window.addEventListener("resize", recompute);
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
+      scrollTarget.removeEventListener("scroll", recompute);
+      window.removeEventListener("resize", recompute);
+      // isDesktopPinned flips shortly after mount (the separate matchMedia
+      // effect below), which tears this effect down and rebuilds it once
+      // more almost immediately -- if a throttle timeout was still pending
+      // at that moment, clearing it without also resetting the ref left
+      // recompute()'s own guard permanently non-null (the timeout callback
+      // that would have reset it to null never got to run), silently
+      // disabling every future recompute call, forever, on this and every
+      // later effect instance. Reset it here too, not just inside the
+      // timeout body.
       if (scrollProgressThrottleRef.current !== null) {
         window.clearTimeout(scrollProgressThrottleRef.current);
+        scrollProgressThrottleRef.current = null;
       }
     };
-  }, [layout]);
+  }, [layout, isDesktopPinned]);
 
   // Bubbles the live scroll fraction up to the parent (for localStorage
   // persistence) on a trailing debounce, decoupled from the throttled local
@@ -970,28 +1016,45 @@ export function ReaderMode({
             bottom-left "원문 편집 / 표시 옵션 / 문자 수" row). Stays fixed and
             visible in every left-page mode (Gate 3B: closing options or
             re-edit needs this same row still there to land back on). */}
+        {/* Reading V3 Gate C correction -- at 1024-1199px the full labels
+            ("원문 편집 / 표시 옵션 / 문자 수 N") wrapped the char-count number
+            one digit per line, reading as broken text rather than a one-line
+            tool strip. Each label now carries both a full and a compact span
+            (CSS below shows exactly one per breakpoint, see .reading-left-
+            footer-label-full/-compact); aria-label pins the button's
+            accessible name to the full phrase regardless of which span is
+            visually showing, so assistive tech never sees "편집"/"옵션". */}
         <div className="reading-left-footer">
           <button
             type="button"
             className="reading-left-footer-btn"
             onClick={handleToggleTextCollapsed}
+            aria-label="원문 편집"
           >
             <PencilIcon className="button-icon" />
-            원문 편집
+            <span className="reading-left-footer-label-full">원문 편집</span>
+            <span className="reading-left-footer-label-compact">편집</span>
           </button>
           <button
             type="button"
             className="reading-left-footer-btn"
             onClick={handleToggleOptions}
             aria-expanded={isOptionsOpen}
+            aria-label="표시 옵션"
           >
             <ChevronDownIcon
               className={`reading-left-footer-btn-icon${isOptionsOpen ? " reading-left-footer-btn-icon-open" : ""}`}
             />
-            표시 옵션
+            <span className="reading-left-footer-label-full">표시 옵션</span>
+            <span className="reading-left-footer-label-compact">옵션</span>
           </button>
           <span className="reading-left-footer-charcount">
-            문자 수 {originalText.length}
+            <span className="reading-left-footer-label-full">
+              문자 수 {originalText.length}
+            </span>
+            <span className="reading-left-footer-label-compact">
+              {originalText.length}자
+            </span>
           </span>
         </div>
 
@@ -1097,7 +1160,21 @@ export function ReaderMode({
               ) : null}
             </>
           ) : null}
-          <span className="reading-right-footer-spacer" />
+        </div>
+        {/* Reading V3 Gate C -- the accounting sentence + save command used
+            to sit as trailing flex items in the same wrapping row as the
+            per-word tools above, pushed right by a flex:1 spacer. That
+            meant how many lines the row took (and therefore the whole
+            footer's height) depended on which per-word tools happened to
+            be present (뜻 수정 only shows once a word is already saved) AND
+            on selectedCount (the save button only exists once
+            selectedCount > 0) at the same time -- exactly the combination
+            that could push the save button alone onto a second line the
+            moment selectedCount went 0 -> 1, moving the footer's height.
+            A dedicated second row removes that coupling: its own presence
+            and height never depend on selectedCount, only whether the save
+            button paints *inside* it. */}
+        <div className="reading-right-footer-tail">
           <span className="reading-right-footer-count">
             선택 <strong>{selectedCount}</strong>개
             <span className="reading-right-footer-saveable">

@@ -328,6 +328,61 @@
     aspect-ratio: auto;
     width: 100%;
     height: calc(100svh - 50px);
+    /* Reading V3 Gate D -- shared book-edge anchor for the candidate tab/
+       tray (ReadingVocabPanel.tsx), replacing viewport-edge right:0/3%.
+       Base values here are the TALL photo's own measured coordinates
+       (v3-reading-open-book-desktop-tall.png, 1536x1024 native); the wide
+       photo's media query below overrides only the three leaf values
+       (native-w/h, right-x) -- everything derived from them recomputes
+       automatically since custom properties resolve at used-value time,
+       picking up whichever leaf values actually cascaded for a given
+       element. Frame width is exactly 100vw and height is exactly
+       `100svh - 50px` (confirmed via getBoundingClientRect at every
+       required viewport, not assumed), so the whole conversion is plain
+       object-fit:cover math expressed in CSS max()/calc() -- no JS resize
+       listener, no runtime measurement.
+       --reading-book-right-x is the book's own right outer edge (dark
+       cover-cloth trim, not the pale page edge alone) in the ORIGINAL
+       photo's pixel space, averaged over the same height band the
+       candidate tab's `top: 30%` lands on (measured directly against the
+       source PNGs, not guessed from the page safe-zone). */
+    --reading-book-native-w: 1536;
+    --reading-book-native-h: 1024;
+    /* Unitless (not px): calc() cannot multiply two length values together
+       (length * length is invalid), and --reading-book-screen-x below
+       needs (right-x / native-w) -- a plain ratio -- times a length. Kept
+       unitless here so that division produces a unitless number, not a
+       length. */
+    --reading-book-right-x: 1265;
+    /* object-fit:cover: the image is scaled by whichever ratio is larger
+       (width-driven or height-driven), then centered -- renderedW is that
+       resulting on-screen image width; cropX is however much of it hangs
+       off each side once centered against the frame's actual (100vw)
+       width. This single formula stays correct whether a given viewport
+       happens to be width-driven (no horizontal crop -- most of the tall
+       bucket, 1280px+) or height-driven (1024px-wide viewports crop the
+       photo's sides), unlike a single fixed percentage. */
+    --reading-book-rendered-w: max(
+      100vw,
+      calc((100svh - 50px) * var(--reading-book-native-w) / var(--reading-book-native-h))
+    );
+    --reading-book-crop-x: calc((var(--reading-book-rendered-w) - 100vw) / 2);
+    --reading-book-screen-x: calc(
+      var(--reading-book-right-x) / var(--reading-book-native-w) * var(--reading-book-rendered-w) -
+        var(--reading-book-crop-x)
+    );
+    /* Distance from the frame's own right edge (== 100vw, frame.left is
+       always 0) back to the measured book edge -- this is what a `right:`
+       value needs to land exactly on that edge. */
+    --reading-book-right-offset: calc(100vw - var(--reading-book-screen-x));
+    /* Reading V3 Gate D -- how far the closed tab pokes out beyond the
+       book's edge (8-12px required; 10px picked as the midpoint) --
+       shared by the tab and the open tray so their contact point is
+       byte-identical, not just visually close. */
+    --reading-candidate-tab-offset: 10px;
+    --reading-candidate-anchor-right: calc(
+      var(--reading-book-right-offset) - var(--reading-candidate-tab-offset)
+    );
   }
 
   /* Home Nav V1.1 seam repair (references/mockups/home-nav-prep/
@@ -399,6 +454,14 @@
     width: 29%;
     height: 50.8%;
     padding: 14px 18px;
+    /* Reading V3 Gate B -- single source of truth for the input/analyzed
+       shared y origin: .reading-slip-head's own min-height/margin-bottom
+       (input state) and .reader-scroll-region's margin-top (analyzed
+       state, no visible header of its own) both read these two variables
+       instead of two separately-hand-tuned literals, so the two states
+       cannot drift apart again by editing only one of them. */
+    --reading-left-head-block: 40px;
+    --reading-left-head-gap: 8px;
   }
 
   .reading-page--right {
@@ -447,6 +510,21 @@
     top: 10.6%;
     width: 31.72%;
     height: 69.3%;
+  }
+
+  /* Reading V3 Gate D -- same book-edge anchor system as the tall bucket
+     (see .reading-scene-v2-frame above), just the wide photo's own native
+     size and measured right-edge x (v3-reading-open-book-desktop.png,
+     1849x851 native, right-x measured over the same ~30%-of-frame height
+     band the candidate tab sits at). Every --reading-book-* property
+     derived from these three is declared once, in the base/tall block --
+     it recomputes here automatically because custom properties resolve
+     against whatever cascaded for a given element, not where they were
+     declared. */
+  .reading-scene-v2-frame {
+    --reading-book-native-w: 1849;
+    --reading-book-native-h: 851;
+    --reading-book-right-x: 1553;
   }
 }
 
@@ -499,14 +577,20 @@
 .reading-slip-title {
   margin: 0;
   color: var(--screen-accent, var(--primary-dark));
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 800;
+  /* Reading V3 Gate B -- tightened from the browser default (~1.2) so the
+     head block's real content height fits inside the smaller
+     --reading-left-head-block below with no slack to spare; the title
+     itself is otherwise unchanged (still bold, still clearly a heading). */
+  line-height: 1.1;
 }
 
 .reading-slip-subtitle {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: var(--text-secondary);
   font-size: 13px;
+  line-height: 1.25;
   word-break: keep-all;
 }
 
@@ -688,8 +772,8 @@
   .reading-slip-head {
     display: block;
     order: 10;
-    min-height: 54px;
-    margin-bottom: 14px;
+    min-height: var(--reading-left-head-block, 54px);
+    margin-bottom: var(--reading-left-head-gap, 14px);
   }
 
   .reading-slip {
@@ -705,8 +789,11 @@
        State Contract); :focus-within stands in for "the active paragraph"
        -- a plain <textarea> has no per-paragraph DOM to target individually,
        so the whole rule strengthening while the editor has focus is the
-       closest honest equivalent without inventing a contenteditable editor. */
-    border-left: 2px solid rgba(122, 148, 110, 0.45);
+       closest honest equivalent without inventing a contenteditable editor.
+       Reading V3 Gate B -- thinned/faded a step (was 2px/0.45) so the rule
+       reads as a quiet margin mark, not a stronger line than the enlarged
+       body text sitting next to it; .reader-text below mirrors this exactly. */
+    border-left: 1.5px solid rgba(122, 148, 110, 0.32);
     padding-left: 16px;
     transition: border-color var(--motion-fast) var(--ease-soft);
   }
@@ -770,14 +857,22 @@
        so it was still applying -- textarea content sat 14px lower than
        .reader-text's (0 padding), breaking the shared y origin. Measured
        via getBoundingClientRect against .reader-line, not guessed. */
-    padding: 0;
+    /* Reading V3 Gate B -- 3px top only, matching .reader-line's own
+       `padding: 3px 0` exactly (see below): both textarea and reader-line
+       now start their real glyph the same distance into an identical box,
+       instead of comparing a flush-top textarea against a 3px-inset
+       reader-line. Horizontal stays 0 -- the shared 16px x-inset lives on
+       this wrapper's own padding-left above, not here. */
+    padding: 3px 0 0;
     font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
     /* Matches .reader-text/.reader-line below exactly -- same desktop
        font-family/size/line-height so submitting text swaps editor
        semantics for tokenized reader semantics without the first line
-       visibly shifting (DESIGN_SPEC.md State Continuity). */
-    font-size: 16px;
-    line-height: 1.9;
+       visibly shifting (DESIGN_SPEC.md State Continuity). Reading V3 Gate B
+       -- comfortable long-form Japanese reading size/rhythm, up from
+       16px/1.9 (1440+ goes to 18px, see the dedicated breakpoint below). */
+    font-size: 17px;
+    line-height: 2;
   }
 
   .reading-page--start .reading-slip textarea {
@@ -1216,8 +1311,8 @@
      editor's first line, whichever header is actually showing. */
   .reading-progress-tag-wrap {
     display: block;
-    min-height: 54px;
-    margin-bottom: 14px;
+    min-height: var(--reading-left-head-block, 54px);
+    margin-bottom: var(--reading-left-head-gap, 14px);
   }
 }
 
@@ -1481,27 +1576,41 @@
   }
 
   .reading-page--reader[data-left-mode="reading"] > .reader-scroll-region {
-    /* 54px (.reading-slip-head min-height) + 14px (its margin-bottom) --
-       see the comment above. Reading mode only: options has no header
+    /* Reading V3 Gate B -- same --reading-left-head-block/-gap variables
+       .reading-slip-head itself reads (see .reading-page--left), not a
+       hand-copied literal -- the two states share one number now, not two
+       that happened to match. Reading mode only: options has no header
        block of its own to match, and re-edit already gets the same
        spacing for free from ReadingSourceSlip's own head (see above). */
-    margin-top: 68px;
+    margin-top: calc(
+      var(--reading-left-head-block, 54px) + var(--reading-left-head-gap, 14px)
+    );
   }
 
   .reading-left-footer {
     grid-area: footer;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 6px 14px;
+    gap: 6px 10px;
     margin-top: 12px;
     padding-top: 10px;
-    /* Clears .reading-progress-flag, a page-corner overlay positioned
-       independently of this row's own flow (see below). */
-    padding-left: 66px;
+    /* Reading V3 Gate C -- clears the enlarged 66px .reading-progress-flag
+       ribbon (was 52px + 14px clearance = 66px; now 66px + 14px = 80px). */
+    padding-left: 80px;
     border-top: 1px dashed var(--paper-border);
     color: var(--muted);
-    font-size: 12px;
+    /* Reading V3 Gate C -- was 12px; 1440+ override below. */
+    font-size: 12.5px;
+  }
+
+  /* Reading V3 Gate C -- a quiet vertical rule between each tool (원문
+     편집 | 표시 옵션 | 문자 수) instead of relying on bare gap alone, so the
+     row reads as one continuous printed strip with light dividers, not
+     three independent floating labels. */
+  .reading-left-footer > :not(:first-child) {
+    padding-left: 10px;
+    border-left: 1px solid var(--paper-border);
   }
 
   .reading-page--reader[data-left-mode="reedit"] .reading-left-footer,
@@ -1517,14 +1626,21 @@
     width: auto;
     min-width: 0;
     min-height: 0;
+    /* Unchanged from pre-Gate-C -- the footer row's own height must not
+       move, so the hit area stays exactly this box, just restyled. */
     padding: 4px 2px;
     border: none;
     background: none;
     color: var(--text-secondary);
-    font-size: 12px;
+    font-size: inherit;
     font-weight: 600;
     white-space: nowrap;
     box-shadow: none;
+    text-decoration: underline solid transparent;
+    text-underline-offset: 3px;
+    transition:
+      color var(--motion-fast) var(--ease-soft),
+      text-decoration-color var(--motion-fast) var(--ease-soft);
   }
 
   .reading-left-footer-btn:not(:disabled):hover {
@@ -1532,6 +1648,12 @@
     background: none;
     box-shadow: none;
     transform: none;
+    text-decoration-color: currentColor;
+  }
+
+  .reading-left-footer-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
   }
 
   .reading-left-footer-btn .button-icon {
@@ -1551,7 +1673,30 @@
 
   .reading-left-footer-charcount {
     margin-left: auto;
+    flex: 0 0 auto;
     color: var(--muted);
+    /* Reading V3 Gate C correction -- root cause of the 1024 wrap: unlike
+       the two buttons (already flex:0 0 auto + white-space:nowrap), this
+       span had neither, so once the row's total content outgrew the
+       column width, the flex item shrank below its own text's natural
+       width and the number wrapped one digit per line instead of the row
+       overflowing/scrolling. Compact text (below) reduces how often this
+       row gets tight in the first place; this stops it from ever wrapping
+       internally regardless. */
+    white-space: nowrap;
+  }
+
+  /* Reading V3 Gate C correction -- full phrase by default (1200px+); the
+     1024-1199px override below swaps to the compact variant instead. Both
+     spans always exist in the DOM (see ReaderMode.tsx) so the button's own
+     aria-label -- not this visibility toggle -- is what fixes the
+     accessible name. */
+  .reading-left-footer-label-full {
+    display: inline;
+  }
+
+  .reading-left-footer-label-compact {
+    display: none;
   }
 
   /* Reading V3 Gate 3B -- desktop's options mode is .reading-options-inline
@@ -1580,7 +1725,10 @@
     left: 0;
     bottom: 0;
     z-index: 2;
-    width: 52px;
+    /* Reading V3 Gate C -- was 52px; widened toward a real page-corner
+       bookmark's presence (.reading-left-footer's padding-left above
+       clears the new width with the same 14px gap it always kept). */
+    width: 66px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1602,8 +1750,35 @@
   }
 
   .reading-progress-flag strong {
-    font-size: 14px;
+    /* Reading V3 Gate C -- was 14px; the label above stays 8px so the
+       percentage reads as the ribbon's own headline number. */
+    font-size: 18px;
     font-weight: 800;
+  }
+}
+
+/* Reading V3 Gate C correction -- 1024-1199px only: the full labels
+   ("원문 편집" / "표시 옵션" / "문자 수 186") plus the two vertical dividers
+   and the widened 66px ribbon's clearance left too little room in this
+   narrow band, wrapping the char count one digit per line. Compact text
+   only -- callbacks, aria-expanded, icons, footer height/position, and the
+   30-32px button geometry are all untouched; only which <span> paints. */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .reading-left-footer-label-full {
+    display: none;
+  }
+
+  .reading-left-footer-label-compact {
+    display: inline;
+  }
+}
+
+/* Reading V3 Gate C -- left tool row's second fixed tier (1440+), matching
+   the pattern every other Gate B/C typography table already uses; no vw
+   units, footer height/position untouched (font-size only). */
+@media (min-width: 1440px) {
+  .reading-left-footer {
+    font-size: 13px;
   }
 }
 
@@ -1631,6 +1806,11 @@
   gap: 6px 12px;
 }
 
+/* Reading V3 Gate C -- was a filled/bordered pill (border+panel-bg+999px
+   radius); padding grows by exactly the border's old 1px on each side so
+   the actual hit area stays the same size with the visible capsule gone.
+   Rest state carries a transparent underline so hover only needs to swap
+   its color in, not add a new decoration line (avoids any reflow/jitter). */
 .reading-right-footer-btn {
   display: inline-flex;
   align-items: center;
@@ -1638,14 +1818,26 @@
   width: auto;
   min-width: 0;
   min-height: 0;
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--panel-bg);
+  padding: 5px 9px;
+  border: none;
+  border-radius: 0;
+  background: none;
   color: var(--text-secondary);
   font-size: 11.5px;
   font-weight: 600;
+  /* Explicit, not "normal" -- font-metric-based auto line-height can
+     round to a different pixel value at font-weight 800 vs 600 in this
+     stack (confirmed via computed style: 27px vs 26px at identical
+     font-size), which grew the whole footer by 1px the moment
+     .reading-right-footer-save (weight 800) appeared. A fixed line-height
+     shared with that rule removes the dependency on font-weight entirely. */
+  line-height: 1.4;
   box-shadow: none;
+  text-decoration: underline solid transparent;
+  text-underline-offset: 3px;
+  transition:
+    color var(--motion-fast) var(--ease-soft),
+    text-decoration-color var(--motion-fast) var(--ease-soft);
 }
 
 .reading-right-footer-btn .button-icon {
@@ -1655,15 +1847,24 @@
 
 .reading-right-footer-btn:not(:disabled):hover {
   color: var(--screen-accent, var(--accent));
-  background: var(--soft-bg);
+  background: none;
   box-shadow: none;
   transform: none;
+  text-decoration-color: currentColor;
 }
 
+.reading-right-footer-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* "어휘 노트 담기 해제" (already saved) -- was a filled coral pill; now just
+   the same ink-color + permanent underline mark, at rest (not only on
+   hover), so "this word is already in the basket" reads as a quiet status
+   mark rather than a second button style. */
 .reading-right-footer-btn-active {
-  border-color: var(--tone-coral);
   color: var(--tone-coral);
-  background: #f7e9e2;
+  text-decoration-color: var(--tone-coral);
 }
 
 .reading-right-footer-link {
@@ -1692,14 +1893,37 @@
   opacity: 0.5;
 }
 
-.reading-right-footer-spacer {
-  flex: 1 1 auto;
+/* Reading V3 Gate C -- accounting sentence + save command's own row,
+   separate from the per-word tools row above (see the JSX comment in
+   ReaderMode.tsx for why: keeps this row's presence/height independent of
+   selectedCount, so 0 -> 1+ never moves the footer). Right-aligned to
+   match where the old flex:1 spacer used to push these same two items. */
+/* Reading V3 Gate C -- accounting sentence on its own line, save command
+   on its own line below (right-aligned), always -- not a row that only
+   wraps once the two no longer fit side by side. At 1024px the count
+   (~144px) and save button (~145px) together don't fit inside the right
+   page's ~274px column, so a width-dependent single row would silently
+   wrap only there, changing this row's height only at that breakpoint and
+   only once selectedCount goes 0 -> 1. Stacking unconditionally, at every
+   width, with a fixed min-height covering both lines whether or not save
+   is currently rendered, makes the height identical at 0 and 1+ selected,
+   at every breakpoint -- one rule instead of a breakpoint-specific patch. */
+.reading-right-footer-tail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-top: 4px;
+  min-height: 48px;
 }
 
+/* Reading V3 Gate C -- "선택 N개" and "저장 가능 N개" now read as one quiet
+   accounting sentence instead of a count plus a separate bordered pill
+   badge next to it (see .reading-right-footer-saveable below). */
 .reading-right-footer-count {
   display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  gap: 4px;
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 600;
@@ -1712,22 +1936,85 @@
 }
 
 .reading-right-footer-saveable {
-  padding: 1px 7px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--soft-bg);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
   color: var(--muted);
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
 }
 
-.reading-right-footer-save {
+.reading-right-footer-saveable::before {
+  content: "\00b7\0020";
+  color: var(--muted);
+}
+
+/* Reading V3 Gate C -- this button also carries the shared
+   .reader-bookmark-button class (notched CTA shape/forest-green fill/
+   drop-shadow, used elsewhere as a real floating call-to-action -- see its
+   own comment near .reader-bookmark-button). That look is exactly the
+   "리본/CTA" this gate exists to remove from the footer, but the shared
+   class itself must stay untouched for its other call sites, so every
+   shape/color property is overridden here instead via the ancestor-scoped
+   selector below (higher specificity than the single-class shared rule,
+   regardless of source order). Only ever rendered when selectedCount > 0
+   (ReaderMode.tsx) -- never introduced as a hidden/disabled control at 0. */
+.reading-right-footer-wrap .reading-right-footer-save {
   width: auto;
   min-width: 0;
-  padding: 7px 14px;
-  font-size: 12px;
+  padding: 5px 9px;
+  border: none;
+  border-radius: 0;
+  clip-path: none;
+  background: none;
+  box-shadow: none;
+  color: var(--screen-accent, var(--tone-ink-green));
+  /* Reading V3 Gate C -- exactly matches .reading-right-footer-btn's own
+     font-size (11.5px, not this button's pre-Gate-C 12px): the two must
+     render the same line-box height or the row (and therefore the whole
+     footer) gains a stray 1px the moment this button appears at
+     selectedCount 1, which is exactly the failure Gate C rules out. Bold
+     weight + underline + accent color still keep it visually distinct
+     without needing a different font size. */
+  font-size: 11.5px;
+  font-weight: 800;
+  /* Matches .reading-right-footer-btn's own explicit line-height exactly
+     -- see that rule's comment (font-weight 800 vs 600 rounds "normal"
+     line-height to a different pixel value in this font stack). */
+  line-height: 1.4;
   white-space: nowrap;
+  text-decoration: underline solid var(--screen-accent, var(--tone-ink-green));
+  text-underline-offset: 3px;
+  transform: none;
+  transition: opacity var(--motion-fast) var(--ease-soft);
+}
+
+.reading-right-footer-wrap .reading-right-footer-save .button-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.reading-right-footer-wrap .reading-right-footer-save:not(:disabled):hover {
+  transform: none;
+  box-shadow: none;
+  opacity: 0.8;
+}
+
+.reading-right-footer-wrap .reading-right-footer-save:not(:disabled):active {
+  transform: none;
+}
+
+.reading-right-footer-wrap .reading-right-footer-save:disabled {
+  background: none;
+  box-shadow: none;
+  opacity: 0.55;
+}
+
+.reading-right-footer-wrap .reading-right-footer-save:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .reading-right-footer-message {
@@ -1769,12 +2056,16 @@
   flex-direction: column;
 }
 
+/* Reading V3 Gate A -- selected-word header/nav/close is the ledger's own
+   page-navigation strip, not a decorative title bar: nav and close hit
+   areas below are sized for a confident click/tap (30-32px), independent
+   of how small their visual glyphs stay. */
 .token-ledger-header {
   display: flex;
   align-items: center;
   gap: 10px;
   flex: 0 0 auto;
-  margin-bottom: 12px;
+  margin-bottom: 22px;
 }
 
 .token-ledger-eyebrow {
@@ -1786,14 +2077,14 @@
 .token-ledger-nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-left: auto;
 }
 
 .token-ledger-nav-button {
   position: relative;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   min-width: 0;
   min-height: 0;
   padding: 0;
@@ -1840,6 +2131,15 @@
   text-align: center;
 }
 
+/* Ledger-scoped close-button sizing -- .token-sheet-close is shared with
+   the unrelated mobile card, so its own hit area (30px) stays untouched;
+   this override only ever reaches the desktop ledger's close button. */
+.token-ledger .token-sheet-close {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+}
+
 .token-ledger-word-row {
   display: flex;
   flex-wrap: wrap;
@@ -1851,14 +2151,14 @@
 .token-ledger-word {
   color: var(--text);
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
-  font-size: 30px;
+  font-size: 36px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.18;
 }
 
 .token-ledger-reading {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .token-ledger-pos {
@@ -1866,56 +2166,253 @@
   border-radius: 999px;
   background: var(--soft-bg);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
+}
+
+.token-ledger-meaning-label {
+  display: block;
+  margin: 22px 0 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 700;
 }
 
 .token-ledger-meaning {
   flex: 0 0 auto;
-  margin: 10px 0 0;
+  margin: 0;
   color: var(--text);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
+  line-height: 1.5;
+}
+
+/* Printed four-column status selector -- replaces the filled pastel pill
+   grid with a borderless row of outline/filled circular marks, so status
+   reads as a classification mark rather than a form control. Stable
+   36-40px row height at every status (no layout shift on toggle). */
+.token-ledger-status {
+  display: flex;
+  align-items: stretch;
+  height: 38px;
+  margin-top: 22px;
+}
+
+.token-ledger-status-item {
+  display: flex;
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 4px;
+  border: none;
+  border-left: 1px solid var(--paper-border);
+  border-radius: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.token-ledger-status-item:first-child {
+  border-left: none;
+}
+
+.token-ledger-status-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--muted);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.token-ledger-status-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.token-ledger-status-item:not(:disabled):hover {
+  background: var(--soft-bg);
+  box-shadow: none;
+  transform: none;
+}
+
+.token-ledger-status-item[data-active="true"] {
+  font-weight: 700;
+}
+
+.token-ledger-status-item[data-tone="known"][data-active="true"] {
+  color: #2f6b46;
+}
+
+.token-ledger-status-item[data-tone="known"][data-active="true"] .token-ledger-status-dot {
+  border-color: #4f8c66;
+  background: #4f8c66;
+}
+
+.token-ledger-status-item[data-tone="uncertain"][data-active="true"] {
+  color: #6f5f96;
+}
+
+.token-ledger-status-item[data-tone="uncertain"][data-active="true"] .token-ledger-status-dot {
+  border-color: #6f5f96;
+  background: #6f5f96;
+}
+
+.token-ledger-status-item[data-tone="unknown"][data-active="true"] {
+  color: #96603f;
+}
+
+.token-ledger-status-item[data-tone="unknown"][data-active="true"] .token-ledger-status-dot {
+  border-color: #96603f;
+  background: #96603f;
+}
+
+.token-ledger-status-item[data-tone="unclassified"][data-active="true"] {
+  color: var(--text);
+}
+
+.token-ledger-status-item[data-tone="unclassified"][data-active="true"] .token-ledger-status-dot {
+  border-color: var(--text);
+  background: var(--text);
 }
 
 .token-ledger-meta {
   flex: 0 0 auto;
-  margin: 6px 0 0;
+  margin: 20px 0 0;
   color: var(--muted);
   font-size: 12px;
 }
 
 .token-ledger-example {
   flex: 0 0 auto;
-  margin-top: 14px;
-  padding-top: 12px;
+  margin-top: 20px;
+  padding-top: 14px;
   border-top: 1px dashed var(--paper-border);
 }
 
 .token-ledger-example-label {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 700;
 }
 
 .token-ledger-example-text {
   margin: 0;
   color: var(--text);
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 15.5px;
+  line-height: 1.8;
 }
 
 .token-ledger-example-hint {
   margin: 0;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
-.token-ledger-stamps {
-  flex: 0 0 auto;
-  margin-top: 16px;
+/* Trailing conditional notes (JLPT disclaimer, unclassified auto-save
+   hint) -- scoped to sit directly under the ledger's example block; the
+   shared base rules (used unmodified by the mobile card) keep their own
+   margin there. Order-independent spacing: whichever of the two renders
+   first gets the group gap, the second (if both appear) gets a quieter
+   one -- no fixed/empty gap is left when neither renders. */
+.token-ledger > .jlpt-detail-hint,
+.token-ledger > .token-note-stamp-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+}
+
+.token-ledger > .jlpt-detail-hint + .token-note-stamp-hint {
+  margin-top: 6px;
+}
+
+/* Reading V3 Gate A correction -- 1024-1439 only: a normal word (short
+   meaning, short example) was clipped below the fold and forced a
+   scrollbar even at rest. Compresses vertical rhythm between groups at
+   this narrower tier only; 1440+ keeps the original Gate A spacing
+   untouched (no rule here touches typography, row height, or the 1440+
+   media block). Long-meaning/long-example words still scroll as before --
+   this only removes the *default* scroll a short word shouldn't need. */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .token-ledger-header {
+    margin-bottom: 13px;
+  }
+
+  .token-ledger-meaning-label {
+    margin-top: 14px;
+  }
+
+  .token-ledger-status {
+    margin-top: 13px;
+  }
+
+  .token-ledger-meta {
+    margin-top: 11px;
+  }
+
+  .token-ledger-example {
+    margin-top: 12px;
+    padding-top: 9px;
+  }
+
+  .token-ledger > .jlpt-detail-hint,
+  .token-ledger > .token-note-stamp-hint {
+    margin-top: 7px;
+  }
+
+  .token-ledger > .jlpt-detail-hint + .token-note-stamp-hint {
+    margin-top: 3px;
+  }
+}
+
+/* Reading V3 Gate A typography tier -- fixed breakpoint (never vw-based).
+   1024-1439 sizes are the base rules above; 1440+ bumps headword/meaning/
+   reading/example/section-label/meta roles to their larger target. */
+@media (min-width: 1440px) {
+  .token-ledger-word {
+    font-size: 42px;
+    line-height: 1.15;
+  }
+
+  .token-ledger-reading {
+    font-size: 16px;
+  }
+
+  .token-ledger-meaning-label {
+    font-size: 13px;
+  }
+
+  .token-ledger-meaning {
+    font-size: 20px;
+  }
+
+  .token-ledger-meta {
+    font-size: 12.5px;
+  }
+
+  .token-ledger-example-label {
+    font-size: 13px;
+  }
+
+  .token-ledger-example-text {
+    font-size: 16px;
+  }
+
+  .token-ledger-example-hint {
+    font-size: 12.5px;
+  }
+
+  .token-ledger > .jlpt-detail-hint,
+  .token-ledger > .token-note-stamp-hint {
+    font-size: 12.5px;
+  }
 }
 
 /* ---------------------------------------------------------------------
@@ -1930,6 +2427,10 @@
 .reading-candidate-tab {
   position: absolute;
   z-index: 4;
+  /* Mobile-only default -- desktop overrides this to the measured
+     book-edge anchor below (see @media (min-width: 1024px)). Mobile's own
+     tab/tray are out of Gate D's scope and keep this viewport-edge value
+     unchanged. */
   right: 0;
   top: 30%;
   display: flex;
@@ -1968,6 +2469,10 @@
 .reading-candidate-panel {
   position: absolute;
   z-index: 4;
+  /* Mobile-only default -- desktop overrides this to the same book-edge
+     anchor the tab uses (see @media (min-width: 1024px)) so the two share
+     one exact contact point instead of two independent viewport-relative
+     guesses. */
   right: 3%;
   top: 6%;
   bottom: 6%;
@@ -1981,8 +2486,62 @@
 }
 
 @media (min-width: 1024px) {
+  /* Reading V3 Gate D -- both anchored to the exact same computed value
+     (.reading-scene-v2-frame's --reading-candidate-anchor-right), not two
+     independently-tuned offsets, so the tab and the open tray meet with
+     zero contact error regardless of viewport width or which scene photo
+     loaded. */
+  .reading-candidate-tab {
+    right: var(--reading-candidate-anchor-right);
+    /* Gate D correction -- equal z-index (4) with .reading-candidate-panel
+       meant DOM order decided the stack, and the panel (rendered after the
+       tab in ReadingVocabPanel.tsx) painted over it whenever open, hiding
+       the tab completely instead of reading as "the same tab, unfolded".
+       Raised above the panel so the tab's own small shape keeps showing at
+       its usual spot the whole time the tray is open. */
+    z-index: 5;
+  }
+
   .reading-candidate-panel {
+    right: var(--reading-candidate-anchor-right);
     width: min(340px, 42%);
+    /* Gate D correction -- the book-contact edge (right side) was rounded
+       the same as the outward-facing side, which put a curved gap between
+       the panel's corner and the tab's own flat right edge right where
+       they're meant to meet, reading as two separate floating shapes
+       instead of one tab that unfolded sideways. Flat on the right (0),
+       rounded only on the left -- same split .reading-candidate-tab's own
+       `border-radius: 10px 0 0 10px` already uses. */
+    border-radius: 14px 0 0 14px;
+    /* Gate D correction -- the panel's own overflow-y:auto plus
+       .reading-vocab-tray's separate max-height+overflow-y:auto below
+       gave 1024px two independent vertical scrollbars once the panel's
+       own available height (top:6%/bottom:6% of a shorter frame) fell
+       below its fixed content's height + the tray's fixed 380px cap. A
+       column flex with the panel itself never scrolling -- only the tray
+       (flex:1, min-height:0) does -- leaves exactly one scroll owner at
+       every height, not just the ones tall enough to hide the seam. */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Gate D final correction -- a bare `.reading-vocab-tray` selector here
+     loses to the base rule's `max-height: 380px` (globals.css, further
+     down the file): both are single-class selectors of equal specificity,
+     and at equal specificity the *later* declaration wins regardless of
+     which one sits inside a matching media query. The base rule is
+     declared after this block, so it silently re-capped the tray at
+     380px, leaving a large empty gap under a 56-word list instead of the
+     tray filling the panel's actual remaining height. Scoped through the
+     panel ancestor instead of reordering the file -- (0,2,0) beats the
+     base rule's (0,1,0) unconditionally, so this wins no matter where
+     either rule is declared. */
+  .reading-candidate-panel .reading-vocab-tray {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
   }
 }
 
@@ -11938,15 +12497,31 @@ input.reading-vocab-sticker-toggle:checked {
 @media (min-width: 1024px) {
   .reader-text {
     font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
-    font-size: 16px;
-    line-height: 1.9;
+    /* Reading V3 Gate B -- comfortable long-form Japanese reading size/
+       rhythm (was 16px/1.9); must stay byte-for-byte identical to
+       .reading-slip textarea's own desktop rule above -- same fixed
+       breakpoints, no vw units, 1440+ override below. */
+    font-size: 17px;
+    line-height: 2;
     /* Same sage rule + inset as .reading-slip textarea (see near
        .reading-slip-form above) -- without it here too, the analyzed
        text's left edge sat 18px left of the editor's, breaking the shared
        x origin DESIGN_SPEC.md requires (measured via
-       getBoundingClientRect, not eyeballed). */
-    border-left: 2px solid rgba(122, 148, 110, 0.45);
+       getBoundingClientRect, not eyeballed). Thinned/faded alongside the
+       textarea's identical rule -- see that rule's own comment. */
+    border-left: 1.5px solid rgba(122, 148, 110, 0.32);
     padding-left: 16px;
+  }
+}
+
+@media (min-width: 1440px) {
+  /* Reading V3 Gate B -- second fixed tier, kept identical between the
+     input editor and the analyzed reader (both selectors listed together
+     so they can never drift to different values at this breakpoint). */
+  .reading-slip textarea,
+  .reader-text {
+    font-size: 18px;
+    line-height: 2;
   }
 }
 
@@ -12288,7 +12863,11 @@ input.reading-vocab-sticker-toggle:checked {
 /* Selection cue -- stronger fill than any status above, plus a glow (not a
    hard ring): one thin near-solid edge plus a soft blurred halo, sized to
    .token-chip-surface (the word alone) via --chip-glow, so it wraps the
-   word the same way the fill does -- never the badge, never a card frame. */
+   word the same way the fill does -- never the badge, never a card frame.
+   Mobile/tablet keep this exact pre-Gate-B look (Gate B is desktop reading-
+   rhythm scope only, and this same TokenChip renders inside the mobile
+   reading text too) -- the quieter underline-only treatment is a >=1024px
+   override just below, not a replacement of this base rule. */
 .token-chip-active {
   color: inherit;
   --chip-fill: linear-gradient(
@@ -12301,6 +12880,72 @@ input.reading-vocab-sticker-toggle:checked {
     0 1px 5px rgba(217, 164, 30, 0.35);
 }
 
+/* Reading V3 Gate B -- desktop-only: the golden glow-box above reads as a
+   highlighter/button sitting on top of the sentence and (since it
+   overrides --chip-fill outright) hides the word's own status color while
+   selected. This override leaves --chip-fill alone -- whichever status
+   wash (.token-chip-known/-uncertain/-unknown/-unclassified) is already on
+   the word keeps showing through -- and marks "this is the selected word"
+   with only a solid, slightly thicker underline in the app's warm accent
+   color, distinct from every status's own dotted underline. No box-shadow,
+   no fill change, no line-height impact. */
+@media (min-width: 1024px) {
+  .token-chip-active {
+    --chip-glow: none;
+    text-decoration-line: underline;
+    text-decoration-style: solid;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 2px;
+  }
+
+  /* Restores each status's own resting-state wash instead of the base
+     rule's gold fill above -- compound selectors (higher specificity than
+     either single class alone) so this reliably wins regardless of source
+     order. Keeps "known/uncertain/unknown/unclassified stay visually
+     distinct even while selected" true, which the uniform gold fill broke. */
+  .token-chip-active.token-chip-known {
+    --chip-fill: linear-gradient(
+      180deg,
+      rgba(140, 189, 163, 0.05) 0%,
+      rgba(140, 189, 163, 0.09) 38%,
+      rgba(140, 189, 163, 0.15) 100%
+    );
+  }
+
+  .token-chip-active.token-chip-uncertain {
+    --chip-fill: linear-gradient(
+      180deg,
+      rgba(173, 156, 214, 0.07) 0%,
+      rgba(173, 156, 214, 0.12) 38%,
+      rgba(173, 156, 214, 0.2) 100%
+    );
+  }
+
+  .token-chip-active.token-chip-unknown {
+    --chip-fill: linear-gradient(
+      180deg,
+      rgba(214, 162, 129, 0.06) 0%,
+      rgba(214, 162, 129, 0.1) 38%,
+      rgba(214, 162, 129, 0.18) 100%
+    );
+  }
+
+  .token-chip-active.token-chip-unclassified {
+    --chip-fill: linear-gradient(
+      180deg,
+      rgba(210, 197, 165, 0.06) 0%,
+      rgba(210, 197, 165, 0.1) 38%,
+      rgba(210, 197, 165, 0.17) 100%
+    );
+  }
+
+  .token-chip-active.token-chip-muted,
+  .token-chip-active.token-chip-plain {
+    --chip-fill: none;
+  }
+}
+
 /* No hard border/pill outline -- a bordered badge next to a full-word
    highlight read as a second little box. A very faint translucent-white
    backing (not a border) is enough to keep N5/N4/N3 legible against
@@ -12311,20 +12956,25 @@ input.reading-vocab-sticker-toggle:checked {
    width -- adds real horizontal material between every word across a whole
    sentence. Kept as small/quiet as still-legible so it reads as a faint
    note next to the word, not a second tag breaking up sentence flow. */
+/* Reading V3 Gate B -- one step quieter still (was color:#7d8490/opacity
+   .45 resting, a full opaque-ish #4d5561/1 on hover): reuses the shared
+   --muted ink instead of a separate blue-gray so it reads as the same
+   "quiet annotation" tone the rest of the page's secondary text already
+   uses, and the hover peak no longer goes fully opaque. */
 .jlpt-chip-badge {
   display: inline-block;
   margin-left: 0.05em;
   padding: 0 1px;
   border: none;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.45);
-  color: #7d8490;
+  background: rgba(255, 255, 255, 0.4);
+  color: var(--muted);
   font-size: 7px;
   font-weight: 700;
   line-height: 1.4;
   vertical-align: super;
   white-space: nowrap;
-  opacity: 0.45;
+  opacity: 0.38;
   transition:
     opacity 0.12s ease,
     color 0.12s ease,
@@ -12333,9 +12983,9 @@ input.reading-vocab-sticker-toggle:checked {
 
 .token-chip:hover .jlpt-chip-badge,
 .token-chip:focus-visible .jlpt-chip-badge {
-  opacity: 1;
-  color: #4d5561;
-  background: rgba(255, 255, 255, 0.75);
+  opacity: 0.75;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.65);
 }
 
 .jlpt-detail-hint {
