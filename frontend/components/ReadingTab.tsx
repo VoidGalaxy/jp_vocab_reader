@@ -23,8 +23,8 @@ import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 export const SAMPLE_TEXT =
   "彼は闇の中で声を聞いた。少女は約束を思い出した。騎士は剣を握り、敵から王を守った。";
 
-const DESKTOP_ASSET = "/brand/decor/v3/v3-reading-open-book-desktop.png";
-const TALL_DESKTOP_ASSET = "/brand/decor/v3/v3-reading-open-book-desktop-tall.png";
+const DESKTOP_ASSET = "/brand/decor/v4/v4-reading-open-book-desktop.png";
+const TALL_DESKTOP_ASSET = "/brand/decor/v4/v4-reading-open-book-desktop-tall.png";
 const MOBILE_ASSET = "/brand/decor/v2/v2-reading-page-mobile-9x16.webp";
 
 type ReadingTabProps = {

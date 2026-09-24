@@ -775,7 +775,8 @@ export function ReaderMode({
             checked={focusMode}
             onChange={(event) => setFocusMode(event.target.checked)}
           />
-          모르는/헷갈리는 단어만 강조
+          <span className="reading-focus-label-full">모르는/헷갈리는 단어만 강조</span>
+          <span className="reading-focus-label-compact">모름·헷갈림 강조</span>
         </label>
         <label className="checkbox-field reading-jlpt-toggle">
           <input
