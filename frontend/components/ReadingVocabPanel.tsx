@@ -22,6 +22,8 @@ import {
 import { getDisplayMeaning, statusLabels } from "./shared";
 
 type ReadingVocabPanelProps = {
+  variant?: "tray" | "page";
+  onClose?: () => void;
   // Computed once in ReadingTab (shared with the Save Tray/Word Inspector)
   // instead of recomputed here, so every part of the reading workspace
   // agrees on exactly the same grouped/deduped word list.
@@ -81,6 +83,8 @@ const quickSelectModes: Array<{ mode: ReadingSaveMode; label: string; hint: stri
 ];
 
 export function ReadingVocabPanel({
+  variant = "tray",
+  onClose,
   entries,
   selectedTokenKey,
   onSelectToken,
@@ -89,6 +93,7 @@ export function ReadingVocabPanel({
   onReplaceSelection,
   onClearSelection,
 }: ReadingVocabPanelProps) {
+  const isPage = variant === "page";
   const [filter, setFilter] = useState<ReadingVocabFilter>("all");
   const [search, setSearch] = useState("");
   // Collapsed by default -- the word list is a secondary/reference panel in
@@ -105,34 +110,32 @@ export function ReadingVocabPanel({
     () => searchReadingVocabEntries(filteredEntries, search),
     [filteredEntries, search],
   );
+  const QuickSelectDisclosure = isPage ? "details" : "div";
 
   return (
     <>
-      {/* Phase 169 -- a physical pull-tab clipped to the book's outer edge
-          (echoing the mobile V2 photo's own sticky bookmark tab, see
-          globals.css), not an admin-drawer handle row spanning the page
-          width. Opening it slides a panel out from the same edge
-          (.reading-candidate-panel) -- still an overlay attached to the
-          scene, never a separate section below the fold. */}
-      <button
+      {/* Mobile retains the original edge tab. Desktop renders the same
+          search and selection actions directly on the right book page. */}
+      {!isPage ? <button
         type="button"
         className={`reading-candidate-tab${isCollapsed ? "" : " reading-candidate-tab-open"}`}
         onClick={() => setIsCollapsed((value) => !value)}
         aria-expanded={!isCollapsed}
+        aria-label={`이 글의 단어 ${entries.length}개`}
       >
         <CardFileIcon className="reading-candidate-tab-icon" />
         {entries.length}
-      </button>
-      {isCollapsed ? null : (
-        <div className="reading-candidate-panel">
+      </button> : null}
+      {!isPage && isCollapsed ? null : (
+        <div className={isPage ? "reading-vocab-page" : "reading-candidate-panel"}>
       <div className="reading-candidate-panel-header">
         <span className="reading-candidate-panel-title">
-          단어 스티커 트레이 · {entries.length}개
+          {isPage ? "이 글의 단어" : "단어 스티커 트레이"} · {isPage ? visibleEntries.length : entries.length}개
         </span>
         <button
           type="button"
           className="reading-candidate-panel-close"
-          onClick={() => setIsCollapsed(true)}
+          onClick={isPage ? onClose : () => setIsCollapsed(true)}
           aria-label="단어 목록 닫기"
         >
           <CloseIcon className="reading-candidate-panel-close-icon" />
@@ -150,10 +153,22 @@ export function ReadingVocabPanel({
             className="reading-vocab-search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="단어, 읽기, 뜻으로 검색"
+            placeholder={isPage ? "단어 검색" : "단어, 읽기, 뜻으로 검색"}
             aria-label="단어 목록 검색"
           />
         </div>
+        {isPage ? (
+          <select
+            className="reading-vocab-filter-select"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value as ReadingVocabFilter)}
+            aria-label="단어 상태 필터"
+          >
+            {filterOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        ) : null}
         <div
           className="reading-vocab-filters"
           role="group"
@@ -179,11 +194,9 @@ export function ReadingVocabPanel({
         </div>
       </div>
 
-      <div
-        className="reading-vocab-quick-select"
-        role="group"
-        aria-label="빠른 선택"
-      >
+      <QuickSelectDisclosure className={isPage ? "reading-vocab-quick-select-disclosure" : undefined}>
+      {isPage ? <summary>여러 단어 선택</summary> : null}
+      <div className="reading-vocab-quick-select" role="group" aria-label="빠른 선택">
         <button
           type="button"
           className="ghost-button compact-button reading-vocab-quick-select-button"
@@ -213,6 +226,7 @@ export function ReadingVocabPanel({
           </button>
         ))}
       </div>
+      </QuickSelectDisclosure>
 
       <p className="reading-vocab-selection-summary">
         현재 목록 {visibleEntries.length}개

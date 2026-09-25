@@ -2203,6 +2203,22 @@
   margin-top: 4px;
 }
 
+.reading-right-footer-list-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reading-right-footer-list-toggle .button-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.reading-right-footer-list-toggle[aria-pressed="true"] {
+  color: #2f6b46;
+  text-decoration-color: currentColor;
+}
+
 /* ---------------------------------------------------------------------
    Dictionary ledger content -- TokenDetailSheet.tsx's TokenDetailLedger
    (desktop-only "pinned" replacement, see its own comment there). One
@@ -2376,8 +2392,9 @@
   align-items: stretch;
   height: 46px;
   margin-top: 22px;
-  border-top: 1px solid rgba(121, 96, 61, 0.22);
-  border-bottom: 1px solid rgba(121, 96, 61, 0.22);
+  border-top: 1px solid rgba(91, 68, 44, 0.42);
+  border-bottom: 1px solid rgba(91, 68, 44, 0.42);
+  background: rgba(255, 253, 247, 0.28);
 }
 
 .token-ledger-status-item {
@@ -2394,9 +2411,9 @@
   min-height: 44px;
   padding: 0 6px;
   border: none;
-  border-left: 1px solid rgba(121, 96, 61, 0.2);
+  border-left: 1px solid rgba(91, 68, 44, 0.38);
   border-radius: 0;
-  color: #51483d;
+  color: #3f372e;
   background: transparent;
   font-size: 14px;
   font-weight: 650;
@@ -2435,7 +2452,7 @@
 
 .token-ledger-status-item:not(:disabled):hover {
   color: var(--status-ink);
-  background: var(--status-wash);
+  background: rgba(255, 253, 247, 0.7);
   box-shadow: none;
   transform: none;
 }
@@ -2449,7 +2466,8 @@
 .token-ledger-status-item[data-active="true"] {
   color: var(--status-ink);
   background: var(--status-wash);
-  font-weight: 750;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px var(--status-ink);
 }
 
 .token-ledger-status-item[data-active="true"]::after {
@@ -2458,7 +2476,7 @@
   right: 10px;
   bottom: 0;
   left: 10px;
-  height: 2px;
+  height: 3px;
   background: var(--status-ink);
 }
 
@@ -2488,7 +2506,7 @@
 
 .token-ledger-status-item[data-tone="known"] {
   --status-ink: #2f6b46;
-  --status-wash: rgba(79, 140, 102, 0.1);
+  --status-wash: rgba(79, 140, 102, 0.18);
 }
 
 .token-ledger-status-item[data-tone="known"][data-active="true"] {
@@ -2502,7 +2520,7 @@
 
 .token-ledger-status-item[data-tone="uncertain"] {
   --status-ink: #6f5f96;
-  --status-wash: rgba(111, 95, 150, 0.1);
+  --status-wash: rgba(111, 95, 150, 0.18);
 }
 
 .token-ledger-status-item[data-tone="uncertain"][data-active="true"] {
@@ -2516,7 +2534,7 @@
 
 .token-ledger-status-item[data-tone="unknown"] {
   --status-ink: #925337;
-  --status-wash: rgba(146, 83, 55, 0.1);
+  --status-wash: rgba(146, 83, 55, 0.18);
 }
 
 .token-ledger-status-item[data-tone="unknown"][data-active="true"] {
@@ -2530,7 +2548,7 @@
 
 .token-ledger-status-item[data-tone="unclassified"] {
   --status-ink: #78671f;
-  --status-wash: rgba(120, 103, 31, 0.1);
+  --status-wash: rgba(120, 103, 31, 0.18);
 }
 
 .token-ledger-status-item[data-tone="unclassified"][data-active="true"] {
@@ -7915,6 +7933,10 @@ select {
   gap: 3px 12px;
 }
 
+.reading-vocab-filter-select {
+  display: none;
+}
+
 .reading-vocab-filter-button {
   min-width: 0;
   padding: 3px 1px 4px;
@@ -8350,6 +8372,198 @@ input.reading-vocab-sticker-toggle:checked {
   height: 13px;
   color: var(--muted);
   opacity: 0.55;
+}
+
+@media (min-width: 1024px) {
+  .reading-vocab-mobile-only {
+    display: none;
+  }
+
+  .reading-page--right[data-right-mode="list"] .reading-right-footer {
+    display: none;
+  }
+
+  /* The optional word index occupies the right paper itself. The right
+     page's reader-scroll-region owns scrolling in both index and ledger
+     modes; there is no second floating panel or sticker-tray scrollbar. */
+  .reading-vocab-page {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 0 2px 12px;
+    color: #3f372e;
+  }
+
+  .reading-vocab-page .reading-candidate-panel-header {
+    margin: 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(91, 68, 44, 0.34);
+  }
+
+  .reading-vocab-page .reading-candidate-panel-title {
+    color: #2b251e;
+    font-size: 16px;
+  }
+
+  .reading-vocab-page .reading-candidate-panel-close {
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(91, 68, 44, 0.3);
+    border-radius: 2px;
+    background: transparent;
+  }
+
+  .reading-vocab-page .reading-vocab-drawer-hint {
+    display: none;
+  }
+
+  .reading-vocab-page .reading-vocab-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 130px;
+    gap: 4px;
+  }
+
+  .reading-vocab-page .reading-vocab-search-wrap {
+    min-width: 0;
+  }
+
+  .reading-vocab-page .reading-vocab-filters {
+    display: none;
+  }
+
+  .reading-vocab-page .reading-vocab-filter-select {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 30px;
+    padding: 2px 22px 2px 4px;
+    border: none;
+    border-bottom: 1px solid rgba(91, 68, 44, 0.42);
+    border-radius: 0;
+    background: transparent;
+    color: #3f372e;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .reading-vocab-page .reading-vocab-filter-select:focus-visible {
+    outline: 2px solid #2f6b46;
+    outline-offset: 2px;
+  }
+
+  .reading-vocab-quick-select-disclosure {
+    border-bottom: 1px solid rgba(91, 68, 44, 0.22);
+  }
+
+  .reading-vocab-quick-select-disclosure summary {
+    width: fit-content;
+    padding: 3px 0 6px;
+    color: #51483d;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .reading-vocab-page .reading-vocab-quick-select {
+    gap: 4px 10px;
+    padding-bottom: 7px;
+  }
+
+  .reading-vocab-page .reading-vocab-selection-summary {
+    display: none;
+  }
+
+  .reading-vocab-page .reading-vocab-tray {
+    display: grid;
+    gap: 0;
+    max-height: none;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .reading-vocab-page .reading-vocab-sticker-row,
+  .reading-vocab-page .reading-vocab-sticker-row:nth-child(n) {
+    width: 100%;
+    max-width: none;
+    padding-left: 27px;
+    transform: none;
+  }
+
+  .reading-vocab-page .reading-vocab-sticker-row::before {
+    display: none;
+  }
+
+  .reading-vocab-page input.reading-vocab-sticker-toggle,
+  .reading-vocab-page .reading-vocab-sticker-toggle-placeholder {
+    top: 12px;
+    left: 0;
+    box-shadow: none;
+  }
+
+  .reading-vocab-page .reading-vocab-sticker-row .reading-vocab-sticker {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    padding: 5px 20px 5px 4px;
+    border: none;
+    border-bottom: 1px solid rgba(91, 68, 44, 0.22);
+    border-radius: 0;
+    background: transparent;
+    clip-path: none;
+    box-shadow: none;
+    transform: none;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1px 6px;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .reading-vocab-page .reading-vocab-sticker-word-row {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .reading-vocab-page .reading-vocab-sticker-meta {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    flex-wrap: nowrap;
+    margin-top: 0;
+  }
+
+  .reading-vocab-page .reading-vocab-sticker-meaning {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .reading-vocab-page .reading-vocab-sticker:not(:disabled):hover,
+  .reading-vocab-page .reading-vocab-sticker-active {
+    background: rgba(47, 107, 70, 0.08);
+    box-shadow: none;
+    outline: none;
+  }
+
+  .reading-vocab-page .reading-vocab-sticker-row-checked .reading-vocab-sticker::after {
+    display: none;
+  }
+
+  .reading-vocab-page .reading-vocab-status-badge,
+  .reading-vocab-page .reading-vocab-occurrence,
+  .reading-vocab-page .reading-vocab-saved-badge {
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .reading-vocab-page .reading-vocab-controls {
+    grid-template-columns: minmax(0, 1fr) 104px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -13275,6 +13489,19 @@ input.reading-vocab-sticker-toggle:checked {
 /* A tint keeps words discoverable without turning every line of Japanese
    prose into a continuous underline. Stronger ink appears on hover/selection. */
 @media (min-width: 1024px) {
+  .reader-text .token-chip {
+    border-radius: 0;
+  }
+
+  .reader-text .token-chip:not(:disabled):is(:hover, :active) {
+    box-shadow: none;
+    transform: none;
+  }
+
+  .reader-text .token-chip:not(.token-chip-muted):hover .token-chip-surface {
+    filter: none;
+  }
+
   .reader-text .token-chip-known {
     --reader-mark-rgb: 140 189 163;
     --reader-rule: rgba(65, 107, 77, 0.72);
@@ -13318,12 +13545,6 @@ input.reading-vocab-sticker-toggle:checked {
     .token-chip-unknown,
     .token-chip-unclassified
   ):is(:hover, :focus-visible) {
-    --chip-fill: linear-gradient(
-      180deg,
-      rgb(var(--reader-mark-rgb) / 0.14) 0%,
-      rgb(var(--reader-mark-rgb) / 0.24) 42%,
-      rgb(var(--reader-mark-rgb) / 0.4) 100%
-    );
     text-decoration-line: underline;
     text-decoration-style: solid;
     text-decoration-color: var(--reader-rule);
@@ -13980,6 +14201,14 @@ input.reading-vocab-sticker-toggle:checked {
   background: #fef08a;
   color: #422006;
   font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .token-ledger-example .example-highlight {
+    background: rgba(184, 152, 72, 0.2);
+    color: inherit;
+    font-weight: inherit;
+  }
 }
 
 /* Dedicated dialog chrome for the two "send feedback" dialogs (app-wide

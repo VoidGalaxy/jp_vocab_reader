@@ -23,8 +23,8 @@ import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 export const SAMPLE_TEXT =
   "彼は闇の中で声を聞いた。少女は約束を思い出した。騎士は剣を握り、敵から王を守った。";
 
-const DESKTOP_ASSET = "/brand/decor/v4/v4-reading-open-book-desktop.png";
-const TALL_DESKTOP_ASSET = "/brand/decor/v4/v4-reading-open-book-desktop-tall.png";
+const DESKTOP_ASSET = "/brand/decor/v4/v4-reading-open-book-desktop-soft-seam.png";
+const TALL_DESKTOP_ASSET = "/brand/decor/v4/v4-reading-open-book-desktop-tall-soft-seam.png";
 const MOBILE_ASSET = "/brand/decor/v2/v2-reading-page-mobile-9x16.webp";
 
 type ReadingTabProps = {
@@ -127,6 +127,7 @@ export function ReadingTab({
     tokenIndex: number;
     requestId: number;
   } | null>(null);
+  const [isWordListOpen, setIsWordListOpen] = useState(false);
   const externalSelectRequestIdRef = useRef(0);
 
   function handleVocabPanelSelect(tokenIndex: number) {
@@ -135,6 +136,10 @@ export function ReadingTab({
       tokenIndex,
       requestId: externalSelectRequestIdRef.current,
     });
+  }
+  function handleDesktopVocabSelect(tokenIndex: number) {
+    handleVocabPanelSelect(tokenIndex);
+    setIsWordListOpen(false);
   }
   const summary = hasResult
     ? computeReadingSaveSummary(tokens, vocabItems, selectedDeckId)
@@ -367,6 +372,22 @@ export function ReadingTab({
               recentlySavedCount={recentlySavedCount}
               onStartStudyFromSaved={onStartStudyFromSaved}
               onGoToVocab={onGoToVocab}
+              wordListOpen={isWordListOpen}
+              onToggleWordList={() => setIsWordListOpen((value) => !value)}
+              wordListCount={entries.length}
+              wordListContent={
+                <ReadingVocabPanel
+                  variant="page"
+                  onClose={() => setIsWordListOpen(false)}
+                  entries={entries}
+                  selectedTokenKey={selectedTokenKey}
+                  onSelectToken={handleDesktopVocabSelect}
+                  selectedWordKeys={selectedWordKeys}
+                  onToggleSelect={toggleSelect}
+                  onReplaceSelection={replaceSelection}
+                  onClearSelection={clearSelection}
+                />
+              }
             />
           ) : (
             <>
@@ -386,15 +407,17 @@ export function ReadingTab({
           )}
 
           {hasResult ? (
-            <ReadingVocabPanel
-              entries={entries}
-              selectedTokenKey={selectedTokenKey}
-              onSelectToken={handleVocabPanelSelect}
-              selectedWordKeys={selectedWordKeys}
-              onToggleSelect={toggleSelect}
-              onReplaceSelection={replaceSelection}
-              onClearSelection={clearSelection}
-            />
+            <div className="reading-vocab-mobile-only">
+              <ReadingVocabPanel
+                entries={entries}
+                selectedTokenKey={selectedTokenKey}
+                onSelectToken={handleVocabPanelSelect}
+                selectedWordKeys={selectedWordKeys}
+                onToggleSelect={toggleSelect}
+                onReplaceSelection={replaceSelection}
+                onClearSelection={clearSelection}
+              />
+            </div>
           ) : null}
         </div>
       </div>

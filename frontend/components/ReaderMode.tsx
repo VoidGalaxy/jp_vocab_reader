@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet, TokenDetailLedger } from "./TokenDetailSheet";
@@ -11,7 +12,7 @@ import type { ReadingSourceSlipProps } from "./ReadingSourceSlip";
 import { buildReaderLayout, getNavigableTokenIndexes } from "./readerLayout";
 import { getTokenGroupKey } from "./coverageUtils";
 import type { MessageTone } from "./coverageUtils";
-import { BookmarkIcon, ChevronDownIcon, FolderIcon, InfoIcon, PencilIcon } from "./icons";
+import { BookmarkIcon, CardFileIcon, ChevronDownIcon, FolderIcon, InfoIcon, PencilIcon } from "./icons";
 
 // Reading-progress percentage is derived from how far the reader has
 // scrolled through the .reader-text container relative to the viewport,
@@ -127,6 +128,10 @@ type ReaderModeProps = {
   recentlySavedCount: number;
   onStartStudyFromSaved: () => void;
   onGoToVocab: () => void;
+  wordListOpen: boolean;
+  onToggleWordList: () => void;
+  wordListCount: number;
+  wordListContent: ReactNode;
   // Session management -- previously ReadingTab's own top-of-screen
   // "원문 관리" toolbar (a separate row above this card). Folded in here
   // instead: the restore notice as a small chip in the header, the
@@ -179,6 +184,10 @@ export function ReaderMode({
   recentlySavedCount,
   onStartStudyFromSaved,
   onGoToVocab,
+  wordListOpen,
+  onToggleWordList,
+  wordListCount,
+  wordListContent,
   isSessionRestored,
   onDismissRestoredNotice,
   isTextCollapsed,
@@ -1080,9 +1089,11 @@ export function ReaderMode({
           part of this same page, always present once a result exists, so
           the right page always ends in one small tidy footer row instead
           of a floating card layered on top of the scene. */}
-      <div className="reading-page reading-page--right reading-page--reader">
-        <div className="reader-scroll-region">
-          {tokenDetailProps && isDesktopPinned ? (
+      <div className="reading-page reading-page--right reading-page--reader" data-right-mode={wordListOpen ? "list" : "ledger"}>
+        <div className="reader-scroll-region" id="reading-right-content" key={wordListOpen ? "list" : "ledger"}>
+          {wordListOpen ? (
+            wordListContent
+          ) : tokenDetailProps && isDesktopPinned ? (
             <TokenDetailLedger {...tokenDetailProps} />
           ) : (
             <div className="reading-page-idle">
@@ -1147,7 +1158,7 @@ export function ReaderMode({
                   className="reading-right-footer-link"
                   onClick={goToNextUnknown}
                 >
-                  모르는 단어로
+                  다음 모르는 단어
                 </button>
               ) : null}
               {activeToken.occurrence_count > 1 && !isAtFirstOccurrence ? (
@@ -1200,6 +1211,16 @@ export function ReaderMode({
           </p>
         ) : null}
         <div className="reading-right-footer-links">
+          <button
+            type="button"
+            className="reading-right-footer-link reading-right-footer-list-toggle"
+            onClick={onToggleWordList}
+            aria-controls="reading-right-content"
+            aria-pressed={wordListOpen}
+          >
+            <CardFileIcon className="button-icon" />
+            {wordListOpen ? "단어 정보로" : `이 글의 단어 ${wordListCount}개`}
+          </button>
           {recentlySavedCount > 0 ? (
             <button
               type="button"
