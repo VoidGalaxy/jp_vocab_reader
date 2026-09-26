@@ -5,7 +5,7 @@ import type { TokenStatus, TokenWithStatus } from "./types";
 import { getDisplayMeaning } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
-import { BookmarkIcon, CloseIcon } from "./icons";
+import { BookmarkIcon, ChevronRightIcon, CloseIcon } from "./icons";
 import { ShioriMark, ShioriStamp } from "./Shiori";
 
 type TokenDetailSheetProps = {
@@ -133,8 +133,15 @@ function CompactTokenDetailSheet(props: TokenDetailSheetProps) {
         onKeyDown={handleKeyDown}
       >
         <div className="reading-compact-overline">
-          <span>선택한 단어</span>
-          {positionLabel ? <span>{positionLabel}</span> : null}
+          <div className="reading-compact-stepper" role="group" aria-label="단어 이동">
+            <button type="button" className="reading-compact-step-prev" onClick={onPrevious} disabled={!canGoPrevious} aria-label="이전 단어" title="이전 단어">
+              <ChevronRightIcon />
+            </button>
+            <span aria-live="polite">{positionLabel}</span>
+            <button type="button" onClick={onNext} disabled={!canGoNext} aria-label="다음 단어" title="다음 단어">
+              <ChevronRightIcon />
+            </button>
+          </div>
           <button type="button" onClick={() => setDetailsOpen((open) => !open)} aria-expanded={detailsOpen}>
             {detailsOpen ? "간단히" : "자세히"}
           </button>
@@ -164,10 +171,6 @@ function CompactTokenDetailSheet(props: TokenDetailSheetProps) {
 
         {detailsOpen ? (
           <div className="reading-compact-details">
-            <div className="reading-compact-nav" role="group" aria-label="단어 이동">
-              <button type="button" onClick={onPrevious} disabled={!canGoPrevious}>← 이전</button>
-              <button type="button" onClick={onNext} disabled={!canGoNext}>다음 →</button>
-            </div>
             <p className="reading-compact-meta">{meta}</p>
             {token.jlpt_level ? <p className="reading-compact-hint">JLPT 추천 어휘 기준이며, 비공식 참고용 표시입니다.</p> : null}
             <div className="reading-compact-section">

@@ -13247,9 +13247,8 @@ input.reading-vocab-sticker-toggle:checked {
     width: auto;
     min-width: 0;
     min-height: 0;
-    padding: 0 0 1px;
+    padding: 0;
     border: 0;
-    border-bottom: 1px solid transparent;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
@@ -13269,16 +13268,23 @@ input.reading-vocab-sticker-toggle:checked {
   .reading-page--reader .reader-text .token-chip-surface {
     padding: 0;
     border: 0;
-    background: transparent;
+    border-radius: 2px;
+    background: var(--reading-word-wash, transparent);
     box-shadow: none;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
 
-  .reading-page--reader .reader-text .token-chip-known { border-bottom-color: #39705c; }
-  .reading-page--reader .reader-text .token-chip-uncertain { border-bottom-color: #7968a2; }
-  .reading-page--reader .reader-text .token-chip-unknown { border-bottom-color: #8d563f; }
-  .reading-page--reader .reader-text .token-chip-active {
-    border-bottom: 2px solid #26533e;
-    background: rgba(87, 132, 96, 0.14);
+  .reading-page--reader .reader-text .token-chip-known { --reading-word-wash: rgba(73, 126, 91, 0.15); }
+  .reading-page--reader .reader-text .token-chip-uncertain { --reading-word-wash: rgba(112, 91, 158, 0.14); }
+  .reading-page--reader .reader-text .token-chip-unknown { --reading-word-wash: rgba(159, 87, 59, 0.14); }
+  .reading-page--reader .reader-text .token-chip-unclassified { --reading-word-wash: rgba(137, 125, 64, 0.11); }
+  .reading-page--reader .reader-text .token-chip:not(.token-chip-muted):not(.token-chip-active):is(:hover, :focus-visible) .token-chip-surface {
+    background: rgba(58, 103, 72, 0.24);
+  }
+  .reading-page--reader .reader-text .token-chip-active .token-chip-surface {
+    background: rgba(55, 107, 74, 0.3);
+    color: #153d2a;
   }
 
   .reading-mobile-footer {
@@ -14892,15 +14898,11 @@ input.reading-vocab-sticker-toggle:checked {
   .reading-compact-overline {
     display: flex;
     align-items: center;
-    gap: 9px;
-    min-height: 25px;
+    gap: 8px;
+    min-height: 40px;
     color: #4a584c;
     font-size: 12px;
     white-space: nowrap;
-  }
-
-  .reading-compact-overline span:first-child {
-    font-weight: 700;
   }
 
   .reading-compact-overline button {
@@ -14913,13 +14915,52 @@ input.reading-vocab-sticker-toggle:checked {
     font-weight: 700;
   }
 
-  .reading-compact-overline button:nth-of-type(1) {
+  .reading-compact-overline > button:first-of-type {
     margin-left: auto;
   }
 
+  .reading-compact-stepper {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .reading-compact-stepper span {
+    min-width: 46px;
+    text-align: center;
+    color: #344b39;
+    font-weight: 700;
+  }
+
+  .reading-compact-stepper button {
+    display: grid;
+    flex: 0 0 40px;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    border: 1px solid #bbc8b8;
+    border-radius: 50%;
+    color: #24543b;
+  }
+
+  .reading-compact-stepper button:hover:not(:disabled) {
+    background: rgba(62, 107, 77, 0.12);
+    text-decoration: none;
+  }
+
+  .reading-compact-stepper button:disabled {
+    border-color: #d4dbd0;
+    color: #a0aba0;
+  }
+
+  .reading-compact-step-prev svg { transform: rotate(180deg); }
+
   .reading-compact-overline button:hover,
-  .reading-compact-actions button:hover,
-  .reading-compact-nav button:hover {
+  .reading-compact-actions button:hover {
     text-decoration: underline;
   }
 
@@ -15027,15 +15068,6 @@ input.reading-vocab-sticker-toggle:checked {
     font-size: 13px;
   }
 
-  .reading-compact-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    min-height: 49px;
-  }
-
-  .reading-compact-nav button,
   .reading-compact-actions button {
     min-height: 40px;
     padding: 5px 2px;
@@ -15046,7 +15078,6 @@ input.reading-vocab-sticker-toggle:checked {
     font-weight: 700;
   }
 
-  .reading-compact-nav button:disabled,
   .reading-compact-actions button:disabled {
     color: #90998f;
     text-decoration: none;
