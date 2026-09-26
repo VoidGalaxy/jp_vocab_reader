@@ -26,6 +26,7 @@ export const SAMPLE_TEXT =
 const DESKTOP_ASSET = "/brand/decor/v4/v4-reading-open-book-desktop-soft-seam.png";
 const TALL_DESKTOP_ASSET = "/brand/decor/v4/v4-reading-open-book-desktop-tall-soft-seam.png";
 const MOBILE_ASSET = "/brand/decor/v2/v2-reading-page-mobile-9x16.webp";
+const PHONE_PAPER_ASSET = "/brand/decor/v4/v4-reading-washi-mobile-c-quiet.webp";
 
 type ReadingTabProps = {
   text: string;
@@ -283,8 +284,8 @@ export function ReadingTab({
           scene (v3-reading-open-book-desktop.png, native 1849x851) instead
           of the old V2 photo; every desktop percentage in globals.css was
           remeasured against this asset's own paper/page geometry, not
-          reused from the old 1672x941 plate. Mobile is untouched (still the
-          V2 photo) -- see DESIGN_SPEC.md's Mobile Boundary.
+          reused from the old 1672x941 plate. Phones now use the V4 quiet
+          washi page; tablets retain the V2 photo.
           Phase 173 -- the "원문 읽기" eyebrow used to be a plain text row
           sitting above this scene, its own separate header section reading
           as a leftover app title bar. Moved inside .reading-scene-v2-frame
@@ -292,7 +293,7 @@ export function ReadingTab({
           see .reading-scene-v2-eyebrow, now absolutely positioned against
           the frame rather than sitting in normal flow above it. */}
       <div className="reading-scene-v2">
-        <div className="reading-scene-v2-frame">
+        <div className="reading-scene-v2-frame" data-mobile-word-list-open={isWordListOpen}>
           <picture className="reading-scene-v2-media">
             {/* Reading V3 Recovery Gate 1B -- the approved 1849x851 scene is
                 a panoramic crop that leaves dead space below it on
@@ -321,6 +322,7 @@ export function ReadingTab({
               srcSet={DESKTOP_ASSET}
             />
             <source media="(min-width: 1024px)" srcSet={TALL_DESKTOP_ASSET} />
+            <source media="(max-width: 640px)" srcSet={PHONE_PAPER_ASSET} />
             <img
               className="reading-scene-v2-media-img"
               src={MOBILE_ASSET}
@@ -409,9 +411,11 @@ export function ReadingTab({
           {hasResult ? (
             <div className="reading-vocab-mobile-only">
               <ReadingVocabPanel
+                isOpen={isWordListOpen}
+                onOpenChange={setIsWordListOpen}
                 entries={entries}
                 selectedTokenKey={selectedTokenKey}
-                onSelectToken={handleVocabPanelSelect}
+                onSelectToken={handleDesktopVocabSelect}
                 selectedWordKeys={selectedWordKeys}
                 onToggleSelect={toggleSelect}
                 onReplaceSelection={replaceSelection}

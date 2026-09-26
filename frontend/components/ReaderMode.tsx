@@ -223,6 +223,7 @@ export function ReaderMode({
   // this effect has had a chance to run once mounted -- so there is no
   // hydration mismatch to worry about here.
   const [isDesktopPinned, setIsDesktopPinned] = useState(false);
+  const [isPhonePaper, setIsPhonePaper] = useState(false);
   // Guards against re-applying a restored selection every time tokens
   // change (e.g. after a status save) -- only ever resolved once, right
   // after a restore, then the user's own clicks take over.
@@ -269,6 +270,8 @@ export function ReaderMode({
   // back down as a new initialSelectedTokenKey) and stomping the segment
   // key that click just set.
   const initialSelectedTokenKeyRef = useRef(initialSelectedTokenKey);
+  // A repeated token's first occurrence must not override the saved phone scroll position.
+  const skipRestoredTokenScrollRef = useRef(false);
   // Tracks the last externalSelectRequest.requestId actually applied, so a
   // repeat click on the same word (same tokenIndex, new requestId) still
   // re-triggers the select+scroll, while an unrelated re-render that just
@@ -277,6 +280,19 @@ export function ReaderMode({
 
   const scrollToFraction = useCallback(
     (fraction: number, behavior: ScrollBehavior) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+      if (window.matchMedia("(max-width: 640px)").matches) {
+        const region = readerScrollRegionRef.current;
+        if (region) {
+          region.scrollTo({
+            top: fraction * Math.max(region.scrollHeight - region.clientHeight, 0),
+            behavior: resolveScrollBehavior(behavior),
+          });
+        }
+        return;
+      }
       const container = readerTextRef.current;
       if (!container || typeof window === "undefined") {
         return;
@@ -300,6 +316,14 @@ export function ReaderMode({
     }
     const query = window.matchMedia("(min-width: 1024px)");
     const update = () => setIsDesktopPinned(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 640px)");
+    const update = () => setIsPhonePaper(query.matches);
     update();
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
@@ -362,8 +386,8 @@ export function ReaderMode({
   }, [isDesktopPinned, leftMode]);
 
   const layout = useMemo(
-    () => buildReaderLayout(originalText, tokens),
-    [originalText, tokens],
+    () => buildReaderLayout(originalText, tokens, !isPhonePaper),
+    [originalText, tokens, isPhonePaper],
   );
 
   // Previous/next order follows tokens[] directly (already first-occurrence
@@ -385,11 +409,15 @@ export function ReaderMode({
       (token) => getTokenGroupKey(token) === initialSelectedTokenKeyRef.current,
     );
     if (matchIndex !== -1) {
+      skipRestoredTokenScrollRef.current =
+        initialScrollFraction !== null &&
+        initialScrollFraction !== undefined &&
+        window.matchMedia("(max-width: 640px)").matches;
       setActiveIndex(matchIndex);
       setActiveSegmentKey(null);
     }
     setHasAppliedInitialSelection(true);
-  }, [hasAppliedInitialSelection, tokens]);
+  }, [hasAppliedInitialSelection, initialScrollFraction, tokens]);
 
   // Handles an external "jump to this word" request (the word-list panel).
   // Inlines the same select+notify steps selectToken does below rather than
@@ -412,14 +440,10 @@ export function ReaderMode({
     onSelectedTokenKeyChange?.(getTokenGroupKey(tokens[tokenIndex]));
   }, [externalSelectRequest, tokens, onSelectedTokenKeyChange]);
 
-  // Restores scroll position on mount when there's no token bookmark to
-  // restore to instead (the token-restore effect above already scrolls the
-  // selected word into view via the activeIndex effect below, which is more
-  // precise -- this is only the fallback for "was scroll-reading without
-  // selecting a word"). Runs after render so the container has real layout
-  // to measure -- a short setTimeout rather than requestAnimationFrame,
-  // since rAF isn't guaranteed to be serviced promptly in every context
-  // (see the scroll-tracking effect below for the same reasoning).
+  // On phones, restore the saved scroll fraction even with a selected token:
+  // that token may occur many times. Tablet/desktop keep token-first restore.
+  // Apply it after the phone paragraph layout is ready and mark completion
+  // only after the timer runs, so effect cleanup cannot cancel the restore.
   useEffect(() => {
     if (
       hasAppliedInitialScroll ||
@@ -429,7 +453,10 @@ export function ReaderMode({
     ) {
       return;
     }
-    if (initialSelectedTokenKey) {
+    if (window.matchMedia("(max-width: 640px)").matches && !isPhonePaper) {
+      return;
+    }
+    if (initialSelectedTokenKey && !window.matchMedia("(max-width: 640px)").matches) {
       const matchExists = tokens.some(
         (token) => getTokenGroupKey(token) === initialSelectedTokenKey,
       );
@@ -440,8 +467,8 @@ export function ReaderMode({
     }
     const timeoutId = window.setTimeout(() => {
       scrollToFraction(initialScrollFraction, "auto");
+      setHasAppliedInitialScroll(true);
     }, 50);
-    setHasAppliedInitialScroll(true);
     return () => window.clearTimeout(timeoutId);
   }, [
     hasAppliedInitialScroll,
@@ -449,6 +476,7 @@ export function ReaderMode({
     initialSelectedTokenKey,
     tokens,
     scrollToFraction,
+    isPhonePaper,
   ]);
 
   // Tracks reading progress as the user scrolls. Throttled with a plain
@@ -458,12 +486,8 @@ export function ReaderMode({
   // progress bar stuck. A ~50ms timer is imperceptible for a position
   // indicator and fires reliably regardless of paint state.
   //
-  // Reading V3 Gate C correction -- desktop (isDesktopPinned) subscribes to
-  // .reader-scroll-region's own "scroll" event and computes from its
-  // scrollTop/scrollHeight/clientHeight (see computeReaderRegionProgress);
-  // that element, not the window, is what actually scrolls at this
-  // breakpoint. Mobile keeps subscribing to window "scroll" exactly as
-  // before -- untouched behavior, untouched formula.
+  // The desktop reader and V4 phone page scroll inside .reader-scroll-region.
+  // The intermediate tablet layout retains its window-based progress.
   useEffect(() => {
     function recompute() {
       if (scrollProgressThrottleRef.current !== null) {
@@ -472,14 +496,14 @@ export function ReaderMode({
       scrollProgressThrottleRef.current = window.setTimeout(() => {
         scrollProgressThrottleRef.current = null;
         setScrollProgress(
-          isDesktopPinned
+          isDesktopPinned || isPhonePaper
             ? computeReaderRegionProgress(readerScrollRegionRef.current)
             : computeScrollProgress(readerTextRef.current),
         );
       }, 50) as unknown as number;
     }
     recompute();
-    const scrollTarget: EventTarget = isDesktopPinned
+    const scrollTarget: EventTarget = isDesktopPinned || isPhonePaper
       ? readerScrollRegionRef.current ?? window
       : window;
     scrollTarget.addEventListener("scroll", recompute, { passive: true });
@@ -501,7 +525,7 @@ export function ReaderMode({
         scrollProgressThrottleRef.current = null;
       }
     };
-  }, [layout, isDesktopPinned]);
+  }, [layout, isDesktopPinned, isPhonePaper]);
 
   // Bubbles the live scroll fraction up to the parent (for localStorage
   // persistence) on a trailing debounce, decoupled from the throttled local
@@ -527,6 +551,10 @@ export function ReaderMode({
   // querying by tokenIndex alone always finds the first DOM match.
   useEffect(() => {
     if (activeIndex === null || !readerTextRef.current) {
+      return;
+    }
+    if (skipRestoredTokenScrollRef.current) {
+      skipRestoredTokenScrollRef.current = false;
       return;
     }
     const selector = activeSegmentKey
@@ -572,9 +600,19 @@ export function ReaderMode({
   }
 
   function closeDetail() {
+    const focusTarget = isPhonePaper && activeIndex !== null
+      ? (readerTextRef.current?.querySelector(
+          activeSegmentKey
+            ? `[data-segment-key="${activeSegmentKey}"]`
+            : `[data-token-index="${activeIndex}"]`,
+        ) as HTMLElement | null)
+      : null;
     setActiveIndex(null);
     setActiveSegmentKey(null);
     onSelectedTokenKeyChange?.(null);
+    if (focusTarget) {
+      window.requestAnimationFrame(() => focusTarget.focus({ preventScroll: true }));
+    }
   }
 
   const navPosition = activeIndex !== null ? navigableIndexes.indexOf(activeIndex) : -1;
@@ -625,6 +663,10 @@ export function ReaderMode({
   }
 
   function scrollToTop() {
+    if (isPhonePaper) {
+      readerScrollRegionRef.current?.scrollTo({ top: 0, behavior: resolveScrollBehavior("smooth") });
+      return;
+    }
     readerTextRef.current?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "start" });
   }
 
@@ -677,6 +719,7 @@ export function ReaderMode({
   }
 
   function handleToggleTextCollapsed() {
+    if (isPhonePaper) setIsOptionsOpen(false);
     if (isDesktopPinned) {
       if (!showSlip && readerScrollRegionRef.current) {
         // About to open re-edit (currently in reading mode) -- remember
@@ -704,6 +747,7 @@ export function ReaderMode({
       setIsOptionsOpen(false);
     } else {
       scrollToTop();
+      if (isPhonePaper) setIsOptionsOpen(false);
     }
   }
 
@@ -713,6 +757,7 @@ export function ReaderMode({
       setIsOptionsOpen(false);
     } else {
       scrollToBookmark();
+      if (isPhonePaper) setIsOptionsOpen(false);
     }
   }
 
@@ -856,7 +901,10 @@ export function ReaderMode({
         >
           {isTextCollapsed ? "원문 입력 펼치기" : "원문 입력 접기"}
         </button>
-        <button type="button" className="ghost-button compact-button" onClick={onResetSession}>
+        <button type="button" className="ghost-button compact-button" onClick={() => {
+          if (isPhonePaper) setIsOptionsOpen(false);
+          onResetSession();
+        }}>
           새 원문
         </button>
       </div>
@@ -888,6 +936,37 @@ export function ReaderMode({
         className="reading-page reading-page--left reading-page--reader"
         data-left-mode={leftMode}
       >
+        <div className="reading-mobile-head">
+          {showSlip ? (
+            <>
+              <button type="button" className="reading-mobile-back" onClick={handleToggleTextCollapsed}>
+                ← 읽기로
+              </button>
+              <strong>원문 편집</strong>
+            </>
+          ) : isOptionsOpen ? (
+            <strong>표시 설정</strong>
+          ) : (
+            <>
+              <strong>원문</strong>
+              <small>{originalText.length}자</small>
+            </>
+          )}
+          {isSessionRestored ? (
+            <span className="reading-mobile-restored">
+              이전 작업
+              <button type="button" onClick={onDismissRestoredNotice}>확인</button>
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleToggleOptions}
+            aria-expanded={isOptionsOpen}
+          >
+            {isOptionsOpen ? "읽기로" : "표시 설정"}
+          </button>
+          <span className="reading-mobile-progress-line" style={{ width: `${progressPercent}%` }} />
+        </div>
         {isSessionRestored ? (
           <span className="reading-restored-chip">
             이전 작업 복원됨
@@ -966,8 +1045,19 @@ export function ReaderMode({
             {layout.lines.map((line, lineIndex) => (
               <p className="reader-line" key={`line-${lineIndex}`}>
                 {line.length > 0
-                  ? line.map((segment) =>
-                      segment.type === "token" ? (
+                  ? line.map((segment, segmentIndex) => {
+                      if (segment.type === "text") {
+                        const previous = line[segmentIndex - 1];
+                        const attached = isPhonePaper && previous?.type === "token"
+                          ? segment.content.match(/^[、。，．！？!?」』）】]+/)?.[0] ?? ""
+                          : "";
+                        return <span key={segment.key}>{segment.content.slice(attached.length)}</span>;
+                      }
+                      const next = line[segmentIndex + 1];
+                      const attached = isPhonePaper && next?.type === "text"
+                        ? next.content.match(/^[、。，．！？!?」』）】]+/)?.[0] ?? ""
+                        : "";
+                      const chip = (
                         <TokenChip
                           key={segment.key}
                           token={tokens[segment.tokenIndex]}
@@ -978,10 +1068,11 @@ export function ReaderMode({
                           showJlptTags={showJlptTags}
                           onSelect={() => selectToken(segment.tokenIndex, segment.key)}
                         />
-                      ) : (
-                        <span key={segment.key}>{segment.content}</span>
-                      ),
-                    )
+                      );
+                      return attached ? (
+                        <span className="reading-token-punctuation" key={segment.key}>{chip}{attached}</span>
+                      ) : chip;
+                    })
                   : " "}
               </p>
             ))}
@@ -1006,6 +1097,17 @@ export function ReaderMode({
               </div>
             </div>
           ) : null}
+        </div>
+
+        <div className="reading-mobile-footer">
+          <button type="button" onClick={() => {
+            if (isPhonePaper && activeIndex !== null) closeDetail();
+            onToggleWordList();
+          }} aria-expanded={wordListOpen}>
+            이 글의 단어 {wordListCount}개
+          </button>
+          <button type="button" onClick={handleToggleTextCollapsed}>원문 편집</button>
+          <span>읽기 {progressPercent}%</span>
         </div>
 
         {/* Reading V3 Gate 3B -- desktop's options *mode*: printed directly
@@ -1238,7 +1340,11 @@ export function ReaderMode({
       </div>
 
       {tokenDetailProps && !isDesktopPinned ? (
-        <TokenDetailSheet presentation="modal" {...tokenDetailProps} />
+        <TokenDetailSheet
+          key={activeIndex}
+          presentation={isPhonePaper ? "compact" : "modal"}
+          {...tokenDetailProps}
+        />
       ) : null}
     </>
   );

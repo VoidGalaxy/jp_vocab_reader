@@ -24,6 +24,8 @@ import { getDisplayMeaning, statusLabels } from "./shared";
 type ReadingVocabPanelProps = {
   variant?: "tray" | "page";
   onClose?: () => void;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   // Computed once in ReadingTab (shared with the Save Tray/Word Inspector)
   // instead of recomputed here, so every part of the reading workspace
   // agrees on exactly the same grouped/deduped word list.
@@ -85,6 +87,8 @@ const quickSelectModes: Array<{ mode: ReadingSaveMode; label: string; hint: stri
 export function ReadingVocabPanel({
   variant = "tray",
   onClose,
+  isOpen,
+  onOpenChange,
   entries,
   selectedTokenKey,
   onSelectToken,
@@ -100,6 +104,14 @@ export function ReadingVocabPanel({
   // the reader workspace, not the main event, so it starts out of the way
   // and only expands on request ("어휘 후보 보기").
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const collapsed = isOpen === undefined ? isCollapsed : !isOpen;
+  const setOpen = (open: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(open);
+    } else {
+      setIsCollapsed(!open);
+    }
+  };
 
   const filteredEntries = useMemo(
     () => filterReadingVocabEntries(entries, filter),
@@ -114,28 +126,28 @@ export function ReadingVocabPanel({
 
   return (
     <>
-      {/* Mobile retains the original edge tab. Desktop renders the same
-          search and selection actions directly on the right book page. */}
+      {/* Tablet retains the edge tab; the phone C page opens this same list
+          from its footer, while desktop renders it on the right page. */}
       {!isPage ? <button
         type="button"
-        className={`reading-candidate-tab${isCollapsed ? "" : " reading-candidate-tab-open"}`}
-        onClick={() => setIsCollapsed((value) => !value)}
-        aria-expanded={!isCollapsed}
+        className={`reading-candidate-tab${collapsed ? "" : " reading-candidate-tab-open"}`}
+        onClick={() => setOpen(collapsed)}
+        aria-expanded={!collapsed}
         aria-label={`이 글의 단어 ${entries.length}개`}
       >
         <CardFileIcon className="reading-candidate-tab-icon" />
         {entries.length}
       </button> : null}
-      {!isPage && isCollapsed ? null : (
+      {!isPage && collapsed ? null : (
         <div className={isPage ? "reading-vocab-page" : "reading-candidate-panel"}>
       <div className="reading-candidate-panel-header">
         <span className="reading-candidate-panel-title">
-          {isPage ? "이 글의 단어" : "단어 스티커 트레이"} · {isPage ? visibleEntries.length : entries.length}개
+          {isPage ? "이 글의 단어" : <><span className="reading-candidate-title-tray">단어 스티커 트레이</span><span className="reading-candidate-title-paper">이 글의 단어</span></>} · {isPage ? visibleEntries.length : entries.length}개
         </span>
         <button
           type="button"
           className="reading-candidate-panel-close"
-          onClick={isPage ? onClose : () => setIsCollapsed(true)}
+          onClick={isPage ? onClose : () => setOpen(false)}
           aria-label="단어 목록 닫기"
         >
           <CloseIcon className="reading-candidate-panel-close-icon" />

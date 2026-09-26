@@ -13076,6 +13076,245 @@ input.reading-vocab-sticker-toggle:checked {
   white-space: pre-wrap;
 }
 
+.reading-mobile-head,
+.reading-mobile-footer {
+  display: none;
+}
+
+/* Reading V4 Gate B: the approved phone composition is a single washi page.
+   Desktop and tablet retain their existing photographic book geometry. */
+@media (max-width: 640px) {
+  body:has(.reading-panel) .page {
+    min-height: 100dvh;
+    padding-bottom: 0;
+  }
+
+  .reading-panel {
+    gap: 0;
+  }
+
+  .reading-panel .reading-scene-v2 {
+    margin-inline: -12px;
+  }
+
+  .reading-panel .reading-scene-v2-frame {
+    width: 100vw;
+    height: calc(100dvh - 70px);
+    aspect-ratio: auto;
+    overflow: hidden;
+  }
+
+  .reading-panel .reading-scene-v2-media-img {
+    object-position: left top;
+    border-radius: 0;
+  }
+
+  .reading-panel .reading-scene-v2-eyebrow,
+  .reading-page--reader > .reading-progress-tag-wrap,
+  .reading-page--reader > .reading-left-footer,
+  .reading-page--reader > .reading-progress-flag {
+    display: none;
+  }
+
+  .reading-page--left.reading-page--reader {
+    left: clamp(50px, 15.38vw, 60px);
+    right: clamp(20px, 7.18vw, 28px);
+    top: 20px;
+    bottom: 22px;
+    width: auto;
+    height: auto;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .reading-mobile-head {
+    position: relative;
+    display: flex;
+    flex: 0 0 49px;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(59, 83, 65, 0.47);
+    color: #242923;
+  }
+
+  .reading-mobile-head strong {
+    font-size: 16px;
+  }
+
+  .reading-mobile-head small {
+    color: #5b6258;
+    font-size: 11px;
+  }
+
+  .reading-mobile-restored {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #5b6258;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .reading-mobile-head button,
+  .reading-mobile-footer button {
+    width: auto;
+    min-width: 0;
+    min-height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: #26533e;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .reading-mobile-head button {
+    margin-left: auto;
+  }
+
+  .reading-mobile-head .reading-mobile-back {
+    margin-left: 0;
+  }
+
+  .reading-mobile-restored button {
+    margin-left: 0;
+    font-size: 10px;
+    text-decoration: underline;
+  }
+
+  .reading-page--reader > .reading-restored-chip,
+  .reading-vocab-mobile-only .reading-candidate-tab {
+    display: none;
+  }
+
+  .reading-mobile-progress-line {
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    height: 2px;
+    background: #26533e;
+    pointer-events: none;
+  }
+
+  .reading-page--reader > .reading-options-popover-anchor {
+    position: absolute;
+    top: 49px;
+    left: 0;
+    right: 0;
+    z-index: 20;
+  }
+
+  .reading-page--reader > .reader-scroll-region {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-bottom: 24px;
+    scrollbar-width: thin;
+  }
+
+  .reading-page--reader .reader-text {
+    display: block;
+    padding: 20px 6px 28px 0;
+    color: #242923;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", "MS PMincho", serif;
+    font-size: 19px;
+    font-weight: 550;
+    line-height: 2.05;
+    overflow-wrap: anywhere;
+  }
+
+  .reading-page--reader .reader-line {
+    margin: 0;
+    padding: 0;
+    word-break: normal;
+    line-break: strict;
+  }
+
+  .reading-token-punctuation {
+    white-space: nowrap;
+  }
+
+  .reading-page--reader .reader-text .token-chip {
+    position: relative;
+    display: inline;
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 0 1px;
+    border: 0;
+    border-bottom: 1px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    font: inherit;
+    transform: none;
+    cursor: pointer;
+  }
+
+  .reading-page--reader .reader-text .token-chip::before,
+  .reading-page--reader .reader-text .token-chip::after,
+  .reading-page--reader .reader-text .token-chip-surface::before,
+  .reading-page--reader .reader-text .token-chip-surface::after {
+    display: none;
+  }
+
+  .reading-page--reader .reader-text .token-chip-surface {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .reading-page--reader .reader-text .token-chip-known { border-bottom-color: #39705c; }
+  .reading-page--reader .reader-text .token-chip-uncertain { border-bottom-color: #7968a2; }
+  .reading-page--reader .reader-text .token-chip-unknown { border-bottom-color: #8d563f; }
+  .reading-page--reader .reader-text .token-chip-active {
+    border-bottom: 2px solid #26533e;
+    background: rgba(87, 132, 96, 0.14);
+  }
+
+  .reading-mobile-footer {
+    display: flex;
+    flex: 0 0 43px;
+    align-items: center;
+    gap: 14px;
+    border-top: 1px solid rgba(59, 83, 65, 0.47);
+  }
+
+  .reading-mobile-footer span {
+    margin-left: auto;
+    color: #5b6258;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] > .reader-scroll-region,
+  .reading-page--reader[data-left-mode="reedit"] > .reading-mobile-footer {
+    display: none;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] > .reading-page-reedit-slip {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 359px) {
+  .reading-page--reader .reader-text { font-size: 18px; }
+  .reading-mobile-footer { gap: 10px; }
+  .reading-mobile-head button,
+  .reading-mobile-footer button { font-size: 12px; }
+}
+
 @media (min-width: 1024px) {
   /* Reading V3 Gate 3D -- the base keep-all above is correct for Korean UI
      text elsewhere in this file (e.g. .reading-slip-subtitle) and is left
@@ -14607,5 +14846,719 @@ input.reading-vocab-sticker-toggle:checked {
   .checkbox-field input[type="checkbox"] {
     width: 20px;
     height: 20px;
+  }
+}
+
+/* Reading V4 Gate C: the phone word note is a bottom-attached paper leaf. */
+@media (max-width: 640px) {
+  .reading-compact-overlay {
+    z-index: 30;
+    padding: 0;
+    background: transparent;
+  }
+
+  .reading-compact-sheet {
+    width: 100%;
+    max-width: none;
+    height: min(344px, calc(100dvh - 220px));
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 17px 27px calc(17px + env(safe-area-inset-bottom)) 34px;
+    border-top: 2px solid #4b6b52;
+    background: #f5f3e9;
+    box-shadow: 0 -7px 18px rgba(34, 45, 34, 0.13);
+    color: #242923;
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    scrollbar-width: thin;
+  }
+
+  .reading-compact-sheet-details {
+    height: calc(100dvh - 126px);
+  }
+
+  .reading-compact-sheet button {
+    min-width: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .reading-compact-sheet button:focus-visible {
+    outline: 2px solid #245f41;
+    outline-offset: 2px;
+  }
+
+  .reading-compact-overline {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 25px;
+    color: #4a584c;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .reading-compact-overline span:first-child {
+    font-weight: 700;
+  }
+
+  .reading-compact-overline button {
+    min-height: 30px;
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    color: #24543b;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .reading-compact-overline button:nth-of-type(1) {
+    margin-left: auto;
+  }
+
+  .reading-compact-overline button:hover,
+  .reading-compact-actions button:hover,
+  .reading-compact-nav button:hover {
+    text-decoration: underline;
+  }
+
+  .reading-compact-word-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 9px;
+    min-width: 0;
+  }
+
+  .reading-compact-word-row strong {
+    min-width: 0;
+    color: #171d19;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif CJK JP", serif;
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .reading-compact-word-row span {
+    color: #526057;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .reading-compact-meaning {
+    display: -webkit-box;
+    margin: 10px 0 0;
+    overflow: hidden;
+    color: #1c2720;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.38;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .reading-compact-sheet-details .reading-compact-meaning {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+  }
+
+  .reading-compact-status-heading {
+    margin: 17px 0 9px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .reading-compact-statuses {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .reading-compact-statuses button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 52px;
+    padding: 7px;
+    border: 1px solid #899a8d;
+    background: rgba(255, 255, 255, 0.16);
+    color: #29362d;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .reading-compact-statuses button[data-status="known"] { --compact-status-ink: #276e48; --compact-status-wash: #e9f1e8; }
+  .reading-compact-statuses button[data-status="uncertain"] { --compact-status-ink: #655aa3; --compact-status-wash: #efecf7; }
+  .reading-compact-statuses button[data-status="unknown"] { --compact-status-ink: #a65336; --compact-status-wash: #f5e9e1; }
+  .reading-compact-statuses button[data-status="unclassified"] { --compact-status-ink: #83751c; --compact-status-wash: #f2efd9; }
+
+  .reading-compact-statuses button[aria-pressed="true"] {
+    border: 2px solid var(--compact-status-ink);
+    background: var(--compact-status-wash);
+    color: var(--compact-status-ink);
+    font-weight: 800;
+  }
+
+  .reading-compact-status-marker {
+    flex: 0 0 15px;
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid #56665a;
+    border-radius: 50%;
+  }
+
+  .reading-compact-statuses button[aria-pressed="true"] .reading-compact-status-marker {
+    border-color: var(--compact-status-ink);
+    background: var(--compact-status-ink);
+    box-shadow: inset 0 0 0 3px var(--compact-status-wash);
+  }
+
+  .reading-compact-details {
+    margin-top: 19px;
+    border-top: 1px solid #cad1c3;
+    color: #3a473c;
+    font-size: 13px;
+  }
+
+  .reading-compact-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 49px;
+  }
+
+  .reading-compact-nav button,
+  .reading-compact-actions button {
+    min-height: 40px;
+    padding: 5px 2px;
+    border: 0;
+    background: none;
+    color: #24543b;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .reading-compact-nav button:disabled,
+  .reading-compact-actions button:disabled {
+    color: #90998f;
+    text-decoration: none;
+  }
+
+  .reading-compact-meta,
+  .reading-compact-hint {
+    margin: 5px 0 0;
+    color: #626c61;
+    line-height: 1.55;
+  }
+
+  .reading-compact-section {
+    margin-top: 17px;
+    padding-top: 11px;
+    border-top: 1px solid #d4d9ce;
+  }
+
+  .reading-compact-section h3 {
+    margin: 0 0 5px;
+    font-size: 13px;
+  }
+
+  .reading-compact-example {
+    margin: 0;
+    color: #28332b;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif CJK JP", serif;
+    font-size: 16px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+  }
+
+  .reading-compact-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 16px;
+  }
+}
+
+@media (max-width: 359px) {
+  .reading-compact-sheet { padding-right: 22px; padding-left: 26px; }
+  .reading-compact-word-row strong { font-size: 36px; }
+  .reading-compact-statuses button { min-height: 50px; gap: 6px; font-size: 13px; }
+}
+
+.reading-candidate-title-paper { display: none; }
+
+/* Reading V4 Gate D: all phone states use the same bound paper surface. */
+@media (max-width: 640px) {
+  .reading-page--left.reading-page--start {
+    left: clamp(50px, 15.38vw, 60px);
+    right: clamp(20px, 7.18vw, 28px);
+    top: 20px;
+    bottom: 22px;
+    width: auto;
+    height: auto;
+    padding: 0;
+    display: block;
+  }
+
+  .reading-page--start .reading-slip-form,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-form {
+    position: relative;
+    display: grid;
+    grid-template-areas: "head" "editor" "progress" "controls" "error" "meta" "warning";
+    grid-template-rows: 49px minmax(0, 1fr) auto 116px minmax(18px, auto) 27px auto;
+    gap: 0;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-form {
+    grid-template-areas: "editor" "progress" "controls" "error" "meta" "warning";
+    grid-template-rows: minmax(0, 1fr) auto 116px minmax(18px, auto) 27px auto;
+  }
+
+  .reading-page--start .reading-slip-form > *,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-form > * {
+    min-width: 0;
+  }
+
+  .reading-page--start .reading-slip-head {
+    grid-area: head;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(59, 83, 65, 0.47);
+  }
+
+  .reading-page--start .reading-slip-title {
+    color: #242923;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .reading-page--start .reading-slip-subtitle,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-head {
+    display: none;
+  }
+
+  .reading-page--start .reading-slip,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip {
+    grid-area: editor;
+    position: static;
+    min-height: 0;
+    padding: 20px 0 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .reading-page--start .reading-slip textarea,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip textarea {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #242923;
+    font-family: "Yu Mincho", "Hiragino Mincho ProN", "MS PMincho", serif;
+    font-size: 19px;
+    font-weight: 550;
+    line-height: 2.05;
+    resize: none;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .reading-page--start .reading-slip textarea::placeholder,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip textarea::placeholder {
+    color: #899289;
+    opacity: 1;
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    font-size: 14px;
+  }
+
+  .reading-page--start .reading-slip-sample,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-sample {
+    top: 2px;
+    right: 0;
+    min-height: 40px;
+    padding: 0 2px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #26533e;
+    font-size: 12px;
+    transform: none;
+  }
+
+  .reading-page--start .reading-slip-sample .button-icon,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-sample .button-icon { display: none; }
+
+  .reading-page--start .reading-slip-sample:not(:disabled):hover,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-sample:not(:disabled):hover {
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    text-decoration: underline;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-page-reedit-slip {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-mobile-head > button:last-of-type { display: none; }
+
+  .reading-page--start .reading-slip-controls,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-controls {
+    grid-area: controls;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 56px 50px;
+    gap: 10px;
+    width: 100%;
+    margin: 0;
+    justify-content: stretch;
+  }
+
+  .reading-page--start .reading-deck-picker,
+  .reading-page--reader[data-left-mode="reedit"] .reading-deck-picker {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    max-width: none;
+    height: 56px;
+    padding: 0 2px;
+    border-top: 1px solid rgba(59, 83, 65, 0.47);
+    border-bottom: 1px solid rgba(59, 83, 65, 0.47);
+    border-radius: 0;
+    background: transparent;
+    color: #242923;
+  }
+
+  .reading-page--start .reading-deck-picker.reading-deck-picker--desktop-fallback,
+  .reading-page--reader[data-left-mode="reedit"] .reading-deck-picker.reading-deck-picker--desktop-fallback {
+    display: none;
+  }
+
+  .reading-page--start .reading-deck-picker::before,
+  .reading-page--reader[data-left-mode="reedit"] .reading-deck-picker::before {
+    content: "읽기 덱";
+    flex: 0 0 auto;
+    font-size: 12px;
+  }
+
+  .reading-page--start .reading-deck-picker-icon,
+  .reading-page--reader[data-left-mode="reedit"] .reading-deck-picker-icon { display: none; }
+
+  .reading-page--start .reading-deck-picker select,
+  .reading-page--reader[data-left-mode="reedit"] .reading-deck-picker select {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: calc(100% - 70px);
+    padding: 0 16px 0 0;
+    color: #242923;
+    background: transparent;
+    text-align: right;
+    font-size: 15px;
+  }
+
+  .reading-page--start button.reading-slip-cta,
+  .reading-page--reader[data-left-mode="reedit"] button.reading-slip-cta {
+    width: 100%;
+    max-width: none;
+    height: 50px;
+    min-height: 50px;
+    justify-content: center;
+    padding: 0 12px;
+    border-radius: 2px;
+    clip-path: none;
+    background: #26533e;
+    box-shadow: none;
+    transform: none;
+    font-size: 15px;
+  }
+
+  .reading-page--start button.reading-slip-cta:disabled,
+  .reading-page--reader[data-left-mode="reedit"] button.reading-slip-cta:disabled { background: #a6afa3; }
+
+  .reading-page--start button.reading-slip-cta:not(:disabled):hover,
+  .reading-page--reader[data-left-mode="reedit"] button.reading-slip-cta:not(:disabled):hover {
+    background: #1d4631;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .reading-page--start .reading-slip-error-row,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-error-row {
+    grid-area: error;
+    align-self: start;
+    color: #667066;
+    font-size: 11px;
+  }
+
+  .reading-page--start .reading-slip-meta,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-meta {
+    grid-area: meta;
+    align-self: center;
+  }
+
+  .reading-page--start .reading-slip-copyright,
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-copyright {
+    margin: 0;
+    color: #4b6653;
+    font-size: 11px;
+  }
+
+  .reading-page--start .reading-analyze-progress,
+  .reading-page--reader[data-left-mode="reedit"] .reading-analyze-progress {
+    grid-area: progress;
+    padding: 6px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .reading-page--start .reading-storage-warning,
+  .reading-page--reader[data-left-mode="reedit"] .reading-storage-warning {
+    grid-area: warning;
+    margin: 0;
+    color: #86563f;
+    font-size: 11px;
+  }
+
+  .reading-page--start .reading-deck-recovery,
+  .reading-page--reader[data-left-mode="reedit"] .reading-deck-recovery {
+    height: 56px;
+    padding: 0;
+    border: 0;
+    border-top: 1px solid #9a604c;
+    border-bottom: 1px solid #9a604c;
+    border-radius: 0;
+    background: transparent;
+    overflow-y: auto;
+  }
+
+  .reading-page--start .reading-slip-form:has(.reading-deck-recovery),
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-form:has(.reading-deck-recovery) {
+    grid-template-rows: 49px minmax(0, 1fr) auto 154px minmax(18px, auto) 27px auto;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-form:has(.reading-deck-recovery) {
+    grid-template-rows: minmax(0, 1fr) auto 154px minmax(18px, auto) 27px auto;
+  }
+
+  .reading-page--start .reading-slip-controls:has(.reading-deck-recovery),
+  .reading-page--reader[data-left-mode="reedit"] .reading-slip-controls:has(.reading-deck-recovery) {
+    grid-template-rows: 94px 50px;
+  }
+
+  .reading-page--start .reading-deck-recovery,
+  .reading-page--reader[data-left-mode="reedit"] .reading-deck-recovery {
+    height: 94px;
+    padding: 6px 0;
+    overflow: visible;
+  }
+
+  .reading-page--reader[data-left-mode="options"] > .reader-scroll-region,
+  .reading-page--reader[data-left-mode="options"] > .reading-mobile-footer,
+  .reading-page--reader > .reading-options-popover-anchor { display: none; }
+
+  .reading-page--reader[data-left-mode="options"] > .reading-options-inline {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 20px 0 16px;
+    overflow-y: auto;
+    color: #242923;
+    scrollbar-width: thin;
+  }
+
+  .reading-page--reader[data-left-mode="options"] .reader-mode-hint { margin: 0 0 18px; color: #667066; }
+  .reading-page--reader[data-left-mode="options"] .reader-mode-toggles-section {
+    display: flex;
+    align-items: stretch;
+    gap: 9px;
+    margin: 0;
+    padding: 17px 0;
+    border-top: 1px solid rgba(59, 83, 65, 0.32);
+  }
+  .reading-page--reader[data-left-mode="options"] .reader-mode-toggles-section-label {
+    width: 100%;
+    color: #34533f;
+    font-size: 12px;
+  }
+  .reading-page--reader[data-left-mode="options"] .reading-focus-toggle,
+  .reading-page--reader[data-left-mode="options"] .reading-jlpt-toggle {
+    display: flex;
+    align-items: center;
+    min-height: 42px;
+    gap: 10px;
+    color: #242923;
+    white-space: normal;
+  }
+  .reading-page--reader[data-left-mode="options"] .reader-progress-actions button,
+  .reading-page--reader[data-left-mode="options"] .reader-mode-toggles-section > button {
+    min-height: 42px;
+    padding: 7px 10px;
+    border: 1px solid rgba(59, 83, 65, 0.55);
+    border-radius: 2px;
+    background: transparent;
+    color: #26533e;
+  }
+
+  .reading-scene-v2-frame[data-mobile-word-list-open="true"] .reading-page--left { visibility: hidden; }
+  .reading-vocab-mobile-only .reading-candidate-title-tray { display: none; }
+  .reading-vocab-mobile-only .reading-candidate-title-paper { display: inline; }
+  .reading-vocab-mobile-only .reading-candidate-panel {
+    left: clamp(50px, 15.38vw, 60px);
+    right: clamp(20px, 7.18vw, 28px);
+    top: 20px;
+    bottom: 22px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: hidden;
+    animation: none;
+    color: #242923;
+  }
+
+  .reading-vocab-mobile-only .reading-candidate-panel-header {
+    flex: 0 0 49px;
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid rgba(59, 83, 65, 0.47);
+  }
+  .reading-vocab-mobile-only .reading-candidate-panel-title { color: #242923; font-size: 16px; }
+  .reading-vocab-mobile-only .reading-candidate-panel-close {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .reading-vocab-mobile-only .reading-vocab-drawer-hint { display: none; }
+  .reading-vocab-mobile-only .reading-vocab-controls {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+    padding: 13px 0 8px;
+  }
+  .reading-vocab-mobile-only .reading-vocab-search-wrap { flex: 1 1 100%; min-width: 0; }
+  .reading-vocab-mobile-only .reading-vocab-search { min-height: 40px; font-size: 14px; }
+  .reading-vocab-mobile-only .reading-vocab-filters {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    gap: 13px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .reading-vocab-mobile-only .reading-vocab-filter-button { flex: 0 0 auto; min-height: 39px; font-size: 12px; }
+  .reading-vocab-mobile-only .reading-vocab-quick-select {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .reading-vocab-mobile-only .reading-vocab-quick-select-button { flex: 0 0 auto; white-space: nowrap; }
+  .reading-vocab-mobile-only .reading-vocab-selection-summary { flex: 0 0 auto; margin: 7px 0; }
+  .reading-vocab-mobile-only .reading-vocab-tray {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    padding: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .reading-vocab-mobile-only .reading-vocab-sticker-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    max-width: none;
+    min-height: 75px;
+    margin: 0;
+    border-bottom: 1px solid rgba(59, 83, 65, 0.24);
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+  }
+  .reading-vocab-mobile-only .reading-vocab-sticker-row::before,
+  .reading-vocab-mobile-only .reading-vocab-sticker::after { display: none; }
+  .reading-vocab-mobile-only .reading-vocab-sticker {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    padding: 9px 17px 9px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    background-image: none;
+    box-shadow: none;
+    transform: none;
+    clip-path: none;
+    justify-content: start;
+    justify-items: start;
+  }
+  .reading-vocab-mobile-only .reading-vocab-sticker-row:nth-child(3n) .reading-vocab-sticker,
+  .reading-vocab-mobile-only .reading-vocab-sticker-row:nth-child(3n + 2) .reading-vocab-sticker {
+    border-radius: 0;
+    clip-path: none;
+  }
+  .reading-vocab-mobile-only input.reading-vocab-sticker-toggle,
+  .reading-vocab-mobile-only .reading-vocab-sticker-toggle-placeholder {
+    position: static;
+    flex: 0 0 19px;
+    width: 19px;
+    min-width: 19px;
+    height: 19px;
+    box-sizing: border-box;
+    border: 1px solid #5b715f;
+    border-radius: 2px;
+    background: transparent;
+    box-shadow: none;
+  }
+  .reading-vocab-mobile-only input.reading-vocab-sticker-toggle:checked {
+    border-color: #26533e;
+    background: #26533e;
+    box-shadow: inset 0 0 0 3px #f7f5ed;
+  }
+  .reading-vocab-mobile-only .reading-vocab-sticker-toggle-placeholder { opacity: 0.55; }
+  .reading-vocab-mobile-only .reading-vocab-sticker-row-checked .reading-vocab-sticker,
+  .reading-vocab-mobile-only .reading-vocab-sticker-active {
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+  }
+  .reading-vocab-mobile-only .reading-vocab-status-badge,
+  .reading-vocab-mobile-only .reading-vocab-occurrence,
+  .reading-vocab-mobile-only .reading-vocab-saved-badge {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
 }

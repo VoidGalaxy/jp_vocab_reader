@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { TokenStatus, TokenWithStatus } from "./types";
 import { getDisplayMeaning } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
@@ -43,7 +44,7 @@ type TokenDetailSheetProps = {
 // panel, not something that interrupts the page). Both shells render the
 // exact same TokenDetailContent, so there is exactly one place that knows
 // what a word card actually contains.
-type TokenDetailPresentation = "modal" | "pinned";
+type TokenDetailPresentation = "modal" | "pinned" | "compact";
 
 // Short local labels for the classify stamp row only -- statusLabels
 // (shared.tsx) stays the long/formal form used elsewhere (Analyze tab
@@ -57,6 +58,164 @@ const stampLabels: Record<TokenStatus, string> = {
   unknown: "모름",
   unclassified: "미분류",
 };
+
+const compactStatusLabels: Record<TokenStatus, string> = {
+  known: "아는 단어",
+  uncertain: "헷갈림",
+  unknown: "모르는 단어",
+  unclassified: "미분류",
+};
+
+const compactStatuses: TokenStatus[] = ["known", "uncertain", "unknown", "unclassified"];
+
+function CompactTokenDetailSheet(props: TokenDetailSheetProps) {
+  const {
+    token, onClose, onStatusChange, onPrevious, onNext,
+    canGoPrevious, canGoNext, onNextUnknown, canGoNextUnknown,
+    onFirstOccurrence, canGoFirstOccurrence, positionLabel,
+    isInBasket, canAddToBasket, onToggleBasket,
+    meaningEditItemId, meaningEditDraft, isSavingMeaningEdit,
+    meaningEditMessage, onStartMeaningEdit, onMeaningEditDraftChange,
+    onSaveMeaningEdit, onCancelMeaningEdit, onReportMeaning,
+  } = props;
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const sheetRef = useRef<HTMLElement>(null);
+  const label = token.surface || token.base_form;
+  const meaning = token.savedMeaningKo || token.meaning_ko;
+  const vocabItemId = token.savedVocabItemId ?? null;
+  const editingMeaning = vocabItemId !== null && meaningEditItemId === vocabItemId;
+  const example = token.savedExampleSentence || token.example_sentence;
+  const meta = [
+    token.base_form && token.base_form !== label ? `기본형 ${token.base_form}` : null,
+    `${token.occurrence_count || 1}회 등장`,
+    token.jlpt_level ? `JLPT 추천 ${token.jlpt_level}` : null,
+  ].filter(Boolean).join(" · ");
+
+  useEffect(() => {
+    closeRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab" || !sheetRef.current) return;
+    const buttons = Array.from(
+      sheetRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
+      ),
+    ).filter((element) => element.getClientRects().length > 0);
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  return (
+    <div className="reading-inspector-float-overlay reading-compact-overlay" role="presentation" onClick={onClose}>
+      <section
+        ref={sheetRef}
+        className={`reading-compact-sheet${detailsOpen ? " reading-compact-sheet-details" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${label} 단어 정보`}
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={handleKeyDown}
+      >
+        <div className="reading-compact-overline">
+          <span>선택한 단어</span>
+          {positionLabel ? <span>{positionLabel}</span> : null}
+          <button type="button" onClick={() => setDetailsOpen((open) => !open)} aria-expanded={detailsOpen}>
+            {detailsOpen ? "간단히" : "자세히"}
+          </button>
+          <button ref={closeRef} type="button" onClick={onClose} aria-label="단어 카드 닫기">닫기</button>
+        </div>
+
+        <div className="reading-compact-word-row">
+          <strong>{label}</strong>
+          <span>{[token.reading && token.reading !== label ? token.reading : null, token.part_of_speech].filter(Boolean).join(" · ")}</span>
+        </div>
+        <p className="reading-compact-meaning">{getDisplayMeaning(meaning)}</p>
+        <h3 className="reading-compact-status-heading">단어 분류</h3>
+        <div className="reading-compact-statuses" role="group" aria-label="단어 상태 변경">
+          {compactStatuses.map((status) => (
+            <button
+              type="button"
+              key={status}
+              data-status={status}
+              aria-pressed={token.status === status}
+              onClick={() => onStatusChange(status)}
+            >
+              <span className="reading-compact-status-marker" aria-hidden="true" />
+              {compactStatusLabels[status]}
+            </button>
+          ))}
+        </div>
+
+        {detailsOpen ? (
+          <div className="reading-compact-details">
+            <div className="reading-compact-nav" role="group" aria-label="단어 이동">
+              <button type="button" onClick={onPrevious} disabled={!canGoPrevious}>← 이전</button>
+              <button type="button" onClick={onNext} disabled={!canGoNext}>다음 →</button>
+            </div>
+            <p className="reading-compact-meta">{meta}</p>
+            {token.jlpt_level ? <p className="reading-compact-hint">JLPT 추천 어휘 기준이며, 비공식 참고용 표시입니다.</p> : null}
+            <div className="reading-compact-section">
+              <h3>예문</h3>
+              {example ? (
+                <p className="reading-compact-example">
+                  <HighlightedExample sentence={example} surface={token.surface} baseForm={token.base_form} normalizedForm={token.normalized_form} />
+                </p>
+              ) : <p className="reading-compact-hint">이 단어가 포함된 문장을 찾지 못했어요.</p>}
+            </div>
+            <div className="reading-compact-section">
+              <h3>어휘 노트</h3>
+              <div className="reading-compact-actions">
+                {canAddToBasket ? (
+                  <button type="button" onClick={onToggleBasket} aria-pressed={isInBasket}>
+                    {isInBasket ? "저장 대상에서 제외" : "저장 대상으로 선택"}
+                  </button>
+                ) : null}
+                {vocabItemId !== null ? (
+                  <MeaningQuickEdit
+                    isEditing={editingMeaning}
+                    draftValue={meaningEditDraft}
+                    isSaving={isSavingMeaningEdit}
+                    message={editingMeaning ? meaningEditMessage : ""}
+                    onStartEdit={() => onStartMeaningEdit(vocabItemId, meaning)}
+                    onDraftChange={onMeaningEditDraftChange}
+                    onSave={onSaveMeaningEdit}
+                    onCancel={onCancelMeaningEdit}
+                  />
+                ) : null}
+                {!editingMeaning ? <button type="button" onClick={() => onReportMeaning(token)}>뜻 오류 신고</button> : null}
+              </div>
+            </div>
+            <div className="reading-compact-section">
+              <h3>원문에서 이동</h3>
+              <div className="reading-compact-actions">
+                <button type="button" onClick={onNextUnknown} disabled={!canGoNextUnknown}>다음 모르는 단어</button>
+                {token.occurrence_count > 1 ? (
+                  <button type="button" onClick={onFirstOccurrence} disabled={!canGoFirstOccurrence}>첫 등장으로</button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </section>
+    </div>
+  );
+}
 
 // Phase 120 -- Reading Inspector Interior Reconstruction. Previously this
 // card was built like an information-management panel: a titled/tinted
@@ -542,6 +701,10 @@ export function TokenDetailSheet({
         <TokenDetailContent {...contentProps} />
       </div>
     );
+  }
+
+  if (presentation === "compact") {
+    return <CompactTokenDetailSheet {...contentProps} />;
   }
 
   // Phase 169 -- mobile/tablet: a small floating note anchored to the

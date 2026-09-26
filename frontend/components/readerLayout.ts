@@ -59,6 +59,7 @@ export type ReaderLayout = {
 export function buildReaderLayout(
   originalText: string,
   tokens: TokenWithStatus[],
+  splitSentences = true,
 ): ReaderLayout {
   const lines: ReaderInlineSegment[][] = [[]];
   const usedTokenIndexes = new Set<number>();
@@ -78,10 +79,9 @@ export function buildReaderLayout(
     } else {
       line.push({ type: "text", key: `t-${keyCounter++}`, content: char });
     }
-    // Break onto a new line right after sentence-ending punctuation so a
-    // wall of pasted text reads one sentence per line, the way the input
-    // would if the user had typed line breaks themselves.
-    if (SENTENCE_ENDING_CHARS.has(char)) {
+    // Desktop/tablet keep the legacy sentence rows; phone paper uses only
+    // the line breaks the user actually entered.
+    if (splitSentences && SENTENCE_ENDING_CHARS.has(char)) {
       lines.push([]);
     }
   }
