@@ -6,7 +6,7 @@ import type { TokenStatus, TokenWithStatus } from "./types";
 import { TokenChip } from "./TokenChip";
 import { TokenDetailSheet, TokenDetailLedger } from "./TokenDetailSheet";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
-import { ShioriGuideCard, ShioriMark } from "./Shiori";
+import { ShioriMark } from "./Shiori";
 import { ReadingSourceSlip } from "./ReadingSourceSlip";
 import type { ReadingSourceSlipProps } from "./ReadingSourceSlip";
 import { buildReaderLayout, getNavigableTokenIndexes } from "./readerLayout";
@@ -201,11 +201,17 @@ export function ReaderMode({
   // word (e.g. 闇 appearing 40 times in a long text) collapses to one
   // tokenIndex after dedup, so tokenIndex alone can't tell "the 3rd 闇" apart
   // from "the 1st 闇". null means "no specific occurrence" (prev/next nav,
-  // the word-list panel, or a restored selection), which intentionally
-  // falls back to the word's first occurrence.
+  // the word-list panel, or a restored selection); scrolling then falls
+  // back to the word's first occurrence (see highlightedSegmentKey for
+  // which occurrence, if any, is underlined).
   const [activeSegmentKey, setActiveSegmentKey] = useState<string | null>(
     null,
   );
+  // False only for a selection restored from a saved session: the session
+  // stores which word, not which occurrence, so the reader must not guess
+  // an occurrence to underline. Every in-session selection path (click,
+  // prev/next, word list, first occurrence) sets it back to true.
+  const [isSelectionLocated, setIsSelectionLocated] = useState(true);
   const [focusMode, setFocusMode] = useState(false);
   const [showJlptTags, setShowJlptTags] = useState(true);
   // Reader-first layout: display toggles used to sit inline in the header
@@ -283,7 +289,13 @@ export function ReaderMode({
       if (typeof window === "undefined") {
         return;
       }
-      if (window.matchMedia("(max-width: 640px)").matches) {
+      // Phone paper and the desktop book both scroll inside
+      // .reader-scroll-region (the window never scrolls there); only the
+      // intermediate tablet layout scrolls the window.
+      if (
+        window.matchMedia("(max-width: 640px)").matches ||
+        window.matchMedia("(min-width: 1024px)").matches
+      ) {
         const region = readerScrollRegionRef.current;
         if (region) {
           region.scrollTo({
@@ -347,8 +359,15 @@ export function ReaderMode({
   // fires whenever the mode returns to "reading", which covers both
   // "options closed" and "re-edit closed/submitted" the same way, since
   // both land back on leftMode "reading".
+  //
+  // Only on a real return from another mode: on mount (and when the desktop
+  // breakpoint first matches) the mode was already "reading", and applying
+  // the still-empty saved value would reset a restored position to 0.
+  const previousLeftModeRef = useRef(leftMode);
   useEffect(() => {
-    if (!isDesktopPinned || leftMode !== "reading") {
+    const previousMode = previousLeftModeRef.current;
+    previousLeftModeRef.current = leftMode;
+    if (!isDesktopPinned || leftMode !== "reading" || previousMode === "reading") {
       return;
     }
     const container = readerScrollRegionRef.current;
@@ -390,6 +409,19 @@ export function ReaderMode({
     [originalText, tokens, isPhonePaper],
   );
 
+  // First rendered occurrence (segment key) of each token, in reading order.
+  const firstSegmentKeyByToken = useMemo(() => {
+    const keys = new Map<number, string>();
+    for (const line of layout.lines) {
+      for (const segment of line) {
+        if (segment.type === "token" && !keys.has(segment.tokenIndex)) {
+          keys.set(segment.tokenIndex, segment.key);
+        }
+      }
+    }
+    return keys;
+  }, [layout]);
+
   // Previous/next order follows tokens[] directly (already first-occurrence
   // text order -- see getNavigableTokenIndexes), not the rendered layout.
   const navigableIndexes = useMemo(
@@ -412,9 +444,11 @@ export function ReaderMode({
       skipRestoredTokenScrollRef.current =
         initialScrollFraction !== null &&
         initialScrollFraction !== undefined &&
-        window.matchMedia("(max-width: 640px)").matches;
+        (window.matchMedia("(max-width: 640px)").matches ||
+          window.matchMedia("(min-width: 1024px)").matches);
       setActiveIndex(matchIndex);
       setActiveSegmentKey(null);
+      setIsSelectionLocated(false);
     }
     setHasAppliedInitialSelection(true);
   }, [hasAppliedInitialSelection, initialScrollFraction, tokens]);
@@ -437,11 +471,14 @@ export function ReaderMode({
     }
     setActiveIndex(tokenIndex);
     setActiveSegmentKey(null);
+    setIsSelectionLocated(true);
     onSelectedTokenKeyChange?.(getTokenGroupKey(tokens[tokenIndex]));
   }, [externalSelectRequest, tokens, onSelectedTokenKeyChange]);
 
-  // On phones, restore the saved scroll fraction even with a selected token:
-  // that token may occur many times. Tablet/desktop keep token-first restore.
+  // On phones and the desktop book, restore the saved scroll fraction even
+  // with a selected token: that token may occur many times, and the saved
+  // fraction is where the reader actually was. Only the tablet layout keeps
+  // token-first restore.
   // Apply it after the phone paragraph layout is ready and mark completion
   // only after the timer runs, so effect cleanup cannot cancel the restore.
   useEffect(() => {
@@ -456,7 +493,11 @@ export function ReaderMode({
     if (window.matchMedia("(max-width: 640px)").matches && !isPhonePaper) {
       return;
     }
-    if (initialSelectedTokenKey && !window.matchMedia("(max-width: 640px)").matches) {
+    if (
+      initialSelectedTokenKey &&
+      !window.matchMedia("(max-width: 640px)").matches &&
+      !window.matchMedia("(min-width: 1024px)").matches
+    ) {
       const matchExists = tokens.some(
         (token) => getTokenGroupKey(token) === initialSelectedTokenKey,
       );
@@ -467,6 +508,9 @@ export function ReaderMode({
     }
     const timeoutId = window.setTimeout(() => {
       scrollToFraction(initialScrollFraction, "auto");
+      if (!window.matchMedia("(min-width: 641px) and (max-width: 1023px)").matches) {
+        setScrollProgress(computeReaderRegionProgress(readerScrollRegionRef.current));
+      }
       setHasAppliedInitialScroll(true);
     }, 50);
     return () => window.clearTimeout(timeoutId);
@@ -531,15 +575,26 @@ export function ReaderMode({
   // persistence) on a trailing debounce, decoupled from the throttled local
   // updates above so scrolling never writes to localStorage dozens of times
   // per second.
+  //
+  // Held back until a pending restore has been applied: before that, the
+  // live value is just the freshly mounted region's 0, and bubbling it would
+  // overwrite the saved position before it is ever restored.
   useEffect(() => {
     if (!onScrollProgressChange) {
+      return;
+    }
+    if (
+      !hasAppliedInitialScroll &&
+      initialScrollFraction !== null &&
+      initialScrollFraction !== undefined
+    ) {
       return;
     }
     const timeoutId = window.setTimeout(() => {
       onScrollProgressChange(scrollProgress);
     }, 400);
     return () => window.clearTimeout(timeoutId);
-  }, [scrollProgress, onScrollProgressChange]);
+  }, [scrollProgress, onScrollProgressChange, hasAppliedInitialScroll, initialScrollFraction]);
 
   // Keeps the selected word visible in the source text as prev/next moves
   // it around -- best-effort only, so a missing DOM match (e.g. the active
@@ -596,6 +651,7 @@ export function ReaderMode({
   function selectToken(index: number, segmentKey: string | null = null) {
     setActiveIndex(index);
     setActiveSegmentKey(segmentKey);
+    setIsSelectionLocated(true);
     onSelectedTokenKeyChange?.(getTokenGroupKey(tokens[index]));
   }
 
@@ -764,7 +820,18 @@ export function ReaderMode({
   const progressPercent = Math.round(scrollProgress * 100);
   const activeToken = activeIndex !== null ? tokens[activeIndex] : null;
   const hasNextUnknown = findNextUnknownPosition() !== -1;
-  const isAtFirstOccurrence = activeSegmentKey === null;
+  // Exactly one rendered occurrence is underlined: the clicked one, or the
+  // first occurrence for selections that scroll there (prev/next, word
+  // list, "첫 등장으로"), or none for a restored selection whose occurrence
+  // is unknown.
+  const firstOccurrenceKey =
+    activeIndex !== null ? firstSegmentKeyByToken.get(activeIndex) ?? null : null;
+  const highlightedSegmentKey =
+    activeIndex === null
+      ? null
+      : activeSegmentKey ?? (isSelectionLocated ? firstOccurrenceKey : null);
+  const isAtFirstOccurrence =
+    highlightedSegmentKey !== null && highlightedSegmentKey === firstOccurrenceKey;
   // Narrowed once here (not re-read off activeToken.savedVocabItemId inside
   // the footer's closures below) so TypeScript can actually track that it's
   // non-null wherever onStartEdit captures it.
@@ -967,6 +1034,17 @@ export function ReaderMode({
           </button>
           <span className="reading-mobile-progress-line" style={{ width: `${progressPercent}%` }} />
         </div>
+        <div className="reading-desktop-head">
+          <strong>{leftMode === "options" ? "표시 설정" : "원문"}</strong>
+          {isSessionRestored ? (
+            <span className="reading-desktop-restored">
+              이전 작업 복원됨
+              <button type="button" onClick={onDismissRestoredNotice}>확인</button>
+            </span>
+          ) : (
+            <span>{originalText.length}자</span>
+          )}
+        </div>
         {isSessionRestored ? (
           <span className="reading-restored-chip">
             이전 작업 복원됨
@@ -982,6 +1060,9 @@ export function ReaderMode({
 
         {showSlip ? (
           <div className="reading-page-reedit-slip">
+            <button type="button" className="reading-reedit-close" onClick={handleToggleTextCollapsed}>
+              읽기로
+            </button>
             <ReadingSourceSlip {...slipProps} />
           </div>
         ) : null}
@@ -1043,7 +1124,14 @@ export function ReaderMode({
         <div className="reader-scroll-region" ref={readerScrollRegionRef}>
           <div className="reader-text" ref={readerTextRef}>
             {layout.lines.map((line, lineIndex) => (
-              <p className="reader-line" key={`line-${lineIndex}`}>
+              <p
+                className={
+                  layout.lineStartsParagraph[lineIndex]
+                    ? "reader-line reader-line--paragraph"
+                    : "reader-line"
+                }
+                key={`line-${lineIndex}`}
+              >
                 {line.length > 0
                   ? line.map((segment, segmentIndex) => {
                       if (segment.type === "text") {
@@ -1063,7 +1151,7 @@ export function ReaderMode({
                           token={tokens[segment.tokenIndex]}
                           tokenIndex={segment.tokenIndex}
                           segmentKey={segment.key}
-                          isActive={activeIndex === segment.tokenIndex}
+                          isActive={segment.key === highlightedSegmentKey}
                           focusMode={focusMode}
                           showJlptTags={showJlptTags}
                           onSelect={() => selectToken(segment.tokenIndex, segment.key)}
@@ -1137,6 +1225,7 @@ export function ReaderMode({
             accessible name to the full phrase regardless of which span is
             visually showing, so assistive tech never sees "편집"/"옵션". */}
         <div className="reading-left-footer">
+          <span className="reading-left-footer-progress">읽기 {progressPercent}%</span>
           <button
             type="button"
             className="reading-left-footer-btn"
@@ -1170,13 +1259,6 @@ export function ReaderMode({
           </span>
         </div>
 
-        {/* Small physical page-corner marker (reading-v3-analyzed-reference.png's
-            forest-green folded corner), desktop only -- a passive readout,
-            not an interactive trigger (그 역할은 이제 "표시 옵션" 버튼). */}
-        <span className="reading-progress-flag" aria-hidden="true">
-          <span className="reading-progress-flag-label">읽기 진행률</span>
-          <strong>{progressPercent}%</strong>
-        </span>
       </div>
 
       {/* Desktop-only opposite page: always mounted (an idle Shiori guide
@@ -1199,11 +1281,12 @@ export function ReaderMode({
             <TokenDetailLedger {...tokenDetailProps} />
           ) : (
             <div className="reading-page-idle">
-              <ShioriGuideCard
-                variant="reading"
-                size="md"
-                message="단어를 누르면 이 자리에서 뜻과 예문을 볼 수 있어요."
-              />
+              <div className="reading-page-idle-head">단어</div>
+              <div className="reading-page-idle-copy">
+                <strong>읽는 중</strong>
+                <p>원문의 단어를 선택하면 이곳에서 뜻과 분류를 볼 수 있어요.</p>
+                <small>원문은 왼쪽 지면에서 계속 읽을 수 있습니다.</small>
+              </div>
             </div>
           )}
         </div>

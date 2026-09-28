@@ -23,8 +23,8 @@ import type { Deck, TokenStatus, TokenWithStatus, VocabItem } from "./types";
 export const SAMPLE_TEXT =
   "彼は闇の中で声を聞いた。少女は約束を思い出した。騎士は剣を握り、敵から王を守った。";
 
-const DESKTOP_ASSET = "/brand/decor/v4/v4-reading-open-book-desktop-soft-seam.png";
-const TALL_DESKTOP_ASSET = "/brand/decor/v4/v4-reading-open-book-desktop-tall-soft-seam.png";
+const DESKTOP_ASSET = "/brand/decor/v4/v4-reading-c-folio-desktop-wide.webp";
+const TALL_DESKTOP_ASSET = "/brand/decor/v4/v4-reading-c-folio-desktop-tall.webp";
 const MOBILE_ASSET = "/brand/decor/v2/v2-reading-page-mobile-9x16.webp";
 const PHONE_PAPER_ASSET = "/brand/decor/v4/v4-reading-washi-mobile-c-quiet.webp";
 
@@ -270,53 +270,15 @@ export function ReadingTab({
       }`}
       aria-live="polite"
     >
-      {/* Phase 169 -- one full-bleed open-book photo is the scene anchor (a
-          different shot per breakpoint, not one crop of the other): the
-          desktop photo is a two-page ruled spread, so .reading-page--left/
-          --right are that book's two real pages; the mobile photo shows one
-          page (plus a sliver of the other, already baked into the shot), so
-          --right stays unmounted there and --left becomes that single
-          page's full extent. Every live piece below (slip, reader text,
-          word inspector, save memo, candidate tab) is positioned as a % of
-          this same frame -- see globals.css for the exact zones, tuned per
-          breakpoint against where each photo actually has ruled-page room.
-          Reading V3 Gate B -- desktop now uses the approved direct-ImageGen
-          scene (v3-reading-open-book-desktop.png, native 1849x851) instead
-          of the old V2 photo; every desktop percentage in globals.css was
-          remeasured against this asset's own paper/page geometry, not
-          reused from the old 1672x941 plate. Phones now use the V4 quiet
-          washi page; tablets retain the V2 photo.
-          Phase 173 -- the "원문 읽기" eyebrow used to be a plain text row
-          sitting above this scene, its own separate header section reading
-          as a leftover app title bar. Moved inside .reading-scene-v2-frame
-          as a small paper tag hanging off the book's top edge instead --
-          see .reading-scene-v2-eyebrow, now absolutely positioned against
-          the frame rather than sitting in normal flow above it. */}
+      {/* Desktop uses one C folio book scene per aspect-ratio bucket. Live
+          content stays inside the measured paper zones; phones and tablets
+          retain their existing separate scenes. */}
       <div className="reading-scene-v2">
         <div className="reading-scene-v2-frame" data-mobile-word-list-open={isWordListOpen}>
           <picture className="reading-scene-v2-media">
-            {/* Reading V3 Recovery Gate 1B -- the approved 1849x851 scene is
-                a panoramic crop that leaves dead space below it on
-                narrower/taller desktop windows (Gate 1A's finding). The
-                1536x1024 tall scene fills those windows instead. Wide must
-                be listed first: <source> picks the first matching entry, so
-                a window that satisfies both would otherwise land on
-                whichever came first regardless of which is "more correct" --
-                listing wide first makes that an explicit choice, not
-                incidental order. Media conditions here are mirrored exactly
-                in globals.css (.reading-scene-v2-frame / .reading-page--left
-                / --right) so the CSS geometry always matches whichever
-                photo actually loaded.
-                Recovery Gate 1C -- threshold raised from 16/9 to 2/1: at
-                exactly 16:9 (e.g. 1600x900) the wide photo's own ratio
-                (2.17:1) is narrower than the window, and forcing the frame
-                to the photo's width-driven aspect-ratio left a bottom gap
-                below it (fixed in CSS by making height-driven sizing the
-                only model at >=1024px) -- but a wide-but-not-that-wide
-                window still doesn't need the panoramic photo at all when
-                the tall photo already fills it edge-to-edge with a small,
-                safe cover crop. 2/1 keeps the wide photo for windows
-                actually shaped like it. */}
+            {/* Source conditions must match the desktop safe-zone variables
+                in globals.css. Each scene's book core is contained; only its
+                surrounding cloth bleed may be clipped at the frame edge. */}
             <source
               media="(min-width: 1500px) and (min-aspect-ratio: 2/1)"
               srcSet={DESKTOP_ASSET}

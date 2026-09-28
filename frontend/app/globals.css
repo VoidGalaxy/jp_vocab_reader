@@ -307,82 +307,32 @@
 }
 
 @media (min-width: 1024px) {
-  /* Reading V3 Recovery Gate 1C -- Gate 1B gave the wide bucket its own
-     width-driven `height:auto; aspect-ratio:1849/851` override, which
-     silently reintroduced a *bottom* strip: at a viewport wider than
-     1849:851 the width-driven height comes out shorter than the available
-     `100svh - 50px`, leaving a gap between the frame's bottom and the
-     viewport's (26px at 1920x960, 114px at 1600x900 under the old >=16/9
-     threshold -- Gate 1B's own sceneTopBottomGap check only ever compared
-     the frame to the image *inside* it, which are always equal by
-     construction, so it could never have caught this).
-     Fix: height-driven sizing is now the ONLY sizing model at >=1024px,
-     for both scenes. Neither scene ever gets `height:auto` again --
-     object-fit:cover (base rule below) does all the cropping, so the
-     frame's bottom always lands exactly at `100svh - 50px` regardless of
-     which photo loaded. Which photo loads still forks at >=1500px and
-     >=2/1 (see the page-safe-zone block and <picture> below) -- only the
-     page-content coordinates differ per photo now, not the frame's own
-     size. */
   .reading-scene-v2-frame {
     aspect-ratio: auto;
     width: 100%;
     height: calc(100svh - 50px);
-    /* Reading V3 Gate D -- shared book-edge anchor for the candidate tab/
-       tray (ReadingVocabPanel.tsx), replacing viewport-edge right:0/3%.
-       Base values here are the TALL photo's own measured coordinates
-       (v3-reading-open-book-desktop-tall.png, 1536x1024 native); the wide
-       photo's media query below overrides only the three leaf values
-       (native-w/h, right-x) -- everything derived from them recomputes
-       automatically since custom properties resolve at used-value time,
-       picking up whichever leaf values actually cascaded for a given
-       element. Frame width is exactly 100vw and height is exactly
-       `100svh - 50px` (confirmed via getBoundingClientRect at every
-       required viewport, not assumed), so the whole conversion is plain
-       object-fit:cover math expressed in CSS max()/calc() -- no JS resize
-       listener, no runtime measurement.
-       --reading-book-right-x is the book's own right outer edge (dark
-       cover-cloth trim, not the pale page edge alone) in the ORIGINAL
-       photo's pixel space, averaged over the same height band the
-       candidate tab's `top: 30%` lands on (measured directly against the
-       source PNGs, not guessed from the page safe-zone). */
-    --reading-book-native-w: 1536;
-    --reading-book-native-h: 1024;
-    /* Unitless (not px): calc() cannot multiply two length values together
-       (length * length is invalid), and --reading-book-screen-x below
-       needs (right-x / native-w) -- a plain ratio -- times a length. Kept
-       unitless here so that division produces a unitless number, not a
-       length. */
-    --reading-book-right-x: 1265;
-    /* object-fit:cover: the image is scaled by whichever ratio is larger
-       (width-driven or height-driven), then centered -- renderedW is that
-       resulting on-screen image width; cropX is however much of it hangs
-       off each side once centered against the frame's actual (100vw)
-       width. This single formula stays correct whether a given viewport
-       happens to be width-driven (no horizontal crop -- most of the tall
-       bucket, 1280px+) or height-driven (1024px-wide viewports crop the
-       photo's sides), unlike a single fixed percentage. */
-    --reading-book-rendered-w: max(
-      100vw,
-      calc((100svh - 50px) * var(--reading-book-native-w) / var(--reading-book-native-h))
-    );
-    --reading-book-crop-x: calc((var(--reading-book-rendered-w) - 100vw) / 2);
-    --reading-book-screen-x: calc(
-      var(--reading-book-right-x) / var(--reading-book-native-w) * var(--reading-book-rendered-w) -
-        var(--reading-book-crop-x)
-    );
-    /* Distance from the frame's own right edge (== 100vw, frame.left is
-       always 0) back to the measured book edge -- this is what a `right:`
-       value needs to land exactly on that edge. */
-    --reading-book-right-offset: calc(100vw - var(--reading-book-screen-x));
-    /* Reading V3 Gate D -- how far the closed tab pokes out beyond the
-       book's edge (8-12px required; 10px picked as the midpoint) --
-       shared by the tab and the open tray so their contact point is
-       byte-identical, not just visually close. */
-    --reading-candidate-tab-offset: 10px;
-    --reading-candidate-anchor-right: calc(
-      var(--reading-book-right-offset) - var(--reading-candidate-tab-offset)
-    );
+    overflow: hidden;
+    /* Cloth mean, only visible outside a source's supported ratio range. */
+    background: #636e60;
+    /* C folio, tall source, native pixels (references/mockups/reading-v4-prep/
+       desktop-c-folio/gateA/safe-zones.json). The core is the book plus its
+       minimum cloth margin; it is contained in the frame, and the rest of
+       the image is cloth bleed that may be clipped. The wide source
+       overrides these leaf values in the matching media query. */
+    --folio-w: 2997;
+    --folio-h: 1488;
+    --folio-core-w: 1785;
+    --folio-core-h: 1275;
+    --folio-left-x: 727.5;
+    --folio-left-width: 696;
+    --folio-right-x: 1573.5;
+    --folio-right-width: 696;
+    --folio-safe-y: 229.5;
+    --folio-safe-height: 1008;
+    --folio-render-h: calc(min(100svh - 50px, 100vw * var(--folio-core-h) / var(--folio-core-w)) * var(--folio-h) / var(--folio-core-h));
+    --folio-render-w: calc(var(--folio-render-h) * var(--folio-w) / var(--folio-h));
+    --folio-offset-x: calc((100vw - var(--folio-render-w)) / 2);
+    --folio-offset-y: calc((100svh - 50px - var(--folio-render-h)) / 2);
   }
 
   /* Home Nav V1.1 seam repair (references/mockups/home-nav-prep/
@@ -398,12 +348,21 @@
     display: none;
   }
 
-  /* Top corners must read as flush with the paper's torn lower edge, not
-     as a second rounded frame boundary -- only the lower corners (the
-     photographed book's own resting corners) keep their radius. */
+  .reading-scene-v2-media {
+    overflow: hidden;
+  }
+
+  /* Placed by the same core-fit transform as the page panes below, so the
+     scene and the live paper zones can never drift apart. */
   .reading-scene-v2-media-img {
-    border-radius: 0 0 26px 26px;
-    object-position: center;
+    position: absolute;
+    left: var(--folio-offset-x);
+    top: var(--folio-offset-y);
+    width: var(--folio-render-w);
+    height: var(--folio-render-h);
+    max-width: none;
+    border-radius: 0;
+    object-fit: fill;
   }
 }
 
@@ -436,24 +395,15 @@
 }
 
 @media (min-width: 1024px) {
-  /* Reading V3 Recovery Gate 1B -- tall-scene default. Remeasured
-     independently against v3-reading-open-book-desktop-tall.png's own
-     paper edges (1536x1024 native): same paper-vs-cover/wood row-sampling
-     method as the wide set below, not a reuse or estimate from it (the
-     two photos have different notebook scale/position). Percentages are
-     of the full source image; the tall frame's own height always equals
-     the rendered image height exactly (object-fit:cover never crops that
-     axis when the viewport is narrower than 1536:1024, which covers
-     1024x768 and 1280x900), and the small symmetric width/height crop
-     cover applies at the other tested ratios lands inside the safety
-     margin already built into these numbers (verified via gate1b-qa
-     screenshots at all three required tall viewports, not assumed). */
+  /* Both page panes use the C folio's measured text-safe rectangles. The
+     same core-fit transform as the scene image keeps them on paper at every
+     desktop ratio, including when the cloth bleed is clipped. */
   .reading-page--left {
-    left: 18.2%;
-    top: 20%;
-    width: 29%;
-    height: 50.8%;
-    padding: 14px 0;
+    left: calc(var(--folio-offset-x) + var(--folio-render-w) * var(--folio-left-x) / var(--folio-w));
+    top: calc(var(--folio-offset-y) + var(--folio-render-h) * var(--folio-safe-y) / var(--folio-h));
+    width: calc(var(--folio-render-w) * var(--folio-left-width) / var(--folio-w));
+    height: calc(var(--folio-render-h) * var(--folio-safe-height) / var(--folio-h));
+    padding: 0;
     /* Reading V3 Gate B -- single source of truth for the input/analyzed
        shared y origin: .reading-slip-head's own min-height/margin-bottom
        (input state) and .reader-scroll-region's margin-top (analyzed
@@ -461,16 +411,16 @@
        instead of two separately-hand-tuned literals, so the two states
        cannot drift apart again by editing only one of them. */
     --reading-left-head-block: 40px;
-    --reading-left-head-gap: 8px;
+    --reading-left-head-gap: 20px;
   }
 
   .reading-page--right {
     display: block;
-    left: 50.5%;
-    top: 20%;
-    width: 30.3%;
-    height: 50.8%;
-    padding: 14px 18px;
+    left: calc(var(--folio-offset-x) + var(--folio-render-w) * var(--folio-right-x) / var(--folio-w));
+    top: calc(var(--folio-offset-y) + var(--folio-render-h) * var(--folio-safe-y) / var(--folio-h));
+    width: calc(var(--folio-render-w) * var(--folio-right-width) / var(--folio-w));
+    height: calc(var(--folio-render-h) * var(--folio-safe-height) / var(--folio-h));
+    padding: 0;
   }
 
   /* The old center-the-compact-form behavior fights the new slip layout,
@@ -483,48 +433,19 @@
 }
 
 @media (min-width: 1500px) and (min-aspect-ratio: 2/1) {
-  /* Reading V3 Recovery Gate 1C -- threshold raised from 16/9 (1.778) to
-     2/1 so 1600x900 (exactly 16:9) now falls to the tall bucket instead
-     of forcing the panoramic photo into a window it doesn't fill without
-     a bottom gap (see the frame-sizing comment above). At the remaining
-     wide viewports the frame is now height-driven like every other
-     breakpoint, so object-fit:cover crops a small amount off the *sides*
-     of the 1849x851 photo instead of leaving it un-cropped at its native
-     ratio. These coordinates are that side-crop projected onto the
-     Gate B safe-zone box (not a fresh eyeball placement): scale = max(
-     frameWidth/1849, frameHeight/851), renderedWidth = 1849*scale, cropX =
-     (renderedWidth-frameWidth)/2, screenX = origX*scale - cropX -- solved
-     at 1920x960 (frameHeight = 960-50 = 910), the only required wide
-     viewport. Y is untouched (0 crop at this ratio: height is the
-     scale-driving axis), which is why top/height match Gate B's original
-     10.6%/69.3% exactly; only left/width shift with the horizontal crop. */
-  .reading-page--left {
-    left: 17.46%;
-    top: 10.6%;
-    width: 27.8%;
-    height: 69.3%;
-  }
-
-  .reading-page--right {
-    left: 50.62%;
-    top: 10.6%;
-    width: 31.72%;
-    height: 69.3%;
-  }
-
-  /* Reading V3 Gate D -- same book-edge anchor system as the tall bucket
-     (see .reading-scene-v2-frame above), just the wide photo's own native
-     size and measured right-edge x (v3-reading-open-book-desktop.png,
-     1849x851 native, right-x measured over the same ~30%-of-frame height
-     band the candidate tab sits at). Every --reading-book-* property
-     derived from these three is declared once, in the base/tall block --
-     it recomputes here automatically because custom properties resolve
-     against whatever cascaded for a given element, not where they were
-     declared. */
+  /* Native coordinates of the wide C folio. Source and CSS media conditions
+     must stay identical. */
   .reading-scene-v2-frame {
-    --reading-book-native-w: 1849;
-    --reading-book-native-h: 851;
-    --reading-book-right-x: 1553;
+    --folio-w: 2958;
+    --folio-h: 1138;
+    --folio-core-w: 2275;
+    --folio-core-h: 1137.6;
+    --folio-left-x: 644;
+    --folio-left-width: 735;
+    --folio-right-x: 1579;
+    --folio-right-width: 735;
+    --folio-safe-y: 113.8;
+    --folio-safe-height: 892.4;
   }
 }
 
@@ -1456,14 +1377,18 @@
   display: none;
 }
 
-.reading-progress-flag {
-  display: none;
-}
-
 /* Reading V3 Gate 3B -- desktop-only options mode, see ReaderMode.tsx;
    mobile never shows this element (it keeps using the separate
    .reader-mode-toggles popover instead), regardless of isOptionsOpen. */
 .reading-options-inline {
+  display: none;
+}
+
+.reading-desktop-head {
+  display: none;
+}
+
+.reading-reedit-close {
   display: none;
 }
 
@@ -1506,6 +1431,50 @@
       var(--reading-left-head-block, 40px)
       minmax(0, 1fr)
       auto;
+  }
+
+  .reading-desktop-head {
+    grid-area: head;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    border-bottom: 1px solid rgba(67, 79, 68, 0.28);
+    color: #24352a;
+    font-size: 13px;
+    line-height: 22px;
+  }
+
+  .reading-desktop-head strong {
+    font-weight: 700;
+  }
+
+  .reading-desktop-head > span {
+    color: #666e62;
+    white-space: nowrap;
+  }
+
+  .reading-desktop-restored {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .reading-desktop-restored button {
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #315a3d;
+    font-size: inherit;
+    text-decoration: underline;
+  }
+
+  .reading-page--reader > .reading-restored-chip,
+  .reading-page--reader[data-left-mode="reedit"] > .reading-desktop-head {
+    display: none;
   }
 
   .reading-page--reader > .reading-restored-chip {
@@ -1718,6 +1687,25 @@
     margin-bottom: 0;
     padding-bottom: 0;
     border-bottom: none;
+    position: relative;
+  }
+
+  .reading-reedit-close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    color: #315a3d;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   /* Old top pill/popover trigger (mobile-only from here on, see
@@ -1757,13 +1745,11 @@
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 6px 10px;
+    gap: 6px 14px;
     margin-top: 12px;
     padding-top: 10px;
-    /* Reading V3 Gate C -- clears the enlarged 66px .reading-progress-flag
-       ribbon (was 52px + 14px clearance = 66px; now 66px + 14px = 80px). */
-    padding-left: 80px;
-    border-top: 1px dashed var(--paper-border);
+    padding-left: 0;
+    border-top: 1px solid rgba(67, 79, 68, 0.28);
     color: var(--muted);
     /* Reading V3 Gate C -- was 12px; 1440+ override below. */
     font-size: 12.5px;
@@ -1774,12 +1760,17 @@
      row reads as one continuous printed strip with light dividers, not
      three independent floating labels. */
   .reading-left-footer > :not(:first-child) {
-    padding-left: 10px;
-    border-left: 1px solid var(--paper-border);
+    padding-left: 0;
+    border-left: 0;
   }
 
-  .reading-page--reader[data-left-mode="reedit"] .reading-left-footer,
-  .reading-page--reader[data-left-mode="reedit"] .reading-progress-flag {
+  .reading-left-footer-progress {
+    flex: 0 0 auto;
+    color: #51634f;
+    white-space: nowrap;
+  }
+
+  .reading-page--reader[data-left-mode="reedit"] .reading-left-footer {
     display: none;
   }
 
@@ -1875,57 +1866,11 @@
     display: none;
   }
 
-  /* Reading V3 Gate 3B -- a bookmark-ribbon tab hanging off the page's
-     bottom-left corner (reading-v3-analyzed-reference.png's forest-green
-     folded-corner marker), not a rounded pill/card: flat top and sides,
-     with the bottom edge notched to a point via clip-path so it reads as
-     a ribbon end rather than a rectangular badge. Sits flush against
-     .reading-left-footer's own top border (same bottom:0 anchor, and the
-     footer's padding-left clears its width, see .reading-left-footer
-     above) so the two read as one connected printed strip along the
-     page's bottom edge, not two separate floating chips. No image asset
-     -- clip-path only. */
-  .reading-progress-flag {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    z-index: 2;
-    /* Reading V3 Gate C -- was 52px; widened toward a real page-corner
-       bookmark's presence (.reading-left-footer's padding-left above
-       clears the new width with the same 14px gap it always kept). */
-    width: 66px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 1px;
-    padding: 7px 4px 16px;
-    background: var(--tone-ink-green);
-    color: #f0f0ec;
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    text-align: center;
-    line-height: 1.15;
-    clip-path: polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%);
-  }
-
-  .reading-progress-flag-label {
-    word-break: keep-all;
-  }
-
-  .reading-progress-flag strong {
-    /* Reading V3 Gate C -- was 14px; the label above stays 8px so the
-       percentage reads as the ribbon's own headline number. */
-    font-size: 18px;
-    font-weight: 800;
-  }
 }
 
 /* Reading V3 Gate C correction -- 1024-1199px only: the full labels
    ("원문 편집" / "표시 옵션" / "문자 수 186") plus the two vertical dividers
-   and the widened 66px ribbon's clearance left too little room in this
-   narrow band, wrapping the char count one digit per line. Compact text
+   do not reliably fit on one line in this narrow band. Compact text
    only -- callbacks, aria-expanded, icons, footer height/position, and the
    30-32px button geometry are all untouched; only which <span> paints. */
 @media (min-width: 1024px) and (max-width: 1199px) {
@@ -2247,6 +2192,42 @@
     border-radius: 3px;
     background: rgba(70, 83, 58, 0.24);
   }
+
+  .reading-page--reader .reading-page-idle {
+    display: block;
+    height: auto;
+    place-items: normal;
+    text-align: left;
+  }
+
+  .reading-page-idle-head {
+    height: 40px;
+    border-bottom: 1px solid rgba(67, 79, 68, 0.28);
+    color: #24352a;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 22px;
+  }
+
+  .reading-page-idle-copy {
+    margin-top: clamp(42px, 9vh, 105px);
+    color: #596a5a;
+  }
+
+  .reading-page-idle-copy strong {
+    color: #285038;
+    font-size: 18px;
+  }
+
+  .reading-page-idle-copy p {
+    margin: 14px 0 6px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .reading-page-idle-copy small {
+    font-size: 12px;
+  }
 }
 
 /* Reading V4 Gate C -- selected-word header/nav/close is the ledger's own
@@ -2258,7 +2239,9 @@
   align-items: center;
   gap: 10px;
   flex: 0 0 auto;
-  margin-bottom: 18px;
+  margin-bottom: 31px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(67, 79, 68, 0.28);
 }
 
 .token-ledger-eyebrow {
@@ -2638,7 +2621,7 @@
    this only removes the *default* scroll a short word shouldn't need. */
 @media (min-width: 1024px) and (max-width: 1439px) {
   .token-ledger-header {
-    margin-bottom: 13px;
+    margin-bottom: 27px;
   }
 
   .token-ledger-meaning-label {
@@ -2752,10 +2735,7 @@
 .reading-candidate-tab {
   position: absolute;
   z-index: 4;
-  /* Mobile-only default -- desktop overrides this to the measured
-     book-edge anchor below (see @media (min-width: 1024px)). Mobile's own
-     tab/tray are out of Gate D's scope and keep this viewport-edge value
-     unchanged. */
+  /* The tab/tray presentation is used below the desktop breakpoint. */
   right: 0;
   top: 30%;
   display: flex;
@@ -2794,10 +2774,6 @@
 .reading-candidate-panel {
   position: absolute;
   z-index: 4;
-  /* Mobile-only default -- desktop overrides this to the same book-edge
-     anchor the tab uses (see @media (min-width: 1024px)) so the two share
-     one exact contact point instead of two independent viewport-relative
-     guesses. */
   right: 3%;
   top: 6%;
   bottom: 6%;
@@ -2808,78 +2784,6 @@
   background: rgba(253, 249, 238, 0.98);
   box-shadow: 0 14px 30px rgba(120, 98, 40, 0.26);
   animation: app-slide-up var(--motion-fast) var(--ease-soft) both;
-}
-
-@media (min-width: 1024px) {
-  /* Reading V3 Gate D -- both anchored to the exact same computed value
-     (.reading-scene-v2-frame's --reading-candidate-anchor-right), not two
-     independently-tuned offsets, so the tab and the open tray meet with
-     zero contact error regardless of viewport width or which scene photo
-     loaded. */
-  .reading-candidate-tab {
-    right: var(--reading-candidate-anchor-right);
-    width: 38px;
-    min-height: 56px;
-    justify-content: center;
-    padding: 8px 5px;
-    border: 1px solid rgba(119, 65, 78, 0.32);
-    border-right: 0;
-    border-radius: 4px 0 0 4px;
-    background: #ebbdc8;
-    box-shadow: -3px 5px 8px rgba(62, 43, 30, 0.25);
-    /* Gate D correction -- equal z-index (4) with .reading-candidate-panel
-       meant DOM order decided the stack, and the panel (rendered after the
-       tab in ReadingVocabPanel.tsx) painted over it whenever open, hiding
-       the tab completely instead of reading as "the same tab, unfolded".
-       Raised above the panel so the tab's own small shape keeps showing at
-       its usual spot the whole time the tray is open. */
-    z-index: 5;
-  }
-
-  .reading-candidate-panel {
-    right: var(--reading-candidate-anchor-right);
-    width: min(340px, 42%);
-    /* Gate D correction -- the book-contact edge (right side) was rounded
-       the same as the outward-facing side, which put a curved gap between
-       the panel's corner and the tab's own flat right edge right where
-       they're meant to meet, reading as two separate floating shapes
-       instead of one tab that unfolded sideways. Flat on the right (0),
-       rounded only on the left -- same split .reading-candidate-tab's own
-       `border-radius: 10px 0 0 10px` already uses. */
-    border-radius: 14px 0 0 14px;
-    /* Gate D correction -- the panel's own overflow-y:auto plus
-       .reading-vocab-tray's separate max-height+overflow-y:auto below
-       gave 1024px two independent vertical scrollbars once the panel's
-       own available height (top:6%/bottom:6% of a shorter frame) fell
-       below its fixed content's height + the tray's fixed 380px cap. A
-       column flex with the panel itself never scrolling -- only the tray
-       (flex:1, min-height:0) does -- leaves exactly one scroll owner at
-       every height, not just the ones tall enough to hide the seam. */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    border: 1px solid rgba(119, 65, 78, 0.26);
-    border-right: 0;
-    box-shadow: -8px 12px 20px rgba(62, 43, 30, 0.22);
-  }
-
-  /* Gate D final correction -- a bare `.reading-vocab-tray` selector here
-     loses to the base rule's `max-height: 380px` (globals.css, further
-     down the file): both are single-class selectors of equal specificity,
-     and at equal specificity the *later* declaration wins regardless of
-     which one sits inside a matching media query. The base rule is
-     declared after this block, so it silently re-capped the tray at
-     380px, leaving a large empty gap under a 56-word list instead of the
-     tray filling the panel's actual remaining height. Scoped through the
-     panel ancestor instead of reordering the file -- (0,2,0) beats the
-     base rule's (0,1,0) unconditionally, so this wins no matter where
-     either rule is declared. */
-  .reading-candidate-panel .reading-vocab-tray {
-    flex: 1 1 auto;
-    min-height: 0;
-    max-height: none;
-    overflow-y: auto;
-  }
 }
 
 .reading-candidate-panel-header {
@@ -13076,6 +12980,15 @@ input.reading-vocab-sticker-toggle:checked {
   white-space: pre-wrap;
 }
 
+/* Paragraph break in sentence-row mode (see buildReaderLayout's
+   lineStartsParagraph): a short spacer instead of the one or two empty
+   full-height rows a blank line used to produce, so long sources keep
+   their paragraph shape without large dead bands. Phone paper never gets
+   this class and keeps its literal empty lines. */
+.reader-line--paragraph {
+  margin-top: 0.8em;
+}
+
 .reading-mobile-head,
 .reading-mobile-footer {
   display: none;
@@ -13111,8 +13024,7 @@ input.reading-vocab-sticker-toggle:checked {
 
   .reading-panel .reading-scene-v2-eyebrow,
   .reading-page--reader > .reading-progress-tag-wrap,
-  .reading-page--reader > .reading-left-footer,
-  .reading-page--reader > .reading-progress-flag {
+  .reading-page--reader > .reading-left-footer {
     display: none;
   }
 

@@ -42,6 +42,12 @@ export type ReaderInlineSegment =
 
 export type ReaderLayout = {
   lines: ReaderInlineSegment[][];
+  // Parallel to lines: true when that line opens a new paragraph in the
+  // source (a blank line, or a line break right after a sentence end).
+  // Only set in sentence-row mode, where those breaks used to render as
+  // one or two empty full-height rows; the reader draws a short spacer
+  // instead. Phone paper keeps its literal empty lines and never sets it.
+  lineStartsParagraph: boolean[];
   // Tokens whose surface never matched anywhere in originalText (should be
   // rare -- e.g. a compound/noun-phrase candidate whose span got consumed
   // by an overlapping match first). Kept so the UI can still surface them
@@ -62,16 +68,42 @@ export function buildReaderLayout(
   splitSentences = true,
 ): ReaderLayout {
   const lines: ReaderInlineSegment[][] = [[]];
+  const lineStartsParagraph: boolean[] = [false];
   const usedTokenIndexes = new Set<number>();
   let keyCounter = 0;
+  // Sentence-row mode only: line breaks seen while the current row is
+  // still empty. The row itself already provides one break, so any extra
+  // one means the source started a new paragraph here.
+  let pendingBreaks = 0;
 
   const currentLine = () => lines[lines.length - 1];
 
+  function startLine() {
+    lines.push([]);
+    lineStartsParagraph.push(false);
+    pendingBreaks = 0;
+  }
+
+  // Called before anything is placed on the current row.
+  function beginContent() {
+    if (splitSentences && currentLine().length === 0) {
+      if (pendingBreaks > 0 && lines.length > 1) {
+        lineStartsParagraph[lines.length - 1] = true;
+      }
+      pendingBreaks = 0;
+    }
+  }
+
   function pushChar(char: string) {
     if (char === "\n") {
-      lines.push([]);
+      if (splitSentences && currentLine().length === 0) {
+        pendingBreaks += 1;
+      } else {
+        startLine();
+      }
       return;
     }
+    beginContent();
     const line = currentLine();
     const last = line[line.length - 1];
     if (last && last.type === "text") {
@@ -82,7 +114,7 @@ export function buildReaderLayout(
     // Desktop/tablet keep the legacy sentence rows; phone paper uses only
     // the line breaks the user actually entered.
     if (splitSentences && SENTENCE_ENDING_CHARS.has(char)) {
-      lines.push([]);
+      startLine();
     }
   }
 
@@ -103,6 +135,7 @@ export function buildReaderLayout(
     }
 
     if (matchedTokenIndex !== -1) {
+      beginContent();
       currentLine().push({
         type: "token",
         key: `k-${keyCounter++}`,
@@ -118,6 +151,7 @@ export function buildReaderLayout(
 
   while (lines.length > 1 && lines[lines.length - 1].length === 0) {
     lines.pop();
+    lineStartsParagraph.pop();
   }
 
   const unmatchedTokenIndexes: number[] = [];
@@ -127,5 +161,5 @@ export function buildReaderLayout(
     }
   });
 
-  return { lines, unmatchedTokenIndexes };
+  return { lines, lineStartsParagraph, unmatchedTokenIndexes };
 }
