@@ -479,6 +479,8 @@ type ReadingSession = {
   // 0..1 fraction of how far the user had scrolled through the reader text
   // container -- null if never recorded (v1 session, or never scrolled).
   scrollFraction: number | null;
+  // Tablet can scroll both its reading pane and the document.
+  tabletDocumentScrollFraction: number | null;
   updatedAt: string;
 };
 
@@ -556,6 +558,11 @@ function parseReadingSession(value: string | null): ReadingSession | null {
       Number.isFinite(parsed.scrollFraction)
         ? Math.min(Math.max(parsed.scrollFraction, 0), 1)
         : null;
+    const tabletDocumentScrollFraction =
+      typeof parsed.tabletDocumentScrollFraction === "number" &&
+      Number.isFinite(parsed.tabletDocumentScrollFraction)
+        ? Math.min(Math.max(parsed.tabletDocumentScrollFraction, 0), 1)
+        : null;
 
     return {
       version: parsed.version,
@@ -571,6 +578,7 @@ function parseReadingSession(value: string | null): ReadingSession | null {
       isTextCollapsed: parsed.isTextCollapsed,
       recentlySavedVocabItemIds,
       scrollFraction,
+      tabletDocumentScrollFraction,
       updatedAt: parsed.updatedAt,
     };
   } catch {
@@ -755,6 +763,9 @@ export default function HomePage() {
   const [readingScrollFraction, setReadingScrollFraction] = useState<
     number | null
   >(null);
+  const [readingTabletDocumentScrollFraction, setReadingTabletDocumentScrollFraction] = useState<
+    number | null
+  >(null);
   const [isReadingSessionRestored, setIsReadingSessionRestored] =
     useState(false);
   const [vocabItems, setVocabItems] = useState<VocabItem[]>([]);
@@ -915,6 +926,7 @@ export default function HomePage() {
       setRecentlySavedVocabItemIds(readingSession.recentlySavedVocabItemIds);
       setCurrentSelectedTokenKey(readingSession.selectedTokenKey);
       setReadingScrollFraction(readingSession.scrollFraction);
+      setReadingTabletDocumentScrollFraction(readingSession.tabletDocumentScrollFraction);
       setIsReadingSessionRestored(true);
       if (readingSession.deckId && readingSession.tokens.length > 0) {
         void refreshReadingDeckVocabItems(
@@ -944,6 +956,7 @@ export default function HomePage() {
         isTextCollapsed: isReadingTextCollapsed,
         recentlySavedVocabItemIds,
         scrollFraction: readingScrollFraction,
+        tabletDocumentScrollFraction: readingTabletDocumentScrollFraction,
       });
       setReadingStorageWarning(
         persisted
@@ -962,6 +975,7 @@ export default function HomePage() {
     isReadingTextCollapsed,
     recentlySavedVocabItemIds,
     readingScrollFraction,
+    readingTabletDocumentScrollFraction,
   ]);
 
   async function initializeUserSession() {
@@ -1477,6 +1491,7 @@ export default function HomePage() {
     setRecentlySavedVocabItemIds([]);
     setCurrentSelectedTokenKey(null);
     setReadingScrollFraction(null);
+    setReadingTabletDocumentScrollFraction(null);
     setIsReadingSessionRestored(false);
     setReadingAnalyzeProgress({ current: 0, total: chunks.length });
 
@@ -1627,6 +1642,7 @@ export default function HomePage() {
     setRecentlySavedVocabItemIds([]);
     setCurrentSelectedTokenKey(null);
     setReadingScrollFraction(null);
+    setReadingTabletDocumentScrollFraction(null);
     setIsReadingSessionRestored(false);
     clearReadingSession();
   }
@@ -1679,6 +1695,7 @@ export default function HomePage() {
     setReadingMessage("");
     setCurrentSelectedTokenKey(null);
     setReadingScrollFraction(null);
+    setReadingTabletDocumentScrollFraction(null);
     setIsReadingSessionRestored(false);
 
     // readingSelectedDeckId may still be empty this early (decks load
@@ -3521,6 +3538,8 @@ export default function HomePage() {
             selectedTokenKey={currentSelectedTokenKey}
             scrollFraction={readingScrollFraction}
             onScrollProgressChange={setReadingScrollFraction}
+            tabletDocumentScrollFraction={readingTabletDocumentScrollFraction}
+            onTabletDocumentScrollChange={setReadingTabletDocumentScrollFraction}
             onTextChange={setReadingText}
             onLoadSampleText={loadSampleReadingText}
             onSelectedDeckChange={setReadingSelectedDeckId}

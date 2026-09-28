@@ -50,6 +50,8 @@ type ReadingTabProps = {
   selectedTokenKey: string | null;
   scrollFraction: number | null;
   onScrollProgressChange: (fraction: number) => void;
+  tabletDocumentScrollFraction: number | null;
+  onTabletDocumentScrollChange: (fraction: number) => void;
   onTextChange: (text: string) => void;
   onLoadSampleText: () => void;
   onSelectedDeckChange: (deckId: string) => void;
@@ -95,6 +97,8 @@ export function ReadingTab({
   selectedTokenKey,
   scrollFraction,
   onScrollProgressChange,
+  tabletDocumentScrollFraction,
+  onTabletDocumentScrollChange,
   onTextChange,
   onLoadSampleText,
   onSelectedDeckChange,
@@ -307,6 +311,8 @@ export function ReadingTab({
               onSelectedTokenKeyChange={onSelectedTokenKeyChange}
               initialScrollFraction={scrollFraction}
               onScrollProgressChange={onScrollProgressChange}
+              initialTabletDocumentScrollFraction={tabletDocumentScrollFraction}
+              onTabletDocumentScrollChange={onTabletDocumentScrollChange}
               externalSelectRequest={externalSelectRequest}
               isTokenInBasket={isTokenInBasket}
               canAddToBasket={canAddToBasket}

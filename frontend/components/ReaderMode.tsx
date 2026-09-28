@@ -14,32 +14,33 @@ import { getTokenGroupKey } from "./coverageUtils";
 import type { MessageTone } from "./coverageUtils";
 import { BookmarkIcon, CardFileIcon, ChevronDownIcon, FolderIcon, InfoIcon, PencilIcon } from "./icons";
 
-// Reading-progress percentage is derived from how far the reader has
-// scrolled through the .reader-text container relative to the viewport,
-// not from selected-token position -- most reading happens without
-// clicking every word, so scroll position is the more meaningful signal.
-// 0 = container top just entered the viewport top, 1 = container bottom
-// has reached the viewport bottom. Deliberately approximate (see task
-// notes): the goal is a sense of "how far in", not a precise metric.
-function computeScrollProgress(container: HTMLElement | null): number {
-  if (!container || typeof window === "undefined") {
-    return 0;
+// Reading-progress percentage is derived from scroll position, not from
+// selected-token position -- most reading happens without clicking every
+// word, so scroll position is the more meaningful signal.
+//
+// Tablet (641-1023px) has no single fixed scroller. Measured at 800x1100,
+// 768x1024 and 1023x768: the page pane (.reading-page, overflow-y:auto)
+// scrolls once the source outgrows it, while a shorter source leaves the
+// pane unscrollable and only the document scrolls. Progress, the scroll
+// subscription and restore all resolve the owner through this one function
+// so they can never measure one element and restore another.
+function resolveTabletScrollOwner(region: HTMLElement | null): HTMLElement | null {
+  if (typeof document === "undefined") {
+    return null;
   }
-  const rect = container.getBoundingClientRect();
-  const viewportHeight = window.innerHeight || 1;
-  const total = Math.max(rect.height - viewportHeight, 1);
-  const scrolled = Math.min(Math.max(-rect.top, 0), total);
-  return scrolled / total;
+  const pane = region?.closest<HTMLElement>(".reading-page") ?? null;
+  if (pane && pane.scrollHeight > pane.clientHeight + 1) {
+    return pane;
+  }
+  return (document.scrollingElement as HTMLElement | null) ?? null;
 }
 
 // Reading V3 Gate C correction -- desktop's actual scrolling element is
 // .reader-scroll-region itself (overflow-y:auto, see globals.css), not the
 // window (window never scrolls at this breakpoint -- confirmed via
-// body.scrollHeight === window.innerHeight in Gate B/C QA). The
-// window-scroll-based computeScrollProgress above is correct for mobile
-// (where the page itself scrolls) but silently never advances past its
-// initial value on desktop, which is why the progress ribbon stayed stuck.
-// scrollTop / max(scrollHeight - clientHeight, 1), clamped to 0..1.
+// body.scrollHeight === window.innerHeight in Gate B/C QA).
+// scrollTop / max(scrollHeight - clientHeight, 1), clamped to 0..1. Also
+// used for the tablet owner resolved above (pane or document).
 function computeReaderRegionProgress(region: HTMLElement | null): number {
   if (!region) {
     return 0;
@@ -90,6 +91,8 @@ type ReaderModeProps = {
   // off last time, not at wherever they've scrolled to just now.
   initialScrollFraction?: number | null;
   onScrollProgressChange?: (fraction: number) => void;
+  initialTabletDocumentScrollFraction?: number | null;
+  onTabletDocumentScrollChange?: (fraction: number) => void;
   // Imperative "select this token" channel for triggers outside the reader
   // itself (currently: the word-list panel). requestId must increment on
   // every request, including repeat clicks on the same tokenIndex, so the
@@ -162,6 +165,8 @@ export function ReaderMode({
   onSelectedTokenKeyChange,
   initialScrollFraction = null,
   onScrollProgressChange,
+  initialTabletDocumentScrollFraction = null,
+  onTabletDocumentScrollChange,
   externalSelectRequest = null,
   meaningEditItemId,
   meaningEditDraft,
@@ -242,6 +247,7 @@ export function ReaderMode({
   // Live 0..1 scroll-through-container fraction, recomputed as the user
   // scrolls -- drives the progress bar/percent display.
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [tabletDocumentProgress, setTabletDocumentProgress] = useState(0);
   const readerTextRef = useRef<HTMLDivElement | null>(null);
   // Reading V3 Gate 3B -- the actual scrolling element for reading mode
   // (.reader-scroll-region, overflow-y:auto at desktop; readerTextRef above
@@ -290,8 +296,8 @@ export function ReaderMode({
         return;
       }
       // Phone paper and the desktop book both scroll inside
-      // .reader-scroll-region (the window never scrolls there); only the
-      // intermediate tablet layout scrolls the window.
+      // .reader-scroll-region (the window never scrolls there); the
+      // intermediate tablet layout scrolls its resolved owner instead.
       if (
         window.matchMedia("(max-width: 640px)").matches ||
         window.matchMedia("(min-width: 1024px)").matches
@@ -305,19 +311,13 @@ export function ReaderMode({
         }
         return;
       }
-      const container = readerTextRef.current;
-      if (!container || typeof window === "undefined") {
-        return;
+      const owner = resolveTabletScrollOwner(readerScrollRegionRef.current);
+      if (owner) {
+        owner.scrollTo({
+          top: fraction * Math.max(owner.scrollHeight - owner.clientHeight, 0),
+          behavior: resolveScrollBehavior(behavior),
+        });
       }
-      const rect = container.getBoundingClientRect();
-      const viewportHeight = window.innerHeight || 1;
-      const total = Math.max(rect.height - viewportHeight, 1);
-      const containerTopAbsolute = window.scrollY + rect.top;
-      const targetScrollY = Math.max(
-        containerTopAbsolute + fraction * total,
-        0,
-      );
-      window.scrollTo({ top: targetScrollY, behavior: resolveScrollBehavior(behavior) });
     },
     [],
   );
@@ -442,10 +442,7 @@ export function ReaderMode({
     );
     if (matchIndex !== -1) {
       skipRestoredTokenScrollRef.current =
-        initialScrollFraction !== null &&
-        initialScrollFraction !== undefined &&
-        (window.matchMedia("(max-width: 640px)").matches ||
-          window.matchMedia("(min-width: 1024px)").matches);
+        initialScrollFraction !== null && initialScrollFraction !== undefined;
       setActiveIndex(matchIndex);
       setActiveSegmentKey(null);
       setIsSelectionLocated(false);
@@ -475,49 +472,72 @@ export function ReaderMode({
     onSelectedTokenKeyChange?.(getTokenGroupKey(tokens[tokenIndex]));
   }, [externalSelectRequest, tokens, onSelectedTokenKeyChange]);
 
-  // On phones and the desktop book, restore the saved scroll fraction even
-  // with a selected token: that token may occur many times, and the saved
-  // fraction is where the reader actually was. Only the tablet layout keeps
-  // token-first restore.
+  // Restore the saved scroll fraction even with a selected token (phone,
+  // tablet and desktop alike): that token may occur many times, and the
+  // saved fraction is where the reader actually was.
   // Apply it after the phone paragraph layout is ready and mark completion
   // only after the timer runs, so effect cleanup cannot cancel the restore.
   useEffect(() => {
-    if (
-      hasAppliedInitialScroll ||
-      initialScrollFraction === null ||
-      initialScrollFraction === undefined ||
-      tokens.length === 0
-    ) {
+    if (hasAppliedInitialScroll || tokens.length === 0) {
+      return;
+    }
+    if (initialScrollFraction === null || initialScrollFraction === undefined) {
+      // A fresh analysis on tablet: when the document is the owner it still
+      // sits wherever the reader scrolled to reach "원문 펼치기", so start
+      // the new text at 0 explicitly. Done once (hasAppliedInitialScroll),
+      // so later token updates (status changes) never jump the page.
+      if (window.matchMedia("(min-width: 641px) and (max-width: 1023px)").matches) {
+        resolveTabletScrollOwner(readerScrollRegionRef.current)?.scrollTo({ top: 0 });
+        (document.scrollingElement as HTMLElement | null)?.scrollTo({ top: 0 });
+        setScrollProgress(0);
+        setTabletDocumentProgress(0);
+        setHasAppliedInitialScroll(true);
+      }
       return;
     }
     if (window.matchMedia("(max-width: 640px)").matches && !isPhonePaper) {
       return;
     }
-    if (
-      initialSelectedTokenKey &&
-      !window.matchMedia("(max-width: 640px)").matches &&
-      !window.matchMedia("(min-width: 1024px)").matches
-    ) {
-      const matchExists = tokens.some(
-        (token) => getTokenGroupKey(token) === initialSelectedTokenKey,
-      );
-      if (matchExists) {
-        setHasAppliedInitialScroll(true);
-        return;
-      }
-    }
-    const timeoutId = window.setTimeout(() => {
+    const restore = () => {
       scrollToFraction(initialScrollFraction, "auto");
-      if (!window.matchMedia("(min-width: 641px) and (max-width: 1023px)").matches) {
-        setScrollProgress(computeReaderRegionProgress(readerScrollRegionRef.current));
+      const isTablet = window.matchMedia("(min-width: 641px) and (max-width: 1023px)").matches;
+      if (isTablet) {
+        const documentScroller = document.scrollingElement as HTMLElement | null;
+        const pane = readerScrollRegionRef.current?.closest<HTMLElement>(".reading-page");
+        if (pane && pane.scrollHeight > pane.clientHeight + 1 && documentScroller) {
+          documentScroller.scrollTo({
+            top: (initialTabletDocumentScrollFraction ?? 0) *
+              Math.max(documentScroller.scrollHeight - documentScroller.clientHeight, 0),
+          });
+        }
+        setTabletDocumentProgress(computeReaderRegionProgress(documentScroller));
       }
+      setScrollProgress(
+        computeReaderRegionProgress(
+          isTablet
+            ? resolveTabletScrollOwner(readerScrollRegionRef.current)
+            : readerScrollRegionRef.current,
+        ),
+      );
       setHasAppliedInitialScroll(true);
-    }, 50);
-    return () => window.clearTimeout(timeoutId);
+    };
+    let cancelled = false;
+    let timeoutId: number | null = null;
+    if (window.matchMedia("(min-width: 641px) and (max-width: 1023px)").matches) {
+      void document.fonts.ready.then(() => {
+        if (!cancelled) timeoutId = window.setTimeout(restore, 50);
+      });
+    } else {
+      timeoutId = window.setTimeout(restore, 50);
+    }
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
   }, [
     hasAppliedInitialScroll,
     initialScrollFraction,
-    initialSelectedTokenKey,
+    initialTabletDocumentScrollFraction,
     tokens,
     scrollToFraction,
     isPhonePaper,
@@ -531,7 +551,8 @@ export function ReaderMode({
   // indicator and fires reliably regardless of paint state.
   //
   // The desktop reader and V4 phone page scroll inside .reader-scroll-region.
-  // The intermediate tablet layout retains its window-based progress.
+  // The intermediate tablet layout measures its resolved owner (pane or
+  // document) and listens to both, since the owner depends on text length.
   useEffect(() => {
     function recompute() {
       if (scrollProgressThrottleRef.current !== null) {
@@ -539,21 +560,28 @@ export function ReaderMode({
       }
       scrollProgressThrottleRef.current = window.setTimeout(() => {
         scrollProgressThrottleRef.current = null;
+        if (window.matchMedia("(min-width: 641px) and (max-width: 1023px)").matches) {
+          setTabletDocumentProgress(
+            computeReaderRegionProgress(document.scrollingElement as HTMLElement | null),
+          );
+        }
         setScrollProgress(
-          isDesktopPinned || isPhonePaper
-            ? computeReaderRegionProgress(readerScrollRegionRef.current)
-            : computeScrollProgress(readerTextRef.current),
+          computeReaderRegionProgress(
+            isDesktopPinned || isPhonePaper
+              ? readerScrollRegionRef.current
+              : resolveTabletScrollOwner(readerScrollRegionRef.current),
+          ),
         );
       }, 50) as unknown as number;
     }
     recompute();
-    const scrollTarget: EventTarget = isDesktopPinned || isPhonePaper
-      ? readerScrollRegionRef.current ?? window
-      : window;
-    scrollTarget.addEventListener("scroll", recompute, { passive: true });
+    const scrollTargets: EventTarget[] = isDesktopPinned || isPhonePaper
+      ? [readerScrollRegionRef.current ?? window]
+      : [window, readerScrollRegionRef.current?.closest(".reading-page") ?? window];
+    scrollTargets.forEach((target) => target.addEventListener("scroll", recompute, { passive: true }));
     window.addEventListener("resize", recompute);
     return () => {
-      scrollTarget.removeEventListener("scroll", recompute);
+      scrollTargets.forEach((target) => target.removeEventListener("scroll", recompute));
       window.removeEventListener("resize", recompute);
       // isDesktopPinned flips shortly after mount (the separate matchMedia
       // effect below), which tears this effect down and rebuilds it once
@@ -595,6 +623,18 @@ export function ReaderMode({
     }, 400);
     return () => window.clearTimeout(timeoutId);
   }, [scrollProgress, onScrollProgressChange, hasAppliedInitialScroll, initialScrollFraction]);
+
+  useEffect(() => {
+    if (!onTabletDocumentScrollChange ||
+        !window.matchMedia("(min-width: 641px) and (max-width: 1023px)").matches ||
+        (!hasAppliedInitialScroll && initialScrollFraction !== null)) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      onTabletDocumentScrollChange(tabletDocumentProgress);
+    }, 400);
+    return () => window.clearTimeout(timeoutId);
+  }, [tabletDocumentProgress, onTabletDocumentScrollChange, hasAppliedInitialScroll, initialScrollFraction]);
 
   // Keeps the selected word visible in the source text as prev/next moves
   // it around -- best-effort only, so a missing DOM match (e.g. the active
