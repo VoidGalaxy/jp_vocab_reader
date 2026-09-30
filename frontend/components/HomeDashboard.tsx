@@ -1,7 +1,6 @@
 "use client";
 
-import { BookshelfIcon, CardFileIcon, CardsIcon, SparkleIcon } from "./icons";
-import type { StudyStats, VocabItem } from "./types";
+import type { StudyStats } from "./types";
 
 type HomeDashboardProps = {
   isDevUser: boolean;
@@ -10,51 +9,27 @@ type HomeDashboardProps = {
   onStartReading: () => void;
   onTryWithSample: () => void;
   onStartTodayReview: () => void;
+  // Plain switch to the study tab, used when nothing is due today -- the
+  // cover must not auto-start an empty review queue.
+  onGoToStudy: () => void;
   onOpenAccount: () => void;
   onGoToVocab: () => void;
-  // Reuses sharedDecks.length page.tsx already fetches up front
-  // (refreshUserScopedData) -- no new API call.
-  sharedDeckCount: number;
   onGoToSharedDecks: () => void;
-  // Reused only for a light one-word peek in the 단어장 shortcut's hint line
-  // (desktop only, see .home-v10-shortcut-hint) -- no separate "최근 담은
-  // 단어" section on Home. Same /vocab-items?sort=created_desc read the 기록
-  // 탭 already makes, no new API call.
-  recentWords: VocabItem[];
+  onGoToAnalyze: () => void;
+  onGoToStats: () => void;
 };
 
-const ASSET_BASE_V10_5 = "/brand/decor/home-v10.5";
-const ASSET_BASE_V10_12 = "/brand/decor/home-v10.12";
+type ReviewState = "login" | "loading" | "zero" | "due";
 
-// Home V10.3 (approved full-scene rebuild) -- every prior Home iteration
-// (home-v3/v4/v7/v8) stacked separately-illustrated objects (title note,
-// CTA stamp, notebook cover, tab rail, Shiori peek) as CSS-positioned
-// siblings over a photographed desk background, each with its own
-// drop-shadow/filter. No matter how many rounds of shadow/contact/color
-// tuning that structure went through, it kept reading as cut-out PNGs
-// glued onto a photo rather than one photographed scene, because the
-// objects and their shadows were never guaranteed to agree on geometry or
-// light source -- see the old comment history (now removed) for the
-// phase-by-phase record of that failing approach.
-// V10.1/V10.2 replaced that with one opaque, pre-composited scene photo per
-// breakpoint, but the V10.2 notebook sat off-center (skewed right) and its
-// desk props (washi tape, paperclip, pen) read as independently floating
-// rather than part of one photographed composition. V10.3
-// (`home-v10.3-scene-desktop.png`, `home-v10.3-scene-mobile.png`) is a
-// newly approved scene at a new size/ratio (1774x887 / 941x1672) that
-// recenters the notebook and re-grounds the props as edge framing --
-// notebook, title note, CTA ticket, Shiori charm, index tabs, props, and
-// every shadow are baked into the source art under one light source. There
-// is nothing left for CSS to draw: `.home-v10-scene` is a single relative
-// positioning root holding that one decorative <picture> (aria-hidden,
-// pointer-events:none, natural aspect ratio preserved -- never
-// object-fit:cover) plus plain DOM overlay buttons/text positioned as a %
-// of the scene, matching the pixel coordinates measured directly off the
-// approved target mockups (see
-// references/mockups/home-v10.3-prep/COORDINATE_CONTRACT.md). No
-// box-shadow, drop-shadow, filter, gradient, or ::before/::after is used
-// anywhere in this scene -- every visual object, shadow included, lives in
-// the image.
+// Home B2 binding scene (references/mockups/home-b2-binding-final/gateA).
+// One textless photographed scene -- a bound cover above a six-file tray --
+// with every word and hit zone as live DOM on top of it. Desktop (>=1024px)
+// lays the cover and six files over the single scene image at coordinates
+// measured off the 1672x941 source; tablet and mobile rebuild the same
+// objects instead of shrinking them: the cover becomes a 9-slice of its own
+// strip, and each file carries its own compartment cut so rows of 3+3
+// (tablet) or 2+2+2 (mobile, compact) stay one continuous tray. No text or
+// button is baked into any image.
 export function HomeDashboard({
   isDevUser,
   studyStats,
@@ -62,120 +37,118 @@ export function HomeDashboard({
   onStartReading,
   onTryWithSample,
   onStartTodayReview,
+  onGoToStudy,
   onOpenAccount,
   onGoToVocab,
-  sharedDeckCount,
   onGoToSharedDecks,
-  recentWords,
+  onGoToAnalyze,
+  onGoToStats,
 }: HomeDashboardProps) {
   const dueTodayCount = studyStats?.due_today_count ?? 0;
-
-  const vocabHint =
-    recentWords.length > 0
-      ? "최근 모은 단어 보기"
-      : "단어 모으기";
-  const reviewHint = isDevUser
-    ? "로그인해 기록 저장"
+  const reviewState: ReviewState = isDevUser
+    ? "login"
     : isStudyStatsLoading
-      ? "복습 확인 중"
+      ? "loading"
       : dueTodayCount > 0
-        ? `${dueTodayCount}개 복습하기`
-        : "오늘 복습 완료";
-  const decksHint =
-    sharedDeckCount > 0 ? `${sharedDeckCount}개 덱 둘러보기` : "학습 덱 만들기";
+        ? "due"
+        : "zero";
+
+  const review = {
+    login: {
+      value: "로그인 필요",
+      note: "로그인하고 기록 남기기 →",
+      label: "로그인하고 복습 기록 남기기",
+      onClick: onOpenAccount,
+    },
+    loading: {
+      value: "확인 중",
+      note: "잠시만요",
+      label: "오늘 복습 수 확인 중",
+      onClick: undefined,
+    },
+    zero: {
+      value: "0개",
+      note: "오늘은 모두 끝냈어요",
+      label: "오늘 복습 0개, 복습 탭으로 이동",
+      onClick: onGoToStudy,
+    },
+    due: {
+      value: `${dueTodayCount}개`,
+      note: "복습 시작 →",
+      label: `오늘 복습 ${dueTodayCount}개 시작하기`,
+      onClick: onStartTodayReview,
+    },
+  }[reviewState];
+
+  const files = [
+    { key: "reading", name: "읽기", hint: "원문에서 시작", onClick: onStartReading },
+    { key: "vocab", name: "단어장", hint: "모은 단어", onClick: onGoToVocab },
+    { key: "study", name: "복습", hint: "다시 익히기", onClick: onGoToStudy },
+    { key: "decks", name: "덱", hint: "학습 묶음", onClick: onGoToSharedDecks },
+    { key: "analyze", name: "분류", hint: "상태 살피기", onClick: onGoToAnalyze },
+    { key: "stats", name: "통계", hint: "기록 보기", onClick: onGoToStats },
+  ];
 
   return (
-    <section className="tab-panel home-dashboard home-v10" aria-live="polite">
-      <div className="home-v10-scene">
-        <picture className="home-v10-scene-art">
-          <source
-            media="(min-width: 768px)"
-            srcSet={`${ASSET_BASE_V10_12}/home-v10.12-scene-desktop.png`}
-          />
-          <img
-            className="home-v10-scene-img"
-            aria-hidden="true"
-            src={`${ASSET_BASE_V10_5}/home-v10.5-scene-mobile.png`}
-            alt=""
-            draggable={false}
-          />
-        </picture>
+    <section
+      className="tab-panel home-binding"
+      aria-labelledby="home-binding-title"
+    >
+      <div className="home-binding-stage">
+        <div className="home-binding-core">
+          <div className="home-binding-desk" aria-hidden="true" />
 
-        <div className="home-v10-overlay-plane">
-          <div className="home-v10-title-zone">
-          <h2 className="home-v10-title">
-            오늘도 한 문장,
-            <br />한 단어.
-          </h2>
-          <p className="home-v10-subtitle">
-            모르는 단어를 눌러두면, 읽으면서 단어장이 자연스럽게 쌓여요.
-          </p>
+          <div className="home-binding-cover">
+            <div className="home-binding-spine" aria-hidden="true">
+              읽고
+              <br />
+              남기는
+              <br />
+              단어
+            </div>
+            <div className="home-binding-brand">
+              <p className="home-binding-kicker">일본어 원문 읽기 단어장</p>
+              <h2 id="home-binding-title" className="home-binding-title">
+                책갈피
+              </h2>
+              <p className="home-binding-desc">
+                읽고 모은 단어를 오래 기억하도록
+              </p>
+              <button
+                type="button"
+                className="home-binding-sample"
+                onClick={onTryWithSample}
+              >
+                샘플로 체험하기
+              </button>
+            </div>
+            <button
+              type="button"
+              className={`home-binding-review home-binding-review--${reviewState}`}
+              onClick={review.onClick}
+              disabled={reviewState === "loading"}
+              aria-busy={reviewState === "loading" ? true : undefined}
+              aria-label={review.label}
+            >
+              <span className="home-binding-review-label">오늘 복습</span>
+              <strong className="home-binding-review-value">{review.value}</strong>
+              <span className="home-binding-review-note">{review.note}</span>
+            </button>
           </div>
 
-          <button
-          type="button"
-          className="home-v10-sample"
-          onClick={onTryWithSample}
-        >
-          샘플로 체험
-          </button>
-
-          <button
-          type="button"
-          className="home-v10-cta"
-          onClick={onStartReading}
-        >
-          <span className="home-v10-cta-content">
-            <SparkleIcon className="button-icon" />
-            <span>원문 읽기 시작</span>
-          </span>
-          </button>
-
-          <button
-          type="button"
-          className="home-v10-tab home-v10-tab--vocab"
-          onClick={onGoToVocab}
-        >
-          <span className="home-v10-tab-content">
-            <span className="home-v10-tab-icon">
-              <CardFileIcon />
-            </span>
-            <span className="home-v10-tab-text">
-              <span className="home-v10-tab-label">단어장</span>
-              <span className="home-v10-tab-hint">{vocabHint}</span>
-            </span>
-          </span>
-          </button>
-          <button
-          type="button"
-          className="home-v10-tab home-v10-tab--review"
-          onClick={isDevUser ? onOpenAccount : onStartTodayReview}
-        >
-          <span className="home-v10-tab-content">
-            <span className="home-v10-tab-icon">
-              <CardsIcon />
-            </span>
-            <span className="home-v10-tab-text">
-              <span className="home-v10-tab-label">복습</span>
-              <span className="home-v10-tab-hint">{reviewHint}</span>
-            </span>
-          </span>
-          </button>
-          <button
-          type="button"
-          className="home-v10-tab home-v10-tab--decks"
-          onClick={onGoToSharedDecks}
-        >
-          <span className="home-v10-tab-content">
-            <span className="home-v10-tab-icon">
-              <BookshelfIcon />
-            </span>
-            <span className="home-v10-tab-text">
-              <span className="home-v10-tab-label">덱</span>
-              <span className="home-v10-tab-hint">{decksHint}</span>
-            </span>
-          </span>
-          </button>
+          <nav className="home-binding-files" aria-label="학습 공간">
+            {files.map((file, index) => (
+              <button
+                key={file.key}
+                type="button"
+                className={`home-binding-file home-binding-file--${index + 1}`}
+                onClick={file.onClick}
+              >
+                <span className="home-binding-file-name">{file.name}</span>
+                <span className="home-binding-file-hint">{file.hint}</span>
+              </button>
+            ))}
+          </nav>
         </div>
       </div>
     </section>

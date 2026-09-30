@@ -186,40 +186,6 @@
    background only -- text, borders, cards and status colors stay on the
    shared tokens so readability and the app's one warm surface are
    unaffected. */
-.home-dashboard {
-  --screen-accent: var(--tone-amber);
-  --screen-accent-soft: #f7ecd6;
-  /* No custom font-family for the title (see .home-v10-title below) --
-     two OS-serif candidates were tried and rejected in earlier Home
-     iterations for reading as stiff/formal rather than a handmade
-     stationery note. The title reads as distinct from a plain UI heading
-     through weight/size/color/letter-spacing on the same root sans stack
-     every other Home label uses, not a swapped typeface. */
-  display: block;
-  gap: 0;
-}
-
-@media (min-width: 1024px) {
-  /* Phase 177 -- the notebook scene has its own capped height (see
-     .home-v10-scene below) so it never grows into a giant hero on a tall
-     monitor, but pinning it to the top of .page's own full-viewport-height
-     box then left the paper surface reading as empty dead space
-     underneath rather than deliberate desk margin. Centering it in
-     whatever height .page actually has reads as "an object placed in the
-     middle of a desk" instead. Scoped to .home-dashboard (Home-only), not
-     .page/.app-shell-content, so no other tab's vertical rhythm changes. */
-  /* .tab-panel.home-dashboard (not just .home-dashboard) so this beats the
-     later, same-specificity `.tab-panel { display: grid }` base rule --
-     two single-class selectors of equal specificity would otherwise
-     resolve by source order, and .tab-panel's is declared after this. */
-  .tab-panel.home-dashboard {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    min-height: calc(100svh - 140px);
-  }
-}
-
 .reading-panel {
   --screen-accent: var(--tone-ink-green);
   --screen-accent-soft: #e9f2ea;
@@ -3524,24 +3490,25 @@ body {
   background-size: var(--paper-texture-size);
 }
 
-/* Home V10.1 (full scene replacement) -- the desk (wood grain, plant,
-   light) is baked into the single opaque `.home-v10-scene` photo itself
-   (see HomeDashboard.tsx), so there is no separate desk plate or vignette. */
-body:has(.home-v10) {
-  background-color: #d9b98a;
+/* Home B2 binding scene -- the sage desk is baked into the scene art
+   (see .home-binding-stage below); the body only carries the same desk
+   tone so the 6px under the mobile toolbar and any overscroll match it. */
+body:has(.home-binding) {
+  background-color: #737c77;
+  background-image: none;
 }
 
 /* The photographed desk is the Home canvas, not a card inside the shared
    paper page. Keeping the page flush prevents fallback paper from framing
    the opaque scene at its top, sides, or bottom. */
-body:has(.home-v10) .page {
+body:has(.home-binding) .page {
   width: 100%;
   max-width: none;
   padding: 0;
   margin: 0;
 }
 
-body:has(.home-v10) .library-canvas-home {
+body:has(.home-binding) .library-canvas-home {
   width: 100%;
   max-width: none;
   margin: 0;
@@ -3690,26 +3657,9 @@ button {
   margin: 0 0 6px;
   padding: 6px 10px;
   border-bottom: none;
-  background: rgba(253, 249, 238, 0.82);
-  backdrop-filter: blur(3px);
-  box-shadow: none;
-}
-
-/* Home-scoped only (other tabs' toolbar is untouched): the toolbar already
-   reads as a quiet translucent strip everywhere, but the photographed
-   scene under it is richer than a flat paper background, so even this
-   strip can pull focus before the scene does. Lighter background + no
-   dashed underedge, selected via `body:has(.home-v10)` rather than a
-   Home-only toolbar variant component. */
-body:has(.home-v10) .app-toolbar {
-  background: rgba(253, 249, 238, 0.25);
-  border-bottom-color: transparent;
-  /* Phase 196 -- the blur was the last thing still making this read as a
-     pane of glass sitting in front of the scene (i.e. chrome) rather than
-     a faint printed strip above it; dropping it flattens the toolbar back
-     into the page instead of floating over it. */
+  background: #e8ece7;
   backdrop-filter: none;
-  box-shadow: none;
+  box-shadow: inset 0 -1px 0 rgba(35, 57, 47, 0.14);
 }
 
 .app-toolbar-menu-button {
@@ -3723,13 +3673,13 @@ body:has(.home-v10) .app-toolbar {
   min-height: 0;
   padding: 0;
   border-radius: 10px;
-  color: var(--text-secondary);
-  background: var(--soft-bg);
+  color: #2c4439;
+  background: rgba(35, 57, 47, 0.08);
   box-shadow: none;
 }
 
 .app-toolbar-menu-button:not(:disabled):hover {
-  background: var(--border);
+  background: rgba(35, 57, 47, 0.15);
   box-shadow: none;
   transform: none;
 }
@@ -4070,7 +4020,7 @@ body:has(.home-v10) .app-toolbar {
     padding: 0 14px 24px;
   }
 
-  body:has(.home-v10) .app-shell-content {
+  body:has(.home-binding) .app-shell-content {
     max-width: none;
     margin: 0;
     padding: 0;
@@ -4088,18 +4038,8 @@ body:has(.home-v10) .app-toolbar {
     padding: 0;
   }
 
-  /* Home nav v1.1 -- density/grounding pass (references/mockups/
-     home-nav-prep/CLAUDE_DENSITY_PASS.md): the v1 strip (56px host + 8px
-     overlap, 106x40 slots, 106x40 active linen, 12x36 dividers) read as
-     too thick and too bright next to the Home scene. The host itself
-     shrinks to 50px; the paper asset stays a 56px image but now overlaps
-     the scene by only 6px, and every interactive slot drops to 106x36 to
-     match. A single physical paper strip is still shared by every
-     desktop tab -- live DOM labels/icons remain interactive above it.
-     Match the Home-scoped selector so its earlier translucent-background
-     rule cannot erase this asset. */
-  .app-toolbar,
-  body:has(.home-v10) .app-toolbar {
+  /* The same 50px sage binding strip stays fixed across every scene. */
+  .app-toolbar {
     position: sticky;
     top: 0;
     z-index: 20;
@@ -4118,24 +4058,13 @@ body:has(.home-v10) .app-toolbar {
     box-shadow: none;
   }
 
-  /* Home Nav V1.2 -- natural paper edge (references/mockups/home-nav-prep/
-     CLAUDE_EDGE_FINISH_V1_2*.md): V1.1's paper strip baked its edge
-     darkening inside the opaque paper silhouette, so it read as a flat
-     dark contour against every scene regardless of background. V1.2's
-     asset keeps the identical 56px opaque paper body (the toolbar box
-     itself is still exactly 50px; the paper still visually overlaps the
-     scene by 6px) and adds 8px of transparent padding below it holding a
-     separate, low-opacity warm cast shadow outside the paper's own alpha
-     -- so the box needs 14px of extension (6px overlap + 8px shadow
-     padding) to show the asset's full 64px canvas without cropping the
-     shadow tail. Active linen and divider assets are untouched V1.1. */
-  .app-toolbar::before,
-  body:has(.home-v10) .app-toolbar::before {
+  .app-toolbar::before {
     content: "";
     position: absolute;
-    inset: 0 0 -14px;
+    inset: 0;
     z-index: 0;
-    background: transparent url("/brand/decor/home-nav-v1.2/home-nav-paper-strip.png") center top / 100% 64px no-repeat;
+    background: #e8ece7;
+    border-bottom: 1px solid rgba(35, 57, 47, 0.14);
     pointer-events: none;
   }
 
@@ -4181,7 +4110,7 @@ body:has(.home-v10) .app-toolbar {
     left: 4px;
     width: 10px;
     height: 30px;
-    background: url("/brand/decor/home-nav-v1.1/home-nav-divider-emboss.png") center / 10px 30px no-repeat;
+    background: linear-gradient(rgba(35, 57, 47, 0.2), rgba(35, 57, 47, 0.2)) center / 1px 18px no-repeat;
     pointer-events: none;
   }
 
@@ -4198,7 +4127,7 @@ body:has(.home-v10) .app-toolbar {
     min-height: 36px;
     padding: 0 10px;
     border-radius: 4px;
-    color: #493a2c;
+    color: #2c4439;
     background: transparent;
     font-weight: 700;
     font-size: 12.5px;
@@ -4215,19 +4144,19 @@ body:has(.home-v10) .app-toolbar {
     left: -6px;
     width: 10px;
     height: 30px;
-    background: url("/brand/decor/home-nav-v1.1/home-nav-divider-emboss.png") center / 10px 30px no-repeat;
+    background: linear-gradient(rgba(35, 57, 47, 0.2), rgba(35, 57, 47, 0.2)) center / 1px 18px no-repeat;
     pointer-events: none;
   }
 
   .app-toolbar-link:not(:disabled):hover {
     background: transparent;
-    color: #241b14;
+    color: #152a20;
     box-shadow: none;
     transform: none;
   }
 
   .app-toolbar-link:focus-visible {
-    outline: 2px solid rgba(49, 76, 45, 0.72);
+    outline: 2px solid #315a44;
     outline-offset: 1px;
   }
 
@@ -4238,18 +4167,26 @@ body:has(.home-v10) .app-toolbar {
   }
 
   .app-toolbar-link-active {
-    color: #f7ecd8;
-    background: transparent url("/brand/decor/home-nav-v1.1/home-nav-active-linen.png") center / 98px 36px no-repeat;
+    color: #1d4030;
+    background: transparent;
+    font-weight: 800;
     box-shadow: none;
   }
 
   .app-toolbar-link-active:not(:disabled):hover {
-    color: #fff8e9;
-    background: transparent url("/brand/decor/home-nav-v1.1/home-nav-active-linen.png") center / 98px 36px no-repeat;
+    color: #152a20;
+    background: transparent;
   }
 
-  .app-toolbar-link-active::before {
-    display: none;
+  .app-toolbar-link-active::after {
+    content: "";
+    position: absolute;
+    right: 19px;
+    bottom: 0;
+    left: 19px;
+    height: 2px;
+    background: #315a44;
+    pointer-events: none;
   }
 
   .ghost-button.app-topbar-feedback-button {
@@ -4258,24 +4195,24 @@ body:has(.home-v10) .app-toolbar {
     border: none;
     border-radius: 0;
     background: transparent;
-    color: #493a2c;
+    color: #2c4439;
   }
 
   .ghost-button.app-topbar-feedback-button:not(:disabled):hover {
     background: transparent;
-    color: #241b14;
+    color: #152a20;
   }
 
   .account-menu-trigger {
     height: 36px;
     padding-top: 0;
     padding-bottom: 0;
-    color: #493a2c;
+    color: #2c4439;
   }
 
   .account-menu-trigger:not(:disabled):hover {
     background: transparent;
-    color: #241b14;
+    color: #152a20;
   }
 
   /* Drawer/hamburger are mobile/tablet-only -- guards against a drawer
@@ -4455,498 +4392,575 @@ body:has(.home-v10) .app-toolbar {
 }
 
 /* ==========================================================================
-   Home V10.1 (full scene replacement) -- every prior Home iteration
-   (v3/v4/v7/v8) composited separately-illustrated objects (title note, CTA
-   stamp, notebook cover, tab rail, Shiori peek) as CSS-positioned siblings,
-   each carrying its own drop-shadow/filter tuned in isolation. No amount of
-   shadow/contact/color tuning made that read as one photographed scene,
-   because independently-positioned layers have no way to guarantee they
-   agree on geometry or light source -- see git history for the phase-by-
-   phase record.
-   This throws all of that away. `.home-v10-scene` is a single relative
-   positioning root holding exactly one opaque, pre-composited scene photo
-   per breakpoint (notebook, title note, CTA ticket, Shiori charm, index
-   tabs, and every shadow already baked into the source art under one
-   light source -- see HomeDashboard.tsx) plus plain DOM overlay buttons/
-   text positioned as a % of that same box, matching pixel coordinates
-   measured directly off the target mockups (references/mockups/
-   home-v10.1-prep/DESIGN_DELTA.md). There is no CSS box-shadow,
-   drop-shadow, filter, gradient, or ::before/::after anywhere in this
-   scene -- every visual object, its shadow included, lives in the image.
-   The mobile and desktop mockups are separate compositions (not one
-   cropped from the other), so both the scene image AND every overlay
-   element's position switch together at one breakpoint via CSS custom
-   properties declared on `.home-v10-scene` (mobile-first base values,
-   overridden at >=768px) -- keeps the overlay coordinates and the visible
-   image in sync by construction, never independently tunable. */
-.home-v10-scene {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  width: 100%;
-  height: var(--scene-height);
-  margin: 0;
-  --scene-height: calc(100svh - 70px);
-  /* V10.5.1 keeps the approved V1 center composition pixel-identical and
-     extends only the desk above/below it. Its 850x2090 ratio fits the full
-     source width at 320x844, so the notebook and all three tabs no longer
-     rely on a horizontal nudge to survive the mobile crop. */
-  --scene-art-ratio: 850 / 2090;
-  --scene-art-width: max(100vw, calc(40.67svh - 28.47px));
-  --scene-art-shift-x: 0px;
-  /* Mobile coordinate set -- percentages measured directly against the
-     approved 850x1850 V10.5 V1 candidate (references/mockups/
-     home-v10.5-prep/home-v10.5-mobile-candidate-v1.png), not reused from
-     the old 941x1672 V10.3 mobile percentages. */
-  --title-left: 6.3%;
-  --title-top: 37.8%;
-  --title-w: 39%;
-  --title-h: 5.74%;
-  --sample-left: 6.82%;
-  --sample-top: 42.92%;
-  --sample-w: 17.65%;
-  --sample-h: 1.91%;
-  --cta-left: 9.18%;
-  --cta-top: 45.02%;
-  --cta-w: 30.12%;
-  --cta-h: 3.59%;
-  /* CTA visible content is positioned as a % of the CTA hit zone itself
-     (not the scene) -- keeps the icon/label inside the ticket regardless
-     of the hit zone's own scene position. */
-  --cta-content-left: 6%;
-  --cta-content-top: 12%;
-  --cta-content-w: 76%;
-  --cta-content-h: 76%;
-  --tab-vocab-left: 45.18%;
-  --tab-vocab-top: 59.04%;
-  --tab-vocab-w: 12.47%;
-  --tab-vocab-h: 3.06%;
-  --tab-review-left: 60.24%;
-  --tab-review-top: 59.04%;
-  --tab-review-w: 12.47%;
-  --tab-review-h: 3.06%;
-  --tab-decks-left: 75.18%;
-  --tab-decks-top: 59.36%;
-  --tab-decks-w: 12.47%;
-  --tab-decks-h: 2.73%;
-}
+   Home B2 binding scene (references/mockups/home-b2-binding-final/gateA,
+   gateB). Replaces the V10 wooden-desk notebook, ribbon CTA and three tabs
+   with one textless photographed scene -- a bound cover above a six-file
+   tray -- plus live DOM for every word and hit zone. Assets live in
+   /brand/decor/home-b2-binding/ and are cut from (or only extend the plain
+   desk of) references/mockups/home-b2-original-ac-refined/assets/
+   c-tonal-binding.png; see that folder's ASSET_MANIFEST.md.
 
-@media (min-width: 768px) {
-  .home-v10-scene {
-    --scene-height: calc(100svh - 50px);
-    /* V10.4 desktop-only replacement (references/mockups/home-v10.4-prep/
-       CLAUDE_HANDOFF.md) -- the 1774x887 V10.3 art enlarged to fill the
-       wider ~2.14:1 content plane, cropping ~30px off the top and bottom
-       and softening material detail. The approved 1888x833 candidate
-       becomes the desktop source plane instead; --scene-art-width is
-       solved so the art plane's height still equals `--scene-height`
-       (100svh - 50px) at this ratio, so only horizontal desk margin is
-       ever cropped, never the notebook's top/bottom. Mobile keeps its own
-       V10.3 ratio/width/coordinates below, untouched. */
-    --scene-art-ratio: 1888 / 833;
-    --scene-art-width: max(100vw, calc(226.65svh - 113.33px));
-    /* Desktop coordinate set -- percentages measured directly against the
-       approved 1888x833 V10.4 desktop candidate (references/mockups/
-       home-v10.4-prep/home-v10.4-wide-candidate-v1.png), not reused or
-       estimated from the old 1774x887 V10.3 desktop percentages. */
-    --title-left: 27.55%;
-    --title-top: 28.45%;
-    --title-w: 13.25%;
-    --title-h: 12.6%;
-    --sample-left: 27.3%;
-    --sample-top: 40.94%;
-    --sample-w: 6.5%;
-    --sample-h: 4.44%;
-    --cta-left: 27.22%;
-    --cta-top: 47.54%;
-    --cta-w: 19.54%;
-    --cta-h: 12.48%;
-    --cta-content-left: 6%;
-    --cta-content-top: 12%;
-    --cta-content-w: 76%;
-    --cta-content-h: 76%;
-    --tab-vocab-left: 43.64%;
-    --tab-vocab-top: 81.87%;
-    --tab-vocab-w: 6.73%;
-    --tab-vocab-h: 7.8%;
-    --tab-review-left: 51.96%;
-    --tab-review-top: 81.75%;
-    --tab-review-w: 6.73%;
-    --tab-review-h: 8.04%;
-    --tab-decks-left: 60.33%;
-    --tab-decks-top: 82.23%;
-    --tab-decks-w: 6.78%;
-    --tab-decks-h: 7.56%;
-  }
-}
+   Mobile-first: <=640px is the compact 2+2+2 tray, 641-1023px the 3+3
+   tray, >=1024px the full desktop scene. Tablet/mobile rebuild the objects
+   rather than shrinking the desktop image: the cover is a 9-slice of its
+   own strip (spine, seam and marker keep their proportions; only plain
+   paper stretches), and each file carries its own compartment cut at the
+   partition centres, so neighbouring files in a row are contiguous source
+   pixels and the tray reads as one piece.
 
-/* The art and interaction plane use the exact same source aspect ratio and
-   centered crop. This keeps every DOM hit zone locked to its painted object
-   while the viewport trims only the scene's outer desk margins. */
-.home-v10-scene-art,
-.home-v10-overlay-plane {
-  position: absolute;
-  top: 50%;
-  /* --scene-art-shift-x is shared by both planes through this identical
-     left calculation -- never move the image and overlay independently. */
-  left: calc(50% + var(--scene-art-shift-x));
-  width: var(--scene-art-width);
-  height: auto;
-  aspect-ratio: var(--scene-art-ratio);
-  transform: translate(-50%, -50%);
-}
-
-.home-v10-scene-art {
-  z-index: 0;
-  pointer-events: none;
-}
-
-.home-v10-overlay-plane {
-  z-index: 1;
-}
-
-/* Decorative scene photo fills its source-ratio art plane exactly. The root
-   clips the shared plane, so this is a deliberate canvas crop rather than a
-   separate, independently-scaled image. */
-.home-v10-scene-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+   Per-file custom properties are source pixels of that file's slice:
+   --w/--h slice size, --row the summed width of its row, --pl/--pr the
+   plain compartment either side of the card, --bottom where the visible
+   card ends. Percent padding on a flex item resolves against the row
+   (flex container) width, hence every padding divides by --row.
+   ========================================================================== */
+.tab-panel.home-binding {
+  --screen-accent: var(--tone-ink-green);
+  --screen-accent-soft: #e4ebe5;
   display: block;
-  object-fit: fill;
-  pointer-events: none;
-  user-select: none;
+  gap: 0;
 }
 
-.home-v10-title-zone {
-  position: absolute;
-  left: var(--title-left);
-  top: var(--title-top);
-  width: var(--title-w);
-  height: var(--title-h);
-  z-index: 1;
+.home-binding-stage {
+  box-sizing: border-box;
+  min-height: calc(100svh - 62px);
+  padding: 6px 16px 8px;
+  display: flex;
+  justify-content: center;
+  background: linear-gradient(100deg, #87918c 0%, #727b76 55%, #626a64 100%);
+}
+
+.home-binding-core {
+  width: 100%;
+  max-width: 440px;
   display: flex;
   flex-direction: column;
-  /* flex-start, not center -- this box is genuinely small at narrow
-     mobile widths (the "Title content" safe area scales down with the
-     scene itself), and if the title+subtitle ever run a hair taller than
-     the box, top-alignment means overflow:hidden trims the bottom of the
-     subtitle instead of centering trimming an equal sliver off BOTH ends,
-     which would clip the top of the title itself -- confirmed by
-     screenshot: centering cut off the first line's ascenders at 375/1024,
-     top-alignment keeps the title fully intact in the same case. */
-  justify-content: flex-start;
-  overflow: hidden;
-  pointer-events: none;
+  gap: 6px;
 }
 
-.home-v10-title {
-  margin: 0;
-  /* Warm ink-brown, matching the note paper's own printed-ink read rather
-     than a UI heading color. No custom font-family -- see the
-     .home-dashboard comment above for why. */
-  color: #3c2d1c;
-  font-size: clamp(9px, 2.9vw, 18px);
-  font-weight: 600;
-  line-height: 1.28;
-  letter-spacing: 0.01em;
+.home-binding-desk {
+  display: none;
 }
 
-.home-v10-subtitle {
-  margin: 2px 0 0;
-  /* Line-clamped to 2 lines (ellipsis beyond that), not left to wrap
-     freely -- the title-content safe box is only ~40-60px tall on a
-     narrow phone (25%/7.8% of a scene rendered well under the mockup's
-     native 941px width), too short for this copy's full 3-line wrap at
-     any legible font size. Matches how the shortcut hints elsewhere on
-     Home already handle the same tight-box-vs-copy-length tension. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  word-break: keep-all;
-  overflow-wrap: break-word;
-  color: var(--muted);
-  font-size: clamp(7.5px, 2.1vw, 11.5px);
-  line-height: 1.28;
+.home-binding-cover {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  align-items: center;
+  padding: 6px 2px 6px 14px;
+  border-style: solid;
+  border-width: 10px 22px 10px 64px;
+  border-image: url("/brand/decor/home-b2-binding/home-binding-cover.png") 12 30 12 262 fill / 10px 22px 10px 64px stretch;
+  color: #1b3a2f;
 }
 
-@media (min-width: 768px) {
-  .home-v10-title {
-    font-size: clamp(16px, 1.45vw, 22px);
-    line-height: 1.22;
-  }
-
-  .home-v10-subtitle {
-    font-size: clamp(10.5px, 0.9vw, 13.5px);
-    line-height: 1.34;
-  }
-}
-
-.home-v10-sample {
+.home-binding-spine {
   position: absolute;
-  left: var(--sample-left);
-  top: var(--sample-top);
-  width: var(--sample-w);
-  height: var(--sample-h);
-  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: -64px;
+  width: 64px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-  border: none;
-  background: none;
-  padding: 0;
-  margin: 0;
-  color: var(--muted);
-  font-size: clamp(8px, 1.6vw, 12px);
-  font-weight: 600;
-  white-space: nowrap;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-color: var(--border);
-  cursor: pointer;
-  box-shadow: none;
+  justify-content: center;
+  text-align: center;
+  font-family: "Batang", "Nanum Myeongjo", "Noto Serif KR", "AppleMyungjo", serif;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #23392f;
+  opacity: 0.86;
 }
 
-.home-v10-sample:not(:disabled):hover {
-  color: var(--text-secondary);
-  text-decoration-color: var(--border-strong);
+.home-binding-brand {
+  min-width: 0;
+}
+
+.home-binding-kicker {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #1f3a2f;
+}
+
+.home-binding-title {
+  margin: 4px 0 0;
+  font-family: "Batang", "Nanum Myeongjo", "Noto Serif KR", "AppleMyungjo", serif;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: 0;
+  color: #1b3a2f;
+}
+
+.home-binding-desc {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: #24392f;
+}
+
+/* Explicit width/min-height/padding on every Home button below: the
+   generic <=640px `button { width:100%; min-height:44px; ... }` reset is
+   an element selector, so these class rules always win over it. */
+.home-binding-sample,
+.home-binding-review,
+.home-binding-file {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The global `button` recipe (min-width 120px, centered content, gradient
+   fill, hover lift, press scale, brown disabled fill) uses pseudo-class
+   selectors that outrank a single class, so Home's scene buttons neutralise
+   it with a scoped, higher-specificity reset. */
+.home-binding :is(.home-binding-sample, .home-binding-review, .home-binding-file) {
+  min-width: 0;
+  transition: none;
+}
+
+.home-binding :is(.home-binding-sample, .home-binding-file) {
+  gap: 0;
+}
+
+.home-binding .home-binding-review {
+  gap: 0 12px;
+}
+
+.home-binding :is(.home-binding-sample, .home-binding-review, .home-binding-file):not(:disabled):hover,
+.home-binding :is(.home-binding-sample, .home-binding-review, .home-binding-file):not(:disabled):active {
   box-shadow: none;
   transform: none;
 }
 
-@media (min-width: 768px) {
-  .home-v10-sample {
-    font-size: clamp(11.5px, 0.9vw, 13.5px);
-  }
-}
-
-.home-v10-cta {
-  position: absolute;
-  left: var(--cta-left);
-  top: var(--cta-top);
-  width: var(--cta-w);
-  height: var(--cta-h);
-  z-index: 2;
-  min-width: 0;
-  min-height: 0;
-  border: 0;
+.home-binding .home-binding-sample:not(:disabled):hover,
+.home-binding .home-binding-review:not(:disabled):hover,
+.home-binding .home-binding-review:disabled {
   background: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  box-shadow: none;
 }
 
-.home-v10-cta-content {
-  position: absolute;
-  left: var(--cta-content-left);
-  top: var(--cta-content-top);
-  width: var(--cta-content-w);
-  height: var(--cta-content-h);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  box-sizing: border-box;
-  /* Dark mossy ink, not white -- the ticket itself is a plain sage green
-     with no baked copy, and this hue keeps contrast on that light-mid
-     green without introducing a text-shadow/filter to fake it. */
-  color: #24331b;
-  font-size: clamp(8px, 1.7vw, 13px);
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  pointer-events: none;
-  transition: transform var(--motion-fast) var(--ease-soft);
-}
-
-.home-v10-cta-content .button-icon {
-  width: 1em;
-  height: 1em;
-  flex: 0 0 auto;
-}
-
-.home-v10-cta:not(:disabled):hover .home-v10-cta-content {
-  transform: scale(1.03);
-}
-
-.home-v10-cta:not(:disabled):active .home-v10-cta-content {
-  transform: scale(0.97);
-}
-
-/* The three index tabs -- plain hit zones with no art of their own,
-   positioned directly against the scene's own baked-in tab artwork (see
-   the .home-v10-scene custom properties above). No badge/background is
-   drawn by CSS; icon + label + hint sit directly on the tab's own painted
-   color from the image. */
-.home-v10-tab {
-  position: absolute;
-  min-width: 0;
-  min-height: 0;
-  border: 0;
-  background: none;
-  padding: 0;
-  margin: 0;
-  cursor: pointer;
-  z-index: 2;
-  box-shadow: none;
-}
-
-.home-v10-tab--vocab {
-  left: var(--tab-vocab-left);
-  top: var(--tab-vocab-top);
-  width: var(--tab-vocab-w);
-  height: var(--tab-vocab-h);
-}
-
-.home-v10-tab--review {
-  left: var(--tab-review-left);
-  top: var(--tab-review-top);
-  width: var(--tab-review-w);
-  height: var(--tab-review-h);
-}
-
-.home-v10-tab--decks {
-  left: var(--tab-decks-left);
-  top: var(--tab-decks-top);
-  width: var(--tab-decks-w);
-  height: var(--tab-decks-h);
-}
-
-.home-v10-tab:not(:disabled):hover {
-  filter: brightness(1.05);
-}
-
-/* Mobile tabs are physically too narrow for label/hint text to render
-   legibly (~120px wide, per the mobile target mockup) -- icon only,
-   visually. Label/hint stay in the DOM and remain announced to screen
-   readers via the same clip-rect technique used elsewhere in this file
-   (not display:none, which would remove them from the accessibility tree
-   too). */
-.home-v10-tab-content {
-  position: relative;
-  display: flex;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  color: #ffffff;
-}
-
-.home-v10-tab-icon {
+.home-binding-sample {
   display: inline-flex;
-  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-start;
+  width: auto;
+  min-height: 44px;
+  margin-top: 2px;
+  padding: 0 2px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2d5a45;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.home-binding-review {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: baseline;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 0 2px;
+  border-top: 1px solid rgba(24, 59, 44, 0.28);
+  color: #1b3a2f;
+  text-align: left;
+}
+
+.home-binding-review-label {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.home-binding-review-value {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.home-binding-review--login .home-binding-review-value {
+  font-size: 15px;
+}
+
+.home-binding-review--loading .home-binding-review-value {
+  color: #5b6f64;
+  font-weight: 700;
+}
+
+.home-binding-review-note {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.home-binding-review--loading,
+.home-binding-review:disabled {
+  cursor: default;
+}
+
+.home-binding-review--loading .home-binding-review-note,
+.home-binding-review--zero .home-binding-review-note {
+  text-decoration: none;
+  color: #4d6358;
+}
+
+.home-binding-files {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 2px;
+  width: 100%;
+}
+
+.home-binding-file {
+  --bottom: 156;
+  --fl: 0px;
+  --fr: 0px;
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  color: #ffffff;
+  flex: 0 0 auto;
+  width: calc(var(--w) / var(--row) * 100%);
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: var(--w) / var(--h);
+  padding: calc(55 / var(--row) * 100%) calc(var(--pr) / var(--row) * 100%)
+    calc((var(--h) - var(--bottom)) / var(--row) * 100%)
+    calc(var(--pl) / var(--row) * 100%);
+  background: var(--art) center / 100% 100% no-repeat;
+  color: #1c392e;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent, #000 var(--fl), #000 calc(100% - var(--fr)), transparent),
+    linear-gradient(180deg, transparent, #000 10px, #000 calc(100% - 10px), transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent, #000 var(--fl), #000 calc(100% - var(--fr)), transparent),
+    linear-gradient(180deg, transparent, #000 10px, #000 calc(100% - 10px), transparent);
+  mask-composite: intersect;
 }
 
-.home-v10-tab-icon svg {
-  width: 13px;
-  height: 13px;
-}
+/* Mobile 2+2+2, compact slices (a band of plain card paper removed). */
+.home-binding-file--1 { --art: url("/brand/decor/home-b2-binding/home-binding-file-mobile-1.png"); --w: 276; --h: 262; --row: 540; --pl: 51; --pr: 14; --fl: 10px; }
+.home-binding-file--2 { --art: url("/brand/decor/home-b2-binding/home-binding-file-mobile-2.png"); --w: 264; --h: 262; --row: 540; --pl: 13; --pr: 42; --fr: 10px; }
+.home-binding-file--3 { --art: url("/brand/decor/home-b2-binding/home-binding-file-mobile-3.png"); --w: 261; --h: 262; --row: 523; --pl: 37; --pr: 16; --fl: 10px; }
+.home-binding-file--4 { --art: url("/brand/decor/home-b2-binding/home-binding-file-mobile-4.png"); --w: 262; --h: 262; --row: 523; --pl: 15; --pr: 42; --fr: 10px; }
+.home-binding-file--5 { --art: url("/brand/decor/home-b2-binding/home-binding-file-mobile-5.png"); --w: 257; --h: 262; --row: 535; --pl: 37; --pr: 17; --fl: 10px; }
+.home-binding-file--6 { --art: url("/brand/decor/home-b2-binding/home-binding-file-mobile-6.png"); --w: 278; --h: 262; --row: 535; --pl: 18; --pr: 56; --fr: 10px; }
 
-.home-v10-tab-text {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+.home-binding-file-name {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
   white-space: nowrap;
-  border: 0;
 }
 
-.home-v10-tab-label {
-  font-size: 12px;
-  font-weight: 650;
+.home-binding-file-hint {
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.2;
+  color: #5f7266;
+  white-space: nowrap;
 }
 
-.home-v10-tab-hint {
-  color: rgba(255, 255, 255, 0.86);
-  font-size: 9.5px;
-  font-weight: 600;
-  line-height: 1.3;
+.home-binding-sample:focus-visible,
+.home-binding-review:focus-visible {
+  outline: 2px solid #1f4d3a;
+  outline-offset: 3px;
 }
 
-/* Desktop tabs have real room (~145x98px, per the desktop target mockup),
-   so icon + label + up to a 2-line hint all render, left-aligned in the
-   tab's own safe area -- the hit zone box IS the content-safe box here,
-   there is no separate "visible content" sub-region for tabs the way the
-   CTA has one. */
-@media (min-width: 768px) {
-  .home-v10-cta-content {
-    color: #f6eed8;
-    font-size: clamp(12px, 1vw, 15px);
+.home-binding-file:focus-visible {
+  outline: none;
+}
+
+.home-binding-file:focus-visible .home-binding-file-name {
+  background: #f8f6ed;
+  box-shadow: 0 0 0 4px #f8f6ed, 0 0 0 6px #1f4d3a;
+  text-decoration: none;
+}
+
+.home-binding-sample:hover,
+.home-binding-review:not(:disabled):hover .home-binding-review-note {
+  color: #173327;
+}
+
+.home-binding-file:hover .home-binding-file-name {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+@media (max-width: 359px) {
+  .home-binding-cover {
+    border-width: 10px 18px 10px 40px;
+    border-image-width: 10px 18px 10px 40px;
+    padding-left: 12px;
   }
 
-  .home-v10-tab-content {
-    justify-content: flex-start;
-    gap: 6px;
-    padding: 18% 8% 14% 10%;
-    text-align: left;
+  .home-binding-spine {
+    display: none;
   }
 
-  .home-v10-tab-icon {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.22);
+  .home-binding-title {
+    font-size: 27px;
   }
 
-  .home-v10-tab-icon svg {
-    width: 12px;
-    height: 12px;
+  .home-binding-file-name {
+    font-size: 15px;
   }
 
-  .home-v10-tab-text {
-    position: static;
+  .home-binding-file-hint {
+    font-size: 11px;
+  }
+}
+
+/* Tablet 3+3, full-height slices, sized so cover + both rows fit the
+   viewport height (the V10 tablet scene overflowed by 12px). */
+@media (min-width: 641px) {
+  .home-binding-stage {
+    padding: 28px 40px 32px;
+    align-items: center;
+  }
+
+  .home-binding-core {
+    max-width: 720px;
+    gap: 22px;
+    align-items: center;
+  }
+
+  .home-binding-cover {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 24px;
+    padding: 14px 4px 14px 22px;
+    border-width: 12px 30px 12px 150px;
+    border-image-width: 12px 30px 12px 150px;
+  }
+
+  .home-binding-spine {
+    left: -150px;
+    width: 150px;
+    font-size: 17px;
+  }
+
+  .home-binding-kicker {
+    font-size: 12px;
+  }
+
+  .home-binding-title {
+    font-size: 38px;
+  }
+
+  .home-binding-desc {
+    font-size: 14px;
+  }
+
+  .home-binding-sample {
+    min-height: 32px;
+  }
+
+  .home-binding-review {
     display: flex;
-    width: auto;
-    height: auto;
-    flex: 1 1 auto;
     flex-direction: column;
-    min-width: 0;
-    margin: 0;
-    overflow: visible;
-    clip: auto;
-    white-space: normal;
+    justify-content: center;
+    width: auto;
+    min-width: 150px;
+    padding: 6px 6px 6px 20px;
+    border-top: 0;
+    border-left: 1px solid rgba(24, 59, 44, 0.32);
   }
 
-  .home-v10-tab-label {
-    font-size: 13px;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+  .home-binding-review-value {
+    font-size: 26px;
   }
 
-  .home-v10-tab-hint {
-    font-size: 10px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    white-space: normal;
-    word-break: keep-all;
-    overflow-wrap: break-word;
+  .home-binding-review--login .home-binding-review-value {
+    font-size: 17px;
+  }
+
+  .home-binding-review-note {
+    margin-top: 4px;
+  }
+
+  .home-binding-files {
+    row-gap: 10px;
+    max-width: min(720px, calc((100svh - 62px - 60px - 22px - 190px - 10px) / 2 * 776 / 412));
+  }
+
+  .home-binding-file {
+    --bottom: 296;
+  }
+
+  .home-binding-file--1 { --art: url("/brand/decor/home-b2-binding/home-binding-file-tablet-1.png"); --w: 276; --h: 412; --row: 776; --pl: 51; --pr: 14; --fl: 10px; --fr: 0px; }
+  .home-binding-file--2 { --art: url("/brand/decor/home-b2-binding/home-binding-file-tablet-2.png"); --w: 236; --h: 412; --row: 776; --pl: 13; --pr: 14; --fl: 0px; --fr: 0px; }
+  .home-binding-file--3 { --art: url("/brand/decor/home-b2-binding/home-binding-file-tablet-3.png"); --w: 264; --h: 412; --row: 776; --pl: 14; --pr: 42; --fl: 0px; --fr: 10px; }
+  .home-binding-file--4 { --art: url("/brand/decor/home-b2-binding/home-binding-file-tablet-4.png"); --w: 259; --h: 412; --row: 774; --pl: 37; --pr: 17; --fl: 10px; --fr: 0px; }
+  .home-binding-file--5 { --art: url("/brand/decor/home-b2-binding/home-binding-file-tablet-5.png"); --w: 237; --h: 412; --row: 774; --pl: 17; --pr: 17; --fl: 0px; --fr: 0px; }
+  .home-binding-file--6 { --art: url("/brand/decor/home-b2-binding/home-binding-file-tablet-6.png"); --w: 278; --h: 412; --row: 774; --pl: 18; --pr: 56; --fl: 0px; --fr: 10px; }
+
+  .home-binding-file-name {
+    font-size: 18px;
+  }
+
+  .home-binding-file-hint {
+    margin-top: 10px;
+    font-size: 12px;
   }
 }
 
-/* The generic <=640px `button { width:100%; min-height:44px; padding:11px
-   14px }` reset elsewhere in this file is an element selector (lower
-   specificity than any class selector here), so it can never override
-   these buttons' own width/height/padding/min-height -- no exemption rule
-   needed the way the old home-v4-* classes required one. */
+/* Desktop: the single scene. The 1672x941 core is contained in the stage
+   (never cropped); the desk is continued around it by the extended plate
+   (core offset 320px / 220px in source pixels). Every overlay coordinate
+   is a percentage of the core measured off the source; type scales with
+   the core via container units, floored so 1024px stays legible. */
+@media (min-width: 1024px) {
+  .home-binding-stage {
+    position: relative;
+    display: block;
+    height: calc(100svh - 50px);
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #737c77;
+    container-type: size;
+  }
+
+  .home-binding-core {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: block;
+    width: min(100cqw, calc(100cqh * 1672 / 941));
+    max-width: none;
+    aspect-ratio: 1672 / 941;
+    transform: translate(-50%, -50%);
+    container-type: inline-size;
+  }
+
+  .home-binding-desk {
+    display: block;
+    position: absolute;
+    inset: -23.379% -19.139%;
+    background: url("/brand/decor/home-b2-binding/home-binding-scene-desktop.png") 0 0 / 100% 100% no-repeat;
+    pointer-events: none;
+  }
+
+  .home-binding-cover {
+    position: absolute;
+    left: 14.533%;
+    top: 13.390%;
+    width: 71.053%;
+    height: 22.104%;
+    grid-template-columns: 22.05% minmax(0, 1fr) 23% 4.2%;
+    gap: 0;
+    padding: 0;
+    border: 0;
+    border-image: none;
+  }
+
+  .home-binding-spine {
+    position: static;
+    width: auto;
+    font-size: max(12px, 1.2cqw);
+  }
+
+  .home-binding-brand {
+    padding-left: 2.4cqw;
+  }
+
+  .home-binding-kicker {
+    font-size: max(11px, 0.78cqw);
+  }
+
+  .home-binding-title {
+    margin-top: 0.25cqw;
+    font-size: max(26px, 2.85cqw);
+  }
+
+  .home-binding-desc {
+    margin-top: 0.55cqw;
+    font-size: max(12px, 0.9cqw);
+  }
+
+  .home-binding-sample {
+    min-height: 32px;
+    margin-top: 0.2cqw;
+    font-size: max(11px, 0.78cqw);
+  }
+
+  .home-binding-review {
+    align-self: stretch;
+    min-width: 0;
+    margin: 14% 0;
+    padding: 0 0 0 1.5cqw;
+  }
+
+  .home-binding-review-label {
+    font-size: max(11px, 0.78cqw);
+  }
+
+  .home-binding-review-value {
+    margin-top: 0.2cqw;
+    font-size: max(20px, 1.75cqw);
+  }
+
+  .home-binding-review--login .home-binding-review-value {
+    font-size: max(15px, 1.15cqw);
+  }
+
+  .home-binding-review-note {
+    margin-top: 0.35cqw;
+    font-size: max(11px, 0.78cqw);
+  }
+
+  .home-binding-files {
+    position: absolute;
+    inset: 0;
+    display: block;
+    max-width: none;
+    pointer-events: none;
+  }
+
+  .home-binding-file {
+    position: absolute;
+    top: 42.508%;
+    height: 30.181%;
+    width: auto;
+    aspect-ratio: auto;
+    padding: 2.572cqw 0.4cqw 0;
+    background: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+    pointer-events: auto;
+  }
+
+  .home-binding-file--1 { left: 8.313%; width: 12.620%; }
+  .home-binding-file--2 { left: 22.548%; width: 12.500%; }
+  .home-binding-file--3 { left: 36.722%; width: 12.440%; }
+  .home-binding-file--4 { left: 51.017%; width: 12.261%; }
+  .home-binding-file--5 { left: 65.311%; width: 12.141%; }
+  .home-binding-file--6 { left: 79.545%; width: 12.201%; }
+
+  .home-binding-file-name {
+    font-size: max(15px, 1.2cqw);
+  }
+
+  .home-binding-file-hint {
+    margin-top: 0.9cqw;
+    font-size: max(11px, 0.72cqw);
+  }
+}
 
 .info-strip-icon {
   flex: 0 0 auto;

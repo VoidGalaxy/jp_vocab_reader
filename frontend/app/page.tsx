@@ -3475,11 +3475,12 @@ export default function HomePage() {
             onStartReading={() => void handleTabChange("reading")}
             onTryWithSample={startSampleReadingFromHome}
             onStartTodayReview={goToStudyToday}
+            onGoToStudy={() => void handleTabChange("study")}
             onOpenAccount={openAccountMenu}
             onGoToVocab={() => void handleTabChange("vocab")}
-            sharedDeckCount={sharedDecks.length}
             onGoToSharedDecks={() => void handleTabChange("shared")}
-            recentWords={infoRecentWords.slice(0, 3)}
+            onGoToAnalyze={() => void handleTabChange("analyze")}
+            onGoToStats={() => void handleTabChange("info")}
           />
         ) : null}
 
