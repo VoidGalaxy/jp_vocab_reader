@@ -1644,7 +1644,6 @@
     }
   }
 
-
   .reading-page--reader[data-left-mode="reedit"] > .reading-page-reedit-slip {
     display: block;
     /* ReadingSourceSlip already carries its own .reading-slip-head (the
@@ -3394,22 +3393,6 @@
   }
 }
 
-/* Phase 72 -- a quick radial "ink" flash behind a study rating stamp on
-   press, so pressing "다시/어려움/보통/쉬움" reads as stamping ink onto
-   the page rather than just a scale-down. Lives on the button's own
-   ::after (see .study-rating-grid .rating-button below); this keyframe
-   only defines the motion. */
-@keyframes study-stamp-ink {
-  from {
-    opacity: 0.85;
-    transform: scale(0.55);
-  }
-  to {
-    opacity: 0;
-    transform: scale(1.2);
-  }
-}
-
 .app-fade-in {
   animation: app-fade-in var(--motion-base) var(--ease-soft) both;
 }
@@ -3735,16 +3718,6 @@ button {
 
   .account-menu-trigger:not(:disabled):hover {
     transform: rotate(1.5deg) translateY(-1px);
-  }
-}
-
-@media (max-width: 640px) {
-  /* Was tuned to clear the old fixed bottom nav (64px + safe-area inset +
-     40px buffer) when the rating grid auto-scrolled into view on answer
-     reveal (see StudySection.tsx). That bar no longer exists at any width,
-     so this is just a small resting margin now. */
-  .study-rating-grid {
-    scroll-margin-bottom: 20px;
   }
 }
 
@@ -5156,7 +5129,6 @@ button {
   opacity: 0.35;
 }
 
-
 /* index-card-shell -- base "this is an index card" treatment (thin border,
    small radius, soft shadow) reused wherever a single word/deck/word-panel
    needs to read as a physical index card rather than a generic bordered
@@ -6380,243 +6352,6 @@ select {
   justify-content: center;
 }
 
-.study-control-panel {
-  display: grid;
-  gap: 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px;
-  background: var(--panel-bg);
-  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
-}
-
-/* Secondary utility panel (deck + mode picker) sitting below the primary
-   study-hero-card -- a muted tinted fill with no border/shadow of its own
-   keeps it reading as "advanced options" tucked inside its <details>
-   disclosure, not a second competing headline card. */
-.study-control-panel-compact {
-  gap: 12px;
-  padding: 14px;
-  border: none;
-  border-radius: 14px;
-  background: var(--surface-stage);
-  box-shadow: none;
-}
-
-.study-control-heading {
-  display: grid;
-  gap: 2px;
-}
-
-.study-control-heading h3 {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.study-control-heading span {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-/* Deck select and the 학습 시작 button live in the same row at the bottom
-   of the card instead of floating top-right, so the button reads as part
-   of the card's natural flow. */
-.study-control-footer {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-}
-
-.study-control-footer .inline-field {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* Casual Sticker Reader (Phase 58) -- underline field, same family as the
-   reading/vocab tabs' own deck/sort pickers, instead of the app-wide
-   bordered-box <select> default. */
-.study-control-footer select {
-  width: 100%;
-  min-width: 0;
-  border: none;
-  border-bottom: 1px solid var(--border-strong);
-  border-radius: 0;
-  padding: 6px 16px 6px 2px;
-  background: transparent;
-}
-
-.study-control-footer select:focus {
-  border-bottom-color: var(--screen-accent, var(--primary));
-  outline: none;
-}
-
-.study-start-button {
-  flex: 0 0 auto;
-}
-
-/* Shown only when the deck picker above has a shared deck selected (see
-   StudySection's isSharedDeckSelected) -- /stats only understands personal
-   deck_id, so the 학습 모드 option counts stay account-wide even though the
-   deck picker right next to them now reads a specific shared deck. This
-   note doesn't change those numbers, just labels what they actually are. */
-.study-shared-stats-hint {
-  margin: 0;
-  padding-top: 8px;
-  border-top: 1px dashed var(--border);
-  font-size: 12px;
-  font-style: italic;
-  line-height: 1.5;
-}
-
-/* study-board-tag-row / study-board-tag -- Phase 160. Was two plain
-   <details> rows, each summary a dashed-bottom-border line reading as a
-   settings-panel row on the page background above the felt board. Both
-   disclosures now render *inside* .study-board-scene (see
-   StudySection.tsx), so their closed state has to read as something
-   sitting on felt, not a settings list -- each summary is now a small
-   pinned paper tag (same rounded-cutout-plus-shadow family
-   .study-cta-button already established on this same board), and the row
-   holding both sits directly under the quick-start tiles as one more
-   pinned item on the board, not a control strip below it. */
-.study-board-tag-row {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 6px 4px 0;
-}
-
-.study-board-tag {
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-.study-board-tag > summary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  padding: 8px 14px;
-  border-radius: 4px 14px 14px 14px;
-  background: var(--panel-bg);
-  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.16);
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  font-weight: 700;
-  list-style: none;
-  transform: rotate(-1deg);
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft);
-}
-
-.study-board-tag:nth-child(2) > summary {
-  transform: rotate(1deg);
-}
-
-.study-board-tag > summary:hover {
-  transform: rotate(0deg) translateY(-1px);
-  box-shadow: 0 9px 18px rgba(120, 98, 40, 0.22);
-}
-
-.study-board-tag[open] > summary {
-  transform: rotate(0deg);
-}
-
-.study-board-tag > summary::-webkit-details-marker {
-  display: none;
-}
-
-.study-stats-collapsible summary:focus,
-.study-options-collapsible summary:focus {
-  outline: none;
-}
-
-.study-stats-collapsible summary:focus-visible,
-.study-options-collapsible summary:focus-visible {
-  outline: 2px solid rgba(47, 100, 112, 0.32);
-  outline-offset: 3px;
-}
-
-.study-stats-collapsible summary::before {
-  content: "▸";
-  flex: 0 0 auto;
-  color: var(--screen-accent, var(--border-strong));
-}
-
-.study-stats-collapsible[open] summary::before {
-  content: "▾";
-}
-
-/* Opened, the stats panel keeps its normal bordered/shadowed card look
-   (StatsPanel's own .stats-panel rule, previously stripped down to a flat
-   fill "to continue the board above it" -- back when this disclosure sat
-   outside the board, that flattening made sense; now it's meant to read
-   as a small note that unfolded off the felt, so the border/shadow is
-   kept, just given room to sit clear of the tag above it). */
-.study-stats-collapsible .stats-panel {
-  margin-top: 10px;
-}
-
-/* "덱과 모드 직접 선택" used to sit open on the tab by default, right next
-   to the quick-start hero above it -- same choice (which deck/mode to
-   study), shown twice. Folded behind the same native <details> pattern as
-   the stats panel below: the current selection stays visible in the
-   summary line, the picker itself is one tap away instead of always-on. */
-.study-options-collapsible summary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  list-style: none;
-}
-
-.study-options-collapsible summary::-webkit-details-marker {
-  display: none;
-}
-
-.study-options-summary-label {
-  flex: 0 0 auto;
-}
-
-.study-options-summary-label::before {
-  content: "▸ ";
-  color: var(--screen-accent, var(--border-strong));
-}
-
-.study-options-collapsible[open] .study-options-summary-label::before {
-  content: "▾ ";
-}
-
-.study-options-summary-hint {
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: 150px;
-  overflow: hidden;
-  color: var(--muted);
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Opened, the deck/mode picker is its own small note unfolded below the
-   tag -- same panel-bg card look .stats-panel keeps, given its own
-   surface now that it's not stripped flat to match a page-background
-   settings row that no longer exists. */
-.study-options-collapsible .study-control-panel {
-  margin-top: 10px;
-  border: 1px solid var(--border);
-  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.1);
-}
-
-.study-options-collapsible .study-control-panel-compact {
-  background: var(--panel-bg);
-}
-
 /* desk-surface -- the reusable "sitting on a desk, not bare page
    background" gradient/shadow recipe. .desk-surface-stage (복습 focus-card
    backdrop) is the first consumer, extending it with stage-specific
@@ -6645,190 +6380,6 @@ select {
 .desk-surface-section {
   padding: 16px;
   border-radius: 16px;
-}
-
-/* Casual Sticker Reader (Phase 66) -- study-board-scene: the board every
-   Study active-session state (ready/empty/active/complete) sits on.
-   Light .study-card sheets read clearly against it the same way the
-   mockup's board scenes always place light cards on a board, never text
-   directly on the felt itself.
-
-   Phase 167 (Study V2) -- the flat, uniform phase145 felt texture (chosen
-   specifically because it tiled safely via `background-size: cover` at
-   any board height) is replaced with the real v2-study-board-* photos.
-   The two photos are structurally different, not just different crops of
-   one image: the desktop photo is still a near-uniform blank felt board
-   (a couple of pushpins/a washi corner, nothing content-shaped), so it
-   keeps the old cover/center technique safely at >=1024px. The mobile
-   photo is NOT uniform -- it has 4 real sticky notes pinned across the
-   top and one big blank pinned note below them, meant to anchor the
-   quick-start tiles and the review card respectively. `cover` on a photo
-   with fixed content zones would zoom/crop unpredictably once the board
-   grows tall (the active-review-card state easily runs 2-3x the photo's
-   own natural height on a phone) -- `background-size: 100% auto` instead
-   locks the photo to the container's width at its own true aspect ratio,
-   pinned to the top, so the note zones always land in the same place
-   regardless of how tall the content below them grows; the excess board
-   height below the photo just continues in the flat fallback color
-   (sampled from the photo's own felt tone) instead of a distorted image.
-   `.study-cta-button`'s 4 tiles are recolored (see below) to echo those
-   same 4 note colors, so they read as the live, tappable versions of the
-   photo's own pinned notes rather than a same-old CTA row over new
-   wallpaper. */
-.study-board-scene {
-  position: relative;
-  display: grid;
-  gap: 16px;
-  padding: 22px 16px 30px;
-  border-radius: 28px;
-  background-color: #bcd8b0;
-  background-image: url("/brand/decor/v2/v2-study-board-mobile-9x16.webp");
-  background-size: 100% auto;
-  background-position: top center;
-  background-repeat: no-repeat;
-  box-shadow: 0 10px 22px rgba(120, 98, 40, 0.12);
-  overflow: hidden;
-}
-
-@media (min-width: 1024px) {
-  .study-board-scene {
-    background-color: #cfe6c2;
-    background-image: url("/brand/decor/v2/v2-study-felt-board-desktop-16x9.webp");
-    background-size: cover;
-    background-position: center;
-    /* Home Nav V1.1 seam repair -- top corners must read flush with the
-       toolbar's own torn paper edge, not as a second rounded frame
-       boundary. Only the lower corners keep their radius. */
-    border-radius: 0 0 28px 28px;
-  }
-}
-
-/* Phase 74 -- a quiet leaf-sprig hint in the board's bottom-left corner,
-   reusing Home's plant-leaf recipe (Phase 73: layered radial-gradient
-   blobs, same --sage-green token) but without the pot -- a "hint", not
-   Home's full potted plant, and dimmer (opacity vs. Home's full-strength
-   leaves) since Study is a repeated-use screen and should stay quieter
-   than Home. Uses the free ::after slot (::before above already owns the
-   felt-weave texture); tucked in a corner well clear of the centered
-   card stack / rating tray / completion receipt, and .study-board-scene's
-   own overflow:hidden keeps it from ever bleeding past the board. */
-.study-board-scene::after {
-  content: "";
-  position: absolute;
-  left: 14px;
-  bottom: 10px;
-  width: 30px;
-  height: 34px;
-  background:
-    radial-gradient(ellipse 7px 13px at 35% 65%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%),
-    radial-gradient(ellipse 7px 14px at 60% 40%, var(--sage-green) 0%, var(--sage-green) 65%, transparent 68%);
-  opacity: 0.4;
-  transform: rotate(-8deg);
-  pointer-events: none;
-}
-
-.study-card-stack-stage {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  justify-items: center;
-}
-
-.study-card-stack-stage + .study-card-stack-stage {
-  margin-top: 16px;
-}
-
-/* study-card-stack -- the pile itself. .study-card (or .complete-card)
-   inside is the top sheet; the two backing-sheet spans below give it real
-   depth as siblings in the DOM rather than a single card's own pseudo-
-   element trim, so review reads as flipping through a stack instead of one
-   card floating on a page. */
-.study-card-stack {
-  position: relative;
-  width: min(640px, 100%);
-  padding-top: 14px;
-}
-
-.study-card-stack .study-card {
-  position: relative;
-  z-index: 2;
-}
-
-/* The completion receipt is narrower than the active-review card (see
-   .complete-card's own width above) -- narrows its backing-sheet pile to
-   match, so the ghost sheets don't peek out wider than the card sitting on
-   top of them. */
-.study-card-stack-receipt {
-  width: min(440px, 100%);
-}
-
-/* Phase 132 -- was a flat var(--panel-bg) fill + a hairline border; now a
-   real photographed stack of cream index cards (study-flashcard-stack-
-   clean.webp, Phase 131's transparent crop of the same candidate Phase
-   130 deferred over a vignette that turned out to only exist in the
-   flattened -web.webp export, not this source). Only a thin sliver of
-   this box is ever actually visible -- it's nearly the same size as the
-   real .study-card sitting on top of it (z-index 2), offset just a few
-   px by each instance's own rotate+translate below -- so `cover` is used
-   deliberately over `contain`: it guarantees paint reaches every rotated
-   corner where the peek actually happens, even though it crops out most
-   of the source photo's own fanned-card illustration in the process.
-   Both .study-card-backing-sheet-outer and -inner share this rule (same
-   image, each at its own existing offset), so review's stack of two
-   ghost sheets reads as two more real paper cards peeking out, not one
-   photo pasted flat behind a CSS shape. background-color keeps the old
-   flat fill as a same-family fallback if the image fails to load. Border
-   dropped -- the photo already has its own natural card edge/shadow;
-   a CSS border on top of it would have doubled that edge unnaturally. */
-.study-card-backing-sheet {
-  position: absolute;
-  left: 3%;
-  right: 3%;
-  top: 14px;
-  bottom: 0;
-  border-radius: 20px;
-  overflow: hidden;
-  background-color: var(--panel-bg);
-  background-image: url("/brand/decor/phase131/study-flashcard-stack-clean.webp");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  box-shadow: 0 10px 20px rgba(37, 43, 30, 0.18);
-  pointer-events: none;
-}
-
-.study-card-backing-sheet-outer {
-  z-index: 0;
-  transform: rotate(-3deg) translate(-4px, 8px);
-  opacity: 0.82;
-}
-
-.study-card-backing-sheet-inner {
-  z-index: 1;
-  transform: rotate(2deg) translate(5px, 4px);
-  opacity: 0.9;
-}
-
-/* study-progress-marker -- replaces the old bold "N / total" number + a
-   full-width linear bar with one small pinned tag, like a paperclip note
-   on top of the pile ("card 3 of the stack") rather than a dashboard
-   readout. Keeps the same progressbar aria semantics (see StudySection.tsx)
-   even though it no longer draws as a bar. */
-.study-progress-marker {
-  position: absolute;
-  top: -14px;
-  left: 22px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 800;
-  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.22);
-  transform: rotate(-3deg);
 }
 
 /* Phase 167 (Study V2) -- a faint repeating ruled-line texture (was a flat
@@ -6865,83 +6416,6 @@ select {
   border-radius: 20px;
 }
 
-.study-card-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-/* A subscribed shared deck's title (source_label) can be long enough to
-   wrap this row to several lines, pushing the "N / total" counter onto its
-   own line instead of staying paired on the right (Phase 48 QA). Same
-   min-width:0 + ellipsis truncation already used for
-   .study-options-summary-hint -- the counter matters more here than the
-   full title. */
-.study-card-header span {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.study-card-header-recent span:first-child {
-  color: var(--primary-dark);
-}
-
-/* Dashed, no fill -- a quiet aside note (also used for the shared-deck
-   "새 단어 30개" hint), not a bordered callout box competing with the card
-   above it. */
-.study-card-recent-hint {
-  margin: -4px 0 0;
-  padding: 6px 2px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.study-front {
-  min-height: 120px;
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  color: var(--text);
-  font-size: 48px;
-  font-weight: 800;
-  line-height: 1.2;
-  text-align: center;
-}
-
-.study-front-word {
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-}
-
-.study-front-reading {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--muted);
-  letter-spacing: 0.02em;
-}
-
-.study-front span {
-  display: inline-block;
-  justify-self: center;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 4px 9px;
-  color: var(--muted);
-  background: var(--soft-bg);
-  font-size: 13px;
-  font-weight: 700;
-}
-
 /* Wraps the whole revealed-answer block (meaning/tags/example/rating
    stamps) in one element so app-pop can animate it as a single "sticker
    flipped into place" moment -- was a bare Fragment, a direct child of
@@ -6950,104 +6424,6 @@ select {
 .study-answer-reveal {
   display: grid;
   gap: 20px;
-}
-
-/* The word's meaning is the one thing a learner is actually checking
-   their recall against -- called out in its own hero block instead of
-   sitting as an equal-weight grid cell next to 품사/기본형, so it reads
-   first. */
-.study-meaning-hero {
-  display: grid;
-  gap: 4px;
-  border: 1px solid var(--border-strong);
-  border-radius: 12px;
-  padding: 16px 18px;
-  background: var(--soft-bg);
-  animation: app-fade-in var(--motion-base) var(--ease-soft) both;
-}
-
-.study-meaning-label {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.study-meaning-text {
-  margin: 0;
-  color: var(--text);
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1.4;
-}
-
-/* Compact tag row (same recipe as .token-sheet-meta-row elsewhere) instead
-   of a 3-cell bordered grid -- 읽기/품사/기본형 read as light context, not
-   a data table, once the answer is revealed. */
-.study-answer-tags {
-  margin: 0;
-}
-
-/* Casual Sticker Reader (Phase 58) -- a taped-on strip (::before) instead
-   of a colored border-left, same recipe as the reading/vocab tabs' saved
-   examples. .paper-corner (already applied alongside in JSX) owns ::after
-   for its dog-ear fold, so ::before is free for the tape here. */
-.study-example-callout {
-  position: relative;
-  display: grid;
-  gap: 8px;
-  border: 1px solid #ecdfb8;
-  border-radius: 4px 10px 10px 10px;
-  padding: 16px 16px 14px;
-  background: #fdf9ee;
-}
-
-.study-example-callout::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: 14px;
-  z-index: 1;
-  width: 34px;
-  height: 12px;
-  border: 1px solid rgba(232, 194, 92, 0.6);
-  background: rgba(232, 194, 92, 0.45);
-  transform: rotate(-3deg);
-  pointer-events: none;
-}
-
-.study-example-heading {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.study-example-sublabel {
-  color: #a08a4f;
-  font-size: 11px;
-}
-
-.study-example-text {
-  margin: 0;
-  color: var(--text);
-  font-size: 17px;
-  line-height: 1.8;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
-}
-
-.study-example-empty {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-style: italic;
-}
-
-.study-reviewing-hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  text-align: center;
 }
 
 .study-actions {
@@ -7093,45 +6469,6 @@ select {
   transform: none;
 }
 
-.study-rating-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px 10px;
-  padding-top: 4px;
-}
-
-/* Casual Sticker Reader (Phase 66) -- study-rating-stamp-tray: a co-class
-   on the same element as .study-rating-grid (not a replacement -- keeps
-   every existing selector, the scroll-margin-bottom bottom-nav clearance,
-   and ratingGridRef untouched). A perforated divider above the 4 stamps
-   marks this as its own "stamp tray" zone at the foot of the card, instead
-   of just the last row in a form. */
-.study-rating-stamp-tray {
-  position: relative;
-  margin-top: 4px;
-  padding-top: 16px;
-}
-
-.study-rating-stamp-tray::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background-image: linear-gradient(
-    to right,
-    var(--border-strong) 0,
-    var(--border-strong) 5px,
-    transparent 5px,
-    transparent 10px
-  );
-  background-repeat: repeat-x;
-  background-size: 10px 1px;
-  opacity: 0.5;
-  pointer-events: none;
-}
-
 .rating-button {
   display: grid;
   gap: 4px;
@@ -7166,77 +6503,6 @@ select {
   color: rgba(255, 255, 255, 0.85);
   font-size: 11px;
   font-weight: 500;
-}
-
-/* Casual Sticker Reader (Phase 58) -- review's 4-way rating reads as 4
-   stamp seals, not 4 uniform admin buttons. Scoped to .study-rating-grid
-   (not the bare .rating-button, which AnalyzeSection's classify buttons
-   also use and stay untouched): an asymmetric radius plus a permanent
-   inner ring gives each one a rubber-stamp double edge, and an alternating
-   tilt scatters them like stickers -- straightening on hover/focus so the
-   one you're about to press reads clearly, and pressing "stamps it down"
-   (scale + the existing active ring) instead of just darkening. Colors,
-   icons, and labels are unchanged -- the 4-way meaning must stay as legible
-   as before, only the chrome around it changed. */
-.study-rating-grid .rating-button {
-  position: relative;
-  overflow: hidden;
-  border-radius: 18px 18px 18px 5px;
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.4),
-    0 6px 14px rgba(37, 43, 30, 0.16);
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft);
-}
-
-/* Phase 72 -- the stamp's "ink" moment: a radial flash that only plays
-   while the button is actually pressed (see study-stamp-ink above),
-   layered on top of the existing hover lift / active scale-down so
-   pressing a rating reads as stamping ink onto the page, not just a
-   button darkening. */
-.study-rating-grid .rating-button::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.65) 0%, transparent 70%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.study-rating-grid .rating-button:not(:disabled):active::after {
-  animation: study-stamp-ink var(--motion-fast) var(--ease-soft);
-}
-
-.study-rating-grid .rating-button:nth-child(1) {
-  transform: rotate(-2deg);
-}
-
-.study-rating-grid .rating-button:nth-child(2) {
-  border-radius: 18px 18px 5px 18px;
-  transform: rotate(1.5deg);
-}
-
-.study-rating-grid .rating-button:nth-child(3) {
-  transform: rotate(-1deg);
-}
-
-.study-rating-grid .rating-button:nth-child(4) {
-  border-radius: 18px 18px 5px 18px;
-  transform: rotate(2deg);
-}
-
-.study-rating-grid .rating-button:not(:disabled):hover {
-  transform: rotate(0deg) translateY(-2px);
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.5),
-    0 10px 18px rgba(37, 43, 30, 0.2);
-}
-
-.study-rating-grid .rating-button:not(:disabled):active {
-  transform: rotate(0deg) scale(0.94);
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.6);
 }
 
 /* Rating colors are deliberately softer than the app's semantic --danger/
@@ -7336,150 +6602,6 @@ select {
   background-repeat: repeat-x;
   background-size: 10px 1px;
   opacity: 0.55;
-}
-
-/* Casual Sticker Reader (Phase 58) -- a perforated "receipt tear" line
-   (repeating-linear-gradient dashes) instead of a plain dashed rule, so
-   today's ratings read as a small torn-off stamp record, not a results
-   report. */
-.study-complete-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
-  gap: 8px;
-  width: 100%;
-  padding-top: 16px;
-  border-top: none;
-  background-image: linear-gradient(
-    to right,
-    var(--border-strong) 0,
-    var(--border-strong) 5px,
-    transparent 5px,
-    transparent 10px
-  );
-  background-repeat: repeat-x;
-  background-position: top;
-  background-size: 10px 1px;
-}
-
-/* Softened -- same "N repeated tiles in a row" fix as .study-cta-button
-   (Phase 41): each of the 5 stats used to be its own bordered + --soft-bg
-   card, so the completion screen ended with five little boxes lined up
-   inside the already-boxed .complete-card. A small colored stamp dot
-   (::before) replaces the old top accent line -- reads as "this count got
-   its own little stamp", not a bar-chart axis; a thin dashed rule between
-   adjacent stats still carries the "these are distinct counts" read. */
-.study-complete-stat {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  padding: 14px 10px 4px;
-  text-align: center;
-}
-
-.study-complete-stat::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--border-strong);
-}
-
-.study-complete-stat + .study-complete-stat {
-  border-left: 1px dashed var(--border);
-}
-
-.study-complete-stat span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.study-complete-stat strong {
-  color: var(--text);
-  font-size: 18px;
-}
-
-/* Same rose/sand-amber/teal/sage ramp as the .rating-* buttons above, so the
-   completion summary reads as the same 4-way story the learner just rated
-   through, not a second, differently-colored legend. Now the stamp dot's
-   color, not a top border-line's. */
-.study-complete-stat-again::before {
-  background: var(--rose);
-}
-
-.study-complete-stat-hard::before {
-  background: var(--sand-amber);
-}
-
-.study-complete-stat-good::before {
-  background: var(--primary);
-}
-
-.study-complete-stat-easy::before {
-  background: var(--sage-green);
-}
-
-.study-complete-stat-total::before {
-  background: var(--accent);
-}
-
-.study-complete-stat-total strong {
-  font-size: 20px;
-}
-
-/* Phase 153 -- .study-board-note replaces .study-card/.hero-card for the
-   ready ("학습할 단어를 불러오세요") and empty ("오늘은 복습할 단어가
-   없어요" etc.) states only -- the active review flashcard and the
-   completion receipt keep the full .study-card treatment untouched
-   (explicitly protected by this phase's brief). A real screenshot showed
-   the old 640px-wide, 28px-padded, bordered-and-shadowed flashcard shell
-   used for what's really a one- or two-line guidance message, reading as
-   a big stiff white box resting on the mint board rather than a small
-   note pinned to it. No border (a soft shadow + asymmetric corner radius
-   carries the "paper cutout" read instead, same family as the quick-start
-   tiles' own de-boxing below), a slight rotation, and a real width cap
-   sized to the actual short copy it holds instead of matching the active
-   card's own much larger footprint. */
-.study-board-note {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 8px;
-  justify-items: center;
-  width: min(360px, 92%);
-  margin: 0 auto;
-  padding: 22px 22px 20px;
-  border-radius: 4px 18px 18px 18px;
-  background: var(--panel-bg);
-  box-shadow: 0 10px 22px rgba(120, 98, 40, 0.16);
-  transform: rotate(-1deg);
-}
-
-/* A small torn washi-tape strip pinning the note's top edge to the board
-   -- same rgba(217,122,74,...) accent this "casual cute" series already
-   reuses everywhere a note needs to look physically attached to a
-   surface (Home's pinned notes, Vocab's page guide), not a new motif
-   invented for this one spot. */
-.study-board-note::before {
-  content: "";
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  z-index: 1;
-  width: 40px;
-  height: 15px;
-  border: 1px solid rgba(217, 122, 74, 0.42);
-  background: rgba(217, 122, 74, 0.3);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.14);
-  transform: translateX(-50%) rotate(-3deg);
-  pointer-events: none;
-}
-
-.study-board-note .shiori-empty-illustration {
-  margin-bottom: 2px;
 }
 
 .study-ready-card {
@@ -8582,7 +7704,6 @@ input.reading-vocab-sticker-toggle:checked {
   }
 }
 
-
 /* Save-success gets Shiori's small ShioriStamp instead of the generic
    .message::before checkmark -- reused on both the reading save-success
    message and the deck-import success message (SharedDeckSection.tsx).
@@ -8599,79 +7720,6 @@ input.reading-vocab-sticker-toggle:checked {
   padding: 18px;
   background: var(--panel-bg);
   box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
-}
-
-.study-compact-progress {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1 1 160px;
-  min-width: 140px;
-  max-width: 260px;
-}
-
-.study-compact-progress-bar {
-  flex: 1 1 auto;
-  height: 6px;
-}
-
-.study-compact-progress-label {
-  flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* Phase 148 -- was a bordered/shadowed .hero-card box (opaque panel-bg
-   fill, accent top border) holding a washi-tape strip at its corner, the
-   same boxed-card recipe Phase 115/146/147 already removed from Home/
-   Vocab/Deck's own top headers for the identical reason: it read as an
-   admin panel sitting above the tab's real content instead of a heading
-   leading into it. Flattened to the same unboxed heading-strip recipe
-   those phases used (a dashed bottom rule, no fill/border/shadow of its
-   own).
-   Phase 160 -- renamed from .study-hero-card (also dropped the dashed
-   bottom rule): that rule existed specifically to mark "content ends here,
-   the felt board begins below" -- now this heading is itself rendered
-   *inside* .study-board-scene (see StudySection.tsx), so there is no
-   board below it to separate from. Title/progress/quick-start tiles read
-   as the board's own top content, continuous with everything under them,
-   not a header sitting above a separate surface. */
-.study-board-header {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 12px;
-  padding: 6px 4px 4px;
-}
-
-.study-hero-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.study-hero-icon {
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  padding: 7px;
-  border-radius: 999px;
-  color: #ffffff;
-  background: var(--primary);
-}
-
-.study-hero-header h2 {
-  margin: 0;
-  color: var(--text);
-  font-size: 19px;
-}
-
-.study-hero-header p {
-  margin: 2px 0 0;
-  color: var(--muted);
-  font-size: 13px;
 }
 
 /* classify-v2-* -- Phase 165 (V2 scene reconstruction pilot). Replaces the
@@ -9059,237 +8107,6 @@ input.reading-vocab-sticker-toggle:checked {
   text-decoration-color: var(--border-strong);
   box-shadow: none;
   transform: none;
-}
-
-/* Phase 148 -- was a single bordered/shadowed tray (a soft gradient fill
-   behind all 4 tiles) that read as one dashboard widget choosing a study
-   mode, not "학습 도구" resting on the board below. The tray chrome is
-   dropped entirely (no border/background/shadow on the grid itself).
-   Phase 153 -- Phase 148's own per-tile "pinned memo tab" treatment
-   (thin border, tiny 9px dot, +-1.5deg rotation) still read as "4
-   aligned button cards with a decoration" in a real screenshot, not
-   pinned notes -- the crisp ruled border and near-straight row were the
-   dominant signal, not the small dot. Kept the same 4-up grid (the
-   mockup's own quick-start row is 4 roughly-equal notes, not one huge
-   tile plus 3 small ones), but every tile below is now a *borderless*
-   paper cutout (shadow only, no ruled edge), a visibly bigger 3D-ish pin,
-   a real per-tile vertical stagger (not just rotation) so the row breaks
-   its own alignment, and an asymmetric corner radius that differs per
-   tile instead of one shared shape. */
-/* Phase 153 follow-up -- an equal 4-column grid still reads as "4 aligned
-   cards" no matter how each tile is decorated, since every tile is
-   forced to the exact same track width regardless of its own label
-   length. Switched to flex so each tile's width follows its own content
-   (real screenshot confirmed "새 단어 학습"/"덱별 학습"/"어려운 단어
-   복습" now render at 3 visibly different widths, not one shared
-   column), which is what actually breaks the "grid" read -- the
-   per-tile rotation/stagger/pin below were already in place but couldn't
-   overcome four identical-width boxes on their own. */
-.study-cta-grid {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 18px 14px;
-  padding: 10px 2px 2px;
-  border: none;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-}
-
-/* Each tile is its own unbordered paper cutout pinned to the board -- a
-   soft shadow (not a ruled border) carries the "physical object" read,
-   the same "no crisp box edge" call this series already made for Home's
-   pinned notes and Reading's memo strip. */
-.study-cta-button {
-  position: relative;
-  display: grid;
-  flex: 0 1 auto;
-  gap: 3px;
-  justify-items: center;
-  min-width: 108px;
-  min-height: 60px;
-  padding: 15px 16px 11px;
-  border: none;
-  border-radius: 4px 16px 16px 16px;
-  color: var(--text-secondary);
-  background: var(--panel-bg);
-  box-shadow:
-    0 7px 14px rgba(120, 98, 40, 0.16),
-    0 1px 0 rgba(255, 255, 255, 0.5) inset;
-  text-align: center;
-  transform: rotate(-4deg) translateY(5px);
-}
-
-/* A real pin, not a flat dot -- a small radial highlight so it reads as a
-   round-headed pin catching light, not a color swatch. Sized up (was
-   9x9px) so it's an actual focal mark, not something a "4 equal button
-   cards" read could drown out. */
-.study-cta-button::before {
-  content: "";
-  position: absolute;
-  top: -7px;
-  left: 50%;
-  z-index: 1;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 34% 30%,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(255, 255, 255, 0.95) 12%,
-    var(--primary) 46%,
-    var(--primary) 100%
-  );
-  box-shadow: 0 3px 4px rgba(37, 43, 30, 0.32);
-  transform: translateX(-50%);
-}
-
-.study-cta-button:nth-child(2) {
-  border-radius: 16px 4px 16px 16px;
-  transform: rotate(4deg) translateY(-8px);
-}
-
-.study-cta-button:nth-child(2)::before {
-  background: radial-gradient(
-    circle at 34% 30%,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(255, 255, 255, 0.95) 12%,
-    var(--sand-amber) 46%,
-    var(--sand-amber) 100%
-  );
-}
-
-/* Phase 167 (Study V2) -- the 3 secondary tiles pick up a pale paper tint
-   matching their own existing pin-dot color (already established, just
-   never carried onto the card itself) instead of sharing one flat cream
-   fill -- reads as 4 differently-colored sticky notes pinned to the
-   board, the same idea the mobile V2 photo's own 4 pre-printed notes use,
-   not 4 identical tiles that only differ by a small dot. The primary tile
-   keeps its own strong teal fill untouched (still the one unmistakable
-   action). */
-.study-cta-button:nth-child(2) {
-  background: #fbeed2;
-}
-
-.study-cta-button:nth-child(3) {
-  border-radius: 16px 16px 4px 16px;
-  transform: rotate(-3.5deg) translateY(9px);
-  background: #f7dfe1;
-}
-
-.study-cta-button:nth-child(3)::before {
-  background: radial-gradient(
-    circle at 34% 30%,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(255, 255, 255, 0.95) 12%,
-    var(--rose) 46%,
-    var(--rose) 100%
-  );
-}
-
-.study-cta-button:nth-child(4) {
-  border-radius: 16px 16px 16px 4px;
-  transform: rotate(5deg) translateY(-3px);
-  background: #fbe4d3;
-}
-
-.study-cta-button:nth-child(4)::before {
-  background: radial-gradient(
-    circle at 34% 30%,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(255, 255, 255, 0.95) 12%,
-    var(--accent) 46%,
-    var(--accent) 100%
-  );
-}
-
-.study-cta-button:hover {
-  transform: rotate(0deg) translateY(-2px);
-  box-shadow:
-    0 10px 18px rgba(120, 98, 40, 0.2),
-    0 1px 0 rgba(255, 255, 255, 0.5) inset;
-}
-
-.study-cta-label {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.study-cta-button-primary .study-cta-label {
-  font-weight: 700;
-}
-
-.study-cta-hint {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-/* "오늘 복습 시작" is the one action the tab wants the learner to take --
-   filled in the primary color so it outranks the other three quick-start
-   tiles instead of sitting as an equal-weight tab. */
-/* Phase 153 -- kept the tallest/most-padded tile of the four (was already
-   the case) but the size difference alone got lost once every tile lost
-   its crisp border -- min-height/padding now push it visibly further
-   past the other three so "이 것이 가장 중요한 액션" still reads at a
-   glance, per this phase's explicit "primary action은 여전히 명확해야"
-   requirement. */
-.study-cta-button-primary {
-  min-height: 70px;
-  padding: 19px 10px 14px;
-  color: #ffffff;
-  background: linear-gradient(180deg, #3d7885 0%, var(--primary) 100%);
-  box-shadow:
-    0 10px 20px rgba(61, 120, 133, 0.28),
-    0 1px 0 rgba(255, 255, 255, 0.25) inset;
-}
-
-.study-cta-button-primary::before {
-  background: radial-gradient(
-    circle at 34% 30%,
-    #ffffff 0%,
-    #ffffff 12%,
-    rgba(255, 255, 255, 0.75) 46%,
-    rgba(255, 255, 255, 0.75) 100%
-  );
-}
-
-.study-cta-button-primary:hover {
-  background: linear-gradient(180deg, #3d7885 0%, var(--primary) 100%);
-  box-shadow: 0 10px 20px rgba(61, 120, 133, 0.27);
-}
-
-.study-cta-button-primary .study-cta-hint {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-/* Secondary "원문 읽기" / "어휘 노트 보기" links under the quick-start tiles
-   -- kept as low-emphasis ghost buttons so neither competes with "오늘 복습
-   시작". */
-.study-hero-secondary-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  justify-self: center;
-  gap: 8px;
-}
-
-.study-hero-secondary-link {
-  min-width: 0;
-}
-
-/* Compact per-rating feedback ("5분 후 다시 볼게요." etc.) shown while a
-   review card is on screen -- deliberately smaller/quieter than the app's
-   default .message banner so it reads as a brief toast next to the card,
-   not a page-level alert competing with Focus Mode. */
-.study-rating-toast {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 8px 14px;
-  font-size: 12.5px;
-  font-weight: 600;
-  text-align: center;
 }
 
 /* Casual Sticker Reader (Phase 60) -- this was a 4-column grid of 7
@@ -10315,7 +9132,6 @@ input.reading-vocab-sticker-toggle:checked {
   width: 34px;
   height: 34px;
 }
-
 
 .jlpt-level-tag {
   display: inline-flex;
@@ -11985,7 +10801,6 @@ input.reading-vocab-sticker-toggle:checked {
      .shared-deck-card when it left the boxed-card family. */
   .analyze-form,
   .result-section,
-  .study-control-panel,
   .study-card,
   .shared-deck-detail,
   .vocab-form-panel,
@@ -12321,7 +11136,6 @@ input.reading-vocab-sticker-toggle:checked {
     padding: 10px;
   }
 
-  .study-example-callout,
   .context-example-block {
     padding: 10px;
   }
@@ -12363,61 +11177,13 @@ input.reading-vocab-sticker-toggle:checked {
     bottom: 12px;
   }
 
-  .study-front {
-    min-height: 150px;
-    font-size: 42px;
-    line-break: anywhere;
-    overflow-wrap: anywhere;
-  }
-
-  .study-card-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
-  }
-
   .study-actions {
     flex-direction: column;
     align-items: stretch;
   }
 
-  /* Phase 110 (content-priority pass) -- 정답 공개 직후 학습자가 실제로
-     해야 하는 일은 뜻을 확인하고 다시/어려움/보통/쉬움을 고르는 것뿐인데,
-     .study-answer-reveal은 DOM 순서상 뜻 -> 읽기/품사/기본형 태그 ->
-     (개인 단어장 항목이면) 뜻 수정/오류 신고 링크 -> 예문 -> rating grid
-     순으로 쌓여 있었다. 읽기/품사는 이미 reveal 전 .study-front에 항상
-     보이고, 태그/보조 링크/예문은 판단에 꼭 필요하지 않은 참고 정보라서
-     rating grid보다 아래에 있어도 무방하다 -- 실제로 막혔던 건 320-390px
-     좁은 화면에서 이 참고 정보들이 rating grid를 접히는 선 아래로 밀어낸
-     것. `order`만으로 시각적 순서를 바꾼다 (.study-answer-reveal is
-     `display: grid`, 다른 flex/grid 컨테이너와 동일하게 order를 지원);
-     DOM 순서, JSX, 뜻 수정/신고 기능, SRS/리뷰 로직은 전혀 바뀌지 않는다.
-     데스크톱(>640px)은 이 미디어쿼리 밖이라 기존 순서/카드 감성 그대로.
-     .study-answer-tags/.meaning-actions-row/.study-example-callout/
-     .study-example-empty는 이 파일에서 Study 전용 클래스 (meaning-actions-
-     row만 TokenDetailSheet.tsx와 공유하므로 .study-answer-reveal 조상으로
-     스코프). */
-  .study-rating-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    order: 1;
-  }
-
-  .study-reviewing-hint {
-    order: 2;
-  }
-
-  .study-answer-tags {
-    order: 3;
-  }
-
   .study-answer-reveal .meaning-actions-row {
     order: 4;
-  }
-
-  .study-example-callout,
-  .study-example-empty {
-    order: 5;
   }
 
   /* Tighter vertical rhythm than the 20px desktop gap so the meaning hero
@@ -12431,91 +11197,6 @@ input.reading-vocab-sticker-toggle:checked {
     padding: 14px 8px;
   }
 
-  .study-compact-progress {
-    max-width: none;
-  }
-
-  /* Phase 82 -- even with the lighter non-primary fill from the "Non-primary
-     tiles" note above, a 2x2 grid of same-size boxes inside one bordered
-     tray still reads as a 4-stat dashboard widget at phone width. The
-     primary "오늘 복습 시작" tile now spans its own full-width row (still the
-     one loud action), and the outer tray chrome (border/gradient fill/
-     shadow) is dropped so the other three sit as their own small quiet
-     ticket-style choices below it instead of compartments in a shared box.
-     Phase 153 -- .study-cta-grid's base rule is now `display: flex` (was
-     grid, see above), so this no longer sets grid-template-columns --
-     flex-wrap on the base rule already wraps the 3 secondary tiles onto
-     their own row under the full-width primary one; only gap/sizing needs
-     restating here. */
-  .study-cta-grid {
-    gap: 10px;
-    padding: 0;
-    border: none;
-    background: none;
-    box-shadow: none;
-  }
-
-  .study-cta-button-primary {
-    flex: 1 1 100%;
-    min-height: 50px;
-    /* A rotated tile works for the 3 small notes below, but a rotated
-       full-width bar reads as visibly crooked/broken rather than "a note
-       at an angle" -- primary opts back out to dead level here, still
-       distinguished from the other three by its own fill/size alone. */
-    transform: none;
-  }
-
-  .study-cta-button-primary:hover {
-    transform: translateY(-2px);
-  }
-
-  /* Phase 157 audit -- .study-hero-secondary-link ("원문 읽기"/"어휘 노트
-     보기") had no width rule of its own, so the app-wide mobile
-     `button { width: 100% }` rule was the one actually winning --
-     confirmed via a real screenshot showing both as two stacked
-     full-width bars directly under the primary CTA, the exact "quiet
-     action이 admin bar가 되지 않도록" regression already fixed on every
-     other tab's equivalent links (Reading/Analyze/Deck). Opts back out to
-     natural content width, matching `.classify-quiet-link`/.reader-
-     start-cta's own established fix. */
-  .study-hero-secondary-link {
-    width: auto;
-  }
-
-  /* Phase 153 -- was a dashed-border "ticket" look, its own separate
-     paper language from the desktop tiles' pinned-note treatment (and
-     still boxy enough to read as "3 small button cards"). Now the same
-     borderless-cutout-plus-pin family as desktop, just smaller -- one
-     consistent "pinned memo" identity at every width, not two different
-     de-boxing techniques depending on viewport. flex:1 1 0 (not desktop's
-     content-based auto width) keeps the 3 secondary tiles equal-width and
-     guaranteed to fit one row regardless of label length ("어려운 단어
-     복습" is nearly twice "덱별 학습"'s length) -- there's no spare row
-     width at phone size to let them size organically the way desktop's
-     wide board allows. */
-  .study-cta-button:not(.study-cta-button-primary) {
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 44px;
-    padding: 10px 6px 8px;
-    background: var(--panel-bg);
-  }
-
-  .study-cta-button:not(.study-cta-button-primary) .study-cta-label {
-    font-size: 11.5px;
-    line-height: 1.25;
-  }
-
-  .study-cta-button:not(.study-cta-button-primary) .study-cta-hint {
-    font-size: 10.5px;
-    opacity: 0.8;
-  }
-
-  .study-control-footer {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .reading-summary-next-actions {
     flex-direction: column;
     flex-wrap: nowrap;
@@ -12525,28 +11206,6 @@ input.reading-vocab-sticker-toggle:checked {
   .reading-summary-cta-button {
     flex: 0 0 auto;
     width: 100%;
-  }
-
-  .study-complete-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-  }
-
-  /* 2-column layout breaks the desktop "divider before every stat but the
-     first" rule -- that would draw a stray vertical line at the start of
-     each new row. Only the second column of each row (again/hard on row 1,
-     good/easy on row 2) actually sits next to a sibling, so the divider
-     moves to :nth-child(2n) here instead. */
-  .study-complete-stat {
-    border-left: none;
-  }
-
-  .study-complete-stat:nth-child(2n) {
-    border-left: 1px dashed var(--border);
-  }
-
-  .study-complete-stat-total {
-    grid-column: 1 / -1;
   }
 
   .custom-term-table table {
@@ -15528,4 +14187,927 @@ input.reading-vocab-sticker-toggle:checked {
     border-radius: 0;
     background: transparent;
   }
+}
+
+/* ==========================================================================
+   Review open book (references/mockups/review-redesign/b-book-asset/
+   handoff). Replaces the felt board, pinned memos, card stack and detached
+   rating tray. Desktop (>=1024px) lays two live pages over the Reading C
+   folio images (reused byte-unchanged) using the same core-fit transform
+   and measured safe rectangles as .reading-scene-v2-frame (handoff/assets/
+   safe-zones.json); phones and tablets use one bound washi sheet. Images
+   carry material only; every word, count and hit area is DOM.
+   ========================================================================== */
+.study-book {
+  --sb-ink: #292c28;
+  --sb-sub: #555e56;
+  --sb-green: #2f5945;
+  --sb-rule: rgba(79, 90, 72, 0.22);
+  --sb-paper: #f2efe5;
+  --sb-again: #8d4e47;
+  --sb-hard: #946a38;
+  --sb-good: #355f6a;
+  --sb-easy: #3c6d4c;
+  --sb-mincho: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  display: block;
+  gap: 0;
+  color: var(--sb-ink);
+}
+
+.study-book-frame {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.study-book-media,
+.study-book-media-img {
+  display: block;
+  pointer-events: none;
+}
+
+.study-book-page {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.study-book-phone-only {
+  display: none;
+}
+
+/* Every control on the paper is ink on paper, not the app's gradient pill
+   button; the global button look is reset once, scoped to this tab. */
+.study-book button {
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: inherit;
+  box-shadow: none;
+  transform: none;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.study-book button:disabled {
+  cursor: default;
+}
+
+.study-book button:not(:disabled):hover,
+.study-book button:not(:disabled):active {
+  box-shadow: none;
+  transform: none;
+}
+
+.study-book button:focus-visible,
+.study-book summary:focus-visible,
+.study-book select:focus-visible,
+.study-book-scroll:focus-visible {
+  outline: 2px solid var(--sb-green);
+  outline-offset: 2px;
+}
+
+.study-book-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 34px;
+  border-bottom: 1px solid var(--sb-rule);
+  color: var(--sb-sub);
+  font-size: 12px;
+}
+
+.study-book-head strong {
+  color: var(--sb-green);
+  font-weight: 700;
+}
+
+.study-book-count {
+  flex: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.study-book-picker {
+  position: relative;
+  min-width: 0;
+}
+
+.study-book-picker > summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  max-width: 100%;
+  padding: 7px 0;
+  list-style: none;
+  cursor: pointer;
+  color: var(--sb-green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.study-book-picker > summary::-webkit-details-marker {
+  display: none;
+}
+
+.study-book-picker-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-book-picker-panel {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  display: grid;
+  gap: 10px;
+  width: min(300px, 80vw);
+  padding: 14px;
+  border: 1px solid rgba(70, 82, 67, 0.3);
+  border-radius: 3px;
+  background: #f7f4ea;
+  box-shadow: 0 10px 24px rgba(37, 43, 30, 0.18);
+}
+
+.study-book-field {
+  display: grid;
+  gap: 5px;
+  color: var(--sb-sub);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.study-book-field select {
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: 1px solid rgba(70, 82, 67, 0.35);
+  border-radius: 3px;
+  background: #fffdf7;
+  color: var(--sb-ink);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.study-book-label {
+  color: #697167;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.study-book-left-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 20px;
+}
+
+.study-book-mode-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 18px;
+}
+
+.study-book .study-book-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 15px 4px;
+  border-bottom: 1px solid rgba(79, 90, 72, 0.18);
+  color: var(--sb-ink);
+  font-size: 15px;
+  text-align: left;
+}
+
+.study-book .study-book-mode-row[aria-pressed="true"] {
+  border-bottom: 2px solid var(--sb-green);
+  color: var(--sb-green);
+  font-weight: 700;
+}
+
+.study-book .study-book-mode-row:not(:disabled):hover {
+  background: rgba(49, 89, 67, 0.06);
+}
+
+.study-book-mode-row b {
+  font-family: var(--sb-mincho);
+  font-size: 23px;
+  font-weight: 500;
+}
+
+.study-book-word-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 0 18px;
+  text-align: center;
+}
+
+.study-book-word {
+  max-width: 100%;
+  font-family: var(--sb-mincho);
+  font-size: clamp(48px, 5vw, 78px);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.study-book-reading {
+  color: #535c52;
+  font-family: var(--sb-mincho);
+  font-size: 19px;
+}
+
+.study-book-pos {
+  color: #677168;
+  font-size: 12px;
+}
+
+.study-book-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 36px;
+  border-top: 1px solid var(--sb-rule);
+  color: var(--sb-sub);
+  font-size: 11px;
+}
+
+.study-book-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.study-book .study-book-link {
+  padding: 3px 0;
+  color: #405d4a;
+  font-size: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(64, 93, 74, 0.45);
+  text-underline-offset: 3px;
+}
+
+.study-book .study-book-link:not(:disabled):hover {
+  color: var(--sb-green);
+  text-decoration-color: currentColor;
+}
+
+.study-book-center {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 18px;
+  text-align: center;
+}
+
+.study-book-lead {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.45;
+  word-break: keep-all;
+}
+
+.study-book-explainer {
+  margin: 0;
+  color: var(--sb-sub);
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.study-book-fineprint {
+  font-size: 11.5px;
+}
+
+.study-book .study-book-primary {
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 3px;
+  background: #284f3b;
+  color: #fff;
+  font-weight: 700;
+}
+
+.study-book .study-book-primary:not(:disabled):hover {
+  background: #1e4030;
+}
+
+.study-book .study-book-primary:disabled {
+  background: #7d8a80;
+}
+
+.study-book .study-book-secondary {
+  padding: 9px 4px;
+  color: var(--sb-green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.study-book-message {
+  width: 100%;
+  text-align: left;
+}
+
+.study-book-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-top: 20px;
+}
+
+.study-book-answer {
+  display: flex;
+  flex-direction: column;
+}
+
+.study-book-meaning {
+  padding: 4px 0 22px;
+  border-bottom: 1px solid rgba(70, 82, 67, 0.26);
+}
+
+.study-book-senses {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.study-book-senses li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.study-book-sense-no {
+  color: var(--sb-green);
+  font-family: var(--sb-mincho);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.study-book-sense-text {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.study-book-meaning .meaning-quick-edit {
+  margin-top: 14px;
+}
+
+.study-book-example {
+  padding: 23px 0 22px;
+}
+
+.study-book-example-text {
+  margin: 9px 0 0;
+  font-family: var(--sb-mincho);
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.study-book-example .study-book-explainer {
+  margin-top: 9px;
+}
+
+.study-book-rates {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.study-book .study-book-rate {
+  --tone: var(--sb-good);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 80px;
+  min-width: 0;
+  border: 1px solid rgba(70, 82, 67, 0.25);
+  border-top: 4px solid var(--tone);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--tone) 8%, var(--sb-paper));
+  color: var(--tone);
+}
+
+.study-book .study-book-rate[data-tone="again"] {
+  --tone: var(--sb-again);
+}
+
+.study-book .study-book-rate[data-tone="hard"] {
+  --tone: var(--sb-hard);
+}
+
+.study-book .study-book-rate[data-tone="good"] {
+  --tone: var(--sb-good);
+}
+
+.study-book .study-book-rate[data-tone="easy"] {
+  --tone: var(--sb-easy);
+}
+
+.study-book .study-book-rate:not(:disabled):hover,
+.study-book .study-book-rate:focus-visible {
+  border-color: var(--tone);
+  border-top-color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 14%, var(--sb-paper));
+}
+
+.study-book .study-book-rate:disabled {
+  background: color-mix(in srgb, var(--tone) 5%, var(--sb-paper));
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.study-book-rate-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.study-book-rate b {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.study-book-rate small {
+  color: #59635a;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.study-book-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 13px;
+  height: 31px;
+  color: #626b60;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.study-book-saving {
+  margin-right: auto;
+  color: var(--sb-green);
+}
+
+.study-book-done-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  width: 100%;
+  border-top: 1px solid #b9b8a9;
+  border-bottom: 1px solid #b9b8a9;
+}
+
+.study-book-done-stats div {
+  padding: 10px 2px;
+  border-right: 1px solid #b9b8a9;
+  font-size: 12px;
+  text-align: center;
+}
+
+.study-book-done-stats div:last-child {
+  border-right: 0;
+}
+
+.study-book-done-stats b {
+  display: block;
+  color: var(--sb-green);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* Desktop: the open book. Same frame and transform as Reading's C folio
+   (.reading-scene-v2-frame); variables are named separately so neither tab
+   can move the other's pages. */
+@media (min-width: 1024px) {
+  body:has(.study-book) .app-shell-content {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body:has(.study-book) .library-canvas-study {
+    width: 100%;
+    max-width: none;
+  }
+
+  .study-book-frame {
+    height: calc(100svh - 50px);
+    background: #636e60;
+    --sb-w: 2997;
+    --sb-h: 1488;
+    --sb-core-w: 1785;
+    --sb-core-h: 1275;
+    --sb-left-x: 727.5;
+    --sb-left-width: 696;
+    --sb-right-x: 1573.5;
+    --sb-right-width: 696;
+    --sb-safe-y: 229.5;
+    --sb-safe-height: 1008;
+    --sb-render-h: calc(min(100svh - 50px, 100vw * var(--sb-core-h) / var(--sb-core-w)) * var(--sb-h) / var(--sb-core-h));
+    --sb-render-w: calc(var(--sb-render-h) * var(--sb-w) / var(--sb-h));
+    --sb-offset-x: calc((100vw - var(--sb-render-w)) / 2);
+    --sb-offset-y: calc((100svh - 50px - var(--sb-render-h)) / 2);
+  }
+
+  .study-book-media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .study-book-media-img {
+    position: absolute;
+    left: var(--sb-offset-x);
+    top: var(--sb-offset-y);
+    width: var(--sb-render-w);
+    height: var(--sb-render-h);
+    max-width: none;
+    object-fit: fill;
+  }
+
+  .study-book-page {
+    position: absolute;
+    top: calc(var(--sb-offset-y) + var(--sb-render-h) * var(--sb-safe-y) / var(--sb-h));
+    height: calc(var(--sb-render-h) * var(--sb-safe-height) / var(--sb-h));
+    padding: 4px 0;
+  }
+
+  .study-book-page--left {
+    left: calc(var(--sb-offset-x) + var(--sb-render-w) * var(--sb-left-x) / var(--sb-w));
+    width: calc(var(--sb-render-w) * var(--sb-left-width) / var(--sb-w));
+  }
+
+  .study-book-page--right {
+    left: calc(var(--sb-offset-x) + var(--sb-render-w) * var(--sb-right-x) / var(--sb-w));
+    width: calc(var(--sb-render-w) * var(--sb-right-width) / var(--sb-w));
+  }
+}
+
+@media (min-width: 1500px) and (min-aspect-ratio: 2/1) {
+  /* Wide C folio native coordinates; must match the <source> media. */
+  .study-book-frame {
+    --sb-w: 2958;
+    --sb-h: 1138;
+    --sb-core-w: 2275;
+    --sb-core-h: 1137.6;
+    --sb-left-x: 644;
+    --sb-left-width: 735;
+    --sb-right-x: 1579;
+    --sb-right-width: 735;
+    --sb-safe-y: 113.8;
+    --sb-safe-height: 892.4;
+  }
+}
+
+/* Phones and tablets: one bound washi sheet. Both pages flow into the
+   sheet as one column (display: contents), the sheet fills the viewport
+   under the toolbar, and only the answer text scrolls -- so the rating row
+   stays put and the word never scrolls off screen. */
+@media (max-width: 1023px) {
+  body:has(.study-book) {
+    background: #f1eee5;
+  }
+
+  body:has(.study-book) .page {
+    min-height: 100dvh;
+    padding: 0;
+  }
+
+  body:has(.study-book) .app-toolbar {
+    margin-bottom: 0;
+  }
+
+  .study-book-desk-only {
+    display: none;
+  }
+
+  .study-book-phone-only {
+    display: inline-flex;
+  }
+
+  .study-book-frame {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 56px);
+    padding: 20px 22px 14px max(51px, 15.3vw);
+    background: #f1eee5;
+  }
+
+  .study-book-media {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+
+  .study-book-media-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: left top;
+  }
+
+  .study-book-page {
+    display: contents;
+  }
+
+  .study-book-page > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .study-book-left-body {
+    flex: none;
+    overflow: visible;
+    padding-top: 12px;
+  }
+
+  .study-book-mode-list {
+    margin-top: 5px;
+  }
+
+  .study-book .study-book-mode-row {
+    padding: 11px 2px;
+  }
+
+  .study-book-word-area {
+    padding: 10px 0 16px;
+  }
+
+  .study-book-word {
+    font-size: clamp(37px, 11vw, 53px);
+  }
+
+  .study-book-lead {
+    font-size: 20px;
+  }
+
+  .study-book-center {
+    padding: 12px 0;
+  }
+
+  .study-book-foot {
+    height: 32px;
+  }
+
+  /* After reveal the word shrinks to a heading so meaning, example and the
+     rating row share the one sheet. */
+  .study-book[data-book-state="answer"] .study-book-word-area {
+    flex: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 2px 11px;
+    padding: 13px 0 14px;
+    border-bottom: 1px solid rgba(70, 82, 67, 0.28);
+    text-align: left;
+  }
+
+  .study-book[data-book-state="answer"] .study-book-word {
+    font-size: 42px;
+  }
+
+  .study-book[data-book-state="answer"] .study-book-reading {
+    font-size: 16px;
+  }
+
+  .study-book[data-book-state="answer"] .study-book-pos {
+    flex-basis: 100%;
+  }
+
+  .study-book-scroll {
+    padding-top: 17px;
+  }
+
+  .study-book-meaning {
+    padding: 0 0 15px;
+  }
+
+  .study-book-senses {
+    gap: 8px;
+    margin-top: 9px;
+  }
+
+  .study-book-senses li {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .study-book-sense-no {
+    font-size: 15px;
+  }
+
+  .study-book-sense-text {
+    font-size: 18px;
+    line-height: 1.45;
+  }
+
+  .study-book-example {
+    padding: 16px 0 14px;
+  }
+
+  .study-book-example-text {
+    font-size: 15px;
+  }
+
+  .study-book-rates {
+    margin-top: 8px;
+  }
+
+  .study-book .study-book-rate {
+    height: 74px;
+  }
+
+  .study-book-rate b {
+    font-size: 15px;
+  }
+
+  .study-book-rate small {
+    font-size: 10px;
+  }
+
+  .study-book-tools {
+    height: 32px;
+    gap: 10px;
+    font-size: 10.5px;
+  }
+}
+
+@media (max-width: 360px) {
+  .study-book-frame {
+    padding-left: 49px;
+    padding-right: 14px;
+  }
+
+  .study-book-word {
+    font-size: 37px;
+  }
+
+  .study-book[data-book-state="answer"] .study-book-word {
+    font-size: 36px;
+  }
+
+  .study-book-sense-text {
+    font-size: 17px;
+    line-height: 1.4;
+  }
+
+  .study-book .study-book-rate {
+    height: 65px;
+  }
+
+  .study-book-rate b {
+    font-size: 13px;
+  }
+
+  /* The visible hint drops at 320px; the accessible name keeps it. */
+  .study-book-rate small {
+    display: none;
+  }
+}
+
+/* Gate B: the rating being saved stays pressed and fully inked while the
+   other three are disabled. */
+.study-book .study-book-rate[data-pressed="true"],
+.study-book .study-book-rate[data-pressed="true"]:disabled {
+  opacity: 1;
+  border: 2px solid var(--tone);
+  border-top-width: 4px;
+  background: color-mix(in srgb, var(--tone) 22%, var(--sb-paper));
+  box-shadow: inset 0 0 0 1px var(--tone);
+}
+
+.study-book .study-book-rate[data-pressed="true"] b {
+  font-weight: 800;
+}
+
+/* Meaning edit opened on the answer page: ink buttons on paper instead of
+   the shared gradient pill (the scoped button reset above strips it). */
+.study-book .meaning-quick-edit {
+  display: grid;
+  gap: 8px;
+}
+
+.study-book .meaning-quick-edit textarea {
+  width: 100%;
+  border: 1px solid rgba(70, 82, 67, 0.35);
+  border-radius: 3px;
+  background: #fffdf7;
+  color: var(--sb-ink);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.study-book .meaning-quick-edit-hint {
+  margin: 0;
+  color: var(--sb-sub);
+  font-size: 12px;
+}
+
+.study-book .meaning-quick-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.study-book .meaning-quick-edit-actions button:first-child {
+  min-height: 34px;
+  padding: 0 16px;
+  border-radius: 3px;
+  background: #284f3b;
+  color: #fff;
+  font-weight: 700;
+}
+
+.study-book .meaning-quick-edit-actions button:first-child:disabled {
+  background: #7d8a80;
+}
+
+.study-book .meaning-quick-edit-actions .secondary-button {
+  color: var(--sb-green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 학습 현황 opened on the right page reads as a ledger written on the
+   paper, not a card laid on top of it. */
+.study-book .stats-panel {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.study-book .stats-panel .stat-card {
+  border: 0;
+  border-bottom: 1px solid rgba(79, 90, 72, 0.18);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.study-book .stats-panel .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18px;
+}
+
+.study-book .stats-panel .stat-card {
+  justify-content: space-between;
+  padding: 9px 2px;
+}
+
+.study-book .stats-panel .stat-card strong {
+  font-family: var(--sb-mincho);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* The deck/mode picker opens over the page body below it (phones flow both
+   pages into one stacking context, so it must sit above its siblings). */
+.study-book .study-book-head {
+  position: relative;
+  z-index: 3;
 }

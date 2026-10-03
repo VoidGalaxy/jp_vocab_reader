@@ -3758,6 +3758,8 @@ export default function HomePage() {
               setIsAnswerVisible(true);
             }}
             onReview={(result) => void submitStudyReview(result)}
+            isGuest={currentUser?.auth_provider === "dev"}
+            onOpenAccount={openAccountMenu}
           />
         ) : null}
 

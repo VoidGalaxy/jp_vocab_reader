@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { AppEmptyState } from "./BrandElements";
-import { ShioriStamp } from "./Shiori";
+import { useEffect, useRef, useState } from "react";
 import { classifyMessageTone } from "./coverageUtils";
 import type {
   Deck,
@@ -16,30 +14,22 @@ import { StatsPanel } from "./StatsPanel";
 import { formatNextReview, formatReviewDelay, getDisplayMeaning } from "./shared";
 import { HighlightedExample } from "./HighlightedExample";
 import {
-  BookIcon,
   BookmarkIcon,
-  CardsIcon,
   CheckCircleIcon,
   PencilIcon,
   SparkleIcon,
 } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
 
-// scrollIntoView's explicit `behavior: "smooth"` option bypasses the CSS
-// `scroll-behavior: auto !important` the app's global prefers-reduced-motion
-// rule sets (that CSS property only governs "auto" JS calls, not an
-// explicitly-requested smooth one) -- so a reduced-motion user still gets an
-// animated scroll unless this downgrades it first.
-function resolveScrollBehavior(preferred: ScrollBehavior): ScrollBehavior {
-  if (
-    preferred === "smooth" &&
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  ) {
-    return "auto";
-  }
-  return preferred;
-}
+// Review open book (references/mockups/review-redesign/b-book-asset/handoff).
+// Desktop reuses the Reading tab's C folio images byte-unchanged and lays the
+// two live pages over the book's measured safe rectangles (globals.css,
+// "Review open book"). Phones and tablets use the single bound washi sheet,
+// not a shrunk spread. The images carry material only -- every word, count
+// and hit area below is DOM.
+const BOOK_WIDE_ASSET = "/brand/decor/v4/v4-reading-c-folio-desktop-wide.webp";
+const BOOK_TALL_ASSET = "/brand/decor/v4/v4-reading-c-folio-desktop-tall.webp";
+const BOOK_SHEET_ASSET = "/brand/decor/v4/v4-reading-washi-mobile-c-quiet.webp";
 
 type StudySectionProps = {
   items: StudyCardItem[];
@@ -85,6 +75,10 @@ type StudySectionProps = {
   onGoToReading: () => void;
   onShowAnswer: () => void;
   onReview: (result: ReviewResult) => void;
+  // Signed-out visitors study as the shared guest (dev) account, so nothing
+  // ever fails with 401 for them; the ready page says so and offers sign-in.
+  isGuest?: boolean;
+  onOpenAccount?: () => void;
 };
 
 const studyModeLabels: Record<StudyMode, string> = {
@@ -126,18 +120,6 @@ const emptySecondaryMessages: Record<StudyMode, string> = {
   recent: "원문 읽기에서 단어를 다시 담아보세요.",
 };
 
-const quickStartCta: Array<{
-  mode: StudyMode;
-  label: string;
-  countKey: keyof StudyStats;
-  primary?: boolean;
-}> = [
-  { mode: "today", label: "오늘 복습 시작", countKey: "due_today_count", primary: true },
-  { mode: "new", label: "새 단어 학습", countKey: "new_count" },
-  { mode: "uncertain", label: "어려운 단어 복습", countKey: "hard_count" },
-  { mode: "all", label: "덱별 학습", countKey: "total_vocab_count" },
-];
-
 // Each rating gets its own icon meaning, not just its own color -- 다시
 // (책갈피를 다시 꽂아둔다), 어려움 (연필로 메모해 둔다), 보통 (확인 체크),
 // 쉬움 (반짝 스탬프) -- so the 4-way choice reads as four different actions
@@ -146,126 +128,22 @@ const ratingButtons: Array<{
   result: ReviewResult;
   label: string;
   hint: string;
-  className: string;
   icon: (props: { className?: string }) => JSX.Element;
 }> = [
-  {
-    result: "again",
-    label: "다시",
-    hint: "곧 다시 보기",
-    className: "rating-again",
-    icon: BookmarkIcon,
-  },
-  {
-    result: "hard",
-    label: "어려움",
-    hint: "짧게 복습",
-    className: "rating-hard",
-    icon: PencilIcon,
-  },
-  {
-    result: "good",
-    label: "보통",
-    hint: "다음 복습 예약",
-    className: "rating-good",
-    icon: CheckCircleIcon,
-  },
-  {
-    result: "easy",
-    label: "쉬움",
-    hint: "간격 늘리기",
-    className: "rating-easy",
-    icon: SparkleIcon,
-  },
+  { result: "again", label: "다시", hint: "곧 다시", icon: BookmarkIcon },
+  { result: "hard", label: "어려움", hint: "짧게 복습", icon: PencilIcon },
+  { result: "good", label: "보통", hint: "다음 예약", icon: CheckCircleIcon },
+  { result: "easy", label: "쉬움", hint: "간격 늘리기", icon: SparkleIcon },
 ];
 
-// Phase 160 -- Study v2 Board Unity. Was StudyQuickStartHero, its own
-// <section className="study-hero-card"> sitting above .study-board-scene
-// on the plain page background -- a heading/progress/quick-start cluster
-// followed, two DOM levels down, by a visually separate felt board. This
-// is no longer a section of its own: it's a plain fragment of content
-// meant to be rendered *inside* .study-board-scene by the caller below, so
-// the heading, progress line, and pinned quick-start tiles are physically
-// part of the same board surface as everything else on this tab. Every
-// class the quick-start tiles already used (.study-cta-grid/-button, the
-// per-tile pin/rotation) is untouched -- that pinned-memo language already
-// worked, it was just rendered in the wrong place.
-function StudyBoardQuickStart({
-  stats,
-  onQuickStart,
-  onGoToVocab,
-  onGoToReading,
-}: {
-  stats: StudyStats | null;
-  onQuickStart: (mode: StudyMode) => void;
-  onGoToVocab: () => void;
-  onGoToReading: () => void;
-}) {
-  const completed = stats?.reviewed_today_count ?? 0;
-  const total = completed + (stats?.due_today_count ?? 0);
-  const percent = total > 0 ? Math.min(Math.round((completed / total) * 100), 100) : 0;
-
-  return (
-    <div className="study-board-header">
-      <div className="study-hero-header">
-        <CardsIcon className="study-hero-icon" />
-        <div>
-          <h2>오늘 복습을 시작해볼까요?</h2>
-          <p>담아둔 단어를 문맥 예문과 함께 다시 확인해요.</p>
-        </div>
-      </div>
-      {total > 0 ? (
-        <div className="study-compact-progress">
-          <div
-            className="progress-bar study-compact-progress-bar"
-            role="progressbar"
-            aria-label="오늘 학습 진행률"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={percent}
-          >
-            <div style={{ width: `${percent}%` }} />
-          </div>
-          <span className="study-compact-progress-label">
-            오늘 {completed} / {total} 완료
-          </span>
-        </div>
-      ) : null}
-      <div className="study-cta-grid" role="group" aria-label="오늘 학습 시작">
-        {quickStartCta.map(({ mode, label, countKey, primary }) => (
-          <button
-            key={mode}
-            type="button"
-            className={`study-cta-button${primary ? " study-cta-button-primary" : ""}`}
-            onClick={() => onQuickStart(mode)}
-          >
-            <span className="study-cta-label">{label}</span>
-            <span className="study-cta-hint">
-              {stats ? `${stats[countKey]}개` : "-"}
-            </span>
-          </button>
-        ))}
-      </div>
-      <div className="study-hero-secondary-links">
-        <button
-          type="button"
-          className="secondary-button compact-button study-hero-secondary-link"
-          onClick={onGoToReading}
-        >
-          <BookIcon className="button-icon" />
-          원문 읽기
-        </button>
-        <button
-          type="button"
-          className="ghost-button compact-button study-hero-secondary-link"
-          onClick={onGoToVocab}
-        >
-          어휘 노트 보기
-        </button>
-      </div>
-    </div>
-  );
+// meaning_ko is one free-text string, and in real data commas join
+// synonyms inside a single sense -- there is no trustworthy sense delimiter.
+// It is shown as one numbered sense; the stored value is never rewritten.
+function getMeaningSenses(meaningKo: string | null | undefined): string[] {
+  return [getDisplayMeaning(meaningKo)];
 }
+
+type BookState = "ready" | "empty" | "question" | "answer" | "complete";
 
 export function StudySection({
   items,
@@ -306,23 +184,22 @@ export function StudySection({
   onGoToReading,
   onShowAnswer,
   onReview,
+  isGuest = false,
+  onOpenAccount,
 }: StudySectionProps) {
-  // Answer reveal pushes the rating grid below the fold on common phone
-  // heights (confirmed at 375x812/390x844/320x640 -- the fixed bottom nav
-  // eats ~60-90px), so every card would otherwise need a manual scroll
-  // just to find 다시/어려움/보통/쉬움. "nearest" is a no-op on desktop
-  // where the grid is already in view.
-  const ratingGridRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (isAnswerVisible) {
-      ratingGridRef.current?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "nearest" });
-    }
-  }, [isAnswerVisible, currentItem?.id]);
+  // 학습 현황 (StatsPanel) used to be a collapsed disclosure on the board;
+  // it now opens in place of the right page's content outside a session.
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
+  // Which of the four ratings is being saved, so that one stays visibly
+  // pressed while the other three are disabled.
+  const [pendingResult, setPendingResult] = useState<ReviewResult | null>(null);
+  const answerRegionRef = useRef<HTMLDivElement>(null);
+  const showAnswerRef = useRef<HTMLButtonElement>(null);
 
   const totalStudied =
     sessionCounts.again + sessionCounts.hard + sessionCounts.good + sessionCounts.easy;
   // One combined line instead of a separate paragraph per rating -- the
-  // stat grid above already shows each count, so this only needs to say
+  // stat row above already shows each count, so this only needs to say
   // *what happens next* for the ratings that actually occurred this session.
   const completionHintParts: string[] = [];
   if (sessionCounts.again > 0) {
@@ -353,432 +230,606 @@ export function StudySection({
     unknown: unknownCount,
     all: allStudyCount,
   };
+  const reviewedToday = stats?.reviewed_today_count ?? 0;
+  const todayTotal = reviewedToday + dueCount;
   const visibleProgress =
     items.length > 0 ? `${Math.min(currentIndex + 1, items.length)} / ${items.length}` : "0 / 0";
   // NEW_LEXEME_STUDY_LIMIT (30, page.tsx) only caps shared-deck lexeme
-  // "new" sessions -- a specific shared deck's "새 단어 학습" queue really
-  // is capped at 30 (Phase 20-24), but "all" mode mixes in personal
-  // vocab_items' new words too, which have no such cap, so this hint would
-  // be inaccurate there. Only show it for the one case where "30개" is
-  // always true: a single selected shared deck's new-word session.
+  // "new" sessions -- "all" mode mixes in personal vocab_items' new words
+  // too, which have no such cap. Only show it for the one case where
+  // "30개" is always true: a single selected shared deck's new-word session.
   const isSharedDeckSelected = selectedDeckId.startsWith("shared:");
   const showNewLexemeLimitHint = studyMode === "new" && isSharedDeckSelected;
-  // While a card is actively on screen, the dashboard/CTA chrome above it is
-  // hidden -- the review flow should read as one focused flashcard, not a
-  // stats screen with a card wedged underneath it.
-  const isReviewingActive = Boolean(currentItem) && !isComplete;
   // The rating confirmation describes the card that was just rated, but the
-  // next card mounts in the same commit -- so it lives at the bottom of the
-  // card, where the rating buttons were, and clears the moment that next
-  // card's answer is revealed instead of lingering above a word it doesn't
-  // describe. A failure is not a confirmation: it stays until a retry
-  // replaces it, since that card never advanced.
+  // next card mounts in the same commit -- so it shows on the next card's
+  // question page and clears the moment that card's answer is revealed
+  // instead of lingering beside a word it doesn't describe. A failure is
+  // not a confirmation: it stays until a retry replaces it, since that card
+  // never advanced.
   const messageTone = classifyMessageTone(message);
   const isCardMessageVisible =
     Boolean(message) && (!isAnswerVisible || messageTone === "error");
 
-  return (
-    <section className="tab-panel study-panel" aria-live="polite">
-      {/* Phase 160 -- Study v2 Board Unity. Every prior Study pass (66's
-          felt board, 148's light-mint rework, 153's box removal) still
-          left the quick-start hero and the 학습 옵션/학습 현황 disclosures
-          as their own elements on the plain page background, one full DOM
-          level above .study-board-scene -- so the first viewport always
-          read as "controls on top, board underneath," no matter how much
-          each individual piece was de-boxed. There is only one board now:
-          .study-board-scene wraps the quick-start header, both
-          disclosures, the inline message, and every ready/empty/active/
-          complete state, so everything on this tab is physically part of
-          the same felt surface. See globals.css for how the disclosures
-          were restyled from settings rows into small pinned tags to match
-          that surface. */}
-      <div className="study-board-scene">
-      {!isReviewingActive ? (
-        <>
-          <StudyBoardQuickStart
+  const bookState: BookState = isComplete
+    ? "complete"
+    : currentItem
+      ? isAnswerVisible
+        ? "answer"
+        : "question"
+      : hasStarted
+        ? "empty"
+        : "ready";
+  const isSessionPage = bookState === "question" || bookState === "answer";
+  const showStats = isStatsOpen && !isSessionPage;
+  const pressedResult = isReviewing ? pendingResult : null;
+
+  // Revealing the answer or rating a card unmounts the button that had
+  // focus. Hand focus to the new page's natural next stop (the answer text,
+  // then the 정답 보기 button) instead of dropping it to <body>, without
+  // scrolling the sheet.
+  useEffect(() => {
+    const active = typeof document !== "undefined" ? document.activeElement : null;
+    if (active && active !== document.body) {
+      return;
+    }
+    if (bookState === "answer") {
+      answerRegionRef.current?.focus({ preventScroll: true });
+    } else if (bookState === "question") {
+      showAnswerRef.current?.focus({ preventScroll: true });
+    }
+  }, [bookState, currentItem?.id]);
+  // Errors stay wherever they are; a plain status line (a rating
+  // confirmation, or the "no cards" notice the empty page already says in
+  // its own words) is not repeated outside a card.
+  const isErrorMessage = Boolean(message) && messageTone === "error";
+  // Stats failing to load is the only signal that the session has lapsed
+  // (a 401 becomes the "로그인 후 사용할 수 있습니다" message), so it is
+  // shown on the ready page instead of leaving every count at "-".
+  const statsProblem = !stats && !isStatsLoading ? statsMessage : "";
+
+  const readyCount: number | null = !stats
+    ? null
+    : studyMode === "new"
+      ? stats.new_count
+      : studyMode === "recent"
+        ? null
+        : studyModeCounts[studyMode];
+
+  const itemSourceLabel = currentItem
+    ? currentItem.item_type === "lexeme"
+      ? currentItem.source_label
+      : "내 단어장"
+    : "";
+  const isEditingMeaning = Boolean(currentItem) && meaningEditItemId === currentItem?.id;
+
+  const headCount = isSessionPage
+    ? visibleProgress
+    : bookState === "complete"
+      ? `${totalStudied} / ${items.length}`
+      : stats
+        ? `오늘 ${reviewedToday} / ${todayTotal}`
+        : isStatsLoading
+          ? "불러오는 중"
+          : "오늘 - / -";
+
+  const rightTitle =
+    bookState === "question"
+      ? "정답 확인"
+      : bookState === "answer"
+        ? "정답과 평가"
+        : bookState === "complete"
+          ? "오늘의 기록"
+          : "복습 노트";
+
+  const navLinks = (
+    <span className="study-book-nav">
+      <button type="button" className="study-book-link" onClick={onGoToReading}>
+        원문 읽기
+      </button>
+      <span aria-hidden="true">·</span>
+      <button type="button" className="study-book-link" onClick={onGoToVocab}>
+        어휘 노트
+      </button>
+    </span>
+  );
+
+  const statsToggle = (
+    <button
+      type="button"
+      className="study-book-link"
+      aria-expanded={showStats}
+      onClick={() => setIsStatsOpen((open) => !open)}
+    >
+      {showStats ? "학습 현황 닫기" : "학습 현황"}
+    </button>
+  );
+
+  const modeList = (
+    <div className="study-book-modes">
+      <span className="study-book-label" id="study-book-mode-label">
+        학습 방법
+      </span>
+      <div className="study-book-mode-list" role="group" aria-labelledby="study-book-mode-label">
+        {selectableStudyModes.map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            className="study-book-mode-row"
+            aria-pressed={studyMode === mode}
+            onClick={() => onStudyModeChange(mode)}
+          >
+            <span>{studyModeLabels[mode]}</span>
+            <b>{stats ? studyModeCounts[mode] : "-"}</b>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const pageMessage =
+    message && !isSessionPage && (isErrorMessage || bookState === "ready") ? (
+      <p className={`message message--${messageTone} study-book-message`}>{message}</p>
+    ) : null;
+
+  function renderRightBody() {
+    if (showStats) {
+      return (
+        <div className="study-book-scroll study-book-stats">
+          <StatsPanel
+            title="학습 현황"
             stats={stats}
-            onQuickStart={onQuickStart}
-            onGoToVocab={onGoToVocab}
-            onGoToReading={onGoToReading}
-          />
-
-          <div className="study-board-tag-row">
-            <details className="study-board-tag study-options-collapsible">
-              <summary>
-                <span className="study-options-summary-label">학습 옵션</span>
-                <span className="study-options-summary-hint">
-                  {selectedDeckName} · {modeLabel}
-                </span>
-              </summary>
-
-              <div className="study-control-panel study-control-panel-compact">
-                <div className="study-control-footer">
-                  <label className="inline-field">
-                    학습 모드
-                    <select
-                      value={studyMode}
-                      onChange={(event) =>
-                        onStudyModeChange(event.target.value as StudyMode)
-                      }
-                    >
-                      {/* 퀵스타트로 진입한 new/recent 모드도 select가 현재 상태를
-                          그대로 보여줄 수 있도록 옵션을 하나 덧붙인다. */}
-                      {selectableStudyModes.some((mode) => mode === studyMode) ? null : (
-                        <option value={studyMode}>{studyModeLabels[studyMode]}</option>
-                      )}
-                      {selectableStudyModes.map((mode) => (
-                        <option key={mode} value={mode}>
-                          {studyModeLabels[mode]} ({studyModeCounts[mode]}개)
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="inline-field">
-                    학습 덱
-                    <select
-                      value={selectedDeckId}
-                      onChange={(event) => onSelectedDeckChange(event.target.value)}
-                    >
-                      <option value="all">전체 단어장</option>
-                      {decks.map((deck) => (
-                        <option key={deck.id} value={String(deck.id)}>
-                          {deck.name}
-                        </option>
-                      ))}
-                      {sharedDeckOptions.length > 0 ? (
-                        <optgroup label="학습 목록">
-                          {sharedDeckOptions.map((deck) => (
-                            <option key={deck.id} value={deck.id}>
-                              {deck.title}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ) : null}
-                    </select>
-                  </label>
-                  <button
-                    type="button"
-                    className="study-start-button"
-                    onClick={onStart}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      "불러오는 중..."
-                    ) : (
-                      <>
-                        <CardsIcon className="button-icon" />
-                        학습 시작
-                      </>
-                    )}
-                  </button>
-                </div>
-                {isSharedDeckSelected ? (
-                  <p className="muted-text study-shared-stats-hint">
-                    공유덱 전용 통계는 아직 지원하지 않아, 위 학습 모드 옆 숫자는 전체
-                    단어장 기준이에요.
-                  </p>
-                ) : null}
-              </div>
-            </details>
-
-            <details className="study-board-tag study-stats-collapsible">
-              <summary>학습 현황 자세히 보기</summary>
-              <StatsPanel
-                title="학습 현황"
-                stats={stats}
-                isLoading={isStatsLoading}
-                message={statsMessage}
-              />
-            </details>
-          </div>
-        </>
-      ) : null}
-
-      {message && !isReviewingActive ? (
-        <p className={`message message--${messageTone}`}>{message}</p>
-      ) : null}
-
-      {!hasStarted && !currentItem && !isComplete ? (
-        <div className="study-card-stack-stage">
-          <AppEmptyState
-            mood="review"
-            moodSize="sm"
-            className="study-board-note study-ready-card"
-            title="학습할 단어를 불러오세요"
-            description="덱과 학습 모드를 선택한 뒤 복습을 시작할 수 있어요."
+            isLoading={isStatsLoading}
+            message={statsMessage}
           />
         </div>
-      ) : null}
+      );
+    }
 
-      {hasStarted && !currentItem && !isComplete ? (
-        <div className="study-card-stack-stage">
-          <AppEmptyState
-            mood="empty"
-            moodSize="sm"
-            className="study-board-note study-ready-card"
-            title={emptyMessages[studyMode]}
-            description={emptySecondaryMessages[studyMode]}
-          >
-            <div className="study-actions">
-              <button type="button" onClick={onGoToReading}>
-                <BookIcon className="button-icon" />
-                원문 읽기 시작
-              </button>
-              <button type="button" className="study-actions-link-button" onClick={onGoToVocab}>
-                어휘 노트 보기
-              </button>
-            </div>
-          </AppEmptyState>
-        </div>
-      ) : null}
-
-      {currentItem && !isComplete ? (
-        <div className="study-card-stack-stage">
-        <div className="study-card-stack">
-          <span className="study-card-backing-sheet study-card-backing-sheet-outer" aria-hidden="true" />
-          <span className="study-card-backing-sheet study-card-backing-sheet-inner" aria-hidden="true" />
-          <div className="study-card hero-card paper-corner">
-          {/* Progress used to be a bold "N / total" number plus a full-width
-              linear bar -- a dashboard readout sitting on top of the card.
-              A small pinned marker tag reads as "this is card N of the pile"
-              instead, the way a paperclip note on a real card stack would.
-              Keeps the exact same progressbar semantics (aria-valuenow/max)
-              for assistive tech, just no longer drawn as a bar. */}
-          <span
-            className="study-progress-marker"
-            role="progressbar"
-            aria-label="세션 진행률"
-            aria-valuemin={0}
-            aria-valuemax={items.length}
-            aria-valuenow={Math.min(currentIndex + 1, items.length)}
-          >
-            {visibleProgress}
-          </span>
-          <div
-            className={`study-card-header${
-              studyMode === "recent" ? " study-card-header-recent" : ""
-            }`}
-          >
-            <span>
-              {modeLabel}
-              {currentItem.item_type === "lexeme" ? ` · ${currentItem.source_label}` : ""}
-            </span>
-          </div>
-          {studyMode === "recent" ? (
-            <p className="study-card-recent-hint">
-              원문 읽기에서 담은 단어를 바로 복습해요. ({items.length}개 단어)
-            </p>
-          ) : null}
-          {showNewLexemeLimitHint ? (
-            <p className="study-card-recent-hint">새 단어는 한 번에 30개씩 가볍게 시작해요.</p>
-          ) : null}
-          <div className="study-front app-slide-up" key={currentItem.id}>
-            <div className="study-front-word">
-              {currentItem.surface || currentItem.base_form}
-            </div>
-            {currentItem.reading &&
-            currentItem.reading !== (currentItem.surface || currentItem.base_form) ? (
-              <div className="study-front-reading">{currentItem.reading}</div>
-            ) : null}
-            <span>{currentItem.part_of_speech || "품사 없음"}</span>
-          </div>
-          {isAnswerVisible ? (
-            <div className="study-answer-reveal app-pop">
-              <div className="study-meaning-hero">
-                <span className="study-meaning-label">뜻</span>
-                <p className="study-meaning-text">
-                  {getDisplayMeaning(currentItem.meaning_ko)}
-                </p>
-              </div>
-              <div className="token-sheet-meta-row study-answer-tags">
-                {currentItem.reading ? (
-                  <span className="token-sheet-meta-tag">
-                    읽기 {currentItem.reading}
-                  </span>
-                ) : null}
-                {currentItem.part_of_speech ? (
-                  <span className="token-sheet-meta-tag">
-                    {currentItem.part_of_speech}
-                  </span>
-                ) : null}
-                {currentItem.base_form &&
-                currentItem.base_form !== currentItem.surface ? (
-                  <span className="token-sheet-meta-tag">
-                    기본형 {currentItem.base_form}
-                  </span>
-                ) : null}
-              </div>
-              {currentItem.item_type === "vocab" ? (
-                // 뜻 수정/오류 신고는 개인 단어장(vocab_items) 전용 기능 --
-                // 구독 덱 lexeme 단어의 공용 뜻은 이 화면에서 수정 대상이
-                // 아님 (see docs/architecture/shared-lexeme-progress-storage.md).
-                <div className="meaning-actions-row">
-                  <MeaningQuickEdit
-                    isEditing={meaningEditItemId === currentItem.id}
-                    draftValue={meaningEditDraft}
-                    isSaving={isSavingMeaningEdit}
-                    message={
-                      meaningEditItemId === currentItem.id
-                        ? meaningEditMessage
-                        : ""
-                    }
-                    onStartEdit={() =>
-                      onStartMeaningEdit(currentItem.id, currentItem.meaning_ko)
-                    }
-                    onDraftChange={onMeaningEditDraftChange}
-                    onSave={onSaveMeaningEdit}
-                    onCancel={onCancelMeaningEdit}
-                  />
-                  {meaningEditItemId !== currentItem.id ? (
-                    <button
-                      type="button"
-                      className="report-meaning-link-button"
-                      onClick={() => onReportMeaning(currentItem)}
-                    >
-                      뜻 오류 신고
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-              {currentItem.example_sentence ? (
-                <div className="study-example-callout paper-corner">
-                  <div className="study-example-heading">
-                    <span className="memo-label">예문</span>
-                    <span className="study-example-sublabel">
-                      이 단어가 나온 문장
-                    </span>
-                  </div>
-                  <p className="study-example-text">
-                    <HighlightedExample
-                      sentence={currentItem.example_sentence}
-                      surface={currentItem.surface}
-                      baseForm={currentItem.base_form}
-                      normalizedForm={currentItem.normalized_form}
-                    />
-                  </p>
-                </div>
-              ) : (
-                <p className="study-example-empty">저장된 문맥 예문이 없어요.</p>
-              )}
-              <div
-                className="study-rating-grid study-rating-stamp-tray"
-                role="group"
-                aria-label="복습 평가"
-                ref={ratingGridRef}
-              >
-                {ratingButtons.map(({ result, label, hint, className, icon: Icon }) => (
-                  <button
-                    key={result}
-                    type="button"
-                    className={`rating-button ${className}`}
-                    onClick={() => onReview(result)}
-                    disabled={isReviewing}
-                  >
-                    <Icon className="rating-icon" />
-                    <span className="rating-label">{label}</span>
-                    <span className="rating-hint">{hint}</span>
-                  </button>
-                ))}
-              </div>
-              {isReviewing ? (
-                <p className="study-reviewing-hint" role="status" aria-live="polite">
-                  복습 결과를 저장하는 중이에요...
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <div className="study-actions">
-              <button type="button" onClick={onShowAnswer}>
-                정답 보기
-              </button>
-            </div>
-          )}
-          {isCardMessageVisible ? (
+    if (bookState === "ready") {
+      const lead =
+        readyCount === null
+          ? isStatsLoading
+            ? "복습 카드를 세는 중이에요"
+            : "학습할 카드를 불러와 볼까요?"
+          : readyCount > 0
+            ? `카드 ${readyCount}장을 넘겨 볼까요?`
+            : emptyMessages[studyMode];
+      return (
+        <div className="study-book-center">
+          <span className="study-book-label">{modeLabel}</span>
+          <p className="study-book-lead">{lead}</p>
+          {statsProblem ? (
             <p
-              className={`message message--${messageTone} study-rating-toast`}
+              className={`message message--${classifyMessageTone(statsProblem)} study-book-message`}
               role="status"
             >
-              {message}
+              {statsProblem}
             </p>
           ) : null}
-          </div>
+          {pageMessage}
+          <button
+            type="button"
+            className="study-book-primary"
+            onClick={onStart}
+            disabled={isLoading}
+          >
+            {isLoading
+              ? "불러오는 중..."
+              : studyMode === "today"
+                ? "오늘 복습 시작"
+                : "학습 시작"}
+          </button>
+          {studyMode !== "new" ? (
+            <button
+              type="button"
+              className="study-book-secondary"
+              onClick={() => onQuickStart("new")}
+              disabled={isLoading}
+            >
+              새 단어 학습
+            </button>
+          ) : null}
+          <p className="study-book-explainer">
+            <span className="study-book-desk-only">왼쪽에서 학습 방법을 바꿀 수 있어요.</span>
+            <span className="study-book-phone-only">위에서 학습 방법을 바꿀 수 있어요.</span>
+          </p>
+          {isGuest ? (
+            <p className="study-book-explainer study-book-fineprint study-book-guest">
+              로그인하지 않은 상태예요. 로그인하면 복습 기록이 계정에 이어져요.
+              {onOpenAccount ? (
+                <>
+                  {" "}
+                  <button type="button" className="study-book-link" onClick={onOpenAccount}>
+                    로그인
+                  </button>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+          {isSharedDeckSelected ? (
+            <p className="study-book-explainer study-book-fineprint">
+              공유덱 전용 통계는 아직 지원하지 않아, 학습 방법 옆 숫자는 전체 단어장
+              기준이에요.
+            </p>
+          ) : null}
         </div>
-        </div>
-      ) : null}
+      );
+    }
 
-      {isComplete ? (
-        <div className="study-card-stack-stage">
-        <div className="study-card-stack study-card-stack-receipt">
-          <span className="study-card-backing-sheet study-card-backing-sheet-outer" aria-hidden="true" />
-          <span className="study-card-backing-sheet study-card-backing-sheet-inner" aria-hidden="true" />
-          <div className="study-card complete-card paper-corner">
-          <ShioriStamp variant="success" label="완료" />
-          <h3>
+    if (bookState === "empty") {
+      return (
+        <div className="study-book-center">
+          <p className="study-book-lead">
+            {message || emptyMessages[studyMode]}
+          </p>
+          <p className="study-book-explainer">{emptySecondaryMessages[studyMode]}</p>
+          <button type="button" className="study-book-primary" onClick={onGoToReading}>
+            원문 읽기 시작
+          </button>
+          <button type="button" className="study-book-secondary" onClick={onGoToVocab}>
+            어휘 노트 보기
+          </button>
+          {studyMode !== "new" ? (
+            <button
+              type="button"
+              className="study-book-secondary"
+              onClick={() => onQuickStart("new")}
+              disabled={isLoading}
+            >
+              새 단어 학습
+            </button>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (bookState === "complete") {
+      return (
+        <div className="study-book-center">
+          <span className="study-book-label">오늘의 기록</span>
+          <p className="study-book-lead">
             {studyMode === "recent"
-              ? "방금 담은 단어 복습을 마쳤어요."
-              : "오늘 복습을 마쳤어요."}
-          </h3>
-          <div className="study-complete-stats">
-            <div className="study-complete-stat study-complete-stat-again">
-              <span>다시</span>
-              <strong>{sessionCounts.again}개</strong>
-            </div>
-            <div className="study-complete-stat study-complete-stat-hard">
-              <span>어려움</span>
-              <strong>{sessionCounts.hard}개</strong>
-            </div>
-            <div className="study-complete-stat study-complete-stat-good">
-              <span>보통</span>
-              <strong>{sessionCounts.good}개</strong>
-            </div>
-            <div className="study-complete-stat study-complete-stat-easy">
-              <span>쉬움</span>
-              <strong>{sessionCounts.easy}개</strong>
-            </div>
-            <div className="study-complete-stat study-complete-stat-total">
-              <span>총 학습</span>
-              <strong>{totalStudied}개</strong>
-            </div>
+              ? "방금 담은 단어 복습을 마쳤어요"
+              : `${totalStudied}장을 모두 넘겼어요`}
+          </p>
+          <div className="study-book-done-stats">
+            {ratingButtons.map(({ result, label }) => (
+              <div key={result} data-tone={result}>
+                {label}
+                <b>{sessionCounts[result]}</b>
+              </div>
+            ))}
           </div>
-          {completionHint ? <p className="muted-text">{completionHint}</p> : null}
-          <p>
+          {completionHint ? <p className="study-book-explainer">{completionHint}</p> : null}
+          <p className="study-book-explainer">
             {nextUpcomingReviewAt
               ? `이번 세션에서 본 단어 기준 ${formatNextReview(nextUpcomingReviewAt)}`
               : "다음 복습 단어는 아직 예정되어 있지 않아요."}
           </p>
-          <div className="study-actions">
-            <button type="button" onClick={onRestart}>
-              한 번 더 복습
-            </button>
+          {pageMessage}
+          <button type="button" className="study-book-primary" onClick={onRestart}>
+            한 번 더 복습
+          </button>
+          {studyMode === "recent" ? (
             <button
               type="button"
-              className="study-actions-link-button"
-              onClick={onGoToReading}
+              className="study-book-secondary"
+              onClick={() => onQuickStart("today")}
             >
-              <BookIcon className="button-icon" />
-              원문 읽기 시작
+              오늘 복습 보기
             </button>
-            <button
-              type="button"
-              className="study-actions-link-button"
-              onClick={onGoToVocab}
-            >
-              어휘 노트 보기
-            </button>
-            {studyMode === "recent" ? (
-              <button
-                type="button"
-                className="study-actions-link-button"
-                onClick={() => onQuickStart("today")}
-              >
-                오늘 복습 보기
-              </button>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (bookState === "question" && currentItem) {
+      return (
+        <div className="study-book-center">
+          <span className="study-book-label">뜻을 떠올린 뒤</span>
+          <button
+            type="button"
+            className="study-book-primary"
+            onClick={onShowAnswer}
+            ref={showAnswerRef}
+          >
+            정답 보기
+          </button>
+          {studyMode === "recent" ? (
+            <p className="study-book-explainer">
+              원문 읽기에서 담은 단어를 바로 복습해요. ({items.length}개 단어)
+            </p>
+          ) : null}
+          {showNewLexemeLimitHint ? (
+            <p className="study-book-explainer">새 단어는 한 번에 30개씩 가볍게 시작해요.</p>
+          ) : null}
+          {isCardMessageVisible ? (
+            <p className={`message message--${messageTone} study-book-message`} role="status">
+              {message}
+            </p>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (bookState === "answer" && currentItem) {
+      return (
+        <div
+          className="study-book-scroll"
+          tabIndex={0}
+          aria-label="뜻과 예문"
+          ref={answerRegionRef}
+        >
+          <div className="study-book-answer" key={currentItem.id}>
+            {isCardMessageVisible ? (
+              <p className={`message message--${messageTone} study-book-message`} role="status">
+                {message}
+              </p>
             ) : null}
-          </div>
+            <section className="study-book-meaning">
+              <span className="study-book-label">뜻</span>
+              <ol className="study-book-senses">
+                {getMeaningSenses(currentItem.meaning_ko).map((sense, index) => (
+                  <li key={index}>
+                    <span className="study-book-sense-no" aria-hidden="true">
+                      {index + 1}
+                    </span>
+                    <span className="study-book-sense-text">{sense}</span>
+                  </li>
+                ))}
+              </ol>
+              {currentItem.item_type === "vocab" && isEditingMeaning ? (
+                <MeaningQuickEdit
+                  isEditing
+                  draftValue={meaningEditDraft}
+                  isSaving={isSavingMeaningEdit}
+                  message={meaningEditMessage}
+                  onStartEdit={() =>
+                    onStartMeaningEdit(currentItem.id, currentItem.meaning_ko)
+                  }
+                  onDraftChange={onMeaningEditDraftChange}
+                  onSave={onSaveMeaningEdit}
+                  onCancel={onCancelMeaningEdit}
+                />
+              ) : null}
+            </section>
+            <section className="study-book-example">
+              <span className="study-book-label">예문</span>
+              {currentItem.example_sentence ? (
+                <p className="study-book-example-text" lang="ja">
+                  <HighlightedExample
+                    sentence={currentItem.example_sentence}
+                    surface={currentItem.surface}
+                    baseForm={currentItem.base_form}
+                    normalizedForm={currentItem.normalized_form}
+                  />
+                </p>
+              ) : (
+                <p className="study-book-explainer">저장된 문맥 예문이 없어요.</p>
+              )}
+            </section>
           </div>
         </div>
+      );
+    }
+
+    return null;
+  }
+
+  return (
+    <section
+      className="tab-panel study-panel study-book"
+      aria-live="polite"
+      data-book-state={bookState}
+    >
+      <div className="study-book-frame">
+        <picture className="study-book-media" aria-hidden="true">
+          {/* Source conditions must match the safe-zone variables in
+              globals.css ("Review open book"). */}
+          <source
+            media="(min-width: 1500px) and (min-aspect-ratio: 2/1)"
+            srcSet={BOOK_WIDE_ASSET}
+          />
+          <source media="(min-width: 1024px)" srcSet={BOOK_TALL_ASSET} />
+          <img
+            className="study-book-media-img"
+            src={BOOK_SHEET_ASSET}
+            alt=""
+            draggable={false}
+          />
+        </picture>
+
+        {/* Left page: deck/mode entry, then the study methods or the
+            question word. On phones both pages flow as one sheet. */}
+        <div className="study-book-page study-book-page--left">
+          <div className="study-book-head">
+            <details className="study-book-picker">
+              <summary>
+                <span className="study-book-picker-text">
+                  {selectedDeckName} · {modeLabel}
+                </span>
+                <span className="study-book-picker-caret" aria-hidden="true">
+                  ⌄
+                </span>
+              </summary>
+              <div className="study-book-picker-panel">
+                <label className="study-book-field">
+                  학습 덱
+                  <select
+                    value={selectedDeckId}
+                    onChange={(event) => onSelectedDeckChange(event.target.value)}
+                  >
+                    <option value="all">전체 단어장</option>
+                    {decks.map((deck) => (
+                      <option key={deck.id} value={String(deck.id)}>
+                        {deck.name}
+                      </option>
+                    ))}
+                    {sharedDeckOptions.length > 0 ? (
+                      <optgroup label="학습 목록">
+                        {sharedDeckOptions.map((deck) => (
+                          <option key={deck.id} value={deck.id}>
+                            {deck.title}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ) : null}
+                  </select>
+                </label>
+                <label className="study-book-field">
+                  학습 모드
+                  <select
+                    value={studyMode}
+                    onChange={(event) => onStudyModeChange(event.target.value as StudyMode)}
+                  >
+                    {/* 퀵스타트로 진입한 new/recent 모드도 select가 현재 상태를
+                        그대로 보여줄 수 있도록 옵션을 하나 덧붙인다. */}
+                    {selectableStudyModes.some((mode) => mode === studyMode) ? null : (
+                      <option value={studyMode}>{studyModeLabels[studyMode]}</option>
+                    )}
+                    {selectableStudyModes.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {studyModeLabels[mode]} ({studyModeCounts[mode]}개)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </details>
+            {isSessionPage ? (
+              <span
+                className="study-book-count"
+                role="progressbar"
+                aria-label="세션 진행률"
+                aria-valuemin={0}
+                aria-valuemax={items.length}
+                aria-valuenow={Math.min(currentIndex + 1, items.length)}
+              >
+                {headCount}
+              </span>
+            ) : (
+              <span className="study-book-count">{headCount}</span>
+            )}
+          </div>
+
+          {isSessionPage && currentItem ? (
+            <div className="study-book-word-area" key={currentItem.id}>
+              <div className="study-book-word" lang="ja">
+                {currentItem.surface || currentItem.base_form}
+              </div>
+              {currentItem.reading &&
+              currentItem.reading !== (currentItem.surface || currentItem.base_form) ? (
+                <div className="study-book-reading" lang="ja">
+                  {currentItem.reading}
+                </div>
+              ) : null}
+              <div className="study-book-pos">
+                {currentItem.part_of_speech || "품사 없음"}
+                {currentItem.base_form && currentItem.base_form !== currentItem.surface ? (
+                  <>
+                    {" · 기본형 "}
+                    <span lang="ja">{currentItem.base_form}</span>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          ) : bookState === "complete" ? (
+            <div className="study-book-word-area study-book-word-area--done">
+              <p className="study-book-lead">
+                {studyMode === "recent" ? "방금 담은 단어를 다시 봤어요" : "오늘 복습을 마쳤어요"}
+              </p>
+            </div>
+          ) : (
+            <div className="study-book-left-body">{modeList}</div>
+          )}
+
+          <div className="study-book-foot study-book-desk-only">
+            {isSessionPage ? <span>{itemSourceLabel}</span> : statsToggle}
+            {navLinks}
+          </div>
         </div>
-      ) : null}
+
+        {/* Right page: answer and the fixed rating row. Only the answer text
+            scrolls, so a long meaning never moves the ratings. */}
+        <div className="study-book-page study-book-page--right">
+          <div className="study-book-head study-book-desk-only">
+            <strong>{rightTitle}</strong>
+            <span className="study-book-count">{headCount}</span>
+          </div>
+
+          {renderRightBody()}
+
+          {bookState === "answer" && currentItem ? (
+            <>
+              <div className="study-book-rates" role="group" aria-label="복습 평가">
+                {ratingButtons.map(({ result, label, hint, icon: Icon }) => (
+                  <button
+                    key={result}
+                    type="button"
+                    className="study-book-rate"
+                    data-tone={result}
+                    data-pressed={pressedResult === result ? "true" : undefined}
+                    aria-label={`${label}: ${hint}`}
+                    onClick={() => {
+                      setPendingResult(result);
+                      onReview(result);
+                    }}
+                    disabled={isReviewing}
+                  >
+                    <Icon className="study-book-rate-icon" />
+                    <b>{label}</b>
+                    <small>{hint}</small>
+                  </button>
+                ))}
+              </div>
+              <div className="study-book-tools">
+                {isReviewing ? (
+                  <span className="study-book-saving" role="status">
+                    저장하는 중...
+                  </span>
+                ) : null}
+                <span>{itemSourceLabel}</span>
+                {/* 뜻 수정/오류 신고는 개인 단어장(vocab_items) 전용 기능 --
+                    구독 덱 lexeme 단어의 공용 뜻은 이 화면에서 수정 대상이
+                    아님 (see docs/architecture/shared-lexeme-progress-storage.md). */}
+                {currentItem.item_type === "vocab" && !isEditingMeaning ? (
+                  <>
+                    <MeaningQuickEdit
+                      isEditing={false}
+                      draftValue={meaningEditDraft}
+                      isSaving={isSavingMeaningEdit}
+                      message=""
+                      onStartEdit={() =>
+                        onStartMeaningEdit(currentItem.id, currentItem.meaning_ko)
+                      }
+                      onDraftChange={onMeaningEditDraftChange}
+                      onSave={onSaveMeaningEdit}
+                      onCancel={onCancelMeaningEdit}
+                      triggerLabel="뜻 수정"
+                      triggerClassName="study-book-link"
+                    />
+                    <button
+                      type="button"
+                      className="study-book-link"
+                      onClick={() => onReportMeaning(currentItem)}
+                    >
+                      오류 신고
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </>
+          ) : null}
+
+          <div className="study-book-foot">
+            <span className="study-book-desk-only" />
+            <span className="study-book-desk-only">복습 기록</span>
+            <span className="study-book-phone-only">
+              {isSessionPage ? "복습 노트" : statsToggle}
+            </span>
+            <span className="study-book-phone-only">{navLinks}</span>
+          </div>
+        </div>
       </div>
     </section>
   );
