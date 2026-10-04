@@ -1,16 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { AppEmptyState } from "./BrandElements";
-import { ShioriMark, ShioriStamp } from "./Shiori";
-import { classifyMessageTone } from "./coverageUtils";
 import {
-  BookmarkIcon,
-  BookshelfIcon,
-  CardFileIcon,
-  ChevronRightIcon,
-  RotateIcon,
-  SearchIcon,
-  ShieldIcon,
-} from "./icons";
+  useDeferredValue,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { ShioriStamp } from "./Shiori";
+import { classifyMessageTone } from "./coverageUtils";
+import { ChevronRightIcon, RotateIcon, SearchIcon } from "./icons";
 import {
   formatDateTime,
   getDisplayMeaning,
@@ -27,9 +25,9 @@ import type {
   TokenStatus,
 } from "./types";
 
-// 학습 목록 카드함 필터 -- 색인 카드 카드함을 뒤지듯 검색/상태로 좁혀볼 수 있게
-// (see VocabSection.tsx's identical statusFilterOptions pattern for the 노트
-// tab). "전체"는 특정 상태가 아니라 필터 해제이므로 TokenStatus에 없음.
+// 학습 목록 카드함 필터 -- 구독 덱 단어를 검색/상태로 좁혀볼 수 있게
+// (see VocabSection.tsx's statusFilterOptions pattern). "전체"는 특정 상태가
+// 아니라 필터 해제이므로 TokenStatus에 없음.
 const SHARED_WORD_STATUS_FILTERS: Array<{ value: "all" | TokenStatus; label: string }> = [
   { value: "all", label: "전체" },
   { value: "unknown", label: statusLabels.unknown },
@@ -38,9 +36,60 @@ const SHARED_WORD_STATUS_FILTERS: Array<{ value: "all" | TokenStatus; label: str
   { value: "unclassified", label: statusLabels.unclassified },
 ];
 
-// 한 번에 렌더링하는 단어 카드 수 -- 수백~수천 단어짜리 추천 덱을 열어도
-// 목록이 스프레드시트처럼 한 번에 쏟아지지 않도록 페이지 단위로 늘려간다.
+// 한 번에 렌더링하는 단어 수 -- 수백~수천 단어짜리 추천 덱을 열어도
+// 목록이 한 번에 쏟아지지 않도록 페이지 단위로 늘려간다.
 const SHARED_WORD_PAGE_SIZE = 80;
+
+const JLPT_DISCLAIMER =
+  "JLPT 추천 어휘 덱은 학습 참고용 비공식 목록이며, 공개 학습 자료와 내부 사전 데이터를 바탕으로 구성했습니다.";
+
+// Deck C register (references/mockups/deck-scale-catalog/handoff). The
+// source filter is a display-only partition of the already-fetched list by
+// fields the API already returns -- the same three groups the old shelf
+// used -- so every deck lands in exactly one source.
+type DeckSource = "recommended" | "mine" | "community";
+type DeckSourceFilter = "all" | DeckSource;
+type DeckSort = "default" | "words" | "imports" | "recent";
+
+const DECK_SOURCE_LABELS: Record<DeckSource, string> = {
+  recommended: "추천",
+  mine: "내가 공유함",
+  community: "다른 학습자",
+};
+
+const DECK_SORT_OPTIONS: Array<{ value: DeckSort; label: string }> = [
+  { value: "default", label: "기본 순" },
+  { value: "words", label: "많이 담은 순" },
+  { value: "imports", label: "많이 가져간 순" },
+  { value: "recent", label: "최근 공유 순" },
+];
+
+// GET /shared-decks returns the whole visible list (no paging yet). Rows
+// are one line and the same height, so only the rows in view plus this many
+// on each side are in the DOM; spacing above/below stands in for the rest.
+const DECK_ROW_OVERSCAN = 8;
+const DECK_ROW_FALLBACK_HEIGHT = 58;
+
+const IMPORT_SUCCESS_PATTERN = /(학습 목록에 추가했어요|어휘 노트에 가져왔어요)/;
+
+// Below this width the register shows one page at a time (list -> detail
+// -> back). Kept in sync with the deck-ledger media queries in globals.css.
+const SINGLE_PAGE_QUERY = "(max-width: 1023px)";
+
+function getDeckSource(deck: SharedDeckSummary): DeckSource {
+  if (getJlptLevel(deck.title)) {
+    return "recommended";
+  }
+  return deck.is_owner ? "mine" : "community";
+}
+
+function getTotalWordCount(deck: SharedDeckSummary) {
+  return deck.vocab_count + deck.custom_term_count;
+}
+
+function formatIndex(index: number) {
+  return String(index + 1).padStart(2, "0");
+}
 
 // Maps one overlay-carrying SharedDeckItem (see the additive fields on that
 // type) into the shape the interactive word list actually works with --
@@ -65,14 +114,6 @@ function toSharedDeckWordProgress(item: SharedDeckItem): SharedDeckWordProgress 
   };
 }
 
-function JlptLevelTag({ level }: { level: string }) {
-  return (
-    <span className={`jlpt-level-tag jlpt-level-${level.toLowerCase()}`}>
-      {level}
-    </span>
-  );
-}
-
 // Phase 7 Round 1 added `is_published` to the API response (see
 // docs/architecture/shared-lexeme-progress-storage.md -- "Owner unpublish
 // policy"). Treat a missing/undefined value as published for backward
@@ -81,19 +122,8 @@ function isDeckPublished(deck: { is_published?: boolean }): boolean {
   return deck.is_published !== false;
 }
 
-// Calm, non-alarming status pill -- an owner unpublishing their own deck (or
-// a subscriber whose deck got unpublished) is a normal state change, not an
-// error, so this deliberately avoids the danger-button's red tone.
-function UnpublishedBadge() {
-  return (
-    <span className="shared-deck-status-badge shared-deck-status-badge-unpublished">
-      공유 중단됨
-    </span>
-  );
-}
-
 // UI-only display label -- the underlying deck.title in the DB may still be
-// the older "N5어휘모음" form (see getJlptLevel's pattern below); this only
+// the older "N5어휘모음" form (see getJlptLevel's pattern); this only
 // normalizes what's rendered, never the stored data.
 function getDisplayTitle(deck: SharedDeckSummary, level: string | null) {
   if (level) {
@@ -114,8 +144,8 @@ const DEFAULT_SHARED_DECK_DESCRIPTION =
   "일본어 원문 읽기에 활용할 수 있는 공유 어휘 덱입니다. 가져와서 내 단어장에 추가하고 복습할 수 있어요.";
 
 // Display-only fallback -- never written back, so a deck with no
-// description in the DB still reads as a finished library card instead of
-// showing "설명이 없습니다."
+// description in the DB still reads as a finished page instead of showing
+// "설명이 없습니다."
 function getDeckDescription(
   description: string | null | undefined,
   level: string | null,
@@ -128,15 +158,6 @@ function getDeckDescription(
     return jlptLevelDescriptions[level];
   }
   return DEFAULT_SHARED_DECK_DESCRIPTION;
-}
-
-// Resolves which BrandDeckCover tone/level a deck gets -- level wins
-// (recommended-vocab ramp), otherwise ownership decides 내가 공유함 vs 공유 덱.
-function getDeckCoverProps(deck: SharedDeckSummary, level: string | null) {
-  if (level) {
-    return { tone: "recommended" as const, level };
-  }
-  return { tone: deck.is_owner ? ("mine" as const) : ("shared" as const) };
 }
 
 type SharedDeckSectionProps = {
@@ -193,35 +214,363 @@ export function SharedDeckSection({
   onGoToVocab,
   onGoToStudyToday,
 }: SharedDeckSectionProps) {
-  const sortedDecks = sortSharedDecksByJlptLevel(decks);
-  const hasJlptDeck = sortedDecks.some((deck) => getJlptLevel(deck.title));
+  // ---------------------------------------------------------------------
+  // Register list: search, source filter and sort over the list the API
+  // already returned (GET /shared-decks has no query/sort/page params).
+  // These live in this component, so opening a deck and coming back on a
+  // phone keeps them; the list's own scrollTop is saved on open and put
+  // back on Back (see the layout effect below).
+  // ---------------------------------------------------------------------
+  const [deckQuery, setDeckQuery] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<DeckSourceFilter>("all");
+  const [deckSort, setDeckSort] = useState<DeckSort>("default");
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const backButtonRef = useRef<HTMLButtonElement | null>(null);
+  const savedListScrollRef = useRef(0);
+  const lastOpenedDeckIdRef = useRef<number | null>(null);
+  const previousSelectedIdRef = useRef<number | null>(selectedDeckId);
+  const scrollFrameRef = useRef(0);
+  const pendingRowFocusRef = useRef<{ index: number; scrollTop: number } | null>(null);
+  const [rowHeight, setRowHeight] = useState(DECK_ROW_FALLBACK_HEIGHT);
+  const [listViewport, setListViewport] = useState({ top: 0, height: 0 });
+  // Typing stays responsive on long lists; filtering follows a beat later.
+  const deferredQuery = useDeferredValue(deckQuery);
+
+  const baseSortedDecks = useMemo(() => sortSharedDecksByJlptLevel(decks), [decks]);
+  // Lowercased search text and parsed dates, computed once per fetch rather
+  // than on every keystroke/comparison.
+  const deckIndex = useMemo(() => {
+    const index = new Map<number, { text: string; createdAt: number }>();
+    for (const deck of decks) {
+      const level = getJlptLevel(deck.title);
+      index.set(deck.id, {
+        text: [getDisplayTitle(deck, level), deck.title, deck.owner_display_name, deck.description]
+          .filter(Boolean)
+          .join(" | ")
+          .toLowerCase(),
+        createdAt: Date.parse(deck.created_at) || 0,
+      });
+    }
+    return index;
+  }, [decks]);
+  const hasJlptDeck = baseSortedDecks.some((deck) => getJlptLevel(deck.title));
+
+  const sourceCounts = useMemo(() => {
+    const counts: Record<DeckSource, number> = { recommended: 0, mine: 0, community: 0 };
+    for (const deck of decks) {
+      counts[getDeckSource(deck)] += 1;
+    }
+    return counts;
+  }, [decks]);
+
+  const visibleDecks = useMemo(() => {
+    const query = deferredQuery.trim().toLowerCase();
+    const matched = baseSortedDecks.filter((deck) => {
+      if (sourceFilter !== "all" && getDeckSource(deck) !== sourceFilter) {
+        return false;
+      }
+      return !query || Boolean(deckIndex.get(deck.id)?.text.includes(query));
+    });
+    if (deckSort === "default") {
+      return matched;
+    }
+    return [...matched].sort((a, b) => {
+      if (deckSort === "words") {
+        return getTotalWordCount(b) - getTotalWordCount(a);
+      }
+      if (deckSort === "imports") {
+        return b.import_count - a.import_count;
+      }
+      return (deckIndex.get(b.id)?.createdAt ?? 0) - (deckIndex.get(a.id)?.createdAt ?? 0);
+    });
+  }, [baseSortedDecks, deckIndex, deferredQuery, sourceFilter, deckSort]);
+
+  // The list window follows the list's own scroll position and height. A
+  // hidden list (phone detail page) reports 0 and keeps its last window, so
+  // Back finds the opened row already rendered.
+  function syncListViewport() {
+    const list = listRef.current;
+    if (!list || list.clientHeight === 0) {
+      return;
+    }
+    const top = list.scrollTop;
+    const height = list.clientHeight;
+    setListViewport((current) =>
+      current.top === top && current.height === height ? current : { top, height },
+    );
+  }
+
+  function handleListScroll() {
+    if (scrollFrameRef.current) {
+      return;
+    }
+    scrollFrameRef.current = window.requestAnimationFrame(() => {
+      scrollFrameRef.current = 0;
+      syncListViewport();
+    });
+  }
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) {
+      return;
+    }
+    syncListViewport();
+    const observer = new ResizeObserver(() => syncListViewport());
+    observer.observe(list);
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(scrollFrameRef.current);
+      scrollFrameRef.current = 0;
+    };
+  }, []);
+
+  // Row height differs by breakpoint; read it from a rendered row.
+  useLayoutEffect(() => {
+    const row = listRef.current?.querySelector<HTMLElement>(".deck-ledger-row-item");
+    if (row && row.offsetHeight > 0 && row.offsetHeight !== rowHeight) {
+      setRowHeight(row.offsetHeight);
+    }
+    // Keyboard row moves: scroll only once the target's window is in the
+    // DOM, then focus it. Scrolling first (while the old window was still
+    // rendered) let the browser re-adjust scrollTop as rows were swapped.
+    const pending = pendingRowFocusRef.current;
+    const list = listRef.current;
+    if (pending !== null && list) {
+      const target = list.querySelector<HTMLButtonElement>(
+        `[data-row-index="${pending.index}"]`,
+      );
+      if (target) {
+        pendingRowFocusRef.current = null;
+        list.scrollTop = pending.scrollTop;
+        target.focus({ preventScroll: true });
+      }
+    }
+  });
+
+  // A new query/filter/sort starts the list from its first row again.
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
+    }
+    syncListViewport();
+  }, [deferredQuery, sourceFilter, deckSort]);
+
+  const viewportHeight = listViewport.height || rowHeight * 12;
+  const firstRowIndex = Math.max(
+    0,
+    Math.floor(listViewport.top / rowHeight) - DECK_ROW_OVERSCAN,
+  );
+  const endRowIndex = Math.min(
+    visibleDecks.length,
+    Math.ceil((listViewport.top + viewportHeight) / rowHeight) + DECK_ROW_OVERSCAN,
+  );
+  const windowedDecks = visibleDecks.slice(firstRowIndex, endRowIndex);
+
+  // Arrow/Page/Home/End move between rows even when the next row is not
+  // rendered yet: scroll it into the window, then focus it after render.
+  function handleRowKeyDown(event: React.KeyboardEvent<HTMLOListElement>) {
+    const current = (event.target as HTMLElement).closest<HTMLElement>("[data-row-index]");
+    const list = listRef.current;
+    if (!current || !list || visibleDecks.length === 0) {
+      return;
+    }
+    const index = Number(current.dataset.rowIndex);
+    const pageRows = Math.max(1, Math.floor(list.clientHeight / rowHeight) - 1);
+    const targets: Record<string, number> = {
+      ArrowDown: index + 1,
+      ArrowUp: index - 1,
+      PageDown: index + pageRows,
+      PageUp: index - pageRows,
+      Home: 0,
+      End: visibleDecks.length - 1,
+    };
+    if (!(event.key in targets)) {
+      return;
+    }
+    event.preventDefault();
+    const target = Math.min(visibleDecks.length - 1, Math.max(0, targets[event.key]));
+    const rowTop = target * rowHeight;
+    let nextTop = list.scrollTop;
+    if (rowTop < nextTop) {
+      nextTop = rowTop;
+    } else if (rowTop + rowHeight > nextTop + list.clientHeight) {
+      nextTop = rowTop + rowHeight - list.clientHeight;
+    }
+    const rendered = list.querySelector<HTMLButtonElement>(`[data-row-index="${target}"]`);
+    if (rendered && nextTop === list.scrollTop) {
+      rendered.focus({ preventScroll: true });
+      return;
+    }
+    pendingRowFocusRef.current = { index: target, scrollTop: nextTop };
+    const height = list.clientHeight;
+    setListViewport({ top: nextTop, height });
+  }
+
+  const hasFilters = deckQuery.trim() !== "" || sourceFilter !== "all";
+  const selectedIndex =
+    selectedDeckId === null ? -1 : visibleDecks.findIndex((deck) => deck.id === selectedDeckId);
+
+  // Back on a phone/tablet: restore the list's exact scroll position and
+  // return focus to the row that was opened. Desktop never hides the list,
+  // so there is nothing to restore there.
+  useLayoutEffect(() => {
+    const previous = previousSelectedIdRef.current;
+    previousSelectedIdRef.current = selectedDeckId;
+    const isSinglePage =
+      typeof window !== "undefined" && window.matchMedia(SINGLE_PAGE_QUERY).matches;
+    if (!isSinglePage) {
+      return;
+    }
+    if (previous !== null && selectedDeckId === null && listRef.current) {
+      listRef.current.scrollTop = savedListScrollRef.current;
+      const openedId = lastOpenedDeckIdRef.current;
+      if (openedId !== null) {
+        listRef.current
+          .querySelector<HTMLButtonElement>(`[data-deck-id="${openedId}"]`)
+          ?.focus({ preventScroll: true });
+      }
+    } else if (previous === null && selectedDeckId !== null) {
+      backButtonRef.current?.focus({ preventScroll: true });
+    }
+  }, [selectedDeckId]);
+
+  function handleOpenDeck(deckId: number) {
+    // The page-level handler toggles closed when the open deck is chosen
+    // again; in a register where the detail page is always beside the list
+    // that would read as the page going blank, so an already-open row is
+    // left as is.
+    if (deckId === selectedDeckId && (selectedDeck || isLoadingDetail)) {
+      return;
+    }
+    savedListScrollRef.current = listRef.current?.scrollTop ?? 0;
+    lastOpenedDeckIdRef.current = deckId;
+    onSelectDeck(deckId);
+  }
+
+  function clearDeckFilters() {
+    setDeckQuery("");
+    setSourceFilter("all");
+  }
+
+  // ---------------------------------------------------------------------
+  // Selected deck page
+  // ---------------------------------------------------------------------
   const selectedAlreadyImported = selectedDeck
     ? Boolean(selectedDeck.imported_at) || importedDeckId === selectedDeck.id
     : false;
   const selectedLevel = selectedDeck ? getJlptLevel(selectedDeck.title) : null;
   const selectedDeckPublished = selectedDeck ? isDeckPublished(selectedDeck) : true;
 
-  // 학습 목록 카드함 검색/필터 -- 구독 덱 단어가 수백~수천 개여도 스크롤로만
-  // 뒤지지 않도록. 다른 덱을 열거나 검색어/필터를 바꾸면 표시 개수를 다시
-  // 첫 페이지로 되돌린다.
+  // 학습 목록 검색/필터 -- 다른 덱을 열거나 검색어/필터를 바꾸면 표시
+  // 개수를 다시 첫 페이지로 되돌린다.
   const [wordSearchText, setWordSearchText] = useState("");
   const [wordStatusFilter, setWordStatusFilter] = useState<"all" | TokenStatus>("all");
   const [visibleWordCount, setVisibleWordCount] = useState(SHARED_WORD_PAGE_SIZE);
+  // Imported word list: one Tab stop (roving tabindex) -- the active row is
+  // the only tabbable item, rows move with arrows, and each row's status
+  // select is entered with Enter/Space instead of being its own Tab stop.
+  const [activeWordIndex, setActiveWordIndex] = useState(0);
+  const wordListRef = useRef<HTMLUListElement | null>(null);
+  // Row index whose select just changed. Under a status filter the word can
+  // leave the list with its focused select; focus then lands on the row now
+  // at that position instead of falling back to the page.
+  const pendingWordFocusRef = useRef<number | null>(null);
+  const detailBodyRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setWordSearchText("");
     setWordStatusFilter("all");
     setVisibleWordCount(SHARED_WORD_PAGE_SIZE);
+    setActiveWordIndex(0);
+    if (detailBodyRef.current) {
+      detailBodyRef.current.scrollTop = 0;
+    }
   }, [selectedDeck?.id]);
 
   function handleWordSearchChange(value: string) {
     setWordSearchText(value);
     setVisibleWordCount(SHARED_WORD_PAGE_SIZE);
+    setActiveWordIndex(0);
   }
 
   function handleWordStatusFilterChange(value: "all" | TokenStatus) {
     setWordStatusFilter(value);
     setVisibleWordCount(SHARED_WORD_PAGE_SIZE);
+    setActiveWordIndex(0);
+  }
+
+  useLayoutEffect(() => {
+    const pending = pendingWordFocusRef.current;
+    if (pending === null) {
+      return;
+    }
+    // One shot: whatever happens below, this change is settled.
+    pendingWordFocusRef.current = null;
+    const active = document.activeElement;
+    // Focus is still somewhere real (the select that kept its word, or a
+    // control the user already moved to): leave it there.
+    if (active && active !== document.body) {
+      return;
+    }
+    const count = visibleSubscribedWords.length;
+    if (count > 0) {
+      focusWordRow(Math.min(pending, count - 1));
+      return;
+    }
+    // The filter now matches nothing: return to the status filter that is
+    // in effect, the control the user would act on next.
+    document
+      .querySelector<HTMLButtonElement>('.deck-ledger-word-filters button[aria-pressed="true"]')
+      ?.focus();
+  });
+
+  function focusWordRow(index: number) {
+    const row = wordListRef.current?.querySelector<HTMLLIElement>(`[data-word-index="${index}"]`);
+    if (row) {
+      setActiveWordIndex(index);
+      row.focus();
+      row.scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  // Rows: ↑↓/Home/End move, Enter/Space enter the row's status select.
+  // Select: its own arrow keys/changes are untouched; Escape returns to the
+  // row. Tab is never handled, so it leaves the list (other rows and every
+  // select are tabIndex -1).
+  function handleWordListKeyDown(event: React.KeyboardEvent<HTMLUListElement>) {
+    const target = event.target as HTMLElement;
+    const row = target.closest<HTMLLIElement>("[data-word-index]");
+    if (!row) {
+      return;
+    }
+    const index = Number(row.dataset.wordIndex);
+    if (target.tagName === "SELECT") {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        focusWordRow(index);
+      }
+      return;
+    }
+    if (target !== row) {
+      return;
+    }
+    const lastIndex = visibleSubscribedWords.length - 1;
+    const moves: Record<string, number> = {
+      ArrowDown: Math.min(lastIndex, index + 1),
+      ArrowUp: Math.max(0, index - 1),
+      Home: 0,
+      End: lastIndex,
+    };
+    if (event.key in moves) {
+      event.preventDefault();
+      focusWordRow(moves[event.key]);
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      row.querySelector<HTMLSelectElement>("select")?.focus();
+    }
   }
 
   const subscribedWords = useMemo(
@@ -263,621 +612,617 @@ export function SharedDeckSection({
     onImportDeck(deck.id);
   }
 
-  // ---------------------------------------------------------------------
-  // renderBookSpine -- Phase 158. Was renderDeckCard: an <article> laid out
-  // as cover-band-then-title-then-meta-then-a-footer-of-buttons -- a real
-  // card model, just with a book-flavored top strip. Discarded entirely,
-  // not reskinned. A deck is now a standing .book-spine: the whole tone
-  // color (JLPT ramp / 내가 공유함 / 공유 덱, the exact palette
-  // getDeckCoverProps already resolved) fills the spine itself rather than
-  // a thin cap band, title is the spine's own printed label (clamped, not
-  // pushed below a cover image), level/unpublished/owned are small
-  // stickers on the spine face, and there is at most one action -- a
-  // pull-tab fixed to the spine's base -- instead of a card footer that
-  // could hold up to 3 buttons. Owner-only manage actions (공유 취소/다시
-  // 공유하기) are dropped from the spine entirely and now live only in the
-  // opened detail panel (unchanged there) -- a real shelf book isn't
-  // managed while it's still standing closed on the shelf, you pull it out
-  // first, which is exactly what clicking the spine's face already does.
-  // ---------------------------------------------------------------------
-  function renderBookSpine(deck: SharedDeckSummary) {
+  // page.tsx writes the import results in the polite "-어요" form, which the
+  // shared classifier (tuned for "-습니다") reads as plain info -- so the
+  // stamp and the 학습 목록 보기/복습 시작 links never appeared.
+  const isImportSuccess = IMPORT_SUCCESS_PATTERN.test(message);
+  const messageTone = isImportSuccess ? "success" : classifyMessageTone(message);
+  const isInitialLoading = isLoading && decks.length === 0;
+  const hasDecks = decks.length > 0;
+  const isDetailOpen = selectedDeckId !== null;
+
+  function renderDeckRow(deck: SharedDeckSummary, index: number) {
     const isSelected = selectedDeckId === deck.id;
-    const isImporting = importingDeckId === deck.id;
-    const isImported = importedDeckId === deck.id;
     const level = getJlptLevel(deck.title);
-    const totalWordCount = deck.vocab_count + deck.custom_term_count;
-    const alreadyImported = Boolean(deck.imported_at) || isImported;
-    // Subscribed-mode decks (see docs/architecture/shared-lexeme-progress-storage.md)
-    // never need a "다시 가져오기" re-copy confirm -- once subscribed,
-    // the same button just opens the deck's word list instead.
-    const isSubscribedMode = deck.mode === "subscribed";
+    const title = getDisplayTitle(deck, level);
+    const alreadyImported = Boolean(deck.imported_at) || importedDeckId === deck.id;
     const published = isDeckPublished(deck);
-    // Once unpublished, the only reason this button should still appear is
-    // to let an already-subscribed user open their own word list -- never
-    // as a new-import CTA (see docs/architecture/shared-lexeme-progress-storage.md
-    // "Owner unpublish policy" Round 2 update).
-    const showActionButton =
-      !deck.is_owner && (published || (isSubscribedMode && alreadyImported));
-    // Phase 107 -- once a subscribed-mode deck is already in the user's
-    // 학습 목록, the spine's face and the pull-tab below would both end up
-    // calling the exact same onSelectDeck(deck.id) (see the 열기 branch
-    // below), which itself already toggles open/closed via
-    // loadSharedDeckDetail's "select the same id again -> close" logic (see
-    // docs/design/DESIGN.md Phase 107). Two controls doing the identical
-    // thing read as a real duplicate, not just visual clutter, so the
-    // pull-tab is suppressed in this one state -- the spine face alone
-    // still opens/closes the same detail panel. Every other state (owner,
-    // newcomer, non-subscribed-mode) keeps both.
-    const hasDuplicateOpenAction =
-      !deck.is_owner && isSubscribedMode && alreadyImported;
-    const { tone } = getDeckCoverProps(deck, level);
-    const toneClass = level
-      ? `jlpt-level-${level.toLowerCase()}`
-      : `book-spine-tone-${tone}`;
+    const source = getDeckSource(deck);
 
     return (
-      <div
+      <li
         key={deck.id}
-        className={`book-spine ${toneClass}${isSelected ? " book-spine-selected" : ""}`}
+        className="deck-ledger-row-item"
+        aria-posinset={index + 1}
+        aria-setsize={visibleDecks.length}
       >
         <button
           type="button"
-          className="book-spine-face"
-          onClick={() => onSelectDeck(deck.id)}
-          disabled={isLoadingDetail && isSelected}
-          aria-expanded={isSelected}
-          title={getDisplayTitle(deck, level)}
+          className={`deck-ledger-row${isSelected ? " is-selected" : ""}`}
+          data-deck-id={deck.id}
+          data-row-index={index}
+          aria-current={isSelected ? "true" : undefined}
+          onClick={() => handleOpenDeck(deck.id)}
+          title={title}
         >
-          <span className="book-spine-stickers">
-            {level ? <span className="book-spine-sticker">{level}</span> : null}
-            {!published ? (
-              <span className="book-spine-sticker book-spine-sticker-muted">중단</span>
-            ) : null}
+          <span className="deck-ledger-row-no">{formatIndex(index)}</span>
+          <span className="deck-ledger-row-main">
+            <strong>{title}</strong>
+            <small>
+              {deck.owner_display_name || "공유자 미표시"}
+              {level ? ` · ${level}` : ""}
+              {!published ? (
+                <em className="deck-ledger-row-paused">공유 중단</em>
+              ) : null}
+            </small>
           </span>
-          <span className="book-spine-label">{getDisplayTitle(deck, level)}</span>
-          <span className="book-spine-face-footer">
-            <span className="book-spine-count">{totalWordCount}개</span>
-            {alreadyImported ? (
-              <span
-                className="book-spine-owned-mark"
-                aria-hidden="true"
-                title={
-                  deck.imported_at
-                    ? `가져온 날짜: ${formatDateTime(deck.imported_at)}`
-                    : "학습 목록에 있음"
-                }
-              />
-            ) : null}
-            <ChevronRightIcon
-              className={`book-spine-face-chevron${isSelected ? " book-spine-face-chevron-open" : ""}`}
-            />
-          </span>
-        </button>
-        {showActionButton && !hasDuplicateOpenAction ? (
-          <button
-            type="button"
-            className="book-spine-pulltab"
-            onClick={() => {
-              if (isSubscribedMode && alreadyImported) {
-                onSelectDeck(deck.id);
-                return;
-              }
-              handleImportClick(deck);
-            }}
-            disabled={isImporting}
+          <span className="deck-ledger-row-source">{DECK_SOURCE_LABELS[source]}</span>
+          <span className="deck-ledger-row-count">{getTotalWordCount(deck)}개</span>
+          <span
+            className="deck-ledger-row-mark"
             title={
-              !isSubscribedMode && alreadyImported
-                ? "이미 가져온 덱이에요. 다시 가져오면 확인 후 새로 추가돼요."
+              alreadyImported && deck.imported_at
+                ? `가져온 날짜: ${formatDateTime(deck.imported_at)}`
                 : undefined
             }
           >
-            {isImporting ? (
-              <span>가져오는 중</span>
-            ) : isSubscribedMode && alreadyImported ? (
-              <>
-                <BookmarkIcon className="book-spine-pulltab-icon" />
-                <span>열기</span>
-              </>
-            ) : alreadyImported ? (
-              <>
-                <RotateIcon className="book-spine-pulltab-icon" />
-                <span>다시 가져오기</span>
-              </>
-            ) : isSubscribedMode ? (
-              <>
-                <CardFileIcon className="book-spine-pulltab-icon" />
-                <span>학습 목록 추가</span>
-              </>
-            ) : (
-              <>
-                <CardFileIcon className="book-spine-pulltab-icon" />
-                <span>내 노트에 담기</span>
-              </>
-            )}
-          </button>
-        ) : null}
-      </div>
+            {alreadyImported ? "담음" : ""}
+          </span>
+          <ChevronRightIcon className="deck-ledger-row-chevron" />
+        </button>
+      </li>
     );
   }
 
-  const recommendedDecks = sortedDecks.filter((deck) => getJlptLevel(deck.title));
-  const myDecks = sortedDecks.filter(
-    (deck) => !getJlptLevel(deck.title) && deck.is_owner,
-  );
-  const otherDecks = sortedDecks.filter(
-    (deck) => !getJlptLevel(deck.title) && !deck.is_owner,
-  );
-  // Grouping is a display-only partition of the already-fetched `decks`
-  // array (by fields the API already returns) -- no extra fetch/filter
-  // logic, so an ambiguous shape just falls back to one plain grid below.
-  const hasGroups = recommendedDecks.length > 0 && (myDecks.length > 0 || otherDecks.length > 0);
-
-  const messageTone = classifyMessageTone(message);
-  const isInitialLoading = isLoading && decks.length === 0;
-
-  const hasDecks = sortedDecks.length > 0;
-
-  return (
-    <section className="tab-panel shared-deck-section" aria-live="polite">
-      {/* Phase 170 -- one full-bleed V2 bookshelf photo is the scene anchor
-          (a different shot per breakpoint, not one crop of the other). The
-          photo's own painted spines are never mapped 1:1 to real decks --
-          real decks render as live .book-spine elements (Phase 158's
-          object, unchanged) in a horizontally-scrolling row pinned over the
-          photo's own shelf board; whatever width real decks don't fill just
-          shows the photo's own densely-stocked shelf underneath, which is
-          exactly why a handful of decks still reads as "a real shelf with
-          room on it" instead of bare web space (this phase's own
-          requirement) without any conditional filler markup.
-          Phase 173 -- the "덱 책장" eyebrow used to be a plain text row
-          above this scene. Moved inside .shared-scene-v2-frame as a small
-          paper tag hanging off the shelf's top edge instead -- opposite
-          side from .shared-scene-v2-actions at each breakpoint (that zone
-          flips corners too, see below) so the two never overlap. */}
-      <div className="shared-scene-v2">
-        <div className="shared-scene-v2-frame">
-          <picture className="shared-scene-v2-media">
-            <source
-              media="(min-width: 1024px)"
-              srcSet="/brand/decor/v2/v2-shared-bookshelf-desktop-16x9.webp"
-            />
-            <img
-              className="shared-scene-v2-media-img"
-              src="/brand/decor/v2/v2-shared-bookshelf-mobile-9x16.webp"
-              alt=""
-              draggable={false}
-            />
-          </picture>
-
-          <span className="shared-scene-v2-eyebrow">
-            <ShioriMark variant="default" />
-            덱 책장
-          </span>
-
-          {/* Small index tabs clipped to the shelf frame's own top-right
-              corner -- Phase 152's existing notch-tag shape
-              (.shared-deck-tab-action), just moved off a dedicated header
-              row and onto the scene itself so it reads as part of the
-              shelf furniture, not a toolbar sitting above it. */}
-          <div className="shared-scene-v2-actions">
-            <button type="button" className="shared-deck-tab-action" onClick={onGoToVocab}>
-              <CardFileIcon className="button-icon" />
-              어휘 노트
-            </button>
+  function renderListBody() {
+    if (isInitialLoading) {
+      return <p className="deck-ledger-empty">덱 책장을 불러오는 중이에요...</p>;
+    }
+    if (!hasDecks) {
+      if (messageTone === "error") {
+        // Fetch genuinely failed -- a retry instead of the "둘러보세요"
+        // copy, which would read as an empty shelf rather than an
+        // unreachable one.
+        return (
+          <div className="deck-ledger-empty">
+            <strong>덱을 불러오지 못했어요.</strong>
+            <span>잠시 후 다시 시도해주세요.</span>
             <button
               type="button"
-              className="shared-deck-tab-action shared-deck-tab-action-ghost"
+              className="deck-ledger-link"
               onClick={onRefresh}
               disabled={isLoading}
             >
-              <RotateIcon className="button-icon" />
-              {isLoading ? "..." : "새로고침"}
-            </button>
-          </div>
-
-          {hasDecks ? (
-            <div className="shared-shelf-band">
-              <div className="book-shelf-row">
-                {hasGroups ? (
-                  <>
-                    {recommendedDecks.map(renderBookSpine)}
-                    {myDecks.length > 0 ? (
-                      <span className="shared-shelf-divider" aria-hidden="true">
-                        내가 공유함
-                      </span>
-                    ) : null}
-                    {myDecks.map(renderBookSpine)}
-                    {otherDecks.length > 0 ? (
-                      <span className="shared-shelf-divider" aria-hidden="true">
-                        다른 학습자
-                      </span>
-                    ) : null}
-                    {otherDecks.map(renderBookSpine)}
-                  </>
-                ) : (
-                  sortedDecks.map(renderBookSpine)
-                )}
-              </div>
-            </div>
-          ) : null}
-
-          <p className="shared-scene-v2-privacy">
-            <ShieldIcon className="shared-scene-v2-privacy-icon" />
-            가져온 덱은 학습 목록에 바로 추가돼요. 원문 전체는 들어가지 않아요.
-          </p>
-        </div>
-      </div>
-
-      {isInitialLoading ? (
-        <AppEmptyState
-          mood="loading"
-          moodSize="md"
-          className="shared-deck-loading"
-          title="덱 책장을 불러오는 중이에요..."
-        />
-      ) : !hasDecks ? (
-        messageTone === "error" ? (
-          // Fetch genuinely failed -- shows a retry CTA instead of the
-          // cheerful "둘러보세요" copy below, which would otherwise read as
-          // if the deck shelf is just empty rather than unreachable.
-          <AppEmptyState
-            mood="empty"
-            moodSize="md"
-            title="덱을 불러오지 못했어요."
-            description="잠시 후 다시 시도해주세요."
-          >
-            <button
-              type="button"
-              className="ghost-button compact-button"
-              onClick={onRefresh}
-              disabled={isLoading}
-            >
-              <RotateIcon className="button-icon" />
               {isLoading ? "다시 불러오는 중..." : "다시 불러오기"}
             </button>
-          </AppEmptyState>
-        ) : (
-          <AppEmptyState
-            mood="empty"
-            moodSize="md"
-            title="가져올 수 있는 추천 덱을 살펴보세요."
-            description="내 어휘 노트를 공유하거나 추천 덱을 가져올 수 있어요."
-          >
-            <button type="button" className="ghost-button compact-button" onClick={onGoToVocab}>
-              <CardFileIcon className="button-icon" />
-              어휘 노트로 이동
-            </button>
-          </AppEmptyState>
-        )
-      ) : null}
-
-      {hasJlptDeck ? (
-        <p className="info-strip info-strip-quiet shared-deck-disclaimer">
-          <ShieldIcon className="info-strip-icon" />
-          JLPT 추천 어휘 덱은 학습 참고용 비공식 목록이며, 공개 학습 자료와
-          내부 사전 데이터를 바탕으로 구성했습니다.
-        </p>
-      ) : null}
-
-      {message ? (
-        <div className="shared-deck-message">
-          <p
-            className={`message message--${messageTone}${
-              messageTone === "success" ? " message-stamped" : ""
-            }`}
-          >
-            {messageTone === "success" ? (
-              <ShioriStamp variant="success" className="shared-deck-message-stamp" />
-            ) : null}
-            <span>{message}</span>
-          </p>
-          {messageTone === "success" ? (
-            <div className="shared-deck-message-actions">
-              {importedDeckId ? (
-                <button
-                  type="button"
-                  className="secondary-button compact-button"
-                  onClick={() => onSelectDeck(importedDeckId)}
-                >
-                  학습 목록 보기
-                </button>
-              ) : null}
-              <button
-                type="button"
-                className="ghost-button compact-button"
-                onClick={onGoToStudyToday}
-              >
-                복습 시작
-              </button>
-            </div>
-          ) : null}
+          </div>
+        );
+      }
+      return (
+        <div className="deck-ledger-empty">
+          <strong>아직 펼쳐 볼 공유 덱이 없어요.</strong>
+          <span>내 어휘 노트를 공유하거나 추천 덱을 가져올 수 있어요.</span>
+          <button type="button" className="deck-ledger-link" onClick={onGoToVocab}>
+            어휘 노트로 이동
+          </button>
         </div>
-      ) : null}
+      );
+    }
+    if (visibleDecks.length === 0) {
+      return (
+        <div className="deck-ledger-empty">
+          <strong>조건에 맞는 덱이 없어요.</strong>
+          <span>검색어나 분류를 바꿔 보세요.</span>
+          <button type="button" className="deck-ledger-link" onClick={clearDeckFilters}>
+            조건 지우기
+          </button>
+        </div>
+      );
+    }
+    return (
+      <>
+        <ol
+          className="deck-ledger-rows"
+          style={{
+            paddingTop: firstRowIndex * rowHeight,
+            paddingBottom: (visibleDecks.length - endRowIndex) * rowHeight,
+          }}
+          onKeyDown={handleRowKeyDown}
+        >
+          {windowedDecks.map((deck, offset) => renderDeckRow(deck, firstRowIndex + offset))}
+        </ol>
+        {hasJlptDeck ? <p className="deck-ledger-list-note">{JLPT_DISCLAIMER}</p> : null}
+      </>
+    );
+  }
 
-      {selectedDeck ? (
-        <section className="shared-deck-detail app-slide-up" key={selectedDeck.id}>
-          <span className="shared-deck-detail-tape" aria-hidden="true" />
-          <div className="result-heading compact-heading">
-            <div>
-              <div className="shared-deck-title-row">
-                <h2>{getDisplayTitle(selectedDeck, selectedLevel)}</h2>
-                {selectedLevel ? <JlptLevelTag level={selectedLevel} /> : null}
-                {!selectedDeckPublished ? <UnpublishedBadge /> : null}
-                {selectedAlreadyImported ? (
-                  <span
-                    className="shared-deck-imported-badge"
-                    title={
-                      selectedDeck.imported_at
-                        ? `가져온 날짜: ${formatDateTime(selectedDeck.imported_at)}`
-                        : undefined
-                    }
+  function renderPrimaryAction(deck: SharedDeckDetail) {
+    const isImporting = importingDeckId === deck.id;
+    if (deck.is_owner) {
+      if (!canManageSharedDecks) {
+        return null;
+      }
+      return isDeckPublished(deck) ? (
+        <button
+          type="button"
+          className="deck-ledger-action deck-ledger-action-quiet"
+          onClick={() => onUnpublishDeck(deck.id)}
+          disabled={unpublishingDeckId === deck.id}
+        >
+          {unpublishingDeckId === deck.id ? "공유 취소 중..." : "공유 취소"}
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="deck-ledger-action deck-ledger-action-secondary"
+          onClick={() => onRepublishSharedDeck?.(deck.id)}
+          disabled={republishingDeckId === deck.id}
+        >
+          {republishingDeckId === deck.id ? "다시 공유하는 중..." : "다시 공유하기"}
+        </button>
+      );
+    }
+    if ((deck.mode === "subscribed" && selectedAlreadyImported) || !isDeckPublished(deck)) {
+      return null;
+    }
+    return (
+      <button
+        type="button"
+        className={`deck-ledger-action${selectedAlreadyImported ? " deck-ledger-action-secondary" : ""}`}
+        onClick={() => handleImportClick(deck)}
+        disabled={isImporting}
+        title={
+          deck.mode !== "subscribed" && selectedAlreadyImported
+            ? "이미 가져온 덱이에요. 다시 가져오면 확인 후 새로 추가돼요."
+            : undefined
+        }
+      >
+        {isImporting
+          ? "가져오는 중..."
+          : selectedAlreadyImported
+            ? "다시 가져오기"
+            : deck.mode === "subscribed"
+              ? "학습 목록에 추가"
+              : "내 노트에 가져오기"}
+      </button>
+    );
+  }
+
+  function renderWordSection(deck: SharedDeckDetail) {
+    if (deck.mode === "subscribed") {
+      // Subscribed-mode deck: this is the real "학습 목록" (see
+      // docs/architecture/shared-lexeme-progress-storage.md), not a
+      // preview -- show every word, and once the user has actually added
+      // the deck, let them classify each one right here.
+      return (
+        <section className="deck-ledger-words" aria-label="학습 목록">
+          <div className="deck-ledger-words-head">
+            <span>학습 목록</span>
+            <span>{deck.items.length}개</span>
+          </div>
+          {subscribedWords.length > 0 ? (
+            <>
+              <div className="deck-ledger-word-tools">
+                <label className="deck-ledger-word-search">
+                  <SearchIcon className="deck-ledger-search-icon" />
+                  <input
+                    value={wordSearchText}
+                    onChange={(event) => handleWordSearchChange(event.target.value)}
+                    placeholder="단어, 읽기, 뜻으로 검색"
+                    aria-label="학습 목록 검색"
+                  />
+                </label>
+                <div className="deck-ledger-word-filters" role="group" aria-label="학습 상태 필터">
+                  {SHARED_WORD_STATUS_FILTERS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={wordStatusFilter === option.value ? "is-active" : undefined}
+                      aria-pressed={wordStatusFilter === option.value}
+                      onClick={() => handleWordStatusFilterChange(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {filteredSubscribedWords.length > 0 ? (
+                <>
+                  {selectedAlreadyImported ? (
+                    <p id="deck-ledger-word-keys" className="deck-ledger-sr">
+                      위아래 화살표로 단어를 옮기고, Enter나 Space로 상태를 바꿔요. Escape는
+                      단어로 돌아오고, Tab은 목록을 나가요.
+                    </p>
+                  ) : null}
+                  <ul
+                    className="deck-ledger-word-list"
+                    ref={wordListRef}
+                    aria-label={`학습 목록 단어 ${filteredSubscribedWords.length}개`}
+                    onKeyDown={selectedAlreadyImported ? handleWordListKeyDown : undefined}
                   >
-                    {selectedDeck.mode === "subscribed" ? "학습 목록에 있음" : "가져옴"}
-                    {selectedDeck.imported_at
-                      ? ` · ${formatDateTime(selectedDeck.imported_at)}`
-                      : ""}
-                  </span>
-                ) : null}
-              </div>
-              <span className="shared-deck-byline">
-                {selectedDeck.owner_display_name
-                  ? `${selectedDeck.owner_display_name} · `
-                  : ""}
-                단어 수 {selectedDeck.vocab_count}개 · 용어 수{" "}
-                {selectedDeck.custom_term_count}개 · 등록일{" "}
-                {formatDateTime(selectedDeck.created_at)} · 가져간 횟수{" "}
-                {selectedDeck.import_count}회
-              </span>
-            </div>
-            <div className="heading-actions">
-              <button
-                type="button"
-                className="shared-deck-detail-dismiss"
-                onClick={onCloseDetail}
-              >
-                닫기
-              </button>
-              {selectedDeck.is_owner ||
-              (selectedDeck.mode === "subscribed" && selectedAlreadyImported) ||
-              !selectedDeckPublished ? null : (
-                <button
-                  type="button"
-                  className={
-                    selectedAlreadyImported
-                      ? "secondary-button shared-deck-checkout-tag"
-                      : "shared-deck-checkout-tag"
-                  }
-                  onClick={() => handleImportClick(selectedDeck)}
-                  disabled={importingDeckId === selectedDeck.id}
-                >
-                  {importingDeckId === selectedDeck.id
-                    ? "가져오는 중..."
-                    : selectedAlreadyImported
-                      ? "다시 가져오기"
-                      : selectedDeck.mode === "subscribed"
-                        ? "학습 목록에 추가"
-                        : "내 노트에 가져오기"}
-                </button>
-              )}
-              {canManageSharedDecks && selectedDeck.is_owner && selectedDeckPublished ? (
-                <button
-                  type="button"
-                  className="danger-secondary-button shared-deck-manage-tag"
-                  onClick={() => onUnpublishDeck(selectedDeck.id)}
-                  disabled={unpublishingDeckId === selectedDeck.id}
-                >
-                  {unpublishingDeckId === selectedDeck.id
-                    ? "공유 취소 중..."
-                    : "공유 취소"}
-                </button>
-              ) : null}
-              {canManageSharedDecks && selectedDeck.is_owner && !selectedDeckPublished ? (
-                <button
-                  type="button"
-                  className="secondary-button shared-deck-manage-tag"
-                  onClick={() => onRepublishSharedDeck?.(selectedDeck.id)}
-                  disabled={republishingDeckId === selectedDeck.id}
-                >
-                  {republishingDeckId === selectedDeck.id
-                    ? "다시 공유하는 중..."
-                    : "다시 공유하기"}
-                </button>
-              ) : null}
-            </div>
-          </div>
-          <p className="shared-deck-description shared-deck-description-full">
-            {getDeckDescription(selectedDeck.description, selectedLevel)}
-          </p>
-          {selectedLevel ? (
-            <p className="info-strip shared-deck-disclaimer">
-              <ShieldIcon className="info-strip-icon" />
-              JLPT 추천 어휘 덱은 학습 참고용 비공식 목록이며, 공개 학습
-              자료와 내부 사전 데이터를 바탕으로 구성했습니다.
-            </p>
-          ) : null}
-          {canManageSharedDecks && selectedDeck.is_owner ? (
-            <p className="muted-text shared-deck-owner-hint">
-              {selectedDeckPublished
-                ? "공유를 중단하면 새 사용자는 더 이상 이 덱을 가져올 수 없어요. 이미 학습 중인 사용자는 복습을 계속 이어갈 수 있고, 이 덱은 내 책장에서도 계속 볼 수 있어요."
-                : "이 덱은 더 이상 공유 목록에 보이지 않지만, 이미 학습 중인 사용자는 복습을 이어갈 수 있어요."}
-            </p>
-          ) : !selectedDeckPublished ? (
-            <p className="muted-text shared-deck-subscriber-hint">
-              새 사용자는 더 이상 가져올 수 없지만, 내 복습은 계속 이어져요.
-            </p>
-          ) : null}
-
-          {selectedDeck.mode === "subscribed" ? (
-            // Subscribed-mode deck: this is the real "학습 목록" (see
-            // docs/architecture/shared-lexeme-progress-storage.md), not a
-            // preview -- show every word, and once the user has actually
-            // added the deck, let them classify each one right here. No
-            // custom_terms column: lexeme-mode decks never have any (the
-            // backend always returns an empty array for them).
-            <div className="shared-detail-columns shared-detail-columns-single">
-              <div>
-                <h3>
-                  학습 목록 ({selectedDeck.items.length}개)
-                </h3>
-                {subscribedWords.length > 0 ? (
-                  <>
-                    <div className="index-card-filter shared-lexeme-word-filter">
-                      <span className="memo-label vocab-toolbar-label">
-                        <SearchIcon className="vocab-toolbar-label-icon" />
-                        카드함 필터
-                      </span>
-                      <div className="vocab-search-wrap">
-                        <SearchIcon className="vocab-search-icon" />
-                        <input
-                          className="vocab-search-input"
-                          value={wordSearchText}
-                          onChange={(event) => handleWordSearchChange(event.target.value)}
-                          placeholder="단어, 읽기, 뜻으로 검색"
-                          aria-label="학습 목록 검색"
-                        />
-                      </div>
-                      <div className="vocab-status-filters" role="group" aria-label="학습 상태 필터">
-                        {SHARED_WORD_STATUS_FILTERS.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            className={`vocab-filter-chip${
-                              wordStatusFilter === option.value ? " vocab-filter-chip-active" : ""
-                            }`}
-                            aria-pressed={wordStatusFilter === option.value}
-                            onClick={() => handleWordStatusFilterChange(option.value)}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {filteredSubscribedWords.length > 0 ? (
-                      <>
-                        <div className="shared-preview-list shared-lexeme-word-list">
-                          {visibleSubscribedWords.map((word) => (
-                            <div
-                              key={word.lexemeId}
-                              className="shared-preview-row shared-lexeme-row"
-                            >
-                              <div className="shared-lexeme-row-main">
-                                <strong>{word.surface || word.baseForm || "-"}</strong>
-                                <span>{word.reading || "-"}</span>
-                                <span>{getDisplayMeaning(word.meaningKo)}</span>
-                              </div>
-                              {selectedAlreadyImported ? (
-                                <div className="shared-lexeme-row-status">
-                                  <StatusSelect
-                                    value={word.status}
-                                    label={`${word.surface || word.baseForm} 학습 상태`}
-                                    onChange={(status) =>
-                                      onUpdateWordStatus(selectedDeck.id, word.lexemeId, status)
-                                    }
-                                  />
-                                  {updatingWordLexemeId === word.lexemeId ? (
-                                    <span className="shared-lexeme-row-saving">저장 중...</span>
-                                  ) : null}
-                                </div>
-                              ) : null}
-                            </div>
-                          ))}
-                        </div>
-                        <p className="muted-text shared-lexeme-word-count-caption">
-                          전체 {filteredSubscribedWords.length}개 중{" "}
-                          {visibleSubscribedWords.length}개 표시
-                        </p>
-                        {hasMoreSubscribedWords ? (
-                          <button
-                            type="button"
-                            className="secondary-button compact-button shared-lexeme-load-more"
-                            onClick={() =>
-                              setVisibleWordCount((count) => count + SHARED_WORD_PAGE_SIZE)
+                    {visibleSubscribedWords.map((word, index) => (
+                      <li
+                        key={word.lexemeId}
+                        className="deck-ledger-word"
+                        {...(selectedAlreadyImported
+                          ? {
+                              "data-word-index": index,
+                              tabIndex:
+                                index === Math.min(activeWordIndex, visibleSubscribedWords.length - 1)
+                                  ? 0
+                                  : -1,
+                              "aria-posinset": index + 1,
+                              "aria-setsize": filteredSubscribedWords.length,
+                              "aria-label": `${word.surface || word.baseForm || "-"}${
+                                word.reading ? `, ${word.reading}` : ""
+                              }, ${getDisplayMeaning(word.meaningKo)}, 현재 상태 ${
+                                statusLabels[word.status]
+                              }${updatingWordLexemeId === word.lexemeId ? ", 저장 중" : ""}`,
+                              "aria-describedby": "deck-ledger-word-keys",
+                              // Focus anywhere in the row (row or its
+                              // select, keyboard or mouse) makes it the
+                              // list's Tab stop.
+                              onFocus: () => setActiveWordIndex(index),
                             }
-                          >
-                            더 보기 (
-                            {Math.min(
-                              SHARED_WORD_PAGE_SIZE,
-                              filteredSubscribedWords.length - visibleSubscribedWords.length,
-                            )}
-                            개)
-                          </button>
-                        ) : null}
-                      </>
-                    ) : (
-                      <p className="empty">검색 결과가 없어요.</p>
-                    )}
-                  </>
-                ) : (
-                  <p className="empty">공유된 단어가 없어요.</p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="shared-detail-columns">
-              <div>
-                <h3>단어 미리보기 (최대 20개)</h3>
-                {selectedDeck.items.length > 0 ? (
-                  <div className="shared-preview-list">
-                    {selectedDeck.items.slice(0, 20).map((item) => (
-                      <div key={item.id} className="shared-preview-row">
-                        <strong>{item.surface || item.base_form || "-"}</strong>
-                        <span>{item.reading || "-"}</span>
-                        <span>{getDisplayMeaning(item.meaning_ko)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="empty">공유된 단어가 없어요.</p>
-                )}
-              </div>
-
-              <div>
-                <h3>사용자 정의 용어</h3>
-                {selectedDeck.custom_terms.length > 0 ? (
-                  <div className="shared-preview-list">
-                    {selectedDeck.custom_terms.slice(0, 30).map((term) => {
-                      const goodMeaning = getDisplayMeaning(term.meaning_ko, "");
-                      return (
-                        <div key={term.id} className="shared-preview-row">
-                          <strong>{term.term}</strong>
-                          <span>{term.reading || "-"}</span>
-                          <span>
-                            {goodMeaning || term.description || getDisplayMeaning(null)}
+                          : {})}
+                      >
+                        <strong lang="ja">{word.surface || word.baseForm || "-"}</strong>
+                        <span lang="ja">{word.reading || ""}</span>
+                        <b>{getDisplayMeaning(word.meaningKo)}</b>
+                        {selectedAlreadyImported ? (
+                          <span className="deck-ledger-word-status">
+                            <StatusSelect
+                              value={word.status}
+                              label={`${word.surface || word.baseForm} 학습 상태`}
+                              tabIndex={-1}
+                              onChange={(status) => {
+                                pendingWordFocusRef.current = index;
+                                onUpdateWordStatus(deck.id, word.lexemeId, status);
+                              }}
+                            />
+                            {updatingWordLexemeId === word.lexemeId ? (
+                              <small>저장 중...</small>
+                            ) : null}
                           </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="empty">공유된 사용자 정의 용어가 없어요.</p>
-                )}
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="deck-ledger-word-caption">
+                    전체 {filteredSubscribedWords.length}개 중 {visibleSubscribedWords.length}개
+                    표시
+                  </p>
+                  {hasMoreSubscribedWords ? (
+                    <button
+                      type="button"
+                      className="deck-ledger-link deck-ledger-more"
+                      onClick={() => setVisibleWordCount((count) => count + SHARED_WORD_PAGE_SIZE)}
+                    >
+                      더 보기 (
+                      {Math.min(
+                        SHARED_WORD_PAGE_SIZE,
+                        filteredSubscribedWords.length - visibleSubscribedWords.length,
+                      )}
+                      개)
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <p className="deck-ledger-word-empty">검색 결과가 없어요.</p>
+              )}
+            </>
+          ) : (
+            <p className="deck-ledger-word-empty">공유된 단어가 없어요.</p>
+          )}
+        </section>
+      );
+    }
+
+    const previewItems = deck.items.slice(0, 20);
+    const previewTerms = deck.custom_terms.slice(0, 30);
+    return (
+      <>
+        <section className="deck-ledger-words" aria-label="미리 보는 단어">
+          <div className="deck-ledger-words-head">
+            <span>미리 보는 단어</span>
+            <span>
+              {previewItems.length} / {deck.vocab_count}
+            </span>
+          </div>
+          {previewItems.length > 0 ? (
+            <ul className="deck-ledger-word-list">
+              {previewItems.map((item) => (
+                <li key={item.id} className="deck-ledger-word">
+                  <strong lang="ja">{item.surface || item.base_form || "-"}</strong>
+                  <span lang="ja">{item.reading || ""}</span>
+                  <b>{getDisplayMeaning(item.meaning_ko)}</b>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="deck-ledger-word-empty">공유된 단어가 없어요.</p>
+          )}
+        </section>
+        <section className="deck-ledger-words" aria-label="사용자 정의 용어">
+          <div className="deck-ledger-words-head">
+            <span>사용자 정의 용어</span>
+            <span>
+              {previewTerms.length} / {deck.custom_term_count}
+            </span>
+          </div>
+          {previewTerms.length > 0 ? (
+            <ul className="deck-ledger-word-list">
+              {previewTerms.map((term) => {
+                const goodMeaning = getDisplayMeaning(term.meaning_ko, "");
+                return (
+                  <li key={term.id} className="deck-ledger-word">
+                    <strong lang="ja">{term.term}</strong>
+                    <span lang="ja">{term.reading || ""}</span>
+                    <b>{goodMeaning || term.description || getDisplayMeaning(null)}</b>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="deck-ledger-word-empty">공유된 사용자 정의 용어가 없어요.</p>
+          )}
+        </section>
+      </>
+    );
+  }
+
+  function renderDetailPage() {
+    if (!isDetailOpen) {
+      return (
+        <div className="deck-ledger-detail-blank">
+          <span className="deck-ledger-smallcap">선택한 덱</span>
+          <p className="deck-ledger-blank-title">덱을 고르면 이 지면에 펼쳐져요.</p>
+          <p>
+            단어를 미리 살펴보고 마음에 드는 덱은 내 학습 목록에 담아 읽기와 복습에 함께
+            쓸 수 있어요.
+          </p>
+          {hasJlptDeck ? <p className="deck-ledger-note">{JLPT_DISCLAIMER}</p> : null}
+          <p className="deck-ledger-privacy">원문 전체는 포함되지 않아요.</p>
+        </div>
+      );
+    }
+
+    const positionLabel =
+      selectedIndex >= 0
+        ? `${formatIndex(selectedIndex)} / ${visibleDecks.length}`
+        : hasFilters
+          ? "현재 조건 밖"
+          : "";
+
+    return (
+      <>
+        <div className="deck-ledger-detail-top">
+          <button
+            type="button"
+            ref={backButtonRef}
+            className="deck-ledger-back"
+            onClick={onCloseDetail}
+          >
+            ‹ 덱 목록
+          </button>
+          <span className="deck-ledger-position">{positionLabel}</span>
+        </div>
+
+        {!selectedDeck ? (
+          <div className="deck-ledger-detail-blank">
+            <p className="deck-ledger-blank-title">
+              {isLoadingDetail ? "덱을 펼치는 중이에요..." : "이 덱을 펼치지 못했어요."}
+            </p>
+            {!isLoadingDetail ? <p>목록에서 다시 골라 주세요.</p> : null}
+          </div>
+        ) : (
+          <>
+            <div className="deck-ledger-detail-body" ref={detailBodyRef} key={selectedDeck.id}>
+              <span className="deck-ledger-smallcap">
+                {DECK_SOURCE_LABELS[getDeckSource(selectedDeck)]}
+                {selectedLevel ? ` · JLPT ${selectedLevel}` : ""}
+                {selectedDeck.mode === "subscribed" ? " · 학습 목록형" : ""}
+              </span>
+              <h3 className="deck-ledger-detail-title">
+                {getDisplayTitle(selectedDeck, selectedLevel)}
+              </h3>
+              <p className="deck-ledger-detail-meta">
+                {selectedDeck.owner_display_name ? (
+                  <span>{selectedDeck.owner_display_name}</span>
+                ) : null}
+                <span>단어 {selectedDeck.vocab_count}개</span>
+                {selectedDeck.custom_term_count > 0 ? (
+                  <span>용어 {selectedDeck.custom_term_count}개</span>
+                ) : null}
+                <span>가져간 횟수 {selectedDeck.import_count}회</span>
+              </p>
+              <p className="deck-ledger-detail-date">
+                등록 {formatDateTime(selectedDeck.created_at)}
+              </p>
+              {!selectedDeckPublished || selectedAlreadyImported ? (
+                <p className="deck-ledger-detail-states">
+                  {!selectedDeckPublished ? (
+                    <span className="deck-ledger-state deck-ledger-state-paused">공유 중단됨</span>
+                  ) : null}
+                  {selectedAlreadyImported ? (
+                    <span className="deck-ledger-state">
+                      {selectedDeck.mode === "subscribed" ? "학습 목록에 있음" : "가져옴"}
+                      {selectedDeck.imported_at
+                        ? ` · ${formatDateTime(selectedDeck.imported_at)}`
+                        : ""}
+                    </span>
+                  ) : null}
+                </p>
+              ) : null}
+              <p className="deck-ledger-detail-desc">
+                {getDeckDescription(selectedDeck.description, selectedLevel)}
+              </p>
+              {selectedLevel ? <p className="deck-ledger-note">{JLPT_DISCLAIMER}</p> : null}
+              {canManageSharedDecks && selectedDeck.is_owner ? (
+                <p className="deck-ledger-note">
+                  {selectedDeckPublished
+                    ? "공유를 중단하면 새 사용자는 더 이상 이 덱을 가져올 수 없어요. 이미 학습 중인 사용자는 복습을 계속 이어갈 수 있고, 이 덱은 내 책장에서도 계속 볼 수 있어요."
+                    : "이 덱은 더 이상 공유 목록에 보이지 않지만, 이미 학습 중인 사용자는 복습을 이어갈 수 있어요."}
+                </p>
+              ) : !selectedDeckPublished ? (
+                <p className="deck-ledger-note">
+                  새 사용자는 더 이상 가져올 수 없지만, 내 복습은 계속 이어져요.
+                </p>
+              ) : null}
+
+              {renderWordSection(selectedDeck)}
+            </div>
+
+            <div className="deck-ledger-detail-foot">
+              {renderPrimaryAction(selectedDeck)}
+              <p className="deck-ledger-privacy">원문 전체는 포함되지 않아요.</p>
+            </div>
+          </>
+        )}
+      </>
+    );
+  }
+
+  const importedDeckIsOpen =
+    importedDeckId !== null && importedDeckId === selectedDeckId && selectedDeck !== null;
+
+  return (
+    <section
+      className={`tab-panel deck-ledger${isDetailOpen ? " is-detail-open" : ""}`}
+      aria-label="덱 책장"
+    >
+      <div className="deck-ledger-stage">
+        <header className="deck-ledger-head">
+          <div>
+            <span className="deck-ledger-kicker">SHARED DECKS / 共有ノート</span>
+            <h2>덱 책장</h2>
+          </div>
+          <button type="button" className="deck-ledger-head-link" onClick={onGoToVocab}>
+            내 단어장 만들기 ↗
+          </button>
+        </header>
+
+        <div className="deck-ledger-register">
+          <div className="deck-ledger-strip">
+            <span>공유 단어장 목록</span>
+            <span className="deck-ledger-strip-motto">고르고 · 열고 · 함께 공부하기</span>
+          </div>
+
+          {/* A failed list load with nothing to show already says so (with a
+              retry) in the list itself; the strip would repeat it. */}
+          {message && !(messageTone === "error" && !hasDecks) ? (
+            <div className={`deck-ledger-message deck-ledger-message-${messageTone}`} role="status">
+              {messageTone === "success" ? (
+                <ShioriStamp variant="success" className="deck-ledger-message-stamp" />
+              ) : null}
+              <span className="deck-ledger-message-text">{message}</span>
+              {isImportSuccess ? (
+                <span className="deck-ledger-message-actions">
+                  {importedDeckId && !importedDeckIsOpen ? (
+                    <button
+                      type="button"
+                      className="deck-ledger-link"
+                      onClick={() => handleOpenDeck(importedDeckId)}
+                    >
+                      학습 목록 보기
+                    </button>
+                  ) : null}
+                  <button type="button" className="deck-ledger-link" onClick={onGoToStudyToday}>
+                    복습 시작
+                  </button>
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="deck-ledger-pages">
+            <div className="deck-ledger-list-page">
+              <div className="deck-ledger-tools">
+                <label className="deck-ledger-search">
+                  <SearchIcon className="deck-ledger-search-icon" />
+                  <input
+                    type="search"
+                    value={deckQuery}
+                    onChange={(event) => setDeckQuery(event.target.value)}
+                    placeholder="제목, 공유자, 설명으로 검색"
+                    aria-label="공유 덱 검색"
+                  />
+                </label>
+                <label className="deck-ledger-sort">
+                  <span className="deck-ledger-sort-label">정렬</span>
+                  <select
+                    value={deckSort}
+                    onChange={(event) => setDeckSort(event.target.value as DeckSort)}
+                    aria-label="공유 덱 정렬"
+                  >
+                    {DECK_SORT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="deck-ledger-filters" role="group" aria-label="덱 분류">
+                <button
+                  type="button"
+                  className={sourceFilter === "all" ? "is-active" : undefined}
+                  aria-pressed={sourceFilter === "all"}
+                  onClick={() => setSourceFilter("all")}
+                >
+                  전체 <b>{decks.length}</b>
+                </button>
+                {(Object.keys(DECK_SOURCE_LABELS) as DeckSource[]).map((source) => (
+                  <button
+                    key={source}
+                    type="button"
+                    className={sourceFilter === source ? "is-active" : undefined}
+                    aria-pressed={sourceFilter === source}
+                    onClick={() => setSourceFilter(source)}
+                  >
+                    {DECK_SOURCE_LABELS[source]} <b>{sourceCounts[source]}</b>
+                  </button>
+                ))}
+              </div>
+
+              <div className="deck-ledger-count">
+                <span aria-live="polite">{visibleDecks.length}개 덱</span>
+                <span className="deck-ledger-count-cols">제목 · 공유자 · 단어 수</span>
+              </div>
+
+              <div className="deck-ledger-list" ref={listRef} onScroll={handleListScroll}>
+                {renderListBody()}
+              </div>
+
+              <div className="deck-ledger-list-foot">
+                <span>
+                  전체 {decks.length}개 중 {visibleDecks.length}개 표시
+                </span>
+                <button
+                  type="button"
+                  className="deck-ledger-link"
+                  onClick={onRefresh}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "불러오는 중..." : "목록 새로고침"}
+                  <RotateIcon className="deck-ledger-link-icon" />
+                </button>
               </div>
             </div>
-          )}
 
-          {/* Phase 158 -- Phase 157's audit flagged this as a literal
-              duplicate of the top-right "닫기" link (same handler, same
-              label, same action). Rather than drop it outright -- a long
-              subscribed word list can run to hundreds of rows, and losing
-              the only reachable-without-scrolling-up close control would
-              be a real usability regression, not a cleanup -- it's
-              recopied as "책장으로 돌아가기" (same onCloseDetail handler,
-              unchanged), so it reads as this book's own closing action
-              (put it back on the shelf) rather than an identical second
-              copy of the header's quick dismiss. */}
-          <div className="form-actions">
-            <button
-              type="button"
-              className="secondary-button book-return-to-shelf-button"
-              onClick={onCloseDetail}
-            >
-              <BookshelfIcon className="button-icon" />
-              책장으로 돌아가기
-            </button>
+            <article className="deck-ledger-detail" aria-label="선택한 덱">
+              {renderDetailPage()}
+            </article>
           </div>
-        </section>
-      ) : null}
+
+          <footer className="deck-ledger-foot">
+            <span>내가 공유함 {sourceCounts.mine}</span>
+            <span>추천 {sourceCounts.recommended}</span>
+            <span>다른 학습자 {sourceCounts.community}</span>
+          </footer>
+        </div>
+      </div>
     </section>
   );
 }

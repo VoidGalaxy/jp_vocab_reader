@@ -2803,255 +2803,11 @@
   gap: 12px;
 }
 
-.shared-deck-section {
-  --screen-accent: var(--tone-dusty-blue);
-  --screen-accent-soft: #e7eef3;
-}
-
-/* ==========================================================================
-   Phase 170 (Shared Deck V2 Bookshelf Exchange Scene) -- Phase 158 already
-   fixed the item model (a standing .book-spine, not a card -- kept
-   unchanged below), but everything AROUND it was still web-app scaffolding:
-   .shared-hero-card was a title/description/action-row header sitting above
-   the shelf, .shared-library-scene was a CSS-gradient-and-old-photo "wood
-   cabinet" wrapper (phase127/shared-shelf-wood-strip-web.webp) with its own
-   per-group .shelf-section compartments, and two .info-strip notices stacked
-   above all of it. This block replaces the header/cabinet/compartment
-   scaffolding with one real V2 bookshelf photo (.shared-scene-v2-frame) --
-   a different shot per breakpoint, not one crop of the other -- and
-   positions real decks as a horizontally-scrolling row of the *same*
-   .book-spine elements directly over the photo's own shelf board. The
-   photo's own painted spines to the right of that row are never hidden or
-   replaced; they're what keeps a lightly-stocked shelf reading as "a real
-   shelf with room on it" instead of empty web space, without any
-   conditional filler markup. */
-/* Phase 173 -- was a plain text row above .shared-scene-v2 (normal flow).
-   Now a small paper tag hanging off the shelf frame's own top edge --
-   left side (mobile's .shared-scene-v2-actions sits top-left there, so
-   this uses the opposite corner) or right side (desktop's actions zone
-   moves to top-right, so this moves to top-left) -- see the media query
-   below, mirrored from .shared-scene-v2-actions's own left/right flip. */
-.shared-scene-v2-eyebrow {
-  position: absolute;
-  z-index: 4;
-  right: 5%;
-  top: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px 5px 8px;
-  border-radius: 3px 10px 10px 3px;
-  background: var(--panel-bg);
-  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
-  color: var(--screen-accent, var(--muted));
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  transform: translateY(-60%) rotate(2deg);
-}
-
-.shared-scene-v2-eyebrow .shiori-mark {
-  width: 16px;
-  height: 16px;
-}
-
-@media (min-width: 1024px) {
-  .shared-scene-v2-eyebrow {
-    right: auto;
-    left: 6%;
-    transform: translateY(-60%) rotate(-2deg);
-  }
-}
-
-.shared-scene-v2 {
-  position: relative;
-}
-
-.shared-scene-v2-frame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 941 / 1672;
-  isolation: isolate;
-}
-
-.shared-scene-v2-media {
-  display: block;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.shared-scene-v2-media-img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 20px;
-}
-
-@media (min-width: 1024px) {
-  .shared-scene-v2-frame {
-    aspect-ratio: 1672 / 941;
-  }
-
-  /* Home Nav V1.1 seam repair -- same reasoning as
-     .reading-scene-v2-eyebrow above: the toolbar's own paper strip
-     already carries this label as the active "덱" nav tab, and the
-     eyebrow's translateY(-60%) pushed it above the frame into the nav
-     seam. Removed from the desktop render tree entirely; mobile (outside
-     this media query) is unaffected. */
-  .shared-scene-v2-eyebrow {
-    display: none;
-  }
-
-  .shared-scene-v2-media-img {
-    border-radius: 0 0 26px 26px;
-  }
-}
-
-/* Small notched index tabs clipped to the shelf frame's own corner --
-   Phase 152's existing shape/color (.shared-deck-tab-action, unchanged),
-   just moved off a dedicated header row and onto the scene itself. */
-.shared-scene-v2-actions {
-  position: absolute;
-  z-index: 3;
-  top: 3%;
-  left: 3%;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.shared-scene-v2-actions .shared-deck-tab-action {
-  padding: 7px 18px 7px 10px;
-  font-size: 11px;
-}
-
-@media (min-width: 1024px) {
-  .shared-scene-v2-actions {
-    top: 4%;
-    right: 4%;
-    left: auto;
-  }
-
-  .shared-scene-v2-actions .shared-deck-tab-action {
-    padding: 9px 22px 9px 14px;
-    font-size: 12.5px;
-  }
-}
-
-/* The live shelf: pinned over the photo's own shelf board (percentages
-   tuned per breakpoint against where each specific photo actually has a
-   row of spines -- see the two zones below), never growing the frame's own
-   aspect ratio regardless of how many decks exist. Horizontal scroll (not
-   wrap) is the "long shelf" metaphor -- you scan sideways for more books,
-   the same way .book-shelf-row's own comment already reasoned for why a
-   packed flex row (not an auto-fill grid) was the right shape back in
-   Phase 158. */
-.shared-shelf-band {
-  position: absolute;
-  z-index: 2;
-  left: 4%;
-  right: 4%;
-  top: 13%;
-  height: 21%;
-}
-
-@media (min-width: 1024px) {
-  .shared-shelf-band {
-    left: 2%;
-    right: 2%;
-    top: 25%;
-    height: 52%;
-  }
-}
-
-/* A slim upright label between deck groups (recommended / mine / other),
-   sitting in the same scrolling row as the spines it separates -- a small
-   shelf bookend tag, not a second heading row above a compartment. */
-.shared-shelf-divider {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 22px;
-  padding: 8px 0;
-  border-radius: 3px;
-  background: rgba(37, 23, 10, 0.55);
-  color: #fff9ec;
-  font-size: 10px;
-  font-weight: 800;
-  white-space: nowrap;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-}
-
-.shared-scene-v2-privacy {
-  position: absolute;
-  z-index: 2;
-  left: 50%;
-  bottom: 2%;
-  width: 82%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 0;
-  padding: 5px 10px;
-  border-radius: 10px;
-  background: rgba(253, 249, 238, 0.88);
-  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.14);
-  color: var(--text-secondary);
-  font-size: 9.5px;
-  line-height: 1.4;
-  text-align: center;
-  transform: translateX(-50%);
-}
-
-@media (min-width: 1024px) {
-  .shared-scene-v2-privacy {
-    width: auto;
-    max-width: 60%;
-    font-size: 11px;
-  }
-}
-
-.shared-scene-v2-privacy-icon {
-  flex: 0 0 auto;
-  width: 13px;
-  height: 13px;
-  color: var(--success);
-}
-
-/* Checkout-slip CTA on the opened book's own header -- same notch-tag
-   language as .shared-deck-tab-action/.reader-bookmark-button, colored with
-   this screen's own --tone-dusty-blue accent, so import reads as a
-   stationery action pinned to the pulled-out book rather than a plain
-   secondary-button repeated in a footer row. Base secondary-button/plain
-   classes (already conditionally applied in SharedDeckSection.tsx,
-   unchanged) still carry color/background; this only supplies shape. */
-.shared-deck-checkout-tag {
-  border-radius: 3px;
-  clip-path: polygon(
-    0 0,
-    calc(100% - 14px) 0,
-    100% 50%,
-    calc(100% - 14px) 100%,
-    0 100%
-  );
-  padding-right: 22px;
-}
-
 /* Owner manage actions (공유 취소/다시 공유하기) -- smaller and quieter
    than the checkout tag above, so a destructive/reversible admin action
    never competes with the deck's own primary next step, while staying
    clearly its own reachable control rather than a repeated card-footer
    button. */
-.shared-deck-manage-tag {
-  padding: 7px 14px;
-  font-size: 12px;
-}
 
 .study-log-page {
   --screen-accent: var(--sage-green);
@@ -4953,12 +4709,6 @@ button {
 /* Quiet variant -- no card chrome at all, just an icon + caption line. For
    spots (home tab) where even the plain .info-strip card reads as one more
    box on a screen that's trying to show as few boxes as possible. */
-.info-strip-quiet {
-  padding: 0 2px;
-  border: none;
-  background: none;
-  box-shadow: none;
-}
 
 /* Phase 155 -- was .home-summary-chip, a rounded pill badge (border +
    var(--panel-bg) fill, same shape as any dashboard metric chip). The 기록
@@ -5156,18 +4906,6 @@ button {
    its own decoration: a memo-style label tag, a dashed "notebook rule"
    divider, and a paper-corner fold. Deliberately tiny/quiet -- repeated
    small marks, not illustration. */
-.memo-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--soft-bg);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
 
 .dotted-divider {
   height: 0;
@@ -5929,12 +5667,6 @@ button:focus-visible {
   gap: 4px;
 }
 
-.heading-actions {
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-}
-
 .result-heading h2 {
   margin: 0;
   color: var(--text);
@@ -6113,15 +5845,6 @@ select {
 
 .empty-guide button {
   margin-top: 6px;
-}
-
-/* Deck shelf's loading moment -- the base .empty-guide padding (24px) plus
-   a bigger, more visible character reads as a tall empty box while the
-   grid is still loading; tighter padding keeps it a brief, compact pause
-   instead of a big blank card. */
-.shared-deck-loading {
-  gap: 4px;
-  padding: 14px;
 }
 
 /* Brand badge tier 2 -- standalone icon illustration (BrandEmptyIllustration)
@@ -8675,504 +8398,13 @@ input.reading-vocab-sticker-toggle:checked {
   padding: 12px;
 }
 
-.shared-deck-message {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-.shared-deck-message .message {
-  margin: 0;
-}
-
-.shared-deck-message-stamp {
-  margin-top: -3px;
-}
-
-.shared-deck-message-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.shared-deck-section {
-  gap: 12px;
-}
-
-/* Phase 170 -- .shared-library-scene (a CSS-gradient-then-old-photo "wood
-   cabinet" wrapper, phase127/shared-shelf-wood-strip-web.webp) and
-   .shared-hero-card (the title/description/action-row header sitting above
-   it) removed: replaced by .shared-scene-v2-frame's single real V2
-   bookshelf photo -- see the Phase 170 block near the top of this file
-   (search "Phase 170"). */
-
-/* Phase 152 -- "어휘 노트 보기"/"새로고침" used to be a plain
-   .secondary-button/.ghost-button pair, i.e. the exact same full boxed
-   button chrome as every generic web-app action in the app -- against
-   this phase's own "웹 알림 바/boxed CTA처럼 보이면 실패" instruction,
-   demoted to small notched paper-tab actions instead, same fixed-pixel
-   clip-path-notch family Reading's Phase 150 CTAs established
-   (.reader-bookmark-button) and Vocab's Phase 149 bookmark tags before
-   that -- one consistent "bookmark/paper action" language reused across
-   tabs rather than a new shape invented per screen each time. Deck's own
-   screen accent (--tone-dusty-blue, see .shared-deck-section below)
-   colors the primary one; the ghost variant stays unfilled for the
-   secondary refresh action. */
-.shared-deck-header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.shared-deck-tab-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: auto;
-  min-width: 0;
-  padding: 10px 26px 10px 16px;
-  border: 0;
-  border-radius: 3px;
-  clip-path: polygon(
-    0 0,
-    calc(100% - 16px) 0,
-    100% 50%,
-    calc(100% - 16px) 100%,
-    0 100%
-  );
-  background: var(--screen-accent, var(--primary));
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  box-shadow: 0 5px 12px rgba(37, 43, 30, 0.14);
-}
-
-.shared-deck-tab-action:not(:disabled):hover {
-  transform: translateX(2px);
-  box-shadow: 0 7px 16px rgba(37, 43, 30, 0.18);
-}
-
-.shared-deck-tab-action:disabled {
-  background: #a89a80;
-  color: #fff;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.shared-deck-tab-action-ghost {
-  background: var(--soft-bg);
-  color: var(--text-secondary);
-  box-shadow: none;
-}
-
-.shared-deck-tab-action-ghost:not(:disabled):hover {
-  box-shadow: none;
-}
-
-/* book-shelf-row / book-spine -- Phase 158 (Shared Deck Real Bookshelf
-   Reconstruction) established the item model: not a card, a standing
-   .book-spine (full tone color, printed label, at most one pull-tab
-   action -- see .book-spine-pulltab below), unchanged by this phase.
-   Phase 170 changes only how the row itself is laid out: previously it
-   wrapped onto new lines against a CSS-drawn shelf-ledge pseudo-element
-   (::before/::after below), forming its own little shelf inside a card
-   compartment. Now it's a single horizontally-scrolling row -- the "long
-   shelf, scan sideways for more books" metaphor -- pinned directly over
-   the real V2 photo's own shelf board (.shared-shelf-band, see the Phase
-   170 block near the top of this file), so no CSS ledge/compartment
-   drawing is needed here any more; height:100% instead of a fixed px
-   value lets every spine fill whatever room that band actually has at a
-   given breakpoint. */
-.book-shelf-row {
-  position: relative;
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  height: 100%;
-  gap: 4px;
-  overflow-x: auto;
-  overflow-y: visible;
-  padding: 2px 2px 6px;
-}
-
-.book-spine {
-  position: relative;
-  flex: 0 0 clamp(58px, 7vw, 92px);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  border-radius: 3px 8px 8px 3px;
-  /* A darker gutter down the left edge and a lighter catch along the
-     right -- the same two-sided light cue a real embossed spine has when
-     several stand flush against their neighbors -- plus a soft cast
-     shadow onto the next spine so the row reads as separate standing
-     objects touching each other, not one flat painted strip. */
-  box-shadow:
-    inset 3px 0 5px -3px rgba(0, 0, 0, 0.32),
-    inset -1px 0 0 rgba(255, 255, 255, 0.12),
-    2px 4px 8px rgba(37, 23, 10, 0.28);
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft);
-}
-
-/* Casual Sticker Reader (Phase 59) -- the detail panel is a notebook page
-   opened up to read, not a shelved book cover, so it drops the card grid's
-   spine-gutter inset shadow (that cue specifically means "closed") in favor
-   of the same warm ruled-paper fill and washi-tape corner the reader page
-   and other tabs' detail views use. */
-.shared-deck-detail {
-  position: relative;
-  display: grid;
-  gap: 10px;
-  align-content: start;
-  border: 1px solid var(--paper-border);
-  border-radius: 4px 20px 20px 20px;
-  padding: 26px 20px 20px;
-  background:
-    repeating-linear-gradient(
-      180deg,
-      transparent 0,
-      transparent 37px,
-      rgba(110, 91, 47, 0.05) 37px,
-      rgba(110, 91, 47, 0.05) 38px
-    ),
-    var(--paper-bg);
-  box-shadow: 0 16px 36px var(--paper-shadow);
-}
-
-.shared-deck-detail-tape {
-  position: absolute;
-  top: -6px;
-  left: 30px;
-  z-index: 1;
-  width: 46px;
-  height: 16px;
-  border: 1px solid rgba(217, 122, 74, 0.4);
-  background: rgba(217, 122, 74, 0.32);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-  transform: rotate(-4deg);
-  pointer-events: none;
-}
-
-/* Higher specificity than the mobile ".shared-deck-section .shared-deck-detail
-   > *" reset further down (width: 100%, meant for the panel's real content
-   children) -- the tape is a direct child of .shared-deck-detail too, so
-   without this it silently stretched to the full card width below 640px,
-   pushing the page 1px past the viewport. */
-.shared-deck-section .shared-deck-detail > .shared-deck-detail-tape {
-  width: 46px;
-}
-
-.book-spine:hover {
-  box-shadow:
-    inset 3px 0 5px -3px rgba(0, 0, 0, 0.32),
-    inset -1px 0 0 rgba(255, 255, 255, 0.12),
-    2px 8px 14px rgba(37, 23, 10, 0.34);
-  transform: translateY(-4px);
-}
-
-/* The open spine's "pulled off the shelf" cue -- lifts clear of the row
-   (the row's own align-items: flex-end keeps every other spine grounded on
-   the shelf ledge, so this reads as one book actually coming up out of the
-   row, not a shared hover effect) plus a light ring, the same functional
-   "this one's open" cue .selected-shared-deck-card used to carry via a
-   border/shadow on a flat card. */
-.book-spine-selected {
-  transform: translateY(-14px);
-  box-shadow:
-    inset 3px 0 5px -3px rgba(0, 0, 0, 0.32),
-    inset -1px 0 0 rgba(255, 255, 255, 0.12),
-    0 0 0 2px var(--primary),
-    2px 14px 22px rgba(37, 23, 10, 0.38);
-}
-
-.book-spine-selected:hover {
-  transform: translateY(-14px);
-}
-
-/* jlpt-level-n5..n1 (compound, matches the bare tag's own ramp elsewhere on
-   this file) fill the *entire* spine now, not a 34px cap band -- a real
-   book's cover color is its whole visible face, not a strip along the top.
-   Same exact hex ramp as .jlpt-level-n5..n1/the old .brand-deck-cover
-   modifiers (one warm N5->N1 ramp, not a second palette); book-spine-tone-
-   mine/-shared cover the two non-JLPT cases. Compound selector kept for
-   the same defensive reason the old .brand-deck-cover.jlpt-level-n5 used
-   it: so this always wins over the small sticker tag inside reusing the
-   bare .jlpt-level-n5 class for an unrelated small badge elsewhere. */
-.book-spine.jlpt-level-n5 {
-  background-color: #a98a5c;
-}
-
-.book-spine.jlpt-level-n4 {
-  background-color: #c17d4a;
-}
-
-.book-spine.jlpt-level-n3 {
-  background-color: #c17550;
-}
-
-.book-spine.jlpt-level-n2 {
-  background-color: #b85c35;
-}
-
-.book-spine.jlpt-level-n1 {
-  background-color: #8f4324;
-}
-
-.book-spine-tone-mine {
-  background-color: #5f7a5c;
-}
-
-.book-spine-tone-shared {
-  background-color: #8a6a3f;
-}
-
-/* book-spine-face -- the button holding stickers/title/count/chevron; this
-   IS the old "상세 보기" action, just the entire spine face instead of a
-   separate labeled button, so opening a book is "tap the book" rather
-   than "find its one small button." flex: 1 1 auto so it fills whatever
-   height .book-spine-pulltab (fixed height, below) doesn't take. */
-.book-spine-face {
-  position: relative;
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  min-height: 0;
-  width: 100%;
-  padding: 9px 7px 6px;
-  border: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 40%);
-  color: #fff9ec;
-  text-align: left;
-  cursor: pointer;
-}
-
-.book-spine-face:disabled {
-  cursor: not-allowed;
-  opacity: 0.75;
-}
-
-.book-spine-stickers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-  margin-bottom: 6px;
-}
-
-.book-spine-sticker {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: rgba(255, 249, 236, 0.92);
-  color: var(--primary-dark);
-  font-size: 9.5px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.book-spine-sticker-muted {
-  background: rgba(37, 23, 10, 0.32);
-  color: #fff9ec;
-}
-
-/* The spine's own printed label -- clamped rather than letting a very long
-   deck title push the spine's height around (every spine in a row shares
-   one fixed height, see .book-spine above, so the row stays a level shelf
-   line regardless of title length). */
-.book-spine-label {
-  flex: 1 1 auto;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 5;
-  color: #fff9ec;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.32;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  word-break: keep-all;
-  overflow-wrap: anywhere;
-}
-
-.book-spine-face-footer {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 6px;
-}
-
-.book-spine-count {
-  flex: 1 1 auto;
-  min-width: 0;
-  color: rgba(255, 249, 236, 0.85);
-  font-size: 9.5px;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* A small filled dot instead of the old dashed "가져옴" pill -- there's no
-   room on a 96px spine for a wordy status pill next to the count, and the
-   dot still reads clearly once you know the vocabulary (every other tab's
-   own small stat dots -- .analyze-tally-stat::before, .records-level-bar --
-   already use plain color dots for "state at a glance"). title attribute
-   on the wrapping element carries the same "가져온 날짜: ..." detail the
-   old badge's title used to. */
-.book-spine-owned-mark {
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #7fbd97;
-  box-shadow: 0 0 0 1.5px rgba(255, 249, 236, 0.6);
-}
-
-.book-spine-face-chevron {
-  flex: 0 0 auto;
-  width: 12px;
-  height: 12px;
-  color: rgba(255, 249, 236, 0.75);
-  transition: transform var(--motion-fast) var(--ease-soft);
-}
-
-.book-spine-face-chevron-open {
-  transform: rotate(90deg);
-}
-
-/* book-spine-pulltab -- the spine's one primary action (import/re-import/
-   open), fixed to its base like a small label glued to the bottom of the
-   book. A perforated top edge (dashed border) reads as "tear here",
-   reinforcing this is a distinct pull-tab, not a second content region of
-   the spine itself. Text wraps to 2 lines rather than truncating -- every
-   label this renders ("내 노트에 담기", "학습 목록 추가", "다시
-   가져오기") needs to stay fully legible per this phase's own "라벨이
-   너무 작아 action을 찾기 어려우면 실패" requirement, not ellipsized. */
-.book-spine-pulltab {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  width: 100%;
-  padding: 6px 5px 7px;
-  border: 0;
-  border-top: 1.5px dashed rgba(255, 249, 236, 0.5);
-  background: rgba(0, 0, 0, 0.16);
-  color: #fff9ec;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1.25;
-  text-align: center;
-  white-space: normal;
-  cursor: pointer;
-  transition: background var(--motion-fast) var(--ease-soft);
-}
-
-.book-spine-pulltab:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.26);
-}
-
-.book-spine-pulltab:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.book-spine-pulltab-icon {
-  flex: 0 0 auto;
-  width: 13px;
-  height: 13px;
-}
-
-.shared-deck-detail h3 {
-  margin: 0 0 4px;
-  color: var(--text);
-  font-size: 16px;
-}
-
 /* Now composed on top of .info-strip (icon + quiet caption row) instead of
    its own bordered box -- this note isn't the thing the screen wants
    noticed first, so it shouldn't look as heavy as the deck cards below. */
-.shared-deck-disclaimer {
-  margin: 0;
-  font-size: 12px;
-}
-
-.shared-deck-title-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.shared-deck-title-row h2,
-.shared-deck-title-row h3 {
-  margin: 0;
-}
 
 .shared-deck-title-mark {
   width: 34px;
   height: 34px;
-}
-
-.jlpt-level-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  padding: 2px 9px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--primary-dark);
-  background: var(--soft-bg);
-  white-space: nowrap;
-  transform: rotate(-2deg);
-}
-
-/* A warm, single-hue ramp (light -> deep terracotta) reads as a difficulty
-   gradient from N5 to N1, instead of the unrelated rainbow of hues a
-   categorical palette would use -- keeps the card grid feeling like one
-   cohesive "book shelf" rather than a color-coded admin taxonomy. */
-.jlpt-level-n5 {
-  background: #a98a5c;
-}
-
-.jlpt-level-n4 {
-  background: #c17d4a;
-}
-
-.jlpt-level-n3 {
-  background: #c17550;
-}
-
-.jlpt-level-n2 {
-  background: #b85c35;
-}
-
-.jlpt-level-n1 {
-  background: #8f4324;
-}
-
-.shared-deck-word-count-badge {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 3px 10px;
-  background: var(--soft-bg);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 /* Small rotated "가져옴" stamp -- dashed border + slight tilt echoes the
@@ -9181,258 +8413,23 @@ input.reading-vocab-sticker-toggle:checked {
    while keeping its own success-green color (this badge means "done in a
    good way", not the same thing .brand-stamp's screen-accent tint means
    elsewhere). */
-.shared-deck-imported-badge {
-  display: inline-flex;
-  align-items: center;
-  border: 1.5px dashed #7fbd97;
-  border-radius: 999px;
-  padding: 3px 10px;
-  background: #f1faf4;
-  color: #1f6f43;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-  transform: rotate(-2deg);
-}
-
-/* Calm "state changed" pill for an unpublished shared deck (Phase 7 Round 2,
-   see docs/architecture/shared-lexeme-progress-storage.md -- "Owner
-   unpublish policy"). Deliberately neutral, not the danger-button's red --
-   an owner unpublishing their own deck, or a subscriber whose deck lost
-   public visibility, is a normal state, not an error. */
-.shared-deck-status-badge {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* A slight tilt (opposite direction from .shared-deck-imported-badge's own
-   -2deg) reads as a small quiet stamp too, not a plain admin status pill --
-   still deliberately calm-toned (--muted on --soft-bg), never the danger
-   color, since an unpublished deck is a normal state change. */
-.shared-deck-status-badge-unpublished {
-  background: var(--soft-bg);
-  color: var(--muted);
-  transform: rotate(2deg);
-}
-
-.shared-deck-description {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: var(--muted);
-  line-height: 1.5;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow-wrap: anywhere;
-}
-
-/* Detail panel gets the full description instead of the card grid's
-   3-line clamp. */
-.shared-deck-description-full {
-  display: block;
-  overflow: visible;
-  -webkit-line-clamp: unset;
-}
-
-.shared-deck-byline {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-/* Phase 43: the detail panel's title/byline/action-button header sat
-   directly against the description text below it with no visual pause --
-   inside .shared-deck-detail's own border+shadow "book" card, that read as
-   one dense fused block rather than a header over a body. A single dashed
-   rule (same divider tone .management-card/.study-options-collapsible use)
-   separates them without adding another nested box; scoped to the detail
-   panel only so the plain .result-heading used elsewhere (단어장 목록 등)
-   is untouched. */
-.shared-deck-detail > .result-heading {
-  padding-bottom: 12px;
-  border-bottom: 1px dashed var(--border);
-}
 
 /* Softer than .danger-button -- "공유 취소" only removes the deck from the
    public list (the owner's own deck and anyone who already imported it are
    untouched), so it reads as a reversible secondary action rather than a
    destructive delete. */
-.danger-secondary-button {
-  color: #9b3b42;
-  background: #fbe8ea;
-  border: 1px solid #f3cdd1;
-}
-
-.danger-secondary-button:not(:disabled):hover {
-  background: #f8dade;
-}
-
-/* Phase 106 -- the detail panel's top "닫기" sits in .heading-actions right
-   next to the deck's real primary action (가져오기/학습 목록에 추가/공유
-   취소/다시 공유하기), so two same-weight secondary-styled buttons made it
-   unclear which one is the deck's actual next step. Demoted to a quiet
-   text dismiss, same visual language Reading/Study/Analyze already use for
-   pure-navigation actions (.reading-summary-link-button, .study-actions-
-   link-button) -- no border/background/shadow, intrinsic width so it
-   doesn't inherit the mobile .heading-actions{align-items:stretch} full-
-   width stretch. The bottom "닫기" in .form-actions is deliberately left
-   alone: it sits by itself (no competing primary action) after a
-   potentially long subscribed word list, so it stays a real full-weight
-   button as a genuine long-list convenience, not a duplicate CTA. Scoped
-   to this component; .heading-actions itself (shared with
-   VocabSection.tsx) is untouched. */
-.shared-deck-section .shared-deck-detail-dismiss {
-  flex: 0 0 auto;
-  align-self: flex-end;
-  width: auto;
-  min-width: 0;
-  min-height: 0;
-  border: none;
-  border-radius: 0;
-  padding: 6px 2px;
-  color: var(--muted);
-  background: transparent;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  box-shadow: none;
-}
-
-.shared-deck-section .shared-deck-detail-dismiss:not(:disabled):hover {
-  color: var(--screen-accent, var(--accent));
-  background: transparent;
-  box-shadow: none;
-  transform: none;
-}
-
-.shared-detail-columns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.shared-preview-list {
-  display: grid;
-  gap: 6px;
-}
-
-/* Phase 80 -- the solid `var(--border)` rule below used to cut a hard
-   spreadsheet gridline across .shared-deck-detail's own ruled-paper
-   background (the repeating-linear-gradient a few rules up), so opened
-   decks read as a data table rather than the "opened notebook page" the
-   panel's own background already established. A dashed line in the same
-   warm ink tone the ruled-paper lines use (see .shared-deck-detail above)
-   reads as a word underlined on notebook paper instead. */
-.shared-preview-row {
-  display: grid;
-  grid-template-columns: minmax(90px, 1fr) minmax(70px, 0.8fr) minmax(120px, 1.2fr);
-  gap: 8px;
-  align-items: start;
-  border-bottom: 1px dashed rgba(110, 91, 47, 0.28);
-  padding: 8px 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.shared-preview-row strong {
-  color: var(--text);
-}
-
-/* Subscribed-mode deck detail: no custom_terms column exists for a lexeme
-   deck (see docs/architecture/shared-lexeme-progress-storage.md), so the
-   word list gets the full row width instead of sharing it with an
-   always-empty second column. */
-.shared-detail-columns-single {
-  grid-template-columns: 1fr;
-}
-
-/* Interactive "학습 목록" row -- same base look as .shared-preview-row
-   (border/padding/font), but laid out as word-info + status control
-   instead of a plain 3-column read-only row. Compound selector so it wins
-   over .shared-preview-row's own grid-template-columns regardless of
-   stylesheet order. */
-.shared-preview-row.shared-lexeme-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.shared-lexeme-row-main {
-  display: grid;
-  grid-template-columns: minmax(90px, 1fr) minmax(70px, 0.8fr) minmax(120px, 1.2fr);
-  gap: 8px;
-  flex: 1 1 320px;
-  min-width: 0;
-}
-
-.shared-lexeme-row-status {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.shared-lexeme-row-saving {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
 
 /* A full recommended deck (e.g. N5 ~680 words) would otherwise make this
    the tallest thing on the page -- a capped, scrollable panel keeps it a
    "학습 목록" section instead of a page-length list. */
-.shared-lexeme-word-list {
-  max-height: 520px;
-  overflow-y: auto;
-  padding-right: 6px;
-}
 
 /* Same "카드함 필터" drawer-tab treatment as .index-card-filter on the 노트
    tab, reused here so searching/filtering a big recommended deck's word
    list feels like the same card-file gesture, not a second admin toolbar. */
-.shared-lexeme-word-filter {
-  margin: 10px 0;
-}
-
-.shared-lexeme-word-count-caption {
-  margin: 8px 0 0;
-  font-size: 12px;
-}
-
-.shared-lexeme-load-more {
-  margin-top: 8px;
-}
 
 /* Drawer-tab framing instead of a plain bordered admin filter box -- a
    dashed top edge + small "카드함 필터" label reads as pulling open a card
    drawer's filter tab, not an admin data-table toolbar. */
-.index-card-filter {
-  display: grid;
-  gap: 4px;
-  border: 1px dashed var(--border-strong);
-  border-radius: 4px 4px 10px 10px;
-  padding: 6px 8px;
-  background: var(--surface-stage);
-}
-
-.vocab-toolbar-label {
-  justify-self: start;
-  margin-bottom: -2px;
-}
-
-.vocab-toolbar-label-icon {
-  width: 12px;
-  height: 12px;
-}
 
 /* Phase 166 -- .vocab-filter-group/.vocab-notebook-header/.vocab-pinned-
    note* (an "admin panel" stat-pill row above a filter toolbar) are gone.
@@ -9460,82 +8457,17 @@ input.reading-vocab-sticker-toggle:checked {
 
 /* Underline field, same family as the deck/sort selects above -- was a
    bordered pill, the one remaining boxed control in this toolbar. */
-.vocab-search-input {
-  min-height: 34px;
-  padding: 4px 4px 6px 28px;
-  border: none;
-  border-bottom: 1px solid var(--border-strong);
-  border-radius: 0;
-  background: transparent;
-}
-
-.vocab-search-input:focus {
-  border-bottom-color: var(--screen-accent, var(--primary));
-  outline: none;
-}
-
-.vocab-status-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 14px;
-}
 
 /* Casual Sticker Reader (Phase 57) -- underline text-tabs (same recipe as
    the reading tab's candidate-tray filters), not filled pill buttons, so
    "필터" reads as small labels on the notebook page rather than a second
    toolbar stacked under the deck/search/sort row. */
-.vocab-filter-chip {
-  min-width: 0;
-  padding: 3px 1px 4px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.vocab-filter-chip:hover {
-  filter: none;
-  color: var(--text);
-}
-
-.vocab-filter-chip-active {
-  border-bottom-color: var(--primary);
-  background: transparent;
-  color: var(--text);
-}
-
-.vocab-filter-known.vocab-filter-chip-active {
-  border-bottom-color: #1b6b3a;
-  background: transparent;
-  color: #1b6b3a;
-}
 
 /* Uncertain/unknown reuse the same lavender/coral-beige tones as the
    reading tab's token highlights (.token-chip-uncertain/-unknown) instead
    of the amber/rose this used to carry -- one status color language
    app-wide, and "모르는 단어" no longer reads as an error/warning chip
    here either. */
-.vocab-filter-uncertain.vocab-filter-chip-active {
-  border-bottom-color: #6f5f96;
-  background: transparent;
-  color: #6f5f96;
-}
-
-.vocab-filter-unknown.vocab-filter-chip-active {
-  border-bottom-color: #96603f;
-  background: transparent;
-  color: #96603f;
-}
-
-.vocab-filter-unclassified.vocab-filter-chip-active {
-  border-bottom-color: #6b5f3f;
-  background: transparent;
-  color: #6b5f3f;
-}
 
 /* Note-card treatment: an accent rule instead of the study card's fuller
    callout box, and clamped to two lines so a long saved sentence can't
@@ -9695,10 +8627,6 @@ input.reading-vocab-sticker-toggle:checked {
   background: var(--surface-stage);
 }
 
-.compact-heading {
-  margin-bottom: 10px;
-}
-
 .inline-edit-form {
   background: var(--soft-bg);
 }
@@ -9839,7 +8767,6 @@ input.reading-vocab-sticker-toggle:checked {
   .analyze-form,
   .result-section,
   .study-card,
-  .shared-deck-detail,
   .custom-term-section,
   .panel-card {
     padding: 14px;
@@ -9851,13 +8778,6 @@ input.reading-vocab-sticker-toggle:checked {
      replaced that card entirely with .book-spine (see .book-shelf-row's
      own mobile override further below), which never joined this shared
      list either, for the same reason. */
-
-  /* Top padding stays a touch taller than the shared 14px above so
-     .shared-deck-detail-tape (added after this rule, so it wins) still has
-     clearance above the heading row on mobile. */
-  .shared-deck-detail {
-    padding-top: 20px;
-  }
 
   textarea {
     min-height: 220px;
@@ -9874,11 +8794,6 @@ input.reading-vocab-sticker-toggle:checked {
     align-items: stretch;
     flex-direction: column;
     gap: 10px;
-  }
-
-  .heading-actions {
-    flex-direction: column;
-    align-items: stretch;
   }
 
   .deck-create,
@@ -9899,106 +8814,12 @@ input.reading-vocab-sticker-toggle:checked {
     justify-self: stretch;
   }
 
-  .shared-deck-message {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .shared-deck-title-row {
-    gap: 6px;
-  }
-
-  .shared-deck-disclaimer {
-    font-size: 11px;
-  }
-
-  /* Phase 158 -- was a single forced column (1fr) sized around a much
-     older cover ratio; already fixed once (Phase 147) to a 2-column card
-     grid. Book spines keep that same "2 mini books per row" answer the
-     brief itself suggests, just via flex-basis on the new .book-spine
-     instead of a grid track -- shelf/book silhouette must survive down to
-     320px, not degrade into a single-column card list, so this is a
-     resize of the same item, not a layout swap. */
-  .book-shelf-row {
-    gap: 8px;
-    padding-bottom: 0;
-  }
-
-  .book-spine {
-    flex: 0 1 calc(50% - 4px);
-    height: 158px;
-    border-radius: 4px 10px 10px 4px;
-  }
-
-  .book-spine-label {
-    font-size: 13px;
-  }
-
-  .shared-deck-section .hero-card,
-  .shared-deck-section .desk-surface-section,
-  .shared-deck-section .shared-deck-detail {
-    box-sizing: border-box;
-    max-width: calc(100vw - 40px);
-  }
-
-  .shared-deck-section .shared-deck-detail > *,
-  .shared-deck-section .result-heading,
-  .shared-deck-section .shared-detail-columns,
-  .shared-deck-section .shared-deck-title-row {
-    box-sizing: border-box;
-    min-width: 0;
-    max-width: 100%;
-    width: 100%;
-  }
-
-  .shared-deck-section .shared-deck-imported-badge,
-  .shared-deck-section .shared-deck-byline {
-    max-width: 100%;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
-  .shared-deck-section .shared-deck-imported-badge {
-    transform: none;
-  }
-
-  /* The desktop shelf-ledge line reads as "books resting on a shelf" under
-     a packed row of spines -- wrapped into a 2-column grid on mobile
-     there's no single row to sit under, so it's just a stray line under
-     the last row. Dropped rather than shown compressed. */
-  .book-shelf-row::before,
-  .book-shelf-row::after {
-    display: none;
-  }
-
-  .shared-detail-columns {
-    grid-template-columns: 1fr;
-  }
-
   /* Phase 80 -- this used to turn each row into its own solid-bordered
      white card once columns stack to 1fr, which reads as a list of admin
      table cells even more than desktop's single divider line did. A
      dashed underline (same tone as the desktop rule above) keeps rows
      reading as notebook lines at every width instead of switching to a
      boxed-card look specifically on phones. */
-  .shared-preview-row {
-    grid-template-columns: 1fr;
-    gap: 3px;
-    border: none;
-    border-bottom: 1px dashed rgba(110, 91, 47, 0.28);
-    border-radius: 0;
-    padding: 10px 2px;
-  }
-
-  .shared-lexeme-row-main {
-    grid-template-columns: 1fr;
-    gap: 2px;
-  }
-
-  .shared-lexeme-row-status {
-    width: 100%;
-    justify-content: space-between;
-  }
 
   .analyze-options,
   .stats-grid,
@@ -10020,19 +8841,9 @@ input.reading-vocab-sticker-toggle:checked {
     align-items: flex-start;
   }
 
-  .index-card-filter {
-    gap: 8px;
-    padding: 10px;
-  }
-
   /* Same app-wide mobile `button { width: 100% }` touch-target rule as the
      reading tab's filter tabs -- opt these small status filter tabs back
      out to their natural text width so they wrap side-by-side. */
-  .vocab-status-filters .vocab-filter-chip {
-    width: auto;
-    min-width: 0;
-    min-height: 34px;
-  }
 
   .management-actions {
     align-items: stretch;
@@ -15462,5 +14273,1287 @@ input.reading-vocab-sticker-toggle:checked {
 
   .vocab-file-foot-actions {
     margin-left: auto;
+  }
+}
+
+/* ==========================================================================
+   Deck C search ledger (references/mockups/deck-scale-catalog/handoff).
+   Replaces the photographed bookshelf, the horizontal row of live book
+   spines and the detail section that dropped below them. Desktop
+   (>=1024px): one green-bound register holding a wide searchable list and
+   the selected deck's page side by side; only the list scrolls (the page
+   scrolls on its own for long word lists). Phones and tablets: the same
+   register, one page at a time (list -> detail -> back). Binding and paper
+   are CSS only; every title, count, word, state and control is DOM.
+   ========================================================================== */
+.deck-ledger {
+  --dl-desk: #718776;
+  --dl-cloth: #355842;
+  --dl-cloth-text: #d9e7d8;
+  --dl-strip: #dce6d8;
+  --dl-paper: #f0f1e9;
+  --dl-page: #e7ede4;
+  --dl-ink: #284232;
+  --dl-sub: #718272;
+  --dl-green: #2e5940;
+  --dl-line: #becbbd;
+  --dl-row-line: #c2cec1;
+  --dl-mincho: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  display: block;
+  gap: 0;
+  color: var(--dl-ink);
+}
+
+/* Ink on paper: the app's pill button and boxed field looks are reset
+   once, scoped to this tab. */
+.deck-ledger button {
+  justify-content: flex-start;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: inherit;
+  text-align: left;
+  box-shadow: none;
+  transform: none;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.deck-ledger button:not(:disabled):hover,
+.deck-ledger button:not(:disabled):active {
+  box-shadow: none;
+  transform: none;
+}
+
+.deck-ledger button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.deck-ledger button:focus-visible,
+.deck-ledger input:focus-visible,
+.deck-ledger select:focus-visible {
+  outline: 2px solid #2f6945;
+  outline-offset: 2px;
+}
+
+.deck-ledger-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Scene header on the desk */
+.deck-ledger-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 79px;
+  padding: 0 12px;
+}
+
+.deck-ledger-kicker {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #dce7dc;
+}
+
+.deck-ledger-head h2 {
+  margin: 2px 0 0;
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #f4f5ec;
+}
+
+.deck-ledger .deck-ledger-head-link {
+  flex: none;
+  padding: 8px 0;
+  border-bottom: 1px solid #e3eddf;
+  color: #f4f5ed;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.deck-ledger .deck-ledger-head-link:not(:disabled):hover {
+  color: #ffffff;
+}
+
+.deck-ledger .deck-ledger-head-link:focus-visible {
+  outline-color: #f4f5ed;
+}
+
+/* The register: green binding around strip, pages and foot */
+.deck-ledger-register {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 12px solid var(--dl-cloth);
+  border-bottom: 0;
+  background: var(--dl-paper);
+  box-shadow: 0 22px 36px rgba(39, 70, 53, 0.35);
+}
+
+.deck-ledger-strip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 46px;
+  padding: 0 24px;
+  border-bottom: 1px solid #aebfac;
+  background: var(--dl-strip);
+  color: #4a7152;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.deck-ledger-strip-motto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* Messages are written on the register itself, under the strip. */
+.deck-ledger-message {
+  flex: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  min-height: 38px;
+  padding: 7px 24px;
+  border-bottom: 1px solid var(--dl-line);
+  background: #f6f4ea;
+  color: #3e5a45;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.deck-ledger-message-error {
+  background: #f6ece6;
+  color: #874b3f;
+}
+
+.deck-ledger-message-text {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.deck-ledger-message-stamp {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+
+.deck-ledger-message-actions {
+  display: inline-flex;
+  gap: 14px;
+}
+
+.deck-ledger-pages {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 69fr) minmax(0, 31fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+/* List page */
+.deck-ledger-list-page {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 11px 22px 0;
+  background: repeating-linear-gradient(0deg, transparent 0 38px, rgba(142, 170, 141, 0.05) 38px 39px), var(--dl-paper);
+}
+
+.deck-ledger-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 45px;
+  border-top: 1px solid var(--dl-line);
+  border-bottom: 1px solid var(--dl-line);
+}
+
+.deck-ledger-search,
+.deck-ledger-word-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  color: #57715d;
+}
+
+.deck-ledger-search:focus-within,
+.deck-ledger-word-search:focus-within {
+  box-shadow: inset 0 -2px 0 #3e7850;
+}
+
+.deck-ledger-search-icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+
+.deck-ledger .deck-ledger-search input,
+.deck-ledger .deck-ledger-word-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 32px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--dl-ink);
+  font-size: 13px;
+  box-shadow: none;
+  outline: 0;
+}
+
+.deck-ledger .deck-ledger-search input::placeholder,
+.deck-ledger .deck-ledger-word-search input::placeholder {
+  color: #748577;
+}
+
+.deck-ledger .deck-ledger-search input:focus,
+.deck-ledger .deck-ledger-word-search input:focus {
+  outline: 0;
+}
+
+.deck-ledger-sort {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 10px;
+  border-left: 1px solid #c0ccbe;
+  color: #667b69;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.deck-ledger-sort::after {
+  content: "";
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin-top: -4px;
+  border-right: 1.5px solid #3b6146;
+  border-bottom: 1.5px solid #3b6146;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.deck-ledger .deck-ledger-sort select {
+  width: auto;
+  min-width: 0;
+  max-width: 130px;
+  min-height: 0;
+  height: 30px;
+  padding: 0 16px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #3b6146;
+  font-size: 11px;
+  box-shadow: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.deck-ledger-filters {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 21px;
+  height: 48px;
+  border-bottom: 1px solid var(--dl-line);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.deck-ledger-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.deck-ledger .deck-ledger-filters button,
+.deck-ledger .deck-ledger-word-filters button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 2px solid transparent;
+  color: #637768;
+  font-size: 12px;
+}
+
+.deck-ledger .deck-ledger-filters b {
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.deck-ledger .deck-ledger-filters button:not(:disabled):hover,
+.deck-ledger .deck-ledger-word-filters button:not(:disabled):hover {
+  color: #28593a;
+}
+
+.deck-ledger .deck-ledger-filters button.is-active,
+.deck-ledger .deck-ledger-word-filters button.is-active {
+  color: #28593a;
+  border-bottom-color: #376e49;
+  font-weight: 700;
+}
+
+.deck-ledger .deck-ledger-filters button:focus-visible,
+.deck-ledger .deck-ledger-word-filters button:focus-visible {
+  outline-offset: -2px;
+}
+
+.deck-ledger-count {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 0 10px;
+  border-bottom: 1px solid #aebfac;
+  color: #65776a;
+  font-size: 11px;
+}
+
+/* The list's single scroll owner */
+.deck-ledger-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Rows are swapped in and out as the list scrolls; browser scroll
+     anchoring would otherwise nudge scrollTop when they change. */
+  overflow-anchor: none;
+  scrollbar-color: #9db3a0 transparent;
+  scrollbar-width: thin;
+}
+
+.deck-ledger-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deck-ledger .deck-ledger-row {
+  display: grid;
+  grid-template-columns: 37px minmax(0, 1fr) 82px 60px 32px 15px;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  /* One fixed height: the list window positions rows by it. */
+  height: 58px;
+  padding: 7px 10px 7px 4px;
+  border-bottom: 1px solid var(--dl-row-line);
+  border-left: 3px solid transparent;
+  color: var(--dl-ink);
+  cursor: pointer;
+}
+
+.deck-ledger .deck-ledger-row:not(:disabled):hover {
+  background: #e4ebe0;
+}
+
+.deck-ledger .deck-ledger-row.is-selected {
+  border-left-color: #4e8059;
+  background: #dbe7da;
+}
+
+.deck-ledger .deck-ledger-row:focus-visible {
+  outline-offset: -2px;
+}
+
+.deck-ledger-row-no {
+  font: 12px Georgia, "Times New Roman", serif;
+  color: #869887;
+  font-variant-numeric: oldstyle-nums;
+}
+
+.deck-ledger-row-main {
+  min-width: 0;
+}
+
+.deck-ledger-row-main strong {
+  display: block;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-ledger-row-main small {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: #718372;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-ledger-row-paused {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid #b9a49b;
+  color: #8a6152;
+  font-style: normal;
+}
+
+.deck-ledger-row-source {
+  color: #6e826f;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.deck-ledger-row-count {
+  color: #647a69;
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.deck-ledger-row-mark {
+  color: #346948;
+  font-size: 10px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.deck-ledger-row-chevron {
+  width: 14px;
+  height: 14px;
+  color: #749178;
+}
+
+.deck-ledger-list-note {
+  margin: 0;
+  padding: 14px 4px 18px;
+  color: #6f8170;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.deck-ledger-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 72px 15px;
+  color: var(--dl-ink);
+  font-size: 13px;
+  text-align: center;
+}
+
+.deck-ledger-empty strong {
+  font-size: 16px;
+}
+
+.deck-ledger-empty span {
+  color: var(--dl-sub);
+  font-size: 12px;
+}
+
+.deck-ledger .deck-ledger-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #3e684a;
+  font-size: 11px;
+  text-decoration: underline;
+  text-decoration-color: rgba(62, 104, 74, 0.55);
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.deck-ledger .deck-ledger-link:not(:disabled):hover {
+  color: #1f4a2e;
+  text-decoration-color: currentColor;
+}
+
+.deck-ledger-link-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.deck-ledger-list-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 40px;
+  border-top: 1px solid var(--dl-line);
+  color: #718274;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Selected deck page */
+.deck-ledger-detail {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 23px 21px 0;
+  border-left: 3px solid #7f9f85;
+  background: repeating-linear-gradient(0deg, transparent 0 38px, rgba(140, 170, 139, 0.055) 38px 39px), var(--dl-page);
+  overflow: hidden;
+}
+
+.deck-ledger-detail-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 30px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--dl-line);
+  color: #748674;
+  font-size: 11px;
+}
+
+.deck-ledger .deck-ledger-back {
+  display: none;
+  padding: 6px 0;
+  color: #426a4e;
+  font-size: 12px;
+}
+
+.deck-ledger-position {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.deck-ledger-detail-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 26px 2px 16px 0;
+  scrollbar-color: #9db3a0 transparent;
+  scrollbar-width: thin;
+}
+
+.deck-ledger-smallcap {
+  display: block;
+  color: #5d785f;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.deck-ledger-detail-title {
+  margin: 10px 0 12px;
+  color: #254a36;
+  font: 700 26px/1.3 var(--dl-mincho);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.deck-ledger-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  color: #6d806f;
+  font-size: 11px;
+}
+
+.deck-ledger-detail-meta span + span {
+  padding-left: 10px;
+  border-left: 1px solid #c0cdbd;
+}
+
+.deck-ledger-detail-date {
+  margin: 5px 0 0;
+  color: #7a8b7b;
+  font-size: 10px;
+}
+
+.deck-ledger-detail-states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 0;
+}
+
+.deck-ledger-state {
+  padding: 2px 7px;
+  border: 1px solid #9fb7a2;
+  color: #346948;
+  font-size: 11px;
+}
+
+.deck-ledger-state-paused {
+  border-color: #b9a49b;
+  color: #8a6152;
+}
+
+.deck-ledger-detail-desc {
+  margin: 20px 0 14px;
+  font-size: 12px;
+  line-height: 1.8;
+  word-break: keep-all;
+}
+
+.deck-ledger-note {
+  margin: 0 0 12px;
+  color: #6c7e6d;
+  font-size: 11px;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+.deck-ledger-privacy {
+  margin: 0;
+  color: #778a79;
+  font-size: 10px;
+}
+
+.deck-ledger-words {
+  margin-top: 8px;
+  border-top: 1px solid var(--dl-line);
+}
+
+.deck-ledger-words + .deck-ledger-words {
+  margin-top: 18px;
+}
+
+.deck-ledger-words-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 36px;
+  color: #6c816e;
+  font-size: 11px;
+}
+
+.deck-ledger-word-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+  border-top: 1px solid #d1dbcf;
+}
+
+.deck-ledger-word-search {
+  height: 36px;
+}
+
+.deck-ledger-word-filters {
+  display: flex;
+  gap: 14px;
+  height: 32px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.deck-ledger-word-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.deck-ledger .deck-ledger-word-filters button {
+  font-size: 11px;
+}
+
+.deck-ledger-word-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--dl-line);
+}
+
+.deck-ledger-word {
+  display: grid;
+  grid-template-columns: minmax(66px, auto) minmax(0, 70px) minmax(0, 1fr);
+  gap: 4px 9px;
+  align-items: center;
+  min-height: 39px;
+  padding: 4px 0;
+  border-top: 1px solid #d1dbcf;
+  font-size: 12px;
+}
+
+.deck-ledger-word strong {
+  font: 600 17px/1.3 var(--dl-mincho);
+  white-space: nowrap;
+}
+
+.deck-ledger-word > span {
+  overflow: hidden;
+  color: #728674;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-ledger-word b {
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.deck-ledger-word[tabindex]:focus {
+  outline: 0;
+}
+
+.deck-ledger-word[tabindex]:focus-visible {
+  outline: 2px solid #2f6945;
+  outline-offset: -2px;
+  background: rgba(219, 231, 218, 0.7);
+}
+
+.deck-ledger-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.deck-ledger-word-status {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.deck-ledger .deck-ledger-word-status select {
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #b7c6b6;
+  border-radius: 2px;
+  background: #f4f5ee;
+  color: #33503c;
+  font-size: 11px;
+}
+
+/* Entered from its row with Enter/Space: a ring drawn inside the box so the
+   row's own overflow never clips it. */
+.deck-ledger .deck-ledger-word-status select:focus,
+.deck-ledger .deck-ledger-word-status select:focus-visible {
+  outline: 0;
+  border-color: #2f6945;
+  box-shadow: inset 0 0 0 1px #2f6945, 0 0 0 2px rgba(47, 105, 69, 0.25);
+}
+
+.deck-ledger-word-status small {
+  color: #6c816e;
+  font-size: 10px;
+}
+
+.deck-ledger-word-caption,
+.deck-ledger-word-empty {
+  margin: 8px 0 0;
+  color: #6c816e;
+  font-size: 11px;
+}
+
+.deck-ledger .deck-ledger-more {
+  margin-top: 8px;
+}
+
+.deck-ledger-detail-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px 0 18px;
+  border-top: 1px solid var(--dl-line);
+}
+
+.deck-ledger .deck-ledger-action {
+  justify-content: center;
+  min-height: 42px;
+  padding: 11px 16px;
+  background: var(--dl-green);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.deck-ledger .deck-ledger-action:not(:disabled):hover {
+  background: #22482f;
+}
+
+.deck-ledger .deck-ledger-action-secondary {
+  border: 1px solid var(--dl-green);
+  background: transparent;
+  color: var(--dl-green);
+}
+
+.deck-ledger .deck-ledger-action-secondary:not(:disabled):hover {
+  background: rgba(46, 89, 64, 0.08);
+}
+
+.deck-ledger .deck-ledger-action-quiet {
+  border: 1px solid #a98276;
+  background: transparent;
+  color: #8a4f42;
+}
+
+.deck-ledger .deck-ledger-action-quiet:not(:disabled):hover {
+  background: rgba(138, 79, 66, 0.07);
+}
+
+.deck-ledger-detail-blank {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 26px;
+  color: #4f6754;
+  font-size: 12px;
+  line-height: 1.8;
+  word-break: keep-all;
+}
+
+.deck-ledger-detail-blank p {
+  margin: 0 0 12px;
+}
+
+.deck-ledger-detail-blank .deck-ledger-blank-title {
+  margin-top: 10px;
+  color: #254a36;
+  font: 700 20px/1.45 var(--dl-mincho);
+}
+
+.deck-ledger-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  height: 35px;
+  padding: 0 24px;
+  background: var(--dl-cloth);
+  color: var(--dl-cloth-text);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Desktop: list and page side by side on the desk. */
+@media (min-width: 1024px) {
+  body:has(.deck-ledger) .app-shell-content {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body:has(.deck-ledger) .library-canvas-shared {
+    width: 100%;
+    max-width: none;
+  }
+
+  .deck-ledger {
+    height: calc(100svh - 50px);
+    min-height: 620px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: var(--dl-desk);
+  }
+
+  .deck-ledger-stage {
+    width: min(1450px, calc(100vw - 70px));
+    height: min(770px, calc(100% - 44px));
+  }
+}
+
+/* Compact desktop: keep the selected action on the paper at 1024x768
+   (handoff/qa-1024x768-list.png). */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .deck-ledger-stage {
+    width: calc(100vw - 34px);
+    height: calc(100% - 32px);
+  }
+
+  .deck-ledger-pages {
+    grid-template-columns: minmax(0, 66fr) minmax(0, 34fr);
+  }
+
+  .deck-ledger-list-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .deck-ledger .deck-ledger-row {
+    grid-template-columns: 27px minmax(0, 1fr) 62px 48px 25px 13px;
+    gap: 5px;
+  }
+
+  .deck-ledger-row-source {
+    font-size: 9px;
+  }
+
+  .deck-ledger-row-main strong {
+    font-size: 13px;
+  }
+
+  .deck-ledger-filters {
+    gap: 12px;
+  }
+
+  .deck-ledger .deck-ledger-filters button {
+    font-size: 11px;
+  }
+
+  .deck-ledger-detail {
+    padding: 14px 17px 0;
+  }
+
+  .deck-ledger-detail-body {
+    padding-top: 14px;
+  }
+
+  .deck-ledger-detail-title {
+    margin: 7px 0 9px;
+    font-size: 23px;
+  }
+
+  .deck-ledger-detail-desc {
+    margin: 12px 0 9px;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  .deck-ledger-word {
+    min-height: 32px;
+  }
+
+  .deck-ledger-word strong {
+    font-size: 16px;
+  }
+
+  .deck-ledger-detail-foot {
+    padding: 8px 0 12px;
+  }
+}
+
+/* Phones and tablets: one page of the register at a time. */
+@media (max-width: 1023px) {
+  body:has(.deck-ledger) {
+    background: var(--dl-desk, #718776);
+  }
+
+  body:has(.deck-ledger) .page {
+    min-height: 100dvh;
+    padding: 0;
+  }
+
+  body:has(.deck-ledger) .app-toolbar {
+    margin-bottom: 0;
+  }
+
+  .deck-ledger {
+    background: linear-gradient(180deg, #718776, #6a8170);
+  }
+
+  .deck-ledger-stage {
+    height: calc(100dvh - 56px);
+    min-height: 480px;
+  }
+
+  .deck-ledger-head {
+    height: 68px;
+    padding: 0 20px;
+  }
+
+  .deck-ledger-kicker {
+    font-size: 9px;
+  }
+
+  .deck-ledger-head h2 {
+    font-size: 20px;
+  }
+
+  .deck-ledger .deck-ledger-head-link {
+    padding: 5px 0;
+    font-size: 11px;
+  }
+
+  .deck-ledger-register {
+    border-width: 7px;
+    border-bottom: 0;
+    box-shadow: none;
+  }
+
+  .deck-ledger-strip {
+    height: 30px;
+    padding: 0 12px;
+    font-size: 11px;
+  }
+
+  .deck-ledger-strip-motto {
+    font-size: 10px;
+  }
+
+  .deck-ledger-message {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .deck-ledger-pages {
+    display: block;
+    position: relative;
+  }
+
+  .deck-ledger-list-page,
+  .deck-ledger-detail {
+    height: 100%;
+  }
+
+  .deck-ledger-list-page {
+    padding: 0 12px;
+  }
+
+  .deck-ledger.is-detail-open .deck-ledger-list-page,
+  .deck-ledger:not(.is-detail-open) .deck-ledger-detail {
+    display: none;
+  }
+
+  .deck-ledger-detail {
+    padding: 8px 17px 0;
+    border-left: 0;
+  }
+
+  .deck-ledger .deck-ledger-back {
+    display: inline-flex;
+  }
+
+  .deck-ledger-detail-body {
+    padding-top: 20px;
+  }
+
+  .deck-ledger-detail-foot {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0 14px;
+  }
+
+  .deck-ledger-detail-foot .deck-ledger-privacy {
+    margin-left: auto;
+    text-align: right;
+  }
+
+  .deck-ledger-tools {
+    border-top: 0;
+  }
+
+  .deck-ledger .deck-ledger-search input {
+    font-size: 12px;
+  }
+
+  .deck-ledger-filters {
+    height: 41px;
+    gap: 16px;
+  }
+
+  .deck-ledger .deck-ledger-filters button {
+    font-size: 11px;
+  }
+
+  .deck-ledger-count {
+    padding: 11px 0 8px;
+    font-size: 10px;
+  }
+
+  .deck-ledger .deck-ledger-row {
+    grid-template-columns: 28px minmax(0, 1fr) 54px 31px 11px;
+    gap: 4px;
+    height: 59px;
+    padding: 6px 4px;
+  }
+
+  .deck-ledger-row-source {
+    display: none;
+  }
+
+  .deck-ledger-row-main strong {
+    font-size: 14px;
+  }
+
+  .deck-ledger-row-count,
+  .deck-ledger-row-mark {
+    font-size: 10px;
+  }
+
+  .deck-ledger-list-foot {
+    height: 34px;
+    font-size: 10px;
+  }
+
+  .deck-ledger .deck-ledger-list-foot .deck-ledger-link {
+    font-size: 10px;
+  }
+
+  .deck-ledger-foot {
+    height: 25px;
+    gap: 12px;
+    padding: 0 12px;
+    font-size: 10px;
+  }
+
+  .deck-ledger-word {
+    grid-template-columns: minmax(78px, auto) minmax(0, 78px) minmax(0, 1fr);
+    min-height: 42px;
+  }
+
+  .deck-ledger-word strong {
+    font-size: 20px;
+  }
+
+  .deck-ledger-detail-desc {
+    font-size: 13px;
+  }
+}
+
+/* Tablet widths keep the phone page model but with roomier paper. */
+@media (min-width: 701px) and (max-width: 1023px) {
+  .deck-ledger-head {
+    padding: 0 28px;
+  }
+
+  .deck-ledger-list-page {
+    padding: 4px 22px 0;
+  }
+
+  .deck-ledger-detail {
+    padding: 12px 28px 0;
+  }
+
+  .deck-ledger .deck-ledger-row {
+    grid-template-columns: 34px minmax(0, 1fr) 82px 60px 32px 14px;
+    gap: 8px;
+  }
+
+  .deck-ledger-row-source {
+    display: block;
+  }
+}
+
+@media (max-width: 700px) {
+  .deck-ledger-count-cols {
+    display: none;
+  }
+
+  .deck-ledger-sort-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .deck-ledger .deck-ledger-sort select {
+    max-width: 100px;
+  }
+}
+
+@media (max-width: 350px) {
+  .deck-ledger-head {
+    height: 62px;
+    padding: 0 14px;
+  }
+
+  .deck-ledger .deck-ledger-head-link {
+    font-size: 10px;
+  }
+
+  .deck-ledger-strip-motto {
+    display: none;
+  }
+
+  .deck-ledger-list-page {
+    padding: 0 8px;
+  }
+
+  .deck-ledger-filters {
+    gap: 11px;
+  }
+
+  .deck-ledger .deck-ledger-filters button {
+    font-size: 10px;
+  }
+
+  .deck-ledger .deck-ledger-row {
+    grid-template-columns: 22px minmax(0, 1fr) 44px 26px 10px;
+  }
+
+  .deck-ledger-row-main strong {
+    font-size: 13px;
+  }
+
+  .deck-ledger-row-count,
+  .deck-ledger-row-mark {
+    font-size: 9px;
+  }
+
+  .deck-ledger-detail {
+    padding-left: 13px;
+    padding-right: 13px;
+  }
+
+  .deck-ledger-word {
+    grid-template-columns: minmax(70px, auto) minmax(0, 56px) minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .deck-ledger-detail-title {
+    font-size: 23px;
+  }
+
+  .deck-ledger-detail-foot .deck-ledger-privacy {
+    display: none;
+  }
+
+  .deck-ledger-detail-foot .deck-ledger-action {
+    width: 100%;
+  }
+
+  .deck-ledger-foot span:last-child {
+    display: none;
   }
 }

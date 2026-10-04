@@ -2037,9 +2037,14 @@ export default function HomePage() {
     }
   }
 
-  async function loadSharedDecks() {
+  // preserveMessage: callers that just wrote a result message (import,
+  // unpublish, republish) refresh the list without wiping that message --
+  // otherwise React batches the clear with the set and the user never sees it.
+  async function loadSharedDecks(options: { preserveMessage?: boolean } = {}) {
     setIsLoadingSharedDecks(true);
-    setSharedDeckMessage("");
+    if (!options.preserveMessage) {
+      setSharedDeckMessage("");
+    }
 
     try {
       const data = await requestJson<SharedDeckSummary[]>("/shared-decks");
@@ -2183,7 +2188,7 @@ export default function HomePage() {
         setSharedDeckMessage(
           `${withObjectParticle(sourceTitle)} 내 학습 목록에 추가했어요.`,
         );
-        await loadSharedDecks();
+        await loadSharedDecks({ preserveMessage: true });
       } else {
         const totalImportedCount =
           result.imported_vocab_count + result.imported_custom_term_count;
@@ -2196,7 +2201,7 @@ export default function HomePage() {
         await loadDecks();
         await loadVocabItems(importedDeckId);
         await loadCustomTerms(importedDeckId);
-        await loadSharedDecks();
+        await loadSharedDecks({ preserveMessage: true });
       }
     } catch (error) {
       setSharedDeckMessage(
@@ -2232,7 +2237,7 @@ export default function HomePage() {
       // in their own list/detail -- see docs/architecture/shared-lexeme-progress-storage.md
       // "Owner unpublish policy" -- so re-fetch rather than filtering it out
       // locally, and refresh the open detail pane in place if it's this deck.
-      await loadSharedDecks();
+      await loadSharedDecks({ preserveMessage: true });
       await refreshOpenSharedDeckDetail(sharedDeckId);
     } catch (error) {
       if (isHttpError(error, 401)) {
@@ -2243,7 +2248,7 @@ export default function HomePage() {
         setSharedDeckMessage("내가 올린 공유덱만 공유 취소할 수 있습니다.");
       } else if (isHttpError(error, 404)) {
         setSharedDeckMessage("이미 삭제되었거나 존재하지 않는 공유덱입니다.");
-        await loadSharedDecks();
+        await loadSharedDecks({ preserveMessage: true });
       } else {
         setSharedDeckMessage("공유를 취소하지 못했어요. 잠시 후 다시 시도해주세요.");
       }
@@ -2270,7 +2275,7 @@ export default function HomePage() {
         { method: "POST" },
       );
       setSharedDeckMessage(result.message || "다시 공유했습니다.");
-      await loadSharedDecks();
+      await loadSharedDecks({ preserveMessage: true });
       await refreshOpenSharedDeckDetail(sharedDeckId);
     } catch (error) {
       if (isHttpError(error, 401)) {
@@ -2281,7 +2286,7 @@ export default function HomePage() {
         setSharedDeckMessage("내가 올린 공유덱만 다시 공유할 수 있습니다.");
       } else if (isHttpError(error, 404)) {
         setSharedDeckMessage("이미 삭제되었거나 존재하지 않는 공유덱입니다.");
-        await loadSharedDecks();
+        await loadSharedDecks({ preserveMessage: true });
       } else {
         setSharedDeckMessage("다시 공유하지 못했어요. 잠시 후 다시 시도해주세요.");
       }

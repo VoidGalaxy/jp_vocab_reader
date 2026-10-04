@@ -63,16 +63,21 @@ export function StatusSelect({
   value,
   label,
   onChange,
+  tabIndex,
 }: {
   value: TokenStatus;
   label: string;
   onChange: (status: TokenStatus) => void;
+  // Optional: lists with their own row navigation take the select out of
+  // the Tab order and focus it on demand.
+  tabIndex?: number;
 }) {
   return (
     <select
       value={value}
       onChange={(event) => onChange(event.target.value as TokenStatus)}
       aria-label={label}
+      tabIndex={tabIndex}
     >
       {Object.entries(statusLabels).map(([status, labelText]) => (
         <option key={status} value={status}>
@@ -200,11 +205,24 @@ export function sortSharedDecksByJlptLevel<T extends { title: string }>(
 const KOREAN_SYLLABLE_START = 0xac00;
 const KOREAN_SYLLABLE_END = 0xd7a3;
 
+// Digits read in Sino-Korean (일, 이, 삼 ...). Only 이(2), 사(4), 오(5),
+// 구(9) end without a final consonant; a trailing 0 is read as 십/백/천/만
+// (or 영), which all have one.
+const DIGITS_WITHOUT_BATCHIM = new Set(["2", "4", "5", "9"]);
+
 export function withObjectParticle(word: string) {
-  const lastChar = word.charCodeAt(word.length - 1);
-  const hasBatchim =
-    lastChar >= KOREAN_SYLLABLE_START &&
-    lastChar <= KOREAN_SYLLABLE_END &&
-    (lastChar - KOREAN_SYLLABLE_START) % 28 !== 0;
+  // Look past closing brackets/quotes/spaces: "단어장 (3)" reads as "삼".
+  const spoken = word.replace(/[\s)\]}」』"'”’]+$/, "");
+  const last = spoken.charAt(spoken.length - 1);
+  let hasBatchim: boolean;
+  if (/[0-9]/.test(last)) {
+    hasBatchim = !DIGITS_WITHOUT_BATCHIM.has(last);
+  } else {
+    const lastChar = spoken.charCodeAt(spoken.length - 1);
+    hasBatchim =
+      lastChar >= KOREAN_SYLLABLE_START &&
+      lastChar <= KOREAN_SYLLABLE_END &&
+      (lastChar - KOREAN_SYLLABLE_START) % 28 !== 0;
+  }
   return `${word}${hasBatchim ? "을" : "를"}`;
 }
