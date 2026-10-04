@@ -1,13 +1,18 @@
 # Home Approved References
 
-These are visual references approved for the next Home asset phase. They are
-reference-only: do not crop, difference-matte, or wire them into production.
+These references and the
+[`HOME_DESIGN_RETROSPECTIVE.md`](HOME_DESIGN_RETROSPECTIVE.md) describe the
+historical V10.12 phase. Current Home production uses the B2 binding scene in
+`frontend/components/HomeDashboard.tsx` and
+`frontend/public/brand/decor/home-b2-binding/`.
+
+The files below are archival visual references, not current production assets.
+Do not crop, difference-matte, or wire them into production.
 
 - `home-grounded-scene-target.png`: approved overall scene and grounding direction.
 - `home-grounded-scene-clean-target.png`: clean composition reference.
 - `home-shiori-reading-pose-3.png`: approved Shiori pose.
 - `home-ground-contact-shadow-reference.png`: approved contact-shadow behavior.
 
-Production assets must be generated as true transparent foreground layers and
-visually checked over black, white, checkerboard, and the actual desk surface
-before any code is changed.
+The transparent-layer guidance belongs to this historical phase. New scene work
+must define its own asset boundary and validate it against the current app.

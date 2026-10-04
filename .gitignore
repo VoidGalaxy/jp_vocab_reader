@@ -106,3 +106,5 @@ backend/data/jlpt/*_recommended_deck.json
 # Local agent tooling (machine-local, never committed)
 .claude/settings.local.json
 .agents/
+frontend/.qa-tmp/
+references/mockups/**/gate*-qa/

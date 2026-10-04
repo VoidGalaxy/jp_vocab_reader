@@ -3,6 +3,10 @@
 This document turns the Home redesign failures into rules for future visual work.
 It is a decision manual, not a phase history.
 
+For the historical V7-V10.12 failure history, Gate A/Gate B workflow, and
+reusable prompt templates (not current production authority), see
+[`../home-approved/HOME_DESIGN_RETROSPECTIVE.md`](../home-approved/HOME_DESIGN_RETROSPECTIVE.md).
+
 ## 1. Why earlier passes failed
 
 1. **Implementation started before the target was fixed.** Repeated CSS position and shadow edits optimized a compromised screenshot instead of a single approved composition.
@@ -74,4 +78,3 @@ A visual phase is complete only when all are true:
 - No horizontal overflow, asset 404, new console error, matte residue, or shadow clipping exists.
 - Build succeeds once near the end and `git diff --check` is clean.
 - The final report starts with removed or redefined structure, then before/after first impression.
-
