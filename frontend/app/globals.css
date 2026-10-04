@@ -2803,16 +2803,6 @@
   gap: 12px;
 }
 
-.vocab-panel {
-  --screen-accent: var(--tone-ink-brown);
-  --screen-accent-soft: #f1e7da;
-  /* Slightly tighter than the shared .tab-panel rhythm (18px) -- the note
-     screen's own hero card is already compact, so the same gap below it
-     just reads as dead space before the filter/list start. Scoped to this
-     screen only. */
-  gap: 10px;
-}
-
 .shared-deck-section {
   --screen-accent: var(--tone-dusty-blue);
   --screen-accent-soft: #e7eef3;
@@ -9422,47 +9412,6 @@ input.reading-vocab-sticker-toggle:checked {
   margin-top: 8px;
 }
 
-/* Phase 182 -- .vocab-v2-pages (list+detail flowing BELOW the photo on a
-   separately CSS-simulated ruled-paper texture, entirely disconnected from
-   the actual photo above it) is gone. List and detail now render as
-   absolutely-positioned layers directly on .vocab-v3-scene's own photo --
-   see the .vocab-v3-* block further down this file. .vocab-desk-empty
-   still just needs room to center its guide message in, now inside
-   .vocab-v3-ledger-wrap instead of the old .vocab-v2-list-column. */
-@media (min-width: 1024px) {
-  .vocab-desk-empty {
-    display: grid;
-    align-items: center;
-    min-height: 220px;
-  }
-}
-
-/* .vocab-page-guide -- modifier on top of the shared .empty-guide box so
-   the "덱을 아직 안 골랐어요" / "만든 단어장이 없어요" states read as a
-   small sticker note pinned to the notebook page rather than a floating
-   generic empty-state card. Scoped addition (not a rewrite of the app-wide
-   .empty-guide every other tab's empty states still use). */
-.vocab-page-guide {
-  position: relative;
-  max-width: 380px;
-  margin: 0 auto;
-}
-
-.vocab-page-guide::before {
-  content: "";
-  position: absolute;
-  top: -8px;
-  left: 50%;
-  z-index: 1;
-  width: 46px;
-  height: 16px;
-  border: 1px solid rgba(217, 122, 74, 0.4);
-  background: rgba(217, 122, 74, 0.32);
-  box-shadow: 0 2px 4px rgba(37, 43, 30, 0.12);
-  transform: translateX(-50%) rotate(-3deg);
-  pointer-events: none;
-}
-
 /* Drawer-tab framing instead of a plain bordered admin filter box -- a
    dashed top edge + small "카드함 필터" label reads as pulling open a card
    drawer's filter tab, not an admin data-table toolbar. */
@@ -9491,91 +9440,6 @@ input.reading-vocab-sticker-toggle:checked {
    .vocab-v2-title-tag, pinned inside the scene itself alongside the small
    .vocab-v2-count-note stat summary -- see the .vocab-v2-* rules further
    down this file. */
-/* Bookmark/flag-shaped action labels -- reuses the app's established
-   right-notch clip-path (.vocab-item-status-wrap below, and
-   .home-hero-bookmark/.library-hero-bookmark elsewhere) instead of the
-   default full gradient button box, so "이 덱 학습하기"/"원문 읽기"/
-   "더보기" read as small pinned labels, not a webapp CTA row. Overrides
-   the app-wide `button{}` rule's min-width/border-radius/padding/
-   gradient background directly (class selector beats the bare element
-   selector at equal specificity depth). */
-.vocab-bookmark-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 8px 22px 8px 14px;
-  border: 0;
-  border-radius: 3px;
-  /* Fixed-pixel notch depth (not a percentage) -- a percentage point
-     scales with the element's own width, which turned into a huge arrow
-     spanning much of the button once the primary action goes full-width
-     on mobile (see the >640px-gated width:100% rule further down this
-     file). A constant 16px notch reads the same small "bookmark flag"
-     shape at every width. */
-  clip-path: polygon(
-    0 0,
-    calc(100% - 16px) 0,
-    100% 50%,
-    calc(100% - 16px) 100%,
-    0 100%
-  );
-  background: var(--soft-bg);
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  font-weight: 700;
-  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.12);
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft);
-}
-
-.vocab-bookmark-action:not(:disabled):hover {
-  transform: translateX(2px);
-  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.16);
-}
-
-.vocab-bookmark-action:not(:disabled):active {
-  transform: translateX(1px) scale(0.98);
-}
-
-.vocab-bookmark-action:disabled {
-  background: #cfc3a8;
-  color: #fff;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.vocab-bookmark-action-primary {
-  background: var(--screen-accent, var(--primary));
-  color: #fff;
-  font-weight: 800;
-}
-
-/* "더보기" stays a plain small disclosure link, not a third bookmark flag
-   -- it toggles the row of secondary bookmark labels below rather than
-   navigating anywhere itself. */
-.vocab-bookmark-action-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  margin-left: auto;
-  padding: 6px 4px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 12.5px;
-  font-weight: 700;
-  box-shadow: none;
-}
-
-.vocab-bookmark-action-toggle:not(:disabled):hover {
-  color: var(--text);
-  box-shadow: none;
-  transform: none;
-}
 
 .vocab-search-wrap {
   position: relative;
@@ -9673,442 +9537,9 @@ input.reading-vocab-sticker-toggle:checked {
   color: #6b5f3f;
 }
 
-/* Phase 182 -- .vocab-notebook-detail (a separate sticky card painted with
-   a CSS ruled-paper texture standing in for "the notebook's other page")
-   and .vocab-v2-list-column (the list's own, separately-simulated ruled
-   texture) are both gone. List and detail are no longer two independently
-   textured panels sitting side by side below a photo -- .vocab-v3-ledger
-   and .vocab-v3-detail are just internally-scrolling DOM layers laid
-   directly on the ONE real photo's own left/right pages (.vocab-v3-scene,
-   further down). Mobile keeps .vocab-v3-detail hidden (display:none) and
-   the exact inline per-row detail flow, same as before this phase. */
-.vocab-v3-detail {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .vocab-v3-ledger-wrap {
-    position: absolute;
-    left: 17%;
-    top: 25%;
-    width: 36%;
-    height: 68%;
-    /* flex, not grid-template-rows: the middle child (the {message}
-       paragraph) only renders conditionally, and a fixed row-track count
-       would leave .vocab-v3-ledger (meant to be the flexible last track)
-       stuck in whichever track its position happens to land in instead of
-       actually filling the remaining height. flex:1 on the ledger itself
-       (below) fills whatever space is left regardless of how many
-       siblings precede it. */
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-
-  /* Compound selector (beats either single-class rule regardless of
-     source order) -- the "덱을 아직 안 골랐어요" guide is this wrap's only
-     child then, and needs to center in the leftover space rather than
-     stretch to fill it the way a real ledger list does. */
-  .vocab-v3-ledger-wrap.vocab-desk-empty {
-    align-items: center;
-    justify-content: center;
-  }
-
-  .vocab-v3-ledger {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: 6px;
-  }
-
-  .vocab-v3-detail {
-    display: block;
-    position: absolute;
-    left: 57%;
-    top: 8%;
-    width: 35%;
-    height: 84%;
-    overflow-y: auto;
-    padding: 4px 10px 10px;
-  }
-
-  /* The ledger column is narrower than a normal page-width word list, so
-     the row's own flex-wrap row (headword + meaning + status + toggle all
-     trying to share one line before wrapping) read as a jumbled two-line
-     mess instead of clean wraps -- stacking each part on its own line
-     here is more legible in this narrower column, closer to how a real
-     ledger entry (one fact per line) reads anyway. */
-  .vocab-v3-ledger .vocab-row-main {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .vocab-v3-ledger .vocab-row-meaning {
-    flex-basis: auto;
-  }
-
-  .vocab-v3-detail .vocab-row-detail {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-  }
-}
-
-/* Phase 87 -- the idle note page sits directly on the parent photo's own
-   paper instead of drawing a second nested box -- one page, one guide
-   message. */
-.vocab-v3-detail-idle {
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  min-height: 220px;
-  padding: 24px 18px;
-  text-align: center;
-}
-
-.vocab-v3-detail-header {
-  display: grid;
-  gap: 8px;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px dashed var(--border);
-}
-
-/* vocabulary-index-row (renamed from .vocab-row) -- the outer row identity;
-   vocab-row-* sub-classes below (headword/meaning/badges/detail/status)
-   keep their existing names, same pattern as .reader-paper keeping its
-   reader-mode-* header sub-classes.
-
-   Phase 166 (Vocab V2) -- was a bordered/radius/folded-corner "index card"
-   per row (Phase 43/57): defensible on its own, but stacked 20-50 deep it
-   still reads as "a pile of cards", the exact silhouette this phase's
-   brief rules out for a scan-heavy operate screen ("카드 더미처럼 만들지
-   않는다"). Each row is now a plain ledger line -- no border/radius/fold,
-   a bottom dashed rule between rows instead (the same rule style
-   .vocab-row-detail already uses inside a row), so 20-50 words read as
-   entries in one ledger, not a stack of separate cards. */
-.vocabulary-index-row {
-  position: relative;
-  padding: 10px 4px;
-  border-bottom: 1px dashed var(--border);
-  background: transparent;
-  transition: background var(--motion-fast) var(--ease-soft);
-}
-
-.vocabulary-index-row:last-child {
-  border-bottom: none;
-}
-
-.vocabulary-index-row:hover {
-  background: var(--soft-bg);
-}
-
-.vocab-row-expanded {
-  background: var(--soft-bg);
-  border-bottom-color: var(--border-strong);
-}
-
-.vocab-row-main {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 10px;
-}
-
-.vocab-row-headword {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-/* Phase 44: was --text/600 -- the same full-strength ink color as
-   .vocab-item-surface, just one size down, so the meaning competed with
-   the headword for "read me first" instead of following it. Dropped to
-   --text-secondary/500 so 단어 표면형 reads first and the meaning follows
-   as quieter supporting info; still large/dark enough to scan easily, not
-   --muted (that's reserved for genuinely incidental text elsewhere). */
-.vocab-row-meaning {
-  flex: 1 1 140px;
-  min-width: 0;
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-}
-
-.vocab-row-badges {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-
-.vocab-row-due-chip {
-  padding: 2px 8px;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--paper-bg);
-  color: var(--primary-dark);
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.vocab-row-toggle {
-  flex: 0 0 auto;
-  min-height: 30px;
-  padding: 4px 8px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.vocab-row-toggle .reading-vocab-collapse-icon {
-  width: 12px;
-  height: 12px;
-}
-
-.vocab-row-detail {
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
-}
-
-/* Phase 166 -- below the desktop tier (where detail lives in the sticky
-   .vocab-notebook-detail note page instead), an expanded row's inline
-   detail borrows the V2 scene's own "clipped note pulled from the
-   notebook's back pocket" motif -- a kraft-tone patch, a small binder-
-   clip corner mark, and a faint rotation -- rather than reading as a
-   plain expanded form section. Purely decorative (::before), no layout
-   change to the content it wraps. */
-@media (max-width: 1023px) {
-  /* Phase 182 -- was a flat kraft-tone patch; now the real note-pocket
-     photo (the same bordered index-card crop the desktop detail pane
-     sits on, see .vocab-v3-detail), so an expanded row's detail reads as
-     a slip pulled from the SAME notebook's back pocket rather than an
-     unrelated tinted card. */
-  .vocab-row-detail {
-    position: relative;
-    margin-top: 10px;
-    padding: 14px 14px 10px 22px;
-    border-top: none;
-    border-radius: 3px 12px 12px 12px;
-    background-color: #f8f2dd;
-    background-image: url("/brand/decor/phase182/vocab-note-pocket-mobile.webp");
-    background-size: cover;
-    background-position: center;
-    box-shadow: 0 8px 18px rgba(37, 43, 30, 0.16);
-    transform: rotate(-0.4deg);
-  }
-
-  .vocab-row-detail::before {
-    content: "";
-    position: absolute;
-    top: -7px;
-    left: 16px;
-    z-index: 1;
-    width: 12px;
-    height: 16px;
-    border: 2px solid var(--tone-coral);
-    border-radius: 6px;
-    pointer-events: none;
-  }
-}
-
-.vocab-item-surface {
-  color: var(--text);
-  font-size: 19px;
-  font-weight: 800;
-  overflow-wrap: anywhere;
-}
-
-.vocab-item-reading {
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-/* Wraps the (still fully functional) native <select> in the same warm
-   status tint used by reader highlights/status badges elsewhere -- shaped
-   as a small bookmark-flag tag (clip-path only paints this wrapper's own
-   background; the <select> child underneath keeps its normal full
-   rectangular hit box, so click/tap targeting is unaffected) instead of a
-   plain rounded pill, so status reads as a little bookmark sticker rather
-   than a form control. Same notch language as .home-hero-bookmark/
-   .library-hero-bookmark elsewhere in the brand system. */
-.vocab-item-status-wrap {
-  flex: 0 0 auto;
-  /* justify-self:start -- .vocab-notebook-detail-header (the only grid
-     ancestor this wrapper sits in) defaults its grid items to
-     justify-items:stretch, which the flex-only "flex:0 0 auto" above does
-     nothing to opt out of; a percentage clip-path notch (82%) on a
-     stretched-to-full-grid-track width turns into a huge arrow banner
-     instead of a small flag. Explicit here rather than a scoped ancestor
-     override so every context this wrapper is used in stays a content-
-     sized flag, regardless of its parent's layout mode. */
-  justify-self: start;
-  width: fit-content;
-  max-width: 100%;
-  clip-path: polygon(0 0, 82% 0, 100% 50%, 82% 100%, 0 100%);
-}
-
-.vocab-item-status-wrap select {
-  width: auto;
-  min-width: 0;
-  min-height: 0;
-  padding: 5px 18px 5px 10px;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  color: inherit;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.vocab-item-meaning {
-  margin: 0;
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-.vocab-item-secondary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.vocab-item-secondary-tag {
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--soft-bg);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  /* Same fix as .token-sheet-meta-tag -- a long 품사/기본형/덱 이름 value
-     (e.g. a long custom-term part_of_speech) forced this pill to its full
-     unwrapped width and clipped the tail against the card edge instead of
-     wrapping. */
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.vocab-item-review-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.vocab-item-review-badge {
-  padding: 2px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--soft-bg);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.vocab-item-review-badge-accent {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  border-color: var(--border-strong);
-  background: var(--paper-bg);
-  color: var(--primary-dark);
-}
-
-.vocab-item-review-badge-icon {
-  width: 11px;
-  height: 11px;
-}
-
-.vocab-item-review-badge-muted {
-  color: var(--muted);
-  font-weight: 500;
-}
-
 /* Note-card treatment: an accent rule instead of the study card's fuller
    callout box, and clamped to two lines so a long saved sentence can't
    make the library card tower over its neighbors. */
-/* Casual Sticker Reader (Phase 57) -- a small taped-on strip (::before)
-   instead of a colored border-left, same recipe the Analyze tab's word
-   card still uses (.token-sheet-meaning-block) -- so the saved example
-   reads as a note taped inside the expanded row rather than a callout box.
-   (Reading's own word inspector dropped this taped-strip language in
-   Phase 120 in favor of a plain quiet note line -- see .token-note-example
-   in the reader inspector rules.) */
-.vocab-item-example {
-  position: relative;
-  display: grid;
-  gap: 4px;
-  margin-top: 4px;
-  border: 1px solid #ecdfb8;
-  border-radius: 4px 10px 10px 10px;
-  padding: 10px 10px 6px;
-  background: #fdf9ee;
-}
-
-.vocab-item-example::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: 12px;
-  z-index: 1;
-  width: 32px;
-  height: 11px;
-  border: 1px solid rgba(232, 194, 92, 0.6);
-  background: rgba(232, 194, 92, 0.45);
-  transform: rotate(-3deg);
-  pointer-events: none;
-}
-
-.vocab-item-example-label {
-  color: #8a6d1f;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.vocab-item-example-text {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: var(--text);
-  font-size: 13px;
-  line-height: 1.6;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.vocab-item-example-empty {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-style: italic;
-}
-
-.vocab-item-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-}
 
 /* Phase 108 -- "내 단어장 뜻 수정" (MeaningQuickEdit's own trigger) and
    "뜻 오류 신고" are the two purely-informational/secondary actions in this
@@ -10130,7 +9561,6 @@ input.reading-vocab-sticker-toggle:checked {
    by TokenDetailSheet's own "뜻 오류 신고", which is a plain
    .token-note-action-link there), applied directly in VocabSection.tsx and
    StudySection.tsx's own report-meaning buttons. */
-.vocab-item-actions .meaning-quick-edit-trigger,
 .study-answer-reveal .meaning-quick-edit-trigger,
 .report-meaning-link-button {
   flex: 0 0 auto;
@@ -10149,7 +9579,6 @@ input.reading-vocab-sticker-toggle:checked {
   box-shadow: none;
 }
 
-.vocab-item-actions .meaning-quick-edit-trigger:not(:disabled):hover,
 .study-answer-reveal .meaning-quick-edit-trigger:not(:disabled):hover,
 .report-meaning-link-button:not(:disabled):hover {
   color: var(--screen-accent, var(--accent));
@@ -10173,384 +9602,11 @@ input.reading-vocab-sticker-toggle:checked {
   transform: none;
 }
 
-/* ===========================================================================
-   vocab-v3-* -- Phase 182 (Vocab Full Scene Replacement / Skeleton
-   Removal). Mobile (base rules): a compact top slip (title tag + search +
-   deck/sort), a horizontal wrapping row of physical index tabs, then a
-   single ruled notebook page (vocab-ledger-page-mobile.webp) the ledger
-   rows sit on in normal document flow -- a different shot of the same
-   notebook, not the desktop spread scaled down. Selected-row detail stays
-   the existing inline .vocab-row-detail flow (see its own mobile rules
-   further down), now given a small note-pocket paper backing.
-   >=1024px: .vocab-v3-scene becomes ONE open ring-binder photo
-   (vocab-notebook-spread-no-tabs.webp -- tabs cropped out at the source so
-   .vocab-v3-tab-rail's own photographed tab crops are the only tabs on
-   screen) with the tab rail sticking out past its left edge, search/deck/
-   sort as paper labels on the left page's own top margin, the word ledger
-   an internally-scrolling layer over the rest of that same left page, and
-   the detail note living on the photo's own right-page index card --
-   list, detail, and controls all read as one physical object instead of a
-   photo header plus a separately-textured list below it.
-   =========================================================================== */
-.vocab-v3-scene {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.vocab-v3-notebook-img {
-  display: none;
-}
-
-.vocab-v3-title-tag {
-  display: inline-flex;
-  align-self: flex-start;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px 5px 8px;
-  border-radius: 3px 10px 10px 3px;
-  background: var(--panel-bg);
-  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 800;
-  transform: rotate(-2deg);
-}
-
-.vocab-v3-title-tag .shiori-mark {
-  width: 16px;
-  height: 16px;
-}
-
-/* Physical index tabs -- a horizontal wrapping row on mobile (no
-   horizontal scroll: brief explicitly rules that out), each button a real
-   photographed tab crop (phase182/vocab-tab-*.png) instead of a solid CSS
-   color block. */
-.vocab-v3-tab-rail {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.vocab-v3-tab {
-  position: relative;
-  flex: 0 0 auto;
-  width: 30%;
-  aspect-ratio: 362 / 260;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font-size: 11px;
-  font-weight: 800;
-  text-align: center;
-  cursor: pointer;
-}
-
-.vocab-v3-tab-img {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: fill;
-  pointer-events: none;
-  user-select: none;
-}
-
-.vocab-v3-tab-label {
-  position: relative;
-  z-index: 1;
-  padding: 0 14% 6% 8%;
-  line-height: 1.15;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
-}
-
-.vocab-v3-tab-active {
-  filter: brightness(1.08) saturate(1.15);
-  transform: translateY(-3px) scale(1.04);
-}
-
-.vocab-v3-tab-active .vocab-v3-tab-label {
-  font-weight: 900;
-}
-
-/* Compact top slip -- search first (the single most scan-critical
-   control), deck + sort chips right after. Normal flow on mobile, laid
-   onto the photo's own blank page margin on desktop (see the >=1024px
-   override below). */
-.vocab-v3-topstrip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-}
-
-.vocab-v3-search-slip {
-  display: flex;
-  flex: 1 1 200px;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 6px 10px;
-  border-radius: 3px 12px 12px 3px;
-  background: var(--panel-bg);
-  box-shadow: 0 4px 10px rgba(37, 43, 30, 0.1);
-}
-
-.vocab-v3-search-input {
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-  padding: 2px 2px 3px;
-  border: none;
-  border-bottom: 1.5px solid rgba(61, 47, 20, 0.3);
-  border-radius: 0;
-  background: transparent;
-  color: var(--text);
-  font-size: 13px;
-}
-
-.vocab-v3-search-input:focus {
-  outline: none;
-  border-bottom-color: var(--screen-accent, var(--primary));
-}
-
-/* .vocab-search-icon (shared with SharedDeckSection's own search field) is
-   absolutely positioned by default for a wrap that pads its input to make
-   room -- this slip is a plain flex row instead, so the icon needs to sit
-   in flow as a normal flex item. */
-.vocab-v3-search-slip .vocab-search-icon {
-  position: static;
-  flex: 0 0 auto;
-  transform: none;
-}
-
-.vocab-v3-chip-icon {
-  flex: 0 0 auto;
-  width: 12px;
-  height: 12px;
-  color: var(--muted);
-}
-
-.vocab-v3-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  max-width: 100%;
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: var(--panel-bg);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
-}
-
-.vocab-v3-chip select {
-  min-width: 0;
-  max-width: 12em;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Ledger wrap -- mobile: the shared ruled-page photo behind normal-flow
-   rows (the list scrolls with the page, same as every other mobile list in
-   this app). Desktop switches to an internally-scrolling layer positioned
-   over the SAME notebook photo's left page -- see the >=1024px rules
-   further down (grouped with .vocab-v3-detail so list/detail positioning
-   stays easy to compare side by side). */
-.vocab-v3-ledger-wrap {
-  position: relative;
-  min-width: 0;
-  padding: 12px 14px 12px 10px;
-  border-radius: 4px 16px 16px 4px;
-  background-color: #f8f2dd;
-  background-image: url("/brand/decor/phase182/vocab-ledger-page-mobile.webp");
-  background-size: cover;
-  background-position: top;
-  background-repeat: no-repeat;
-  box-shadow: 0 10px 22px rgba(37, 43, 30, 0.14);
-}
-
-.vocab-v3-ledger {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-/* 학습하기/원문읽기/더보기 stamp row + the small stat note, both rendered
-   as siblings right after .vocab-v3-scene -- see VocabSection.tsx. */
-.vocab-v3-stamp-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.vocab-v3-more-panel {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 2px 4px;
-}
-
-.vocab-v3-count-note {
-  display: inline-block;
-  margin-left: auto;
-  padding: 4px 10px;
-  border-radius: 2px 8px 8px 2px;
-  background: var(--panel-bg);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
-  transform: rotate(-1deg);
-}
-
-@media (min-width: 1024px) {
-  /* The whole scene collapses onto ONE real photo: the mobile-only single-
-     page image and the mobile tab-rail's wrapping-row layout both give way
-     to the photo + a left-edge tab column. */
-  .vocab-v3-scene {
-    display: block;
-    width: 100%;
-    max-width: 1180px;
-    margin: 0 auto;
-    aspect-ratio: 1267 / 933;
-  }
-
-  .vocab-v3-notebook-img {
-    display: block;
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: fill;
-    pointer-events: none;
-    user-select: none;
-    /* Home Nav V1.1 seam repair -- top corners must read flush with the
-       toolbar's own torn paper edge, not as a second rounded frame
-       boundary. Only the lower corners (the photographed notebook's own
-       resting corners) keep their radius. */
-    border-radius: 0 0 10px 10px;
-    box-shadow: 0 18px 36px rgba(37, 43, 30, 0.22);
-  }
-
-  /* Home Nav V1.1 seam repair -- the toolbar's own paper strip already
-     carries this label as the active "단어" nav tab, and top:-3% pushed
-     it above .vocab-v3-scene into the nav seam. Removed from the desktop
-     render tree entirely; mobile (outside this media query) is
-     unaffected. */
-  .vocab-v3-title-tag {
-    display: none;
-  }
-
-  /* Sticks out past the photo's own left cover edge, exactly where the
-     source photo's baked-in tabs used to be before they were cropped out
-     -- these are the ONLY tabs on screen now. */
-  .vocab-v3-tab-rail {
-    position: absolute;
-    z-index: 2;
-    /* Was -6%: the scene doesn't reliably have that much surrounding page
-       margin at every width, so a negative left this large clipped tab
-       labels against the viewport's own left edge (confirmed via
-       screenshot -- "완벽히 아는 단어" lost its 완). 0 keeps the tabs
-       flush with the notebook's own left cover edge instead of bleeding
-       further left past it. */
-    left: 0;
-    top: 4%;
-    width: 14%;
-    height: 90%;
-    flex-direction: column;
-    flex-wrap: nowrap;
-    gap: 0;
-  }
-
-  .vocab-v3-tab {
-    flex: 1 1 0;
-    width: 100%;
-    aspect-ratio: auto;
-    font-size: 12px;
-  }
-
-  .vocab-v3-tab-label {
-    padding: 0 40% 6% 6%;
-    font-size: 10.5px;
-  }
-
-  .vocab-v3-tab-active {
-    transform: translateX(4px) scale(1.05);
-  }
-
-  .vocab-v3-topstrip {
-    position: absolute;
-    z-index: 1;
-    left: 17%;
-    top: 3%;
-    width: 32%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 5px;
-  }
-
-  /* .vocab-v3-search-slip's mobile flex-basis (200px, sized for a row
-     layout) becomes a HEIGHT basis once the topstrip switches to
-     flex-direction:column here -- ballooned the slip to ~200px tall
-     instead of its natural content height. */
-  .vocab-v3-search-slip {
-    flex: 0 0 auto;
-  }
-
-  .vocab-v3-chip {
-    align-self: flex-start;
-  }
-
-  .vocab-v3-ledger-wrap {
-    background: none;
-    box-shadow: none;
-    padding: 0;
-  }
-
-  .vocab-v3-ledger {
-    gap: 0;
-  }
-}
-
-/* Softened -- 덱 관리/덱 공유/고급 used to each be their own
-   .management-card box (border + white-78% fill), so opening 관리 stacked
-   three bordered/shadowed cards on top of each other and read as an admin
-   settings screen. One shared soft surface now holds all three as
-   sections of a single note; .management-card itself carries no
-   border/background of its own (see below), just a dashed rule between
-   sections. */
-.vocab-management-panel {
-  position: relative;
-  display: grid;
-  gap: 4px;
-  padding: 20px 16px 14px;
-  border-radius: 4px 14px 14px 14px;
-  background: var(--surface-stage);
-}
-
 /* A small pinned-note tab instead of a card border -- ties this "관리
    쪽지" (deck management/share/custom terms) surface to the same
    washi-tape material as the reader page and Home's sticky note, so it
    reads as a note tucked at the back of the notebook, not a settings
    panel. */
-.vocab-management-panel::before,
 .custom-term-section::before {
   content: "";
   position: absolute;
@@ -10641,25 +9697,6 @@ input.reading-vocab-sticker-toggle:checked {
 
 .compact-heading {
   margin-bottom: 10px;
-}
-
-/* Phase 80 -- was a plain solid-border/uniform-radius white box, the one
-   remaining "settings form" card in Vocab (단어 직접 추가/사용자 정의 용어
-   추가/inline edit all use this). Dashed border + the same asymmetric
-   index-card radius .vocab-management-panel/.custom-term-section already
-   use reads as a slip tucked into the notebook's back pocket instead of a
-   modal-style form panel -- same "dashed = secondary/attached" language
-   .backup-tools already established just above. .paper-corner (added on
-   the 3 call sites in VocabSection.tsx) supplies the folded-corner detail
-   for free via its own free ::after slot. */
-.vocab-form-panel {
-  display: grid;
-  gap: 14px;
-  border: 1.5px dashed var(--paper-border);
-  border-radius: 4px 14px 14px 14px;
-  padding: 18px;
-  background: var(--panel-bg);
-  box-shadow: 0 8px 20px rgba(120, 98, 40, 0.08);
 }
 
 .inline-edit-form {
@@ -10803,8 +9840,6 @@ input.reading-vocab-sticker-toggle:checked {
   .result-section,
   .study-card,
   .shared-deck-detail,
-  .vocab-form-panel,
-  .vocab-management-panel,
   .custom-term-section,
   .panel-card {
     padding: 14px;
@@ -10988,64 +10023,6 @@ input.reading-vocab-sticker-toggle:checked {
   .index-card-filter {
     gap: 8px;
     padding: 10px;
-  }
-
-  /* Phase 80 (now applied to the Phase 149 bookmark-action classes; Phase
-     166 retargets these two selectors from .vocab-bookmark-actions/
-     .vocab-bookmark-more to their V2 replacements) -- the app-wide mobile
-     `button { width: 100% }` touch-target rule (see the >640px-gated rule
-     elsewhere in this file) would stretch all 3 always-visible actions
-     ("이 덱 학습하기"/"원문 읽기"/"더보기") full-width, stacking them into
-     an admin/settings-panel row (Phase 79 QA). Only the primary stays
-     full-width; the rest opt back out to their natural notched-tag width
-     so the row still reads as one clear primary action plus small labels,
-     not three stacked action bars. 44px tap target kept via min-height,
-     not visual padding. */
-  .vocab-v3-stamp-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .vocab-bookmark-action-primary {
-    width: 100%;
-  }
-
-  .vocab-bookmark-action:not(.vocab-bookmark-action-primary) {
-    width: auto;
-    min-width: 0;
-    min-height: 40px;
-  }
-
-  .vocab-bookmark-action-toggle {
-    width: auto;
-    min-width: 0;
-    min-height: 40px;
-    margin-left: 0;
-  }
-
-  .vocab-v3-more-panel {
-    width: 100%;
-  }
-
-  .vocab-v3-more-panel .vocab-bookmark-action {
-    width: auto;
-    min-width: 0;
-    min-height: 42px;
-  }
-
-  .vocab-row-main {
-    align-items: flex-start;
-  }
-
-  .vocab-row-toggle {
-    width: auto;
-  }
-
-  .vocab-item-actions {
-    flex-direction: column;
-    align-items: stretch;
   }
 
   /* Same app-wide mobile `button { width: 100% }` touch-target rule as the
@@ -12203,30 +11180,26 @@ input.reading-vocab-sticker-toggle:checked {
    status control reads as the same color language as every other status
    cue in the app, not a fourth palette. */
 .reading-vocab-status-badge.token-chip-known,
-.legend-swatch.token-chip-known,
-.vocab-item-status-wrap.token-chip-known {
+.legend-swatch.token-chip-known {
   background: #eef9f1;
   color: #1b6b3a;
   box-shadow: none;
 }
 
 .reading-vocab-status-badge.token-chip-uncertain,
-.legend-swatch.token-chip-uncertain,
-.vocab-item-status-wrap.token-chip-uncertain {
+.legend-swatch.token-chip-uncertain {
   background: #f0ecf9;
   color: #6f5f96;
 }
 
 .reading-vocab-status-badge.token-chip-unknown,
-.legend-swatch.token-chip-unknown,
-.vocab-item-status-wrap.token-chip-unknown {
+.legend-swatch.token-chip-unknown {
   background: #faeee2;
   color: #96603f;
 }
 
 .reading-vocab-status-badge.token-chip-unclassified,
-.legend-swatch.token-chip-unclassified,
-.vocab-item-status-wrap.token-chip-unclassified {
+.legend-swatch.token-chip-unclassified {
   background: #f1ead9;
   color: #6b5f3f;
   box-shadow: none;
@@ -15110,4 +14083,1384 @@ input.reading-vocab-sticker-toggle:checked {
 .study-book .study-book-head {
   position: relative;
   z-index: 3;
+}
+
+/* ==========================================================================
+   Vocab A file drawer (references/mockups/vocab-b-hybrid-three/handoff).
+   Replaces the ring-binder photo, photographed index tabs and detached
+   right detail page. Desktop (>=1024px): one shallow green drawer with a
+   narrow index side and one wide ivory sheet; phones and tablets: one
+   full-height sheet with a binding strip. Drawer and paper are CSS only;
+   every word, count and control is DOM. Japanese and Korean share each
+   row, and the open row carries its own detail.
+   ========================================================================== */
+.vocab-file {
+  --vf-desk: #708477;
+  --vf-cloth: #345b45;
+  --vf-cloth-dark: #244834;
+  --vf-ink: #293329;
+  --vf-sub: #5f6d61;
+  --vf-green: #2f5e3e;
+  --vf-paper: #f2f0e7;
+  --vf-rule: #b9c3b6;
+  --vf-rule-soft: rgba(162, 176, 158, 0.66);
+  --vf-known: #4f6c55;
+  --vf-unknown: #9b634f;
+  --vf-uncertain: #5f6590;
+  --vf-unclassified: #6f776f;
+  --vf-due: #866f2f;
+  --vf-mincho: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  display: block;
+  gap: 0;
+  color: var(--vf-ink);
+}
+
+.vocab-file-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Ink on paper: the app's gradient pill button and boxed field looks are
+   reset once, scoped to this tab. */
+.vocab-file button {
+  justify-content: flex-start;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: inherit;
+  text-align: left;
+  box-shadow: none;
+  transform: none;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.vocab-file button:not(:disabled):hover,
+.vocab-file button:not(:disabled):active {
+  box-shadow: none;
+  transform: none;
+}
+
+.vocab-file button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.vocab-file button:focus-visible,
+.vocab-file input:focus-visible,
+.vocab-file select:focus-visible,
+.vocab-file textarea:focus-visible {
+  outline: 2px solid #396d4b;
+  outline-offset: 2px;
+}
+
+.vocab-file-stage {
+  position: relative;
+}
+
+.vocab-file-tray {
+  position: relative;
+}
+
+.vocab-file-index,
+.vocab-file-back,
+.vocab-file-tab {
+  display: none;
+}
+
+.vocab-file-sheet {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sheet header */
+.vocab-file-head {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 77px;
+  padding-bottom: 15px;
+}
+
+.vocab-file-head h2 {
+  margin: 5px 0 0;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #31543d;
+}
+
+.vocab-file-smallcap {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #56705b;
+}
+
+.vocab-file-count {
+  flex: none;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 35px;
+  line-height: 1;
+  color: #305a41;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.vocab-file-count small {
+  margin-left: 4px;
+  font: 10px "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+
+/* Search, deck, sort, add */
+.vocab-file-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  min-width: 0;
+  height: 42px;
+  border-top: 1px solid #b3c2b3;
+  border-bottom: 1px solid #b3c2b3;
+  color: #49634e;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.vocab-file-search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 100%;
+  color: #67796a;
+}
+
+.vocab-file-search-icon {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+
+.vocab-file .vocab-file-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 30px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #293d2e;
+  font-size: 12px;
+  outline: 0;
+}
+
+.vocab-file .vocab-file-search input::placeholder {
+  color: #778578;
+}
+
+.vocab-file .vocab-file-search input:focus {
+  outline: 0;
+}
+
+.vocab-file-search:focus-within {
+  box-shadow: inset 0 -2px 0 #3e7850;
+}
+
+.vocab-file-select {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.vocab-file-select::after {
+  content: "";
+  position: absolute;
+  right: 1px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin-top: -4px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.vocab-file .vocab-file-select select {
+  width: auto;
+  min-width: 0;
+  max-width: 190px;
+  min-height: 0;
+  height: 30px;
+  padding: 0 14px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #3f5c45;
+  font-size: 12px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.vocab-file .vocab-file-select select:focus {
+  outline: 0;
+}
+
+.vocab-file .vocab-file-select select:focus-visible {
+  outline: 2px solid #396d4b;
+  outline-offset: 2px;
+}
+
+.vocab-file-link {
+  color: #3d6549;
+  text-decoration: underline;
+  text-decoration-color: rgba(61, 101, 73, 0.55);
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.vocab-file .vocab-file-link:not(:disabled):hover {
+  color: #1f4a2e;
+  text-decoration-color: currentColor;
+}
+
+.vocab-file-link-danger {
+  color: #8d4e47;
+  text-decoration-color: rgba(141, 78, 71, 0.5);
+}
+
+.vocab-file .vocab-file-link-danger:not(:disabled):hover {
+  color: #6e3530;
+}
+
+.vocab-file .vocab-file-ink-button {
+  justify-content: center;
+  padding: 7px 14px;
+  border: 1px solid #3e6a4c;
+  border-radius: 3px;
+  color: #f4f2ea;
+  background: #3e6a4c;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vocab-file .vocab-file-ink-button:not(:disabled):hover {
+  background: #2f5a3d;
+}
+
+/* Status line */
+.vocab-file-filters {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 17px;
+  min-width: 0;
+  height: 42px;
+  border-bottom: 1px solid #b9c4b6;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.vocab-file-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.vocab-file .vocab-file-filter {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 2px solid transparent;
+  color: #647365;
+  font-size: 12px;
+}
+
+.vocab-file .vocab-file-filter b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.vocab-file .vocab-file-filter:not(:disabled):hover {
+  color: #2b5e3e;
+}
+
+.vocab-file .vocab-file-filter.is-active {
+  color: #2b5e3e;
+  border-bottom-color: #3e7850;
+  font-weight: 700;
+}
+
+.vocab-file .vocab-file-filter:focus-visible {
+  outline-offset: -2px;
+}
+
+.vocab-file-message {
+  flex: none;
+  margin: 0;
+  padding: 8px 0 7px;
+  border-bottom: 1px solid var(--vf-rule-soft);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--vf-sub);
+}
+
+.vocab-file-message.is-success {
+  color: #2f5e3e;
+}
+
+.vocab-file-message.is-error {
+  color: #8d4e47;
+}
+
+.vocab-file-columns {
+  flex: none;
+  display: grid;
+  grid-template-columns: 37px minmax(0, 45fr) minmax(0, 55fr);
+  align-items: center;
+  height: 36px;
+  margin-top: 2px;
+  border-bottom: 1px solid #aebdae;
+  font-size: 11px;
+  color: #69796c;
+}
+
+.vocab-file-columns > span:first-child {
+  grid-column: 1 / 3;
+}
+
+.vocab-file-columns > span:nth-child(2) {
+  padding-left: 28px;
+}
+
+/* The one scroller on the sheet. */
+.vocab-file-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #b4c0b1 transparent;
+}
+
+.vocab-file-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One paired row: number, Japanese, Korean. The hit button and the open
+   detail share the same three columns, so the detail lines up under the
+   Korean meaning. */
+.vocab-file-pair {
+  position: relative;
+  display: grid;
+  grid-template-columns: 37px minmax(0, 45fr) minmax(0, 55fr);
+  border-bottom: 1px solid var(--vf-rule-soft);
+}
+
+.vocab-file-pair.is-open {
+  background: rgba(228, 235, 224, 0.66);
+}
+
+.vocab-file-pair.is-open::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  background: #3c7650;
+}
+
+.vocab-file .vocab-file-pair-hit {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: start;
+  min-height: 68px;
+  color: var(--vf-ink);
+  cursor: pointer;
+}
+
+.vocab-file .vocab-file-pair-hit:not(:disabled):hover {
+  background: rgba(228, 235, 224, 0.42);
+}
+
+.vocab-file .vocab-file-pair-hit:focus-visible {
+  outline-offset: -2px;
+}
+
+.vocab-file-no {
+  padding-top: 23px;
+  padding-left: 9px;
+  white-space: nowrap;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 11px;
+  color: #829184;
+  font-variant-numeric: tabular-nums;
+}
+
+.vocab-file-ja {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 14px 9px 10px 0;
+}
+
+.vocab-file-ja strong {
+  min-width: 0;
+  font-family: var(--vf-mincho);
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.vocab-file-ja > span {
+  font-size: 12px;
+  color: #6e7b6e;
+}
+
+.vocab-file-ja .term-badge {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 11px;
+  color: #6d7a6c;
+}
+
+.vocab-file-ko {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 21px 0 10px 28px;
+}
+
+.vocab-file-ko::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 32px;
+  width: 10px;
+  height: 1px;
+  background: #9fb09d;
+}
+
+.vocab-file-ko strong {
+  flex: 1 1 12em;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.45;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.vocab-file-status {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--vf-known);
+  white-space: nowrap;
+}
+
+.vocab-file-status em {
+  font-style: normal;
+  color: var(--vf-due);
+}
+
+.vocab-file-pair[data-status="unknown"] .vocab-file-status {
+  color: var(--vf-unknown);
+}
+
+.vocab-file-pair[data-status="uncertain"] .vocab-file-status {
+  color: var(--vf-uncertain);
+}
+
+.vocab-file-pair[data-status="unclassified"] .vocab-file-status {
+  color: var(--vf-unclassified);
+}
+
+/* Open row detail */
+.vocab-file-detail {
+  grid-column: 3;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 0 16px 28px;
+}
+
+.vocab-file-example {
+  margin: 0;
+  font-family: var(--vf-mincho);
+  font-size: 15px;
+  line-height: 1.6;
+  color: #4f6453;
+}
+
+.vocab-file-example mark,
+.vocab-file-example strong {
+  padding: 0;
+  background: transparent;
+  color: #2b4f37;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(60, 118, 80, 0.45);
+  text-underline-offset: 3px;
+}
+
+.vocab-file-example-empty {
+  margin: 0;
+  font-size: 12px;
+  color: #7a867b;
+}
+
+.vocab-file-meta {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #6c786d;
+}
+
+.vocab-file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  font-size: 12px;
+}
+
+.vocab-file-actions .vocab-file-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+}
+
+.vocab-file-status-select select {
+  font-weight: 600;
+}
+
+.vocab-file-actions .meaning-quick-edit {
+  flex: 1 0 100%;
+  display: grid;
+  gap: 6px;
+}
+
+.vocab-file .meaning-quick-edit-actions {
+  display: flex;
+  gap: 14px;
+}
+
+.vocab-file .meaning-quick-edit-actions button {
+  color: #3d6549;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.vocab-file .meaning-quick-edit-actions button:first-child {
+  padding: 6px 14px;
+  border-radius: 3px;
+  color: #f4f2ea;
+  background: #3e6a4c;
+  text-decoration: none;
+}
+
+.vocab-file textarea,
+.vocab-file .vocab-file-form input,
+.vocab-file .vocab-file-form select,
+.vocab-file .vocab-file-manage input,
+.vocab-file .vocab-file-manage select {
+  min-height: 36px;
+  border: 1px solid #b7c2b4;
+  border-radius: 3px;
+  padding: 7px 9px;
+  background: #fbfaf5;
+  color: var(--vf-ink);
+  font-size: 13px;
+}
+
+.vocab-file textarea {
+  min-height: 64px;
+}
+
+.vocab-file .meaning-quick-edit-hint,
+.vocab-file .compact-message {
+  margin: 0;
+  font-size: 11px;
+  color: #6c786d;
+}
+
+/* Inline forms (add, edit, custom term) sit on the sheet as ruled areas. */
+.vocab-file-form {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 6px;
+  padding: 12px 0 14px;
+  border-top: 1px dashed #b3bfb0;
+  border-bottom: 1px dashed #b3bfb0;
+  list-style: none;
+}
+
+.vocab-file-form h3,
+.vocab-file-manage h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #31543d;
+}
+
+.vocab-file .vocab-item-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 12px;
+}
+
+.vocab-file .inline-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  font-size: 11px;
+  color: #5f6d61;
+}
+
+.vocab-file .inline-field.wide-field {
+  grid-column: 1 / -1;
+}
+
+.vocab-file .form-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+.vocab-file .form-actions > button {
+  width: auto;
+  flex: none;
+}
+
+.vocab-file-add {
+  margin-top: 10px;
+}
+
+/* Empty / no-deck notes written on the sheet. */
+.vocab-file-note {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  max-width: 34em;
+  padding: 34px 0 20px 37px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--vf-sub);
+}
+
+.vocab-file-note p {
+  margin: 0;
+}
+
+.vocab-file-note-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #31543d;
+}
+
+.vocab-file-note-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.vocab-file-note .vocab-file-link {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+/* Management, written on the same sheet in place of the list. */
+.vocab-file-manage {
+  display: grid;
+  gap: 0;
+  padding-bottom: 16px;
+}
+
+.vocab-file-manage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  border-bottom: 1px solid #aebdae;
+  font-size: 12px;
+}
+
+.vocab-file-manage-section {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--vf-rule-soft);
+  font-size: 12px;
+}
+
+.vocab-file-manage-section > * {
+  max-width: 100%;
+}
+
+.vocab-file-manage h4 {
+  margin: 0;
+  font-size: 13px;
+  color: #31543d;
+}
+
+.vocab-file-manage-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.vocab-file-manage-links .vocab-file-link,
+.vocab-file-manage-section > .vocab-file-link {
+  min-height: 28px;
+}
+
+.vocab-file-manage-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #6c786d;
+}
+
+.vocab-file .deck-create {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.vocab-file .deck-create input {
+  flex: 1 1 160px;
+  width: auto;
+}
+
+.vocab-file-danger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin-top: 4px;
+}
+
+.vocab-file-danger-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8d4e47;
+}
+
+.vocab-file .publish-deck-form {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  width: min(100%, 520px);
+}
+
+.vocab-file .publish-deck-form .inline-field {
+  width: 100%;
+}
+
+.vocab-file-backup {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  width: min(100%, 520px);
+}
+
+.vocab-file-backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.vocab-file-terms {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.vocab-file-term-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vocab-file-term {
+  display: grid;
+  grid-template-columns: minmax(0, 40fr) minmax(0, 60fr) auto;
+  gap: 4px 16px;
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--vf-rule-soft);
+}
+
+.vocab-file-term-word strong {
+  font-family: var(--vf-mincho);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.vocab-file-term-word span {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #6e7b6e;
+}
+
+.vocab-file-term-meaning {
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.vocab-file-term-meaning small {
+  font-size: 11px;
+  font-weight: 400;
+  color: #6c786d;
+}
+
+.vocab-file-term-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Sheet foot */
+.vocab-file-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  border-top: 1px solid #b5c0b3;
+  color: #657568;
+  font-size: 11px;
+}
+
+.vocab-file-foot-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vocab-file-foot-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.vocab-file-foot .vocab-file-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  font-size: 12px;
+}
+
+/* Desktop: the drawer. */
+@media (min-width: 1024px) {
+  .vocab-file-phone-only {
+    display: none !important;
+  }
+
+  body:has(.vocab-file) .app-shell-content {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body:has(.vocab-file) .library-canvas-vocab {
+    width: 100%;
+    max-width: none;
+  }
+
+  .vocab-file-stage {
+    height: calc(100svh - 50px);
+    min-height: 620px;
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    place-items: center;
+    overflow: hidden;
+    background: radial-gradient(ellipse at center 90%, rgba(59, 87, 64, 0.2), transparent 64%), var(--vf-desk);
+  }
+
+  .vocab-file-tray {
+    width: min(1370px, 95vw);
+    height: min(765px, calc(100% - 60px));
+    display: grid;
+    grid-template-columns: 188px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    border: 15px solid var(--vf-cloth-dark);
+    border-bottom-width: 20px;
+    border-radius: 6px;
+    background: var(--vf-cloth-dark);
+    box-shadow: 0 23px 35px rgba(32, 61, 43, 0.31), inset 0 0 0 1px #7b947c;
+  }
+
+  .vocab-file-index {
+    display: flex;
+    flex-direction: column;
+    gap: 27px;
+    min-height: 0;
+    padding: 25px 17px;
+    background: linear-gradient(112deg, #2f5440, #365e47);
+    color: #edf0e7;
+  }
+
+  .vocab-file-mark {
+    font-family: var(--vf-mincho);
+    font-size: 19px;
+  }
+
+  .vocab-file-index-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-height: 0;
+  }
+
+  .vocab-file .vocab-file-index-tab {
+    padding: 11px 7px;
+    border-bottom: 1px solid #7f9c82;
+    color: #d4dfd0;
+    font-size: 13px;
+  }
+
+  .vocab-file .vocab-file-index-tab:not(:disabled):hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .vocab-file .vocab-file-index-tab.is-active {
+    padding-left: 11px;
+    border-left: 3px solid #e8e4cc;
+    background: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+  }
+
+  .vocab-file .vocab-file-index-tab:focus-visible {
+    outline-color: #e8e4cc;
+    outline-offset: -2px;
+  }
+
+  .vocab-file-index-foot {
+    margin-top: auto;
+    font-size: 11px;
+    color: #bfccbd;
+  }
+
+  .vocab-file-back {
+    display: block;
+    position: absolute;
+    top: 17px;
+    left: 210px;
+    right: 30px;
+    bottom: 17px;
+    background: #c9d3c2;
+    transform: translate(8px, 5px);
+    box-shadow: 5px 5px 0 #9eaf9d;
+    pointer-events: none;
+  }
+
+  .vocab-file-sheet {
+    margin: 19px 21px 4px 9px;
+    padding: 30px 42px 19px;
+    background: repeating-linear-gradient(180deg, transparent 0 36px, rgba(142, 164, 139, 0.07) 36px 37px), var(--vf-paper);
+    box-shadow: 0 3px 0 #d6d8cb;
+  }
+
+  .vocab-file-tab {
+    display: block;
+    position: absolute;
+    top: -24px;
+    left: 35px;
+    height: 24px;
+    min-width: 177px;
+    max-width: 60%;
+    padding: 6px 13px;
+    overflow: hidden;
+    border-radius: 7px 8px 0 0;
+    background: #e2e1d4;
+    color: #56725a;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .vocab-file-tray {
+    grid-template-columns: 145px minmax(0, 1fr);
+  }
+
+  .vocab-file-back {
+    left: 168px;
+  }
+
+  .vocab-file-sheet {
+    padding-left: 27px;
+    padding-right: 25px;
+  }
+
+  .vocab-file-columns,
+  .vocab-file-pair {
+    grid-template-columns: 30px minmax(0, 43fr) minmax(0, 57fr);
+  }
+
+  .vocab-file-ja {
+    column-gap: 7px;
+  }
+
+  .vocab-file-ja strong {
+    font-size: 23px;
+  }
+
+  .vocab-file-ja > span {
+    font-size: 11px;
+  }
+
+  .vocab-file-ko strong {
+    font-size: 15px;
+  }
+
+  .vocab-file-filters,
+  .vocab-file-tools {
+    gap: 12px;
+  }
+}
+
+/* Phones and tablets: one sheet with a green binding strip. */
+@media (max-width: 1023px) {
+  body:has(.vocab-file) {
+    background: var(--vf-paper, #f2f0e7);
+  }
+
+  body:has(.vocab-file) .page {
+    min-height: 100dvh;
+    padding: 0;
+  }
+
+  body:has(.vocab-file) .app-toolbar {
+    margin-bottom: 0;
+  }
+
+  .vocab-file-desk-only {
+    display: none !important;
+  }
+
+  .vocab-file-stage {
+    height: calc(100dvh - 56px);
+    min-height: 480px;
+  }
+
+  .vocab-file-tray {
+    height: 100%;
+  }
+
+  .vocab-file-sheet {
+    height: 100%;
+    padding: 22px 22px 6px 35px;
+    overflow: hidden;
+    background: var(--vf-paper);
+    box-shadow: inset 5px 0 #244834, inset 15px 0 #708f71;
+  }
+
+  .vocab-file-sheet::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 12px;
+    background: #466c50;
+    box-shadow: inset 5px 0 #244834;
+    pointer-events: none;
+  }
+
+  .vocab-file-sheet::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 17px;
+    height: 100%;
+    box-shadow: inset -5px 0 rgba(169, 189, 170, 0.5);
+    pointer-events: none;
+  }
+
+  .vocab-file-head {
+    min-height: 0;
+    padding-bottom: 12px;
+    align-items: flex-start;
+  }
+
+  .vocab-file-head h2 {
+    margin-top: 6px;
+    font-size: 22px;
+  }
+
+  .vocab-file-count {
+    font-size: 27px;
+  }
+
+  .vocab-file-smallcap,
+  .vocab-file-count small {
+    font-size: 11px;
+  }
+
+  .vocab-file-tools {
+    height: 42px;
+    gap: 12px;
+    font-size: 12px;
+  }
+
+  .vocab-file .vocab-file-search input {
+    font-size: 13px;
+  }
+
+  .vocab-file .vocab-file-deck select {
+    max-width: 128px;
+  }
+
+  .vocab-file-filters {
+    height: 42px;
+    gap: 16px;
+  }
+
+  .vocab-file .vocab-file-filter {
+    min-height: 40px;
+    font-size: 12px;
+  }
+
+  .vocab-file .vocab-file-filter b {
+    display: none;
+  }
+
+  .vocab-file-columns {
+    position: relative;
+    grid-template-columns: 24px minmax(0, 42fr) minmax(0, 58fr);
+    height: 34px;
+    margin-top: 0;
+    font-size: 11px;
+  }
+
+  .vocab-file-columns > span:first-child {
+    grid-column: 1 / 3;
+  }
+
+  .vocab-file-columns > span:nth-child(2) {
+    padding-left: 10px;
+  }
+
+  .vocab-file-columns .vocab-file-sort {
+    position: absolute;
+    right: 0;
+    top: 0;
+    height: 100%;
+    color: #4f6853;
+  }
+
+  .vocab-file .vocab-file-columns .vocab-file-sort select {
+    height: 32px;
+    max-width: 120px;
+    font-size: 11px;
+    text-align: right;
+    text-align-last: right;
+  }
+
+  .vocab-file-pair {
+    grid-template-columns: 24px minmax(0, 42fr) minmax(0, 58fr);
+  }
+
+  .vocab-file .vocab-file-pair-hit {
+    min-height: 76px;
+  }
+
+  .vocab-file-no {
+    padding-top: 21px;
+    padding-left: 5px;
+    font-size: 11px;
+  }
+
+  .vocab-file-ja {
+    display: block;
+    padding: 12px 6px 9px 0;
+  }
+
+  .vocab-file-ja strong {
+    display: block;
+    font-size: 22px;
+    line-height: 1.3;
+  }
+
+  .vocab-file-ja > span,
+  .vocab-file-ja .term-badge {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+  }
+
+  .vocab-file-ko {
+    display: block;
+    padding: 15px 1px 9px 10px;
+  }
+
+  .vocab-file-ko::before {
+    left: 0;
+    top: 25px;
+    width: 5px;
+  }
+
+  .vocab-file-ko strong {
+    display: block;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .vocab-file-status {
+    display: block;
+    margin: 3px 0 0;
+    font-size: 11px;
+    white-space: normal;
+  }
+
+  .vocab-file-detail {
+    grid-column: 2 / -1;
+    padding: 0 2px 14px 0;
+  }
+
+  .vocab-file-example {
+    font-size: 14px;
+  }
+
+  .vocab-file-actions {
+    gap: 4px 14px;
+  }
+
+  .vocab-file-actions .vocab-file-link,
+  .vocab-file-foot .vocab-file-link {
+    min-height: 36px;
+  }
+
+  .vocab-file-note {
+    padding-left: 24px;
+  }
+
+  .vocab-file-foot {
+    min-height: 40px;
+    font-size: 11px;
+  }
+
+  .vocab-file-foot-actions {
+    gap: 14px;
+  }
+
+  .vocab-file-term {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .vocab-file-term-meaning {
+    grid-column: 1;
+  }
+
+  .vocab-file-term-actions {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .vocab-file-sheet {
+    padding: 18px 16px 4px 28px;
+  }
+
+  .vocab-file-head h2 {
+    font-size: 20px;
+  }
+
+  .vocab-file-count {
+    font-size: 24px;
+  }
+
+  .vocab-file-tools {
+    gap: 9px;
+  }
+
+  .vocab-file .vocab-file-deck select {
+    max-width: 104px;
+  }
+
+  .vocab-file .vocab-file-columns .vocab-file-sort select {
+    max-width: 96px;
+  }
+
+  .vocab-file-filters {
+    gap: 13px;
+  }
+
+  .vocab-file-columns,
+  .vocab-file-pair {
+    grid-template-columns: 20px minmax(0, 40fr) minmax(0, 60fr);
+  }
+
+  .vocab-file-no {
+    padding-left: 3px;
+  }
+
+  .vocab-file-ja strong {
+    font-size: 20px;
+  }
+
+  .vocab-file-ko strong {
+    font-size: 13px;
+  }
+
+  .vocab-file-foot-note {
+    display: none;
+  }
+
+  .vocab-file-foot-actions {
+    margin-left: auto;
+  }
 }

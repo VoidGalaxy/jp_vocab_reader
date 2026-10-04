@@ -1,25 +1,14 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import { AppEmptyState, BrandSectionBadge } from "./BrandElements";
 import { classifyMessageTone } from "./coverageUtils";
 import { HighlightedExample } from "./HighlightedExample";
-import {
-  BookIcon,
-  BookshelfIcon,
-  CardFileIcon,
-  CardsIcon,
-  ChevronDownIcon,
-  ClockIcon,
-  SearchIcon,
-} from "./icons";
+import { SearchIcon } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
-import { ShioriGuideCard, ShioriMark } from "./Shiori";
 import {
   formatDateTime,
   formatNextReview,
   getDisplayMeaning,
-  statusLabels,
   StatusSelect,
 } from "./shared";
 import type {
@@ -50,23 +39,32 @@ function resolveScrollBehavior(preferred: ScrollBehavior): ScrollBehavior {
   return preferred;
 }
 
+// Short paper labels for the status index/filter line and each row's
+// status note. The full statusLabels wording stays in the row's
+// StatusSelect, which is where the status is actually changed.
+const statusShortLabels: Record<TokenStatus, string> = {
+  known: "아는",
+  uncertain: "헷갈림",
+  unknown: "모름",
+  unclassified: "미분류",
+};
+
 const statusFilterOptions: Array<{ value: "all" | TokenStatus; label: string }> = [
   { value: "all", label: "전체" },
-  { value: "unknown", label: statusLabels.unknown },
-  { value: "uncertain", label: statusLabels.uncertain },
-  { value: "known", label: statusLabels.known },
-  { value: "unclassified", label: statusLabels.unclassified },
+  { value: "known", label: statusShortLabels.known },
+  { value: "uncertain", label: statusShortLabels.uncertain },
+  { value: "unknown", label: statusShortLabels.unknown },
+  { value: "unclassified", label: statusShortLabels.unclassified },
 ];
 
-// Ties each status filter chip to the same warm color language as the
-// reading tab / study cards once active -- "전체" stays neutral since it
-// isn't a single status.
-const statusFilterColorClass: Partial<Record<"all" | TokenStatus, string>> = {
-  known: "vocab-filter-known",
-  uncertain: "vocab-filter-uncertain",
-  unknown: "vocab-filter-unknown",
-  unclassified: "vocab-filter-unclassified",
-};
+const sortOptions: Array<{ value: VocabSort; label: string }> = [
+  { value: "created_desc", label: "최근 저장순" },
+  { value: "created_asc", label: "오래된 저장순" },
+  { value: "wrong_desc", label: "많이 틀린순" },
+  { value: "correct_desc", label: "많이 맞힌순" },
+  { value: "review_level_asc", label: "복습 단계 낮은순" },
+  { value: "next_review_asc", label: "다음 복습 가까운순" },
+];
 
 type VocabSectionProps = {
   items: VocabItem[];
@@ -158,6 +156,14 @@ type VocabSectionProps = {
   onGoToShared: () => void;
 };
 
+/* Vocab A, the file drawer (references/mockups/vocab-b-hybrid-three/
+   handoff). Desktop is one shallow drawer: a narrow index on its left side
+   and one wide ivory sheet holding the header, search/deck/sort, status
+   line and the paired-language list. Phones get one full-height sheet with
+   a binding strip instead of a shrunk drawer. Every word, count and control
+   is DOM; the drawer and paper are CSS only. Selecting a word opens its
+   detail inside the same row, and management opens on the same sheet in
+   place of the list, so nothing renders below the scene. */
 export function VocabSection({
   items,
   stats,
@@ -241,91 +247,86 @@ export function VocabSection({
   onGoToStudyToday,
   onGoToShared,
 }: VocabSectionProps) {
+  // Management (deck, share, backup, custom terms) takes the sheet's list
+  // area instead of stacking panels under the drawer.
   const [isManagementOpen, setIsManagementOpen] = useState(false);
-  // "오늘 복습하기 / 덱 책장 / 단어 직접 추가 / 덱·공유 관리" used to be four
-  // always-on buttons split across the hero and the filter box -- none of
-  // them is the primary "학습하기/원문 읽기" pair this screen actually wants
-  // seen first, so they now live behind one shared "더보기" disclosure.
-  const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
   const [isCustomTermManagerOpen, setIsCustomTermManagerOpen] = useState(false);
-  // 사용자 정의 용어 관리를 열어도 실제 목록/입력 폼은 덱 관리/고급/덱 공유
-  // 카드 아래(모바일에서 2000px+ 스크롤 밖)에 렌더링돼 아무 반응이 없는
-  // 것처럼 보였다 (Phase 48 QA). 더보기의 직접 진입 버튼이든 고급 카드 안의
-  // 기존 토글이든, 열리는 순간 실제 내용으로 스크롤해 준다.
-  const customTermSectionRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (isManagementOpen && isCustomTermManagerOpen) {
-      customTermSectionRef.current?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "start" });
-    }
-  }, [isManagementOpen, isCustomTermManagerOpen]);
-  // Casual Sticker Reader (Phase 68) -- 관리 패널이 노트북 스프레드 아래
-  // (뒤쪽 포켓)로 옮겨가면서 "더보기 -> 덱/공유 관리"를 눌러도 화면 위쪽은
-  // 그대로라 아무 반응이 없는 것처럼 보일 수 있다. 위 customTermSectionRef와
-  // 같은 패턴으로, 사용자 정의 용어 관리를 함께 열지 않은 일반 관리 토글에서만
-  // 스크롤해 준다 (그 경로는 이미 자기 자신의 더 구체적인 스크롤을 가지고
-  // 있어 둘이 겹치지 않도록).
-  const managementSectionRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (isManagementOpen && !isCustomTermManagerOpen) {
-      managementSectionRef.current?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "start" });
-    }
-  }, [isManagementOpen, isCustomTermManagerOpen]);
-  const hasActiveFilter =
-    searchText.trim() !== "" || statusFilter !== "all" || dueOnly;
   const [isBackupToolsOpen, setIsBackupToolsOpen] = useState(false);
-  // Compact list rows stay collapsed by default (구현3/4) -- example_sentence,
-  // 품사/base_form, 복습 상세, 수정/삭제 all move behind a per-row toggle
-  // instead of always showing on every card.
-  const [expandedItemIds, setExpandedItemIds] = useState<Set<number>>(
-    () => new Set(),
-  );
-
-  // Casual Sticker Reader (Phase 68) -- selectedItemId is purely a "which
-  // item's detail does the desktop right-hand note page show" pointer.
-  // expandedItemIds above is completely untouched -- still the one source
-  // of truth for "is this row's detail open" on every viewport, still a
-  // Set (multiple rows can stay expanded on mobile, same as before this
-  // Phase). This just remembers which row's toggle was clicked most
-  // recently, so isDesktopDetail (below) knows which one to show on the
-  // right; whenever that item later gets removed from expandedItemIds
-  // (collapsed), the panel naturally falls back to its idle state since it
-  // only renders a selected item's detail while expandedItemIds still has
-  // it.
+  // One open row at a time; an item being edited always stays open.
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
 
-  function toggleItemExpanded(itemId: number) {
-    setSelectedItemId(itemId);
-    setExpandedItemIds((current) => {
-      const next = new Set(current);
-      if (next.has(itemId)) {
-        next.delete(itemId);
-      } else {
-        next.add(itemId);
-      }
-      return next;
-    });
-  }
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const customTermSectionRef = useRef<HTMLDivElement>(null);
 
-  // Casual Sticker Reader (Phase 68; Phase 182 moved list + detail onto
-  // the same notebook photo the tab rail already anchors to) only kicks in
-  // at the same >=1024px "true desktop" tier the rest of the scene gates
-  // on; keep this breakpoint in sync with .vocab-v3-detail's own
-  // display:none/block switch in globals.css. Starts false (matches
-  // SSR/first paint); only read once a
-  // row is actually expanded, which never happens before this effect has
-  // had a chance to run, so there is no hydration mismatch to worry about
-  // here (same reasoning as ReaderMode.tsx's isDesktopPinned).
-  const [isDesktopDetail, setIsDesktopDetail] = useState(false);
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (isManagementOpen && isCustomTermManagerOpen) {
+      customTermSectionRef.current?.scrollIntoView({
+        behavior: resolveScrollBehavior("smooth"),
+        block: "start",
+      });
+    }
+  }, [isManagementOpen, isCustomTermManagerOpen]);
+
+  // Opening management or the add form starts the sheet from the top.
+  useEffect(() => {
+    if (isManagementOpen || isNewVocabFormOpen) {
+      scrollRef.current?.scrollTo({ top: 0 });
+    }
+  }, [isManagementOpen, isNewVocabFormOpen]);
+
+  // A row opened near the end of the list is brought fully into view
+  // inside the sheet's own scroller.
+  useEffect(() => {
+    if (selectedItemId === null) {
       return;
     }
-    const query = window.matchMedia("(min-width: 1024px)");
-    const update = () => setIsDesktopDetail(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
+    document
+      .getElementById(`vocab-file-row-${selectedItemId}`)
+      ?.scrollIntoView({ behavior: resolveScrollBehavior("smooth"), block: "nearest" });
+  }, [selectedItemId]);
+
+  const hasActiveFilter =
+    searchText.trim() !== "" || statusFilter !== "all" || dueOnly;
+  const hasDeckSelected = selectedDeckId !== "";
+  const isSpecificDeck = selectedDeckId !== "all" && selectedDeckId !== "";
+  const selectedDeckName = isSpecificDeck
+    ? decks.find((deck) => String(deck.id) === selectedDeckId)?.name ?? "덱"
+    : selectedDeckId === "all"
+      ? "전체"
+      : "덱 선택 전";
+
+  // Stats are loaded for whichever deck Review last used, so per-status
+  // counts are only shown when they describe the deck on this sheet.
+  const statsMatchDeck =
+    !!stats &&
+    (selectedDeckId === "all"
+      ? stats.scope === "all"
+      : isSpecificDeck && stats.scope === "deck" && String(stats.deck_id) === selectedDeckId);
+  function countFor(value: "all" | TokenStatus | "due"): number | null {
+    if (!statsMatchDeck || !stats) {
+      return null;
+    }
+    switch (value) {
+      case "all":
+        return stats.total_vocab_count;
+      case "known":
+        return stats.known_count;
+      case "uncertain":
+        return stats.uncertain_count;
+      case "unknown":
+        return stats.unknown_count;
+      case "unclassified":
+        return stats.unclassified_count;
+      case "due":
+        return stats.due_today_count;
+    }
+  }
+  const sortLabel =
+    sortOptions.find((option) => option.value === sortValue)?.label ?? "정렬";
+
+  function toggleItem(itemId: number) {
+    setSelectedItemId((current) => (current === itemId ? null : itemId));
+  }
 
   function resetVocabFilters() {
     onSearchTextChange("");
@@ -333,770 +334,438 @@ export function VocabSection({
     onDueOnlyChange(false);
   }
 
-  return (
-    <section className="tab-panel vocab-panel vocab-v3" aria-live="polite">
-      {/* Phase 182 (Vocab Full Scene Replacement) -- the Phase 166 "V2"
-          scene was a photographed notebook used ONLY as a fixed-aspect
-          header establishing shot: filters/search/deck/sort/actions
-          overlaid on it, then .vocab-v2-pages (the actual list + detail)
-          flowed in normal document flow *below* the photo on a separately
-          CSS-simulated ruled-paper texture. Two different "notebook"
-          representations stacked on top of each other -- exactly the
-          "list/detail이 하나의 단어장 안에 묶이지 않는다" failure. This
-          throws that model out: .vocab-v3-scene is ONE open ring-binder
-          photo (tabs cropped OUT of the source photo -- see
-          vocab-notebook-spread-no-tabs.webp -- so our own interactive tab
-          assets are the only tabs on screen) and the word ledger + detail
-          note both render as absolutely-positioned DOM layers directly on
-          top of that same photo's own left/right pages, not below it.
-          Status/due filters are no longer solid CSS-color chips
-          (.vocab-v2-tab's `background: var(--muted)` etc, the "거대한 세로
-          컬러 필터 블록" the brief calls out) -- they're real photographed
-          index-tab crops (phase182/vocab-tab-*.png, sliced from the
-          previously-unused phase145 tab-strip asset) sticking out past the
-          notebook's own left edge. Mobile does not reuse this absolute-
-          position desktop layout at a smaller scale -- see the mobile-only
-          rules in globals.css for the separate compact-slip / horizontal-
-          tab-strip / single-page-ledger composition. */}
-      <div className="vocab-v3-scene">
-        <img
-          className="vocab-v3-notebook-img"
-          src="/brand/decor/phase182/vocab-notebook-spread-no-tabs.webp"
-          alt=""
-          draggable={false}
-        />
-        <span className="vocab-v3-title-tag">
-          <ShioriMark variant="default" />
-          내 단어장
-        </span>
+  function openCustomTerms() {
+    setIsManagementOpen(true);
+    setIsCustomTermManagerOpen(true);
+  }
 
-        <div className="vocab-v3-tab-rail" role="group" aria-label="상태 필터">
-          {statusFilterOptions.map((option) => {
-            const isActive = statusFilter === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                className={`vocab-v3-tab vocab-v3-tab-${option.value}${
-                  isActive ? " vocab-v3-tab-active" : ""
-                }`}
-                aria-pressed={isActive}
-                onClick={() => onStatusFilterChange(option.value)}
-              >
-                <img
-                  className="vocab-v3-tab-img"
-                  src={`/brand/decor/phase182/vocab-tab-${option.value}.png`}
-                  alt=""
-                  draggable={false}
-                />
-                <span className="vocab-v3-tab-label">{option.label}</span>
-              </button>
-            );
-          })}
+  const studyDisabledTitle = isSpecificDeck
+    ? undefined
+    : "학습할 특정 덱을 먼저 선택해 주세요.";
+
+  const filterButtons = (
+    <>
+      {statusFilterOptions.map((option) => {
+        const isActive = statusFilter === option.value;
+        const count = countFor(option.value);
+        return (
           <button
+            key={option.value}
             type="button"
-            className={`vocab-v3-tab vocab-v3-tab-due${dueOnly ? " vocab-v3-tab-active" : ""}`}
-            aria-pressed={dueOnly}
-            onClick={() => onDueOnlyChange(!dueOnly)}
+            className={`vocab-file-filter${isActive ? " is-active" : ""}`}
+            aria-pressed={isActive}
+            onClick={() => onStatusFilterChange(option.value)}
           >
-            <img
-              className="vocab-v3-tab-img"
-              src="/brand/decor/phase182/vocab-tab-due.png"
-              alt=""
-              draggable={false}
-            />
-            <span className="vocab-v3-tab-label">복습 예정만</span>
+            {option.label}
+            {count !== null ? <b>{count}</b> : null}
           </button>
-        </div>
-
-        <div className="vocab-v3-topstrip">
-          <div className="vocab-v3-search-slip">
-            <SearchIcon className="vocab-search-icon" />
-            <input
-              className="vocab-v3-search-input"
-              value={searchText}
-              onChange={(event) => onSearchTextChange(event.target.value)}
-              placeholder="단어, 읽기, 뜻으로 검색"
-              aria-label="단어장 검색"
-            />
-          </div>
-
-          <label className="vocab-v3-chip vocab-v3-chip-deck">
-            <CardFileIcon className="vocab-v3-chip-icon" />
-            <select value={selectedDeckId} onChange={(event) => onSelectedDeckChange(event.target.value)}>
-              <option value="" disabled hidden>덱을 선택해 주세요</option>
-              <option value="all">전체 단어장</option>
-              {decks.map((deck) => (
-                <option key={deck.id} value={String(deck.id)}>
-                  {deck.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="vocab-v3-chip vocab-v3-chip-sort">
-            정렬
-            <select
-              value={sortValue}
-              onChange={(event) => onSortChange(event.target.value as VocabSort)}
-            >
-              <option value="created_desc">최근 저장순</option>
-              <option value="created_asc">오래된 저장순</option>
-              <option value="wrong_desc">많이 틀린순</option>
-              <option value="correct_desc">많이 맞힌순</option>
-              <option value="review_level_asc">복습 단계 낮은순</option>
-              <option value="next_review_asc">다음 복습 가까운순</option>
-            </select>
-          </label>
-        </div>
-
-      {/* Phase 87 -- 덱을 아직 고르지 않은 상태는 페이지 배경 자체를 줄노트
-          질감으로 바꿔 "빈 박스"가 아니라 "아직 아무것도 안 쓴 노트북
-          페이지"처럼 읽히게 하고, 그 위에 놓이는 안내는 .vocab-page-guide로
-          페이지에 붙인 작은 안내 스티커처럼 만든다 (아래 globals.css). */}
-      <div
-        className={`vocab-v3-ledger-wrap${
-          selectedDeckId === "" ? " vocab-desk-empty" : ""
-        }`}
+        );
+      })}
+      <button
+        type="button"
+        className={`vocab-file-filter vocab-file-filter-due${dueOnly ? " is-active" : ""}`}
+        aria-pressed={dueOnly}
+        onClick={() => onDueOnlyChange(!dueOnly)}
       >
-      {selectedDeckId === "" ? (
-        decks.length === 0 ? (
-          <AppEmptyState
-            mood="empty"
-            moodSize="md"
-            className="empty-guide vocab-page-guide"
-            title="아직 만든 단어장이 없어요."
-            description="읽기 탭에서 원문을 읽고 단어를 담아보면 단어장이 자동으로 만들어져요."
-          >
-            <button
-              type="button"
-              className="ghost-button compact-button"
-              onClick={onGoToReading}
-            >
-              <BookIcon className="button-icon" />
+        복습 예정
+        {countFor("due") !== null ? <b>{countFor("due")}</b> : null}
+      </button>
+    </>
+  );
+
+  const sortSelect = (extraClass: string) => (
+    <label className={`vocab-file-select vocab-file-sort ${extraClass}`}>
+      <span className="vocab-file-sr">정렬</span>
+      <select
+        value={sortValue}
+        onChange={(event) => onSortChange(event.target.value as VocabSort)}
+      >
+        {sortOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
+  function renderList() {
+    if (!hasDeckSelected) {
+      return (
+        <div className="vocab-file-note">
+          {decks.length === 0 ? (
+            <>
+              <p className="vocab-file-note-title">아직 만든 단어장이 없어요.</p>
+              <p>읽기 탭에서 원문을 읽고 단어를 담으면 단어장이 자동으로 만들어져요.</p>
+              <button type="button" className="vocab-file-link" onClick={onGoToReading}>
+                원문 읽기 시작
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="vocab-file-note-title">볼 단어장을 골라볼까요?</p>
+              <p>위에서 덱을 고르면 담아둔 단어가 이 장에 적혀요.</p>
+            </>
+          )}
+        </div>
+      );
+    }
+
+    if (items.length === 0) {
+      if (isLoading) {
+        return <p className="vocab-file-note vocab-file-note-quiet">단어를 불러오는 중이에요.</p>;
+      }
+      if (dueOnly && !searchText.trim() && statusFilter === "all") {
+        return (
+          <div className="vocab-file-note">
+            <p className="vocab-file-note-title">지금 복습할 단어가 없어요.</p>
+            <p>새 원문을 읽고 단어를 더 담아보세요.</p>
+            <button type="button" className="vocab-file-link" onClick={onGoToReading}>
+              원문 읽기
+            </button>
+          </div>
+        );
+      }
+      if (hasActiveFilter) {
+        return (
+          <div className="vocab-file-note">
+            <p className="vocab-file-note-title">찾는 단어가 없어요.</p>
+            <p>검색어를 바꾸거나 필터를 풀어보세요.</p>
+            <button type="button" className="vocab-file-link" onClick={resetVocabFilters}>
+              필터 초기화
+            </button>
+          </div>
+        );
+      }
+      return (
+        <div className="vocab-file-note">
+          <p className="vocab-file-note-title">아직 담은 단어가 없어요.</p>
+          <p>원문에서 모르는 단어를 눌러 이 장에 쌓아보세요.</p>
+          <span className="vocab-file-note-actions">
+            <button type="button" className="vocab-file-link" onClick={onGoToReading}>
               원문 읽기 시작
             </button>
-          </AppEmptyState>
-        ) : (
-          <AppEmptyState
-            mood="empty"
-            moodSize="sm"
-            className="empty-guide vocab-page-guide"
-            title="볼 단어장을 골라볼까요?"
-            description="위에서 덱을 고르면 담아둔 단어를 보여드려요."
-          />
-        )
-      ) : (
-        <>
-      <div className="result-heading">
-        <div>
-          <h2 className="section-title-with-icon">
-            <BrandSectionBadge icon={CardFileIcon} />
-            저장된 단어장
-          </h2>
-          <span>{items.length}개</span>
-        </div>
-        <div className="heading-actions">
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={onRefresh}
-            disabled={isLoading}
-          >
-            {isLoading ? "불러오는 중..." : "새로고침"}
-          </button>
-        </div>
-      </div>
-
-      {message ? (
-        <p className={`message message--${classifyMessageTone(message)}`}>
-          {message}
-        </p>
-      ) : null}
-
-      {items.length > 0 ? (
-        <div className="vocab-v3-ledger">
-          {items.map((item) => {
-            const isExpanded =
-              expandedItemIds.has(item.id) || editingItemId === item.id;
-            const isDue =
-              !!item.next_review_at &&
-              new Date(item.next_review_at).getTime() <= Date.now();
-
-            return (
-              <div
-                className={`vocabulary-index-row${isExpanded ? " vocab-row-expanded" : ""}`}
-                key={item.id}
-              >
-                <div className="vocab-row-main">
-                  <div className="vocab-row-headword">
-                    <span className="vocab-item-surface">{item.surface}</span>
-                    {item.reading && item.reading !== item.surface ? (
-                      <span className="vocab-item-reading">{item.reading}</span>
-                    ) : null}
-                    <QualityBadge qualityTag={item.quality_tag} />
-                  </div>
-                  <p className="vocab-row-meaning">
-                    {getDisplayMeaning(item.meaning_ko)}
-                  </p>
-                  <div className="vocab-row-badges">
-                    <div
-                      className={`vocab-item-status-wrap token-chip-${item.status}`}
-                    >
-                      <StatusSelect
-                        value={item.status}
-                        label={`${item.surface} 저장 상태`}
-                        onChange={(status) => onStatusChange(item.id, status)}
-                      />
-                    </div>
-                    {isDue ? (
-                      <span className="vocab-row-due-chip">복습 예정</span>
-                    ) : null}
-                  </div>
-                  <button
-                    type="button"
-                    className="ghost-button compact-button vocab-row-toggle"
-                    onClick={() => toggleItemExpanded(item.id)}
-                    aria-expanded={isExpanded}
-                    aria-label={`${item.surface} 상세 정보 ${isExpanded ? "접기" : "펼치기"}`}
-                  >
-                    <ChevronDownIcon
-                      className={`reading-vocab-collapse-icon${
-                        isExpanded ? "" : " reading-vocab-collapse-icon-collapsed"
-                      }`}
-                    />
-                    {isExpanded ? "접기" : "펼치기"}
-                  </button>
-                </div>
-
-                {/* Casual Sticker Reader (Phase 68) -- on desktop this row's
-                    detail renders once, in the notebook scene's right-hand
-                    note page instead of inline here (see
-                    .vocab-notebook-detail below) -- isDesktopDetail keeps
-                    it from ever mounting in both places at once. Mobile
-                    keeps the exact inline behavior from before this
-                    Phase. */}
-                {isExpanded && !isDesktopDetail ? (
-                  <VocabItemDetail
-                    item={item}
-                    decks={decks}
-                    editingItemId={editingItemId}
-                    editVocabForm={editVocabForm}
-                    isUpdatingVocab={isUpdatingVocab}
-                    meaningEditItemId={meaningEditItemId}
-                    meaningEditDraft={meaningEditDraft}
-                    isSavingMeaningEdit={isSavingMeaningEdit}
-                    meaningEditMessage={meaningEditMessage}
-                    onStartMeaningEdit={onStartMeaningEdit}
-                    onMeaningEditDraftChange={onMeaningEditDraftChange}
-                    onSaveMeaningEdit={onSaveMeaningEdit}
-                    onCancelMeaningEdit={onCancelMeaningEdit}
-                    onReportMeaning={onReportMeaning}
-                    onEditVocabFormChange={onEditVocabFormChange}
-                    onStartEdit={onStartEdit}
-                    onSaveEdit={onSaveEdit}
-                    onCancelEdit={onCancelEdit}
-                    onDelete={onDelete}
-                  />
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ) : dueOnly && !searchText.trim() && statusFilter === "all" ? (
-        <AppEmptyState
-          mood="empty"
-          title="지금 복습할 단어가 없어요."
-          description="새 원문을 읽고 단어를 더 담아보세요."
-        >
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={onGoToReading}
-          >
-            <BookIcon className="button-icon" />
-            원문 읽기
-          </button>
-        </AppEmptyState>
-      ) : hasActiveFilter ? (
-        <AppEmptyState
-          mood="empty"
-          title="찾는 단어가 없어요."
-          description="검색어를 바꾸거나 필터를 풀어보세요."
-        >
-          <button
-            type="button"
-            className="ghost-button compact-button"
-            onClick={resetVocabFilters}
-          >
-            필터 초기화
-          </button>
-        </AppEmptyState>
-      ) : (
-        <AppEmptyState
-          mood="empty"
-          moodSize="md"
-          title="아직 담은 단어가 없어요."
-          description="원문에서 모르는 단어를 눌러 어휘 노트에 쌓아보세요."
-        >
-          <div className="study-actions">
-            <button
-              type="button"
-              className="ghost-button compact-button"
-              onClick={onGoToReading}
-            >
-              <BookIcon className="button-icon" />
-              원문 읽기 시작
-            </button>
-            <button
-              type="button"
-              className="ghost-button compact-button"
-              onClick={onGoToShared}
-            >
-              <BookshelfIcon className="button-icon" />
+            <button type="button" className="vocab-file-link" onClick={onGoToShared}>
               덱 책장 둘러보기
             </button>
-          </div>
-        </AppEmptyState>
-      )}
-        </>
-      )}
-      </div>
-
-      {/* vocab-v3-detail -- the SAME notebook photo's right-hand note-card
-          page (desktop only, see globals.css; hidden on mobile where the
-          selected item's detail instead renders inline under its row,
-          styled as a folded slip -- see .vocab-row-detail's mobile rules).
-          Always mounted (idle guide when nothing is selected, or the same
-          VocabItemDetail content the mobile inline row shows) so it reads
-          as a permanent fixture of the spread, matching the reading tab's
-          pinned inspector. selectedItem is only non-null once
-          expandedItemIds still has it -- collapsing a row on desktop falls
-          back to idle for free, no extra bookkeeping needed. */}
-      <aside className="vocab-v3-detail">
-        {(() => {
-          const selectedItem =
-            selectedItemId !== null && expandedItemIds.has(selectedItemId)
-              ? items.find((candidate) => candidate.id === selectedItemId)
-              : undefined;
-          if (!selectedItem) {
-            // Phase 87 -- 덱을 고르지 않았거나 그 덱에 단어가 없을 때도
-            // 가운데 영역의 안내(.vocab-page-guide)와 똑같은 문구를 그대로
-            // 반복하면 두 영역이 서로 다른 이유 없이 나란히 비어 보인다.
-            // selectedDeckId/items/hasActiveFilter는 이미 위쪽에서 쓰던
-            // 값을 그대로 재사용한 것으로, 이 페이지가 "왜 비어 있는지"를
-            // 단계별로 이어서 설명한다. items.length === 0이 검색/필터
-            // 때문인 경우(hasActiveFilter)까지 "아직 담은 단어가 없어요"로
-            // 뭉뚱그리면 실제로는 단어가 있는 덱인데도 빈 덱처럼 잘못
-            // 안내하게 된다.
-            const idleMessage =
-              selectedDeckId === ""
-                ? "위에서 덱을 고르면 이 페이지에 단어 상세가 펼쳐져요."
-                : items.length === 0 && hasActiveFilter
-                  ? "검색어나 필터에 맞는 단어가 없어요."
-                  : items.length === 0
-                    ? "이 덱에는 아직 담은 단어가 없어요."
-                    : "단어를 펼치면 이 자리에서 자세히 볼 수 있어요.";
-            return (
-              <div className="vocab-v3-detail-idle">
-                <ShioriGuideCard
-                  variant="reading"
-                  size="md"
-                  message={idleMessage}
-                />
-              </div>
-            );
-          }
-          return (
-            <>
-              <div className="vocab-v3-detail-header">
-                <div className="vocab-row-headword">
-                  <span className="vocab-item-surface">{selectedItem.surface}</span>
-                  {selectedItem.reading && selectedItem.reading !== selectedItem.surface ? (
-                    <span className="vocab-item-reading">{selectedItem.reading}</span>
-                  ) : null}
-                  <QualityBadge qualityTag={selectedItem.quality_tag} />
-                </div>
-                <p className="vocab-row-meaning">
-                  {getDisplayMeaning(selectedItem.meaning_ko)}
-                </p>
-                <div className={`vocab-item-status-wrap token-chip-${selectedItem.status}`}>
-                  <StatusSelect
-                    value={selectedItem.status}
-                    label={`${selectedItem.surface} 저장 상태`}
-                    onChange={(status) => onStatusChange(selectedItem.id, status)}
-                  />
-                </div>
-              </div>
-              <VocabItemDetail
-                item={selectedItem}
-                decks={decks}
-                editingItemId={editingItemId}
-                editVocabForm={editVocabForm}
-                isUpdatingVocab={isUpdatingVocab}
-                meaningEditItemId={meaningEditItemId}
-                meaningEditDraft={meaningEditDraft}
-                isSavingMeaningEdit={isSavingMeaningEdit}
-                meaningEditMessage={meaningEditMessage}
-                onStartMeaningEdit={onStartMeaningEdit}
-                onMeaningEditDraftChange={onMeaningEditDraftChange}
-                onSaveMeaningEdit={onSaveMeaningEdit}
-                onCancelMeaningEdit={onCancelMeaningEdit}
-                onReportMeaning={onReportMeaning}
-                onEditVocabFormChange={onEditVocabFormChange}
-                onStartEdit={onStartEdit}
-                onSaveEdit={onSaveEdit}
-                onCancelEdit={onCancelEdit}
-                onDelete={onDelete}
-              />
-            </>
-          );
-        })()}
-      </aside>
-      </div>
-
-      {/* 학습하기/원문읽기/더보기 -- renders as a sibling right after the
-          scene (not absolutely overlaid on the photo) so its dynamic
-          wrapping height can never be clipped by the scene's own
-          overflow:hidden, matching the "더보기" disclosure right after it.
-          Same .vocab-bookmark-action notched-flag stamp shape as before --
-          only the position moved from "inside the photo" to "a stamped row
-          right under the book", still read as attached to the same
-          object, not a toolbar. */}
-      <div className="vocab-v3-stamp-row">
-        <button
-          type="button"
-          className="vocab-bookmark-action vocab-bookmark-action-primary"
-          onClick={onStudySelectedDeck}
-          disabled={selectedDeckId === "all" || selectedDeckId === ""}
-          title={
-            selectedDeckId === "all" || selectedDeckId === ""
-              ? "학습할 특정 덱을 먼저 선택해 주세요."
-              : undefined
-          }
-        >
-          <CardsIcon className="button-icon" />이 덱 학습하기
-        </button>
-        <button
-          type="button"
-          className="vocab-bookmark-action"
-          onClick={onGoToReading}
-        >
-          <BookIcon className="button-icon" />
-          원문 읽기
-        </button>
-        <button
-          type="button"
-          className="vocab-bookmark-action-toggle"
-          onClick={() => setIsMoreActionsOpen((value) => !value)}
-          aria-expanded={isMoreActionsOpen}
-        >
-          <ChevronDownIcon
-            className={`reading-vocab-collapse-icon${
-              isMoreActionsOpen ? "" : " reading-vocab-collapse-icon-collapsed"
-            }`}
-          />
-          더보기
-        </button>
-        <span className="vocab-v3-count-note">
-          전체 {stats ? stats.total_vocab_count : items.length}개 · 복습 예정{" "}
-          {stats ? stats.due_today_count : "-"}개 · 어려운 단어{" "}
-          {stats ? stats.hard_count : "-"}개
-        </span>
-      </div>
-
-      {isMoreActionsOpen ? (
-        <div className="vocab-v3-more-panel">
-          <button
-            type="button"
-            className="vocab-bookmark-action"
-            onClick={onGoToStudyToday}
-          >
-            <CardsIcon className="button-icon" />
-            오늘 복습하기
-          </button>
-          <button
-            type="button"
-            className="vocab-bookmark-action"
-            onClick={onGoToShared}
-          >
-            <BookshelfIcon className="button-icon" />
-            덱 책장
-          </button>
-          <button
-            type="button"
-            className="vocab-bookmark-action"
-            onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
-          >
-            {isNewVocabFormOpen ? "단어 추가 닫기" : "+ 단어 직접 추가"}
-          </button>
-          <button
-            type="button"
-            className="vocab-bookmark-action"
-            onClick={() => {
-              setIsManagementOpen(true);
-              setIsCustomTermManagerOpen(true);
-            }}
-          >
-            사용자 정의 용어 관리
-          </button>
-          <button
-            type="button"
-            className="vocab-bookmark-action"
-            onClick={() => setIsManagementOpen((open) => !open)}
-            aria-expanded={isManagementOpen}
-          >
-            덱/공유 관리
-          </button>
+          </span>
         </div>
-      ) : null}
+      );
+    }
 
-      {/* Casual Sticker Reader (Phase 68) -- management/share/custom-term
-          panels moved here, after the notebook scene, instead of sitting
-          between the filter and the word list where opening any one of
-          them used to push the whole list down (covering the browsing
-          scene the moment "더보기 -> 관리" was clicked). Same disclosure
-          state/handlers as before -- only the JSX position moved. */}
-      {isManagementOpen ? (
-        <div className="vocab-management-panel" ref={managementSectionRef}>
-          <section className="management-card">
-            <div className="management-card-header">
-              <h2>덱 관리</h2>
-              <p className="muted-text">새 덱을 만들거나 현재 선택한 덱을 삭제해요.</p>
-            </div>
+    return (
+      <ol className="vocab-file-list" aria-label="저장한 단어">
+        {items.map((item, index) => {
+          const isExpanded =
+            selectedItemId === item.id || editingItemId === item.id;
+          const isDue =
+            !!item.next_review_at &&
+            new Date(item.next_review_at).getTime() <= Date.now();
+          const detailId = `vocab-file-detail-${item.id}`;
+          const hasReading = !!item.reading && item.reading !== item.surface;
 
-      <div className="deck-create">
-        <input
-          value={newDeckName}
-          onChange={(event) => onNewDeckNameChange(event.target.value)}
-          placeholder="덱 이름"
-        />
-        <input
-          value={newDeckDescription}
-          onChange={(event) => onNewDeckDescriptionChange(event.target.value)}
-          placeholder="설명"
-        />
-        <button type="button" onClick={onCreateDeck} disabled={isCreatingDeck}>
-          {isCreatingDeck ? "만드는 중..." : "덱 만들기"}
-        </button>
-      </div>
-
-      {deckMessage ? (
-        <p className={`message message--${classifyMessageTone(deckMessage)}`}>
-          {deckMessage}
-        </p>
-      ) : null}
-
-      {/* Separated from 덱 만들기 above by its own divider + label so the
-          destructive action reads as a distinct "위험 구역", not the first
-          thing this card shows (see Phase 47 QA notes). */}
-      <div className="deck-danger-zone">
-        <span className="deck-danger-zone-label">위험 구역</span>
-        {selectedDeckId !== "all" && selectedDeckId !== "" ? (
-          <button
-            type="button"
-            className="danger-button-subtle"
-            onClick={() => onDeleteDeck(Number(selectedDeckId))}
-            disabled={selectedDeckId === defaultDeckId}
-            title={
-              selectedDeckId === defaultDeckId
-                ? "기본 단어장은 삭제할 수 없어요."
-                : undefined
-            }
-          >
-            현재 덱 삭제
-          </button>
-        ) : (
-          <span className="muted-text">삭제하려면 특정 덱을 선택하세요.</span>
-        )}
-      </div>
-
-          </section>
-          {/* Moved ahead of 덱 공유 (Phase 46) -- 사용자 정의 용어 관리 is a
-              one-button entry point, but 덱 공유's publish form + advanced
-              backup/CSV panel used to sit between it and 덱 관리, adding a
-              long scroll (~1.6k px on mobile) just to reach this toggle. */}
-          <section className="management-card">
-            <div className="management-card-header">
-              <h2>고급</h2>
-              <p className="muted-text">작품별 사용자 용어와 보조 관리 기능이에요.</p>
-            </div>
-            <div className="management-actions">
+          return (
+            <li
+              key={item.id}
+              id={`vocab-file-row-${item.id}`}
+              className={`vocab-file-pair${isExpanded ? " is-open" : ""}`}
+              data-status={item.status}
+            >
               <button
                 type="button"
-                className="secondary-button"
-                onClick={() => setIsCustomTermManagerOpen((open) => !open)}
-                aria-expanded={isCustomTermManagerOpen}
+                className="vocab-file-pair-hit"
+                aria-expanded={isExpanded}
+                aria-controls={isExpanded ? detailId : undefined}
+                onClick={() => toggleItem(item.id)}
               >
-                사용자 정의 용어 관리
+                <span className="vocab-file-no" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="vocab-file-ja">
+                  <strong lang="ja">{item.surface || item.base_form}</strong>
+                  {hasReading ? <span lang="ja">{item.reading}</span> : null}
+                  <QualityBadge qualityTag={item.quality_tag} />
+                </span>
+                <span className="vocab-file-ko">
+                  <strong>{getDisplayMeaning(item.meaning_ko)}</strong>
+                  <span className="vocab-file-status">
+                    {statusShortLabels[item.status]}
+                    {isDue ? <em> · 복습 예정</em> : null}
+                  </span>
+                </span>
               </button>
-            </div>
-          </section>
-          <section className="management-card">
-            <div className="management-card-header">
-              <h2>덱 공유</h2>
-              <p className="muted-text">
-                CSV는 엑셀 확인용이에요. 앱 간 공유는 덱 공유 파일을 사용하세요.
-              </p>
-            </div>
 
-      <div className="deck-share-panel">
-        <p className="muted-text">
-          등록하면 다른 사용자가 공유 탭에서 이 덱을 보고 자기 단어장으로 가져올 수 있어요. 학습 기록은 공유되지 않아요.
-        </p>
-        <div className="publish-deck-form">
-          <label className="inline-field">
-            공유 제목
-            <input
-              value={publishTitle}
-              onChange={(event) => onPublishTitleChange(event.target.value)}
-              placeholder="비워두면 현재 덱 이름 사용"
-            />
-          </label>
-          <label className="inline-field wide-field">
-            공유 설명
-            <textarea
-              className="compact-textarea"
-              value={publishDescription}
-              onChange={(event) =>
-                onPublishDescriptionChange(event.target.value)
-              }
-              placeholder="덱에 포함된 작품 범위나 학습 목적"
-            />
-          </label>
+              {isExpanded ? (
+                <VocabItemDetail
+                  id={detailId}
+                  item={item}
+                  decks={decks}
+                  editingItemId={editingItemId}
+                  editVocabForm={editVocabForm}
+                  isUpdatingVocab={isUpdatingVocab}
+                  meaningEditItemId={meaningEditItemId}
+                  meaningEditDraft={meaningEditDraft}
+                  isSavingMeaningEdit={isSavingMeaningEdit}
+                  meaningEditMessage={meaningEditMessage}
+                  onStatusChange={onStatusChange}
+                  onStartMeaningEdit={onStartMeaningEdit}
+                  onMeaningEditDraftChange={onMeaningEditDraftChange}
+                  onSaveMeaningEdit={onSaveMeaningEdit}
+                  onCancelMeaningEdit={onCancelMeaningEdit}
+                  onReportMeaning={onReportMeaning}
+                  onEditVocabFormChange={onEditVocabFormChange}
+                  onStartEdit={onStartEdit}
+                  onSaveEdit={onSaveEdit}
+                  onCancelEdit={onCancelEdit}
+                  onDelete={onDelete}
+                />
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+    );
+  }
+
+  function renderManagement() {
+    return (
+      <div className="vocab-file-manage">
+        <div className="vocab-file-manage-head">
+          <h3>단어장 관리</h3>
           <button
             type="button"
-            onClick={onPublishDeck}
-            disabled={selectedDeckId === "all" || selectedDeckId === "" || isPublishingDeck}
-            title={
-              selectedDeckId === "all" || selectedDeckId === ""
-                ? "공유할 특정 덱을 먼저 선택해 주세요."
-                : undefined
-            }
+            className="vocab-file-link"
+            onClick={() => setIsManagementOpen(false)}
           >
-            {isPublishingDeck ? "등록 중..." : "현재 덱을 공유 덱으로 등록"}
+            단어 목록으로
           </button>
         </div>
-        <div className="advanced-backup-panel">
+
+        <section className="vocab-file-manage-section" aria-label="바로 가기">
+          <div className="vocab-file-manage-links">
+            <button
+              type="button"
+              className="vocab-file-link"
+              onClick={onStudySelectedDeck}
+              disabled={!isSpecificDeck}
+              title={studyDisabledTitle}
+            >
+              이 덱 학습하기
+            </button>
+            <button type="button" className="vocab-file-link" onClick={onGoToStudyToday}>
+              오늘 복습하기
+            </button>
+            <button type="button" className="vocab-file-link" onClick={onGoToReading}>
+              원문 읽기
+            </button>
+            <button type="button" className="vocab-file-link" onClick={onGoToShared}>
+              덱 책장
+            </button>
+            <button
+              type="button"
+              className="vocab-file-link"
+              onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
+              aria-expanded={isNewVocabFormOpen}
+            >
+              {isNewVocabFormOpen ? "단어 추가 닫기" : "단어 직접 추가"}
+            </button>
+            <button
+              type="button"
+              className="vocab-file-link"
+              onClick={onRefresh}
+              disabled={isLoading || !hasDeckSelected}
+            >
+              {isLoading ? "불러오는 중..." : "새로고침"}
+            </button>
+          </div>
+          <p className="vocab-file-manage-note">
+            전체 {stats ? stats.total_vocab_count : items.length}개 · 복습 예정{" "}
+            {stats ? stats.due_today_count : "-"}개 · 어려운 단어{" "}
+            {stats ? stats.hard_count : "-"}개
+          </p>
+        </section>
+
+        <section className="vocab-file-manage-section">
+          <h4>덱 관리</h4>
+          <p className="vocab-file-manage-note">새 덱을 만들거나 현재 선택한 덱을 삭제해요.</p>
+          <div className="deck-create">
+            <input
+              value={newDeckName}
+              onChange={(event) => onNewDeckNameChange(event.target.value)}
+              placeholder="덱 이름"
+              aria-label="새 덱 이름"
+            />
+            <input
+              value={newDeckDescription}
+              onChange={(event) => onNewDeckDescriptionChange(event.target.value)}
+              placeholder="설명"
+              aria-label="새 덱 설명"
+            />
+            <button
+              type="button"
+              className="vocab-file-ink-button"
+              onClick={onCreateDeck}
+              disabled={isCreatingDeck}
+            >
+              {isCreatingDeck ? "만드는 중..." : "덱 만들기"}
+            </button>
+          </div>
+          {deckMessage ? (
+            <p className={`vocab-file-message is-${classifyMessageTone(deckMessage)}`} role="status">
+              {deckMessage}
+            </p>
+          ) : null}
+          <div className="vocab-file-danger">
+            <span className="vocab-file-danger-label">위험 구역</span>
+            {isSpecificDeck ? (
+              <button
+                type="button"
+                className="vocab-file-link vocab-file-link-danger"
+                onClick={() => onDeleteDeck(Number(selectedDeckId))}
+                disabled={selectedDeckId === defaultDeckId}
+                title={
+                  selectedDeckId === defaultDeckId
+                    ? "기본 단어장은 삭제할 수 없어요."
+                    : undefined
+                }
+              >
+                현재 덱 삭제
+              </button>
+            ) : (
+              <span className="vocab-file-manage-note">삭제하려면 특정 덱을 선택하세요.</span>
+            )}
+          </div>
+        </section>
+
+        <section className="vocab-file-manage-section">
+          <h4>덱 공유</h4>
+          <p className="vocab-file-manage-note">
+            등록하면 다른 사용자가 공유 탭에서 이 덱을 보고 자기 단어장으로 가져올 수 있어요. 학습 기록은 공유되지 않아요.
+          </p>
+          <div className="publish-deck-form">
+            <label className="inline-field">
+              공유 제목
+              <input
+                value={publishTitle}
+                onChange={(event) => onPublishTitleChange(event.target.value)}
+                placeholder="비워두면 현재 덱 이름 사용"
+              />
+            </label>
+            <label className="inline-field wide-field">
+              공유 설명
+              <textarea
+                className="compact-textarea"
+                value={publishDescription}
+                onChange={(event) => onPublishDescriptionChange(event.target.value)}
+                placeholder="덱에 포함된 작품 범위나 학습 목적"
+              />
+            </label>
+            <button
+              type="button"
+              className="vocab-file-ink-button"
+              onClick={onPublishDeck}
+              disabled={!isSpecificDeck || isPublishingDeck}
+              title={isSpecificDeck ? undefined : "공유할 특정 덱을 먼저 선택해 주세요."}
+            >
+              {isPublishingDeck ? "등록 중..." : "현재 덱을 공유 덱으로 등록"}
+            </button>
+          </div>
           <button
             type="button"
-            className="secondary-button"
+            className="vocab-file-link"
             onClick={() => setIsBackupToolsOpen((open) => !open)}
             aria-expanded={isBackupToolsOpen}
           >
             고급 백업/파일 내보내기
           </button>
           {isBackupToolsOpen ? (
-            <div className="backup-tools">
-              <p className="muted-text">
-                일반적인 덱 공유는 공유 탭을 사용하세요. CSV/JSON 파일은 백업이나 수동 이동이 필요할 때만 사용하는 고급 기능이에요.
+            <div className="vocab-file-backup">
+              <p className="vocab-file-manage-note">
+                CSV는 엑셀 확인용이에요. 일반적인 덱 공유는 공유 탭을 사용하고, CSV/JSON 파일은 백업이나 수동 이동이 필요할 때만 사용하세요.
               </p>
-        <div className="deck-share-actions">
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={onExportDeckPackage}
-            disabled={selectedDeckId === "all" || selectedDeckId === "" || isExportingDeckPackage}
-            title={
-              selectedDeckId === "all" || selectedDeckId === ""
-                ? "내보낼 특정 덱을 먼저 선택해 주세요."
-                : undefined
-            }
-          >
-            {isExportingDeckPackage
-              ? "내보내는 중..."
-              : "현재 덱 공유 파일로 내보내기"}
-          </button>
-          <label className="inline-field">
-            덱 공유 JSON
-            <input
-              type="file"
-              accept="application/json,.json"
-              onChange={(event) =>
-                onDeckPackageFileChange(event.target.files?.[0] ?? null)
-              }
-            />
-          </label>
-          {deckPackageFileName ? (
-            <span className="muted-text">{deckPackageFileName}</span>
-          ) : null}
-          <button
-            type="button"
-            onClick={onImportDeckPackage}
-            disabled={!deckPackageFileName || isImportingDeckPackage}
-            title={
-              !deckPackageFileName
-                ? "가져올 덱 공유 JSON 파일을 먼저 선택해 주세요."
-                : undefined
-            }
-          >
-            {isImportingDeckPackage ? "가져오는 중..." : "덱 가져오기"}
-          </button>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={onDownloadCsv}
-            disabled={isExportingCsv}
-          >
-            {isExportingCsv ? "다운로드 중..." : "CSV 다운로드"}
-          </button>
-        </div>
+              <div className="vocab-file-backup-actions">
+                <button
+                  type="button"
+                  className="vocab-file-link"
+                  onClick={onExportDeckPackage}
+                  disabled={!isSpecificDeck || isExportingDeckPackage}
+                  title={isSpecificDeck ? undefined : "내보낼 특정 덱을 먼저 선택해 주세요."}
+                >
+                  {isExportingDeckPackage ? "내보내는 중..." : "현재 덱 공유 파일로 내보내기"}
+                </button>
+                <button
+                  type="button"
+                  className="vocab-file-link"
+                  onClick={onDownloadCsv}
+                  disabled={isExportingCsv}
+                >
+                  {isExportingCsv ? "다운로드 중..." : "CSV 다운로드"}
+                </button>
+              </div>
+              <label className="inline-field">
+                덱 공유 JSON
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={(event) =>
+                    onDeckPackageFileChange(event.target.files?.[0] ?? null)
+                  }
+                />
+              </label>
+              {deckPackageFileName ? (
+                <span className="vocab-file-manage-note">{deckPackageFileName}</span>
+              ) : null}
+              <button
+                type="button"
+                className="vocab-file-ink-button"
+                onClick={onImportDeckPackage}
+                disabled={!deckPackageFileName || isImportingDeckPackage}
+                title={
+                  deckPackageFileName
+                    ? undefined
+                    : "가져올 덱 공유 JSON 파일을 먼저 선택해 주세요."
+                }
+              >
+                {isImportingDeckPackage ? "가져오는 중..." : "덱 가져오기"}
+              </button>
             </div>
           ) : null}
-        </div>
+        </section>
+
+        <section className="vocab-file-manage-section" ref={customTermSectionRef}>
+          <h4>사용자 정의 용어</h4>
+          <p className="vocab-file-manage-note">
+            작품 고유명사나 자주 나오는 용어를 등록하면 분석 결과에 먼저 반영돼요.
+          </p>
+          <button
+            type="button"
+            className="vocab-file-link"
+            onClick={() => setIsCustomTermManagerOpen((open) => !open)}
+            aria-expanded={isCustomTermManagerOpen}
+          >
+            {isCustomTermManagerOpen
+              ? "사용자 정의 용어 접기"
+              : `사용자 정의 용어 관리 (${customTerms.length}개)`}
+          </button>
+          {isCustomTermManagerOpen ? renderCustomTerms() : null}
+        </section>
       </div>
+    );
+  }
 
-          </section>
-        </div>
-      ) : null}
-
-      {!isNewVocabFormOpen ? (
-        null
-      ) : (
-        <div className="vocab-form-panel paper-corner">
-          <div className="form-heading">
-            <h2>단어 직접 추가</h2>
-          </div>
-          <VocabItemForm
-            form={newVocabForm}
-            decks={decks}
-            onChange={onNewVocabFormChange}
-          />
-          <div className="form-actions">
-            <button type="button" onClick={onAddVocabItem} disabled={isAddingVocab}>
-              {isAddingVocab ? "추가 중..." : "추가"}
-            </button>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => onNewVocabFormOpenChange(false)}
-              disabled={isAddingVocab}
-            >
-              취소
-            </button>
-          </div>
-        </div>
-      )}
-
-      {isManagementOpen && isCustomTermManagerOpen ? (
-      <div className="custom-term-section" ref={customTermSectionRef}>
-        <div className="result-heading compact-heading">
-          <div>
-            <h2>사용자 정의 용어</h2>
-            <span>{customTerms.length}개</span>
-          </div>
-          {!isCustomTermFormOpen ? (
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => onCustomTermFormOpenChange(true)}
-            >
-              + 사용자 정의 용어 추가
-            </button>
-          ) : null}
-        </div>
-
-        {isCustomTermFormOpen ? (
-          <div className="vocab-form-panel paper-corner">
+  function renderCustomTerms() {
+    return (
+      <div className="vocab-file-terms">
+        {!isCustomTermFormOpen ? (
+          <button
+            type="button"
+            className="vocab-file-link"
+            onClick={() => onCustomTermFormOpenChange(true)}
+          >
+            + 사용자 정의 용어 추가
+          </button>
+        ) : (
+          <div className="vocab-file-form">
             <CustomTermForm
               form={newCustomTermForm}
               decks={decks}
@@ -1105,6 +774,7 @@ export function VocabSection({
             <div className="form-actions">
               <button
                 type="button"
+                className="vocab-file-ink-button"
                 onClick={onAddCustomTerm}
                 disabled={isSavingCustomTerm}
               >
@@ -1112,7 +782,7 @@ export function VocabSection({
               </button>
               <button
                 type="button"
-                className="secondary-button"
+                className="vocab-file-link"
                 onClick={() => onCustomTermFormOpenChange(false)}
                 disabled={isSavingCustomTerm}
               >
@@ -1120,60 +790,49 @@ export function VocabSection({
               </button>
             </div>
           </div>
-        ) : null}
+        )}
 
         {customTerms.length > 0 ? (
-          <div className="custom-term-card-list">
+          <ul className="vocab-file-term-list">
             {customTerms.map((term) => (
               <Fragment key={term.id}>
-                <div className="records-word-row custom-term-card paper-corner">
-                  <span className="records-word-surface">{term.term}</span>
-                  {term.reading ? (
-                    <span className="records-word-reading">{term.reading}</span>
-                  ) : null}
-                  {term.part_of_speech ? (
-                    <span className="vocab-item-secondary-tag">
-                      {term.part_of_speech}
-                    </span>
-                  ) : null}
-                  <span className="records-word-meaning">
+                <li className="vocab-file-term">
+                  <span className="vocab-file-term-word">
+                    <strong lang="ja">{term.term}</strong>
+                    {term.reading ? <span lang="ja">{term.reading}</span> : null}
+                  </span>
+                  <span className="vocab-file-term-meaning">
                     {getDisplayMeaning(term.meaning_ko)}
+                    <small>
+                      {[term.part_of_speech, term.deck_name || "공통"]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </small>
+                    {term.description ? <small>{term.description}</small> : null}
                   </span>
-                  <span className="vocab-item-secondary-tag">
-                    {term.deck_name || "공통"}
-                  </span>
-                  {term.description ? (
-                    <span className="custom-term-card-description">
-                      {term.description}
-                    </span>
-                  ) : null}
-                  <div className="row-actions custom-term-card-actions">
+                  <span className="vocab-file-term-actions">
                     <button
                       type="button"
-                      className="secondary-button compact-button"
+                      className="vocab-file-link"
                       onClick={() => onStartCustomTermEdit(term)}
                     >
                       수정
                     </button>
                     <button
                       type="button"
-                      className="danger-button-subtle compact-button"
+                      className="vocab-file-link vocab-file-link-danger"
                       onClick={() => {
-                        if (
-                          window.confirm(
-                            `"${term.term}" 용어를 삭제할까요?`,
-                          )
-                        ) {
+                        if (window.confirm(`"${term.term}" 용어를 삭제할까요?`)) {
                           onDeleteCustomTerm(term.id);
                         }
                       }}
                     >
                       삭제
                     </button>
-                  </div>
-                </div>
+                  </span>
+                </li>
                 {editingCustomTermId === term.id ? (
-                  <div className="vocab-form-panel inline-edit-form paper-corner">
+                  <li className="vocab-file-form">
                     <CustomTermForm
                       form={editCustomTermForm}
                       decks={decks}
@@ -1182,6 +841,7 @@ export function VocabSection({
                     <div className="form-actions">
                       <button
                         type="button"
+                        className="vocab-file-ink-button"
                         onClick={onSaveCustomTermEdit}
                         disabled={isSavingCustomTerm}
                       >
@@ -1189,43 +849,240 @@ export function VocabSection({
                       </button>
                       <button
                         type="button"
-                        className="secondary-button"
+                        className="vocab-file-link"
                         onClick={onCancelCustomTermEdit}
                         disabled={isSavingCustomTerm}
                       >
                         취소
                       </button>
                     </div>
-                  </div>
+                  </li>
                 ) : null}
               </Fragment>
             ))}
-          </div>
+          </ul>
         ) : (
-          <p className="empty">
+          <p className="vocab-file-manage-note">
             {selectedDeckId === ""
               ? "덱을 선택하면 그 덱에 등록한 사용자 정의 용어를 볼 수 있어요."
-              : "등록된 사용자 정의 용어가 없어요. 작품 고유명사나 자주 나오는 용어를 추가하면 분석 결과에 먼저 반영돼요."}
+              : "등록된 사용자 정의 용어가 없어요."}
           </p>
         )}
       </div>
+    );
+  }
 
-      ) : null}
+  const indexTotal = countFor("all");
+
+  return (
+    <section className="tab-panel vocab-file">
+      <div className="vocab-file-stage">
+        <div className="vocab-file-tray">
+          <aside className="vocab-file-index" aria-label="단어장 색인">
+            <span className="vocab-file-mark" lang="ja">
+              ことば
+            </span>
+            <div className="vocab-file-index-list" role="group" aria-label="상태 색인">
+              {statusFilterOptions.map((option) => {
+                const isActive = statusFilter === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`vocab-file-index-tab${isActive ? " is-active" : ""}`}
+                    aria-pressed={isActive}
+                    onClick={() => onStatusFilterChange(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                className={`vocab-file-index-tab${dueOnly ? " is-active" : ""}`}
+                aria-pressed={dueOnly}
+                onClick={() => onDueOnlyChange(!dueOnly)}
+              >
+                복습 예정
+              </button>
+            </div>
+            <span className="vocab-file-index-foot">
+              {indexTotal !== null ? `단어 ${indexTotal} · ` : ""}덱 {decks.length}
+            </span>
+          </aside>
+
+          <div className="vocab-file-back" aria-hidden="true" />
+
+          <div className="vocab-file-sheet">
+            <span className="vocab-file-tab" aria-hidden="true">
+              내 단어장 · {selectedDeckName}
+            </span>
+
+            <header className="vocab-file-head">
+              <div>
+                <span className="vocab-file-smallcap">
+                  MY VOCABULARY<span className="vocab-file-desk-only"> / 日本語</span>
+                </span>
+                <h2>
+                  <span className="vocab-file-desk-only">일본어와 한국어</span>
+                  <span className="vocab-file-phone-only">내 단어장</span>
+                </h2>
+              </div>
+              <span className="vocab-file-count" aria-live="polite">
+                {hasDeckSelected && !(isLoading && items.length === 0) ? items.length : "–"}
+                <small>단어</small>
+              </span>
+            </header>
+
+            <div className="vocab-file-tools">
+              <label className="vocab-file-search">
+                <SearchIcon className="vocab-file-search-icon" />
+                <input
+                  value={searchText}
+                  onChange={(event) => onSearchTextChange(event.target.value)}
+                  placeholder="단어, 읽기, 뜻 검색"
+                  aria-label="단어장 검색"
+                />
+              </label>
+              <label className="vocab-file-select vocab-file-deck">
+                <span className="vocab-file-sr">덱</span>
+                <select
+                  value={selectedDeckId}
+                  onChange={(event) => onSelectedDeckChange(event.target.value)}
+                >
+                  <option value="" disabled hidden>
+                    덱 선택
+                  </option>
+                  <option value="all">전체 단어장</option>
+                  {decks.map((deck) => (
+                    <option key={deck.id} value={String(deck.id)}>
+                      {deck.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {sortSelect("vocab-file-desk-only")}
+              <button
+                type="button"
+                className="vocab-file-link vocab-file-desk-only"
+                onClick={() => onNewVocabFormOpenChange(!isNewVocabFormOpen)}
+                aria-expanded={isNewVocabFormOpen}
+              >
+                {isNewVocabFormOpen ? "추가 닫기" : "단어 추가"}
+              </button>
+            </div>
+
+            <div className="vocab-file-filters" role="group" aria-label="단어 상태">
+              {filterButtons}
+            </div>
+
+            {message ? (
+              <p
+                className={`vocab-file-message is-${classifyMessageTone(message)}`}
+                role="status"
+              >
+                {message}
+              </p>
+            ) : null}
+
+            {!isManagementOpen ? (
+              <div className="vocab-file-columns">
+                <span>
+                  <span className="vocab-file-desk-only">일본어 · 읽기</span>
+                  <span className="vocab-file-phone-only">일본어</span>
+                </span>
+                <span>
+                  <span className="vocab-file-desk-only">뜻 · 기억</span>
+                  <span className="vocab-file-phone-only">한국어</span>
+                </span>
+                {sortSelect("vocab-file-phone-only")}
+              </div>
+            ) : null}
+
+            <div className="vocab-file-scroll" ref={scrollRef}>
+              {isNewVocabFormOpen ? (
+                <div className="vocab-file-form vocab-file-add">
+                  <h3>단어 직접 추가</h3>
+                  <VocabItemForm
+                    form={newVocabForm}
+                    decks={decks}
+                    onChange={onNewVocabFormChange}
+                  />
+                  <div className="form-actions">
+                    <button
+                      type="button"
+                      className="vocab-file-ink-button"
+                      onClick={onAddVocabItem}
+                      disabled={isAddingVocab}
+                    >
+                      {isAddingVocab ? "추가 중..." : "추가"}
+                    </button>
+                    <button
+                      type="button"
+                      className="vocab-file-link"
+                      onClick={() => onNewVocabFormOpenChange(false)}
+                      disabled={isAddingVocab}
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {isManagementOpen ? renderManagement() : renderList()}
+            </div>
+
+            <footer className="vocab-file-foot">
+              <span className="vocab-file-foot-note">
+                {hasDeckSelected ? (
+                  <>
+                    <span className="vocab-file-desk-only">{sortLabel} · </span>
+                    {items.length}개
+                  </>
+                ) : (
+                  "덱을 골라 주세요"
+                )}
+              </span>
+              <span className="vocab-file-foot-actions">
+                <button
+                  type="button"
+                  className="vocab-file-link"
+                  onClick={onStudySelectedDeck}
+                  disabled={!isSpecificDeck}
+                  title={studyDisabledTitle}
+                >
+                  이 덱 학습하기
+                </button>
+                <button
+                  type="button"
+                  className="vocab-file-link vocab-file-desk-only"
+                  onClick={onGoToReading}
+                >
+                  원문 읽기
+                </button>
+                <button
+                  type="button"
+                  className="vocab-file-link"
+                  onClick={() => setIsManagementOpen((open) => !open)}
+                  aria-expanded={isManagementOpen}
+                >
+                  {isManagementOpen ? "단어 목록" : "단어장 관리"}
+                </button>
+              </span>
+            </footer>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
 
 // ---------------------------------------------------------------------------
-// VocabItemDetail -- one item's full detail (secondary tags, review meta,
-// saved example, meaning-edit/report/edit/delete actions, inline edit form).
-// Extracted in Phase 68 so the exact same content can render in two
-// different structural locations (mobile: inline under the row; desktop:
-// the notebook scene's right-hand note page) without hand-duplicating this
-// JSX -- see the two call sites in VocabSection above and below. Pure
-// extraction: every prop here is something the row loop already had in
-// scope, no behavior change.
+// VocabItemDetail -- the open row's body: saved example first, then status,
+// review record, and the meaning-edit/report/edit/delete actions with the
+// inline edit form. Rendered once, inside the selected row.
 // ---------------------------------------------------------------------------
 type VocabItemDetailProps = {
+  id: string;
   item: VocabItem;
   decks: Deck[];
   editingItemId: number | null;
@@ -1235,6 +1092,7 @@ type VocabItemDetailProps = {
   meaningEditDraft: string;
   isSavingMeaningEdit: boolean;
   meaningEditMessage: string;
+  onStatusChange: (itemId: number, status: TokenStatus) => void;
   onStartMeaningEdit: (itemId: number, currentMeaning: string) => void;
   onMeaningEditDraftChange: (value: string) => void;
   onSaveMeaningEdit: () => void;
@@ -1248,6 +1106,7 @@ type VocabItemDetailProps = {
 };
 
 function VocabItemDetail({
+  id,
   item,
   decks,
   editingItemId,
@@ -1257,6 +1116,7 @@ function VocabItemDetail({
   meaningEditDraft,
   isSavingMeaningEdit,
   meaningEditMessage,
+  onStatusChange,
   onStartMeaningEdit,
   onMeaningEditDraftChange,
   onSaveMeaningEdit,
@@ -1268,57 +1128,42 @@ function VocabItemDetail({
   onCancelEdit,
   onDelete,
 }: VocabItemDetailProps) {
+  const metaParts = [
+    item.base_form && item.base_form !== item.surface ? `기본형 ${item.base_form}` : "",
+    item.part_of_speech,
+    item.deck_name,
+    `복습 레벨 ${item.review_level}`,
+    `맞음 ${item.correct_count} · 다시 ${item.wrong_count}`,
+    formatNextReview(item.next_review_at),
+    item.last_reviewed_at ? `마지막 복습 ${formatDateTime(item.last_reviewed_at)}` : "",
+  ].filter(Boolean);
+
   return (
-    <div className="vocab-row-detail">
-      <div className="vocab-item-secondary">
-        {item.base_form && item.base_form !== item.surface ? (
-          <span className="vocab-item-secondary-tag">
-            기본형 {item.base_form}
-          </span>
-        ) : null}
-        {item.part_of_speech ? (
-          <span className="vocab-item-secondary-tag">
-            {item.part_of_speech}
-          </span>
-        ) : null}
-        <span className="vocab-item-secondary-tag">{item.deck_name}</span>
-      </div>
-
-      <div className="vocab-item-review-meta">
-        <span className="vocab-item-review-badge">
-          복습 레벨 {item.review_level}
-        </span>
-        <span className="vocab-item-review-badge">
-          맞음 {item.correct_count} · 다시 {item.wrong_count}
-        </span>
-        <span className="vocab-item-review-badge vocab-item-review-badge-accent">
-          <ClockIcon className="vocab-item-review-badge-icon" />
-          {formatNextReview(item.next_review_at)}
-        </span>
-        {item.last_reviewed_at ? (
-          <span className="vocab-item-review-badge vocab-item-review-badge-muted">
-            마지막 복습 {formatDateTime(item.last_reviewed_at)}
-          </span>
-        ) : null}
-      </div>
-
+    <div className="vocab-file-detail" id={id}>
       {item.example_sentence ? (
-        <div className="vocab-item-example">
-          <span className="vocab-item-example-label">문맥 예문</span>
-          <p className="vocab-item-example-text">
-            <HighlightedExample
-              sentence={item.example_sentence}
-              surface={item.surface}
-              baseForm={item.base_form}
-              normalizedForm={item.normalized_form}
-            />
-          </p>
-        </div>
+        <p className="vocab-file-example" lang="ja">
+          <HighlightedExample
+            sentence={item.example_sentence}
+            surface={item.surface}
+            baseForm={item.base_form}
+            normalizedForm={item.normalized_form}
+          />
+        </p>
       ) : (
-        <p className="vocab-item-example-empty">저장된 예문이 없어요.</p>
+        <p className="vocab-file-example-empty">저장된 예문이 없어요.</p>
       )}
 
-      <div className="vocab-item-actions">
+      <p className="vocab-file-meta">{metaParts.join(" · ")}</p>
+
+      <div className="vocab-file-actions">
+        <label className="vocab-file-select vocab-file-status-select">
+          <span className="vocab-file-sr">기억 상태</span>
+          <StatusSelect
+            value={item.status}
+            label={`${item.surface} 저장 상태`}
+            onChange={(status) => onStatusChange(item.id, status)}
+          />
+        </label>
         <MeaningQuickEdit
           isEditing={meaningEditItemId === item.id}
           draftValue={meaningEditDraft}
@@ -1328,24 +1173,26 @@ function VocabItemDetail({
           onDraftChange={onMeaningEditDraftChange}
           onSave={onSaveMeaningEdit}
           onCancel={onCancelMeaningEdit}
+          triggerLabel="뜻 고치기"
+          triggerClassName="vocab-file-link"
         />
         <button
           type="button"
-          className="report-meaning-link-button"
+          className="vocab-file-link"
           onClick={() => onReportMeaning(item)}
         >
           뜻 오류 신고
         </button>
         <button
           type="button"
-          className="secondary-button compact-button"
+          className="vocab-file-link"
           onClick={() => onStartEdit(item)}
         >
           수정
         </button>
         <button
           type="button"
-          className="danger-button danger-button-subtle compact-button"
+          className="vocab-file-link vocab-file-link-danger"
           onClick={() => {
             const label = item.surface || item.base_form;
             if (
@@ -1362,22 +1209,25 @@ function VocabItemDetail({
       </div>
 
       {editingItemId === item.id ? (
-        <div className="vocab-form-panel inline-edit-form paper-corner">
-          <div className="form-heading">
-            <h2>단어 수정</h2>
-          </div>
+        <div className="vocab-file-form">
+          <h3>단어 수정</h3>
           <VocabItemForm
             form={editVocabForm}
             decks={decks}
             onChange={onEditVocabFormChange}
           />
           <div className="form-actions">
-            <button type="button" onClick={onSaveEdit} disabled={isUpdatingVocab}>
+            <button
+              type="button"
+              className="vocab-file-ink-button"
+              onClick={onSaveEdit}
+              disabled={isUpdatingVocab}
+            >
               {isUpdatingVocab ? "저장 중..." : "저장"}
             </button>
             <button
               type="button"
-              className="secondary-button"
+              className="vocab-file-link"
               onClick={onCancelEdit}
               disabled={isUpdatingVocab}
             >
