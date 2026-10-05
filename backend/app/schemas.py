@@ -192,6 +192,67 @@ class StatsResponse(BaseModel):
     lexeme_completed_today: int = 0
 
 
+# Date-by-date study history (Stats tab 학습 기록), read-only. See
+# app/repositories/stats_history_repository.py for the approved contract.
+class HistoryRatingsResponse(BaseModel):
+    again: int = 0
+    hard: int = 0
+    good: int = 0
+    easy: int = 0
+
+
+class HistoryDayCountsResponse(BaseModel):
+    date: str
+    review_count: int
+    ratings: HistoryRatingsResponse
+    saved_word_count: int
+
+
+class HistoryMonthSummaryResponse(BaseModel):
+    review_count: int
+    saved_word_count: int
+    active_days: int
+
+
+class HistoryStreakResponse(BaseModel):
+    days: int
+    starts_on: str | None
+    ends_on: str | None
+    capped: bool = False
+    definition: str
+
+
+class StatsHistoryMonthResponse(BaseModel):
+    month: str
+    timezone: str
+    today: str
+    as_of: str
+    review_sources: list[str]
+    saved_words_scope: str
+    days: list[HistoryDayCountsResponse]
+    summary: HistoryMonthSummaryResponse
+    current_streak: HistoryStreakResponse
+
+
+class HistorySavedWordResponse(BaseModel):
+    id: int
+    surface: str
+    reading: str
+    meaning_ko: str
+
+
+class StatsHistoryDayResponse(BaseModel):
+    date: str
+    timezone: str
+    review_sources: list[str]
+    saved_words_scope: str
+    review_count: int
+    ratings: HistoryRatingsResponse
+    saved_word_count: int
+    saved_words: list[HistorySavedWordResponse]
+    has_more_saved_words: bool
+
+
 class DeckCreate(BaseModel):
     name: str
     description: str = ""

@@ -52,6 +52,8 @@ import type {
   VocabFormData,
   VocabItem,
   VocabSort,
+  StudyHistoryDay,
+  StudyHistoryMonth,
   StudyStats,
   StudyCardItem,
   StudyLexemeItem,
@@ -839,6 +841,11 @@ export default function HomePage() {
   const [hasStartedStudy, setHasStartedStudy] = useState(false);
   const [isLoadingStudyStats, setIsLoadingStudyStats] = useState(false);
   const [isLoadingInfoStats, setIsLoadingInfoStats] = useState(false);
+  // Stats tab account boundary: bumped whenever the signed-in account (or
+  // its token) changes. StudyLogPage is keyed on it, and the stats loaders
+  // drop responses that started under an older account.
+  const [statsAccountEpoch, setStatsAccountEpoch] = useState(0);
+  const statsAccountEpochRef = useRef(0);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoadingCurrentUser, setIsLoadingCurrentUser] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -1109,35 +1116,29 @@ export default function HomePage() {
   }
 
   async function loadCurrentUser() {
+    // Any sign-in, sign-out or expiry while /me is in flight bumps the
+    // account epoch; a result from an older epoch must not touch the user,
+    // the token or the message.
+    const epoch = statsAccountEpochRef.current;
     setIsLoadingCurrentUser(true);
     try {
       const user = await requestJson<CurrentUser>("/me");
-      setCurrentUser(user);
+      if (epoch === statsAccountEpochRef.current) {
+        setCurrentUser(user);
+      }
     } catch (error) {
       if (isHttpError(error, 401)) {
-        // Stored token is stale/invalid/tampered. Drop it and fall back to
-        // the dev user so the app never gets stuck on a blank screen or an
-        // infinite loading spinner -- the fallback fetch itself is wrapped
-        // separately so a network hiccup here can't throw back out past
-        // this catch block.
-        clearAccessToken();
-        try {
-          const devUser = await requestJson<CurrentUser>(
-            "/me",
-            {},
-            { includeAuth: false },
-          );
-          setCurrentUser(devUser);
-        } catch {
-          setCurrentUser(null);
-        }
-        setAuthMessage(
-          "로그인이 만료되어 로그아웃되었습니다. 다시 로그인해주세요.",
-        );
+        // A stale/invalid/tampered token. apiFetch already cleared it (only
+        // if it is still the stored token) and fired AUTH_EXPIRED_EVENT,
+        // whose handler resets the stats, falls back to the dev user and
+        // shows the expiry message. A 401 for a token that has since been
+        // replaced is simply ignored here.
         return;
       }
-      setCurrentUser(null);
-      setAuthMessage(getErrorMessage(error, "현재 사용자 정보를 불러오지 못했습니다."));
+      if (epoch === statsAccountEpochRef.current) {
+        setCurrentUser(null);
+        setAuthMessage(getErrorMessage(error, "현재 사용자 정보를 불러오지 못했습니다."));
+      }
     } finally {
       setIsLoadingCurrentUser(false);
     }
@@ -1186,6 +1187,7 @@ export default function HomePage() {
         { includeAuth: false },
       );
       setAccessToken(response.access_token);
+      resetStatsForAccountChange();
       setCurrentUser(response.user);
       setAuthPassword("");
       setAuthMessage(
@@ -1219,6 +1221,7 @@ export default function HomePage() {
 
   async function handleLogout() {
     clearAccessToken();
+    resetStatsForAccountChange();
     setAuthPassword("");
     setAuthMessage("로그아웃했습니다. 개발 모드 데이터로 전환합니다.");
     await loadCurrentUser();
@@ -2001,19 +2004,62 @@ export default function HomePage() {
   }
 
   async function loadInfoStats() {
+    const epoch = statsAccountEpochRef.current;
     setIsLoadingInfoStats(true);
     setInfoStatsMessage("");
 
     try {
       const data = await requestJson<StatsResponse>("/stats");
-      setInfoStats(data);
+      if (epoch === statsAccountEpochRef.current) {
+        setInfoStats(data);
+      }
     } catch (error) {
-      setInfoStatsMessage(
-        getAuthAwareErrorMessage(error, "전체 학습 통계를 불러오지 못했습니다."),
-      );
+      if (epoch === statsAccountEpochRef.current) {
+        setInfoStatsMessage(
+          getAuthAwareErrorMessage(error, "전체 학습 통계를 불러오지 못했습니다."),
+        );
+      }
     } finally {
-      setIsLoadingInfoStats(false);
+      if (epoch === statsAccountEpochRef.current) {
+        setIsLoadingInfoStats(false);
+      }
     }
+  }
+
+  // Called the moment the account/token changes, before any reload: the
+  // previous account's stats and records must not stay on screen.
+  // Mid-session token expiry: same account boundary as sign-out -- clear the
+  // stats/records first, then fall back to the dev account like the /me
+  // check does, and reload the stats data for it.
+  const handleAuthExpiredRef = useRef<() => void>(() => {});
+  handleAuthExpiredRef.current = () => {
+    resetStatsForAccountChange();
+    const epoch = statsAccountEpochRef.current;
+    setAuthMessage("로그인이 만료되어 로그아웃되었습니다. 다시 로그인해주세요.");
+    void (async () => {
+      // Stop as soon as a newer sign-in takes over; it reloads for itself.
+      await loadCurrentUser();
+      if (epoch !== statsAccountEpochRef.current) return;
+      await loadInfoStats();
+      if (epoch !== statsAccountEpochRef.current) return;
+      await loadInfoWordHighlights();
+    })();
+  };
+  useEffect(() => {
+    const onExpired = () => handleAuthExpiredRef.current();
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
+  }, []);
+
+  function resetStatsForAccountChange() {
+    statsAccountEpochRef.current += 1;
+    setStatsAccountEpoch(statsAccountEpochRef.current);
+    setInfoStats(null);
+    setInfoStatsMessage("");
+    setInfoRecentWords([]);
+    setInfoHardWords([]);
+    setIsLoadingInfoStats(true);
+    setIsLoadingInfoWords(true);
   }
 
   // 기록 탭의 "최근 담은 단어" / "자주 틀린 단어" -- 이미 존재하는
@@ -2021,19 +2067,26 @@ export default function HomePage() {
   // 몇 개만 뽑아온다. 실패해도 조용히 빈 목록으로 두고 나머지 기록 화면은
   // 그대로 보여준다 (통계 요약이 이미 핵심 내용이라 이 목록은 보조 정보).
   async function loadInfoWordHighlights() {
+    const epoch = statsAccountEpochRef.current;
     setIsLoadingInfoWords(true);
     try {
       const [recentData, hardData] = await Promise.all([
         requestJson<VocabItemsResponse>("/vocab-items?sort=created_desc"),
         requestJson<VocabItemsResponse>("/vocab-items?sort=wrong_desc"),
       ]);
-      setInfoRecentWords(recentData.items.slice(0, 5));
-      setInfoHardWords(hardData.items.filter((item) => item.wrong_count > 0).slice(0, 5));
+      if (epoch === statsAccountEpochRef.current) {
+        setInfoRecentWords(recentData.items.slice(0, 5));
+        setInfoHardWords(hardData.items.filter((item) => item.wrong_count > 0).slice(0, 5));
+      }
     } catch {
-      setInfoRecentWords([]);
-      setInfoHardWords([]);
+      if (epoch === statsAccountEpochRef.current) {
+        setInfoRecentWords([]);
+        setInfoHardWords([]);
+      }
     } finally {
-      setIsLoadingInfoWords(false);
+      if (epoch === statsAccountEpochRef.current) {
+        setIsLoadingInfoWords(false);
+      }
     }
   }
 
@@ -3770,6 +3823,7 @@ export default function HomePage() {
 
         {activeTab === "info" ? (
           <StudyLogPage
+            key={`${statsAccountEpoch}:${currentUser?.id ?? "none"}`}
             stats={infoStats}
             isStatsLoading={isLoadingInfoStats}
             statsMessage={infoStatsMessage}
@@ -3778,6 +3832,16 @@ export default function HomePage() {
             isWordsLoading={isLoadingInfoWords}
             onGoToVocab={() => void handleTabChange("vocab")}
             onGoToReading={() => void handleTabChange("reading")}
+            loadHistoryMonth={(month) =>
+              requestJson<StudyHistoryMonth>(
+                `/stats/history?month=${encodeURIComponent(month)}`,
+              )
+            }
+            loadHistoryDay={(date) =>
+              requestJson<StudyHistoryDay>(
+                `/stats/history/day?date=${encodeURIComponent(date)}&limit=5`,
+              )
+            }
           />
         ) : null}
       </section>
@@ -3858,11 +3922,19 @@ async function apiFetch(
     ...init,
     headers,
   });
-  if (includeAuth && token && response.status === 401) {
+  // Only the token this request was sent with may be dropped: a slow 401
+  // from a previous account must not sign out whoever is signed in now.
+  if (includeAuth && token && response.status === 401 && getAccessToken() === token) {
     clearAccessToken();
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
   }
   return response;
 }
+
+// Fired by apiFetch when the current token is rejected mid-session (the /me
+// check on load handles its own 401). Home listens and runs the same
+// account-boundary reset as sign-out.
+const AUTH_EXPIRED_EVENT = "jv-auth-expired";
 
 function getAccessToken() {
   if (typeof window === "undefined") {

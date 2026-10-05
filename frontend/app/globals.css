@@ -2809,236 +2809,19 @@
    clearly its own reachable control rather than a repeated card-footer
    button. */
 
-.study-log-page {
-  --screen-accent: var(--sage-green);
-  --screen-accent-soft: #eef6f0;
-  min-width: 0;
-  max-width: 100%;
-}
-
-/* ==========================================================================
-   Phase 171 (Stats V2 Study Logbook Final Scene) -- Phase 161 already
-   unboxed every section (stamps/diary/ledger/slips) onto one shared
-   surface, but that surface was still a flat CSS rectangle
-   (.stats-logbook-page: border + var(--paper-bg) fill + shadow), not a real
-   scene -- no V2 photo was in play at all, so a screenshot still read as
-   "a stats page" rather than "a logbook lying open on a desk". This block
-   replaces that flat page with one full-bleed photographed V2 logbook
-   (.stats-scene-v2-frame -- a two-page desktop spread, a single tall page
-   on mobile, a different shot per breakpoint) and positions the exact same
-   content Phase 161 built (TodayStamps/StudyTimeline/DeckProgressJournal/
-   WordSlip, all unchanged below) directly over the photo's own blank stamp
-   labels, ruled ledger table, and pinned note slips. */
-/* Phase 173 -- was a plain text row (mark + text + a second ShioriStamp
-   label) in normal flow above .stats-scene-v2. Now one compact paper tag
-   hanging off the logbook's top edge, left side -- clear of
-   .stats-scene-v2-action (top-right) and far enough above
-   .stats-scene-v2-stamps (top:5-7%) that the small downward dip from
-   translateY(-60%) never reaches it. */
-.stats-scene-v2-eyebrow {
-  position: absolute;
-  z-index: 4;
-  left: 6%;
-  top: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px 5px 8px;
-  border-radius: 3px 10px 10px 3px;
-  background: var(--panel-bg);
-  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
-  color: var(--screen-accent, var(--muted));
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  transform: translateY(-60%) rotate(-2deg);
-}
-
-.stats-scene-v2-eyebrow .shiori-mark {
-  width: 16px;
-  height: 16px;
-}
-
-.stats-scene-v2 {
-  position: relative;
-}
-
-.stats-scene-v2-frame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 941 / 1672;
-  isolation: isolate;
-}
-
-.stats-scene-v2-media {
-  display: block;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.stats-scene-v2-media-img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 20px;
-}
-
-@media (min-width: 1024px) {
-  .stats-scene-v2-frame {
-    aspect-ratio: 1672 / 941;
-  }
-
-  /* Home Nav V1.1 seam repair -- same reasoning as
-     .reading-scene-v2-eyebrow above: the toolbar's own paper strip
-     already carries this label as the active "통계" nav tab, and the
-     eyebrow's translateY(-60%) pushed it above the frame into the nav
-     seam. Removed from the desktop render tree entirely; mobile (outside
-     this media query) is unaffected. */
-  .stats-scene-v2-eyebrow {
-    display: none;
-  }
-
-  .stats-scene-v2-media-img {
-    border-radius: 0 0 26px 26px;
-  }
-}
-
 /* Small notched index tab clipped to the scene's own corner -- same
    shape/color language every other V2 scene's "go elsewhere" action uses
    (.shared-deck-tab-action, .reader-bookmark-button), colored with this
    screen's own --sage-green accent. */
-.stats-scene-v2-action {
-  position: absolute;
-  z-index: 3;
-  top: 3%;
-  right: 3%;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: auto;
-  min-width: 0;
-  padding: 7px 18px 7px 10px;
-  border: 0;
-  border-radius: 3px;
-  clip-path: polygon(
-    0 0,
-    calc(100% - 14px) 0,
-    100% 50%,
-    calc(100% - 14px) 100%,
-    0 100%
-  );
-  background: var(--screen-accent, var(--primary));
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  box-shadow: 0 5px 12px rgba(37, 43, 30, 0.14);
-}
-
-.stats-scene-v2-action:not(:disabled):hover {
-  transform: translateX(2px);
-  box-shadow: 0 7px 16px rgba(37, 43, 30, 0.18);
-}
-
-@media (min-width: 1024px) {
-  .stats-scene-v2-action {
-    padding: 9px 22px 9px 14px;
-    font-size: 12.5px;
-  }
-}
 
 /* The three postmark stamps, pinned over the photo's own three blank label
    shapes at the top of the left/main page. */
-.stats-scene-v2-stamps {
-  position: absolute;
-  z-index: 2;
-  left: 6%;
-  top: 7%;
-  width: 88%;
-  height: 13%;
-  overflow: hidden;
-}
 
 /* Diary lines then deck ledger rows -- one continuous scrollable page
    surface over the photo's own ruled table, matching the brief's "stamp
    summary -> diary entries -> deck ledger" reading order. */
-.stats-scene-v2-journal {
-  position: absolute;
-  z-index: 2;
-  left: 6%;
-  top: 22%;
-  width: 88%;
-  height: 46%;
-  overflow-y: auto;
-  padding: 2px 3%;
-}
 
 /* Two pinned word slips, resting on the photo's own note-slip cutouts. */
-.stats-scene-v2-slips {
-  position: absolute;
-  z-index: 2;
-  left: 6%;
-  top: 70%;
-  width: 88%;
-  height: 21%;
-  display: flex;
-  gap: 8px;
-}
-
-.stats-scene-v2-slips .stats-word-slip {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.stats-scene-v2-slips .stats-word-slip-list {
-  min-height: 0;
-  overflow-y: auto;
-}
-
-@media (min-width: 1024px) {
-  .stats-scene-v2-stamps {
-    left: 9%;
-    top: 5%;
-    width: 40%;
-    height: 24%;
-  }
-
-  .stats-scene-v2-journal {
-    left: 9%;
-    top: 30%;
-    width: 40%;
-    height: 57%;
-    padding: 2px 2%;
-  }
-
-  .stats-scene-v2-slips {
-    left: 53%;
-    top: 6%;
-    width: 37%;
-    height: 82%;
-    flex-direction: column;
-  }
-}
-
-.stats-scene-v2-footer {
-  display: grid;
-  gap: 4px;
-  margin-top: 14px;
-}
-
-.stats-scene-v2-footer-line {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 0;
-  color: var(--muted);
-  font-size: 11.5px;
-  line-height: 1.5;
-}
 
 /* Motion -- shared keyframes + utility animation classes. Deliberately
    small movements (2-8px, opacity, or a light scale) so state screens and
@@ -4717,54 +4500,6 @@ button {
    ...) tape/.vocab-pinned-note family Vocab/Home/Study already reuse for
    "this note is physically pinned to the page" -- same 3 numbers, no pill
    shape left. */
-.study-stamp-tag {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px 6px;
-  border-radius: 2px 2px 8px 2px;
-  background: var(--soft-bg);
-  box-shadow: 0 3px 6px rgba(120, 98, 40, 0.12);
-  transform: rotate(-1.3deg);
-}
-
-.study-stamp-tag:nth-child(even) {
-  transform: rotate(1.1deg);
-}
-
-.study-stamp-tag::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  z-index: 1;
-  width: 16px;
-  height: 9px;
-  border: 1px solid rgba(217, 122, 74, 0.42);
-  background: rgba(217, 122, 74, 0.3);
-  box-shadow: 0 2px 3px rgba(37, 43, 30, 0.12);
-  transform: translateX(-50%) rotate(-4deg);
-  pointer-events: none;
-}
-
-.study-stamp-tag-icon {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  color: var(--screen-accent, var(--muted));
-}
-
-.study-stamp-tag span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.study-stamp-tag strong {
-  color: var(--text);
-  font-size: 15px;
-}
 
 @media (max-width: 640px) {
   .library-card-stage {
@@ -7920,60 +7655,14 @@ input.reading-vocab-sticker-toggle:checked {
   gap: 6px;
 }
 
-/* study-log-entry -- generic section grouping inside the logbook page (see
-   .stats-logbook-page below); not a card of its own, just spacing. */
-.study-log-entry {
-  display: grid;
-  gap: 10px;
-  min-width: 0;
-  max-width: 100%;
-}
-
-/* Phase 171 -- .stats-logbook-scene/-page/-header/-spread/-leaf/-gutter and
-   .study-log-hero-row removed: that whole family built one flat CSS "page"
-   (a plain bordered var(--paper-bg) rectangle, no real photo) with its own
-   2-column grid/gutter split for the word slips. Replaced by
-   .stats-scene-v2-frame's real V2 logbook photo plus absolutely-positioned
-   .stats-scene-v2-stamps/-journal/-slips zones -- see the Phase 171 block
-   near the top of this file (search "Phase 171"). The "오늘" postmark
-   stamps below are unchanged -- only their mount point moved. */
-.stats-today-stamps {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 10px 14px;
-}
-
 /* Phase 161 -- was .records-log-title: plain bold text, which read as a
    generic app section header floating above a card. A page in a real
    ledger book has a small tab/flag label instead -- the underline-in-
    accent-color here is that tab, cheap enough to survive every width
    without new clipping/overflow risk. */
-.stats-section-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  padding: 0 2px 4px 0;
-  border-bottom: 2px solid var(--screen-accent, var(--accent));
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-}
-
-.stats-section-tab-icon {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  color: var(--screen-accent, var(--muted));
-}
 
 /* A slip's own tab sits inside a smaller, tilted note object rather than
    directly on the page, so it stays flush-left with a touch less weight. */
-.stats-section-tab--slip {
-  font-size: 12px;
-}
 
 .records-log-hint {
   margin: -4px 0 0;
@@ -8030,245 +7719,8 @@ input.reading-vocab-sticker-toggle:checked {
   white-space: nowrap;
 }
 
-/* Phase 155 -- was .records-deck-log/.records-deck-row: each deck its own
-   bordered, drop-shadowed card, each carrying its own full rounded
-   dashboard-style progress bar -- several decks in a row read as a stack
-   of separate analytics widgets. Now one continuous "서가 기록지" ledger
-   surface (like the .study-diary-sheet just above it): rows share one
-   flat paper background and are divided by a hairline rule instead of
-   each owning its own box edge, and the fill indicator is a slim
-   underline track rather than a thick rounded bar. Same numbers, same
-   <details> disclosure, same scan order top-to-bottom.
-   Phase 161 -- dropped the ledger's own border/background/radius. It now
-   sits directly on .stats-logbook-page's single shared paper surface
-   instead of being a second nested card on top of it; only the row
-   dividers below still mark it as its own ledger region. */
-.records-deck-ledger {
-  display: grid;
-}
-
-.records-deck-ledger-row {
-  display: grid;
-  gap: 4px;
-  padding: 10px 2px;
-}
-
-.records-deck-ledger-row + .records-deck-ledger-row {
-  border-top: 1px dashed var(--paper-border);
-}
-
-.records-deck-row-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--text);
-}
-
-.records-deck-row-head span {
-  color: var(--primary-dark);
-  font-weight: 700;
-}
-
-.records-deck-progress-line {
-  position: relative;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--border);
-  overflow: hidden;
-}
-
-.records-deck-progress-line div {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--screen-accent, var(--accent));
-  transition: width var(--motion-slow) var(--ease-soft);
-}
-
 /* Primary-visible row: 오늘 복습 N / 모르는 단어 N -- 전체/아는 단어/헷갈리는
    단어 등 상세 숫자만 아래 <details>로 접혀 있다. */
-.records-deck-row-primary-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.records-deck-row-due,
-.records-deck-row-unknown {
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.records-deck-row-unknown {
-  color: var(--status-unknown-fg);
-}
-
-.records-deck-detail {
-  margin-top: 2px;
-}
-
-.records-deck-detail summary {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  list-style: none;
-}
-
-.records-deck-detail summary::-webkit-details-marker {
-  display: none;
-}
-
-.records-deck-detail summary::before {
-  content: "▸ ";
-}
-
-.records-deck-detail[open] summary::before {
-  content: "▾ ";
-}
-
-.records-deck-row-meta {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-/* Phase 155 -- was .study-log-journal-list/-line: each of the (at most 3)
-   sentences got its own bordered, filled chip -- the same rounded-box
-   shape as TodayStudyMemo's stat tags directly above it, just wider, so
-   two different kinds of content (numbers vs. sentences) read as one
-   repeated dashboard shape stacked twice. Now one continuous ruled-paper
-   sheet (same repeating-linear-gradient rule recipe .shared-deck-detail's
-   notebook page already uses) with each entry as a plain line divided by
-   a hairline rule -- a real diary page, not a second row of pill badges.
-   Phase 161 -- dropped its own border/background fill too, for the same
-   reason as .records-deck-ledger above: the ruled lines are real page
-   texture, but the box chrome around them duplicated .stats-logbook-page's
-   own border one layer in. */
-.study-diary-sheet {
-  display: grid;
-  padding: 4px 2px;
-  background: repeating-linear-gradient(
-    180deg,
-    transparent 0,
-    transparent 33px,
-    rgba(110, 91, 47, 0.06) 33px,
-    rgba(110, 91, 47, 0.06) 34px
-  );
-}
-
-.study-diary-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  padding: 10px 0;
-  color: var(--text);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.study-diary-line + .study-diary-line {
-  border-top: 1px dashed var(--paper-border);
-}
-
-.study-diary-line-icon {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  color: var(--screen-accent, var(--accent));
-}
-
-/* Phase 161 -- 최근 담은 단어/자주 틀린 단어 note slips. Each is its own
-   small pinned-paper object (washi tape + slight tilt, same family as
-   .study-stamp-tag/.home-shortcut-tab) resting on the logbook page next to
-   the ledger -- not a bordered sidebar list of app-style cards. */
-.stats-word-slip {
-  position: relative;
-  padding: 14px 14px 10px;
-  border-radius: 2px 14px 14px 14px;
-  background: var(--panel-bg);
-  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.1);
-  transform: rotate(-0.6deg);
-}
-
-.stats-word-slip + .stats-word-slip {
-  transform: rotate(0.6deg);
-}
-
-.stats-word-slip::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: 28px;
-  width: 20px;
-  height: 10px;
-  border: 1px solid rgba(217, 122, 74, 0.42);
-  background: rgba(217, 122, 74, 0.3);
-  box-shadow: 0 2px 3px rgba(37, 43, 30, 0.12);
-  transform: rotate(-4deg);
-  pointer-events: none;
-}
-
-.stats-word-slip-list {
-  display: grid;
-  margin-top: 8px;
-}
-
-.stats-word-slip-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 5px 10px;
-  padding: 8px 0;
-}
-
-.stats-word-slip-row + .stats-word-slip-row {
-  border-top: 1px dashed var(--paper-border);
-}
-
-.records-word-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 10px;
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--panel-bg);
-  box-shadow: 0 2px 6px rgba(120, 98, 40, 0.05);
-}
-
-.records-word-surface {
-  color: var(--text);
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.records-word-reading {
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.records-word-meaning {
-  flex: 1 1 140px;
-  min-width: 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
-.records-word-wrong-badge {
-  flex: 0 0 auto;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--status-unknown-bg);
-  color: var(--status-unknown-fg);
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
 
 /* 사용자 정의 용어 카드함 -- 예전엔 raw <table>이라 관리자 화면처럼 보였던
    자리를 .records-word-row(다른 곳의 index-card 계열 행)와 같은 카드로
@@ -8276,19 +7728,6 @@ input.reading-vocab-sticker-toggle:checked {
 .custom-term-card-list {
   display: grid;
   gap: 8px;
-}
-
-/* Scoped to the Vocab tab's own use of .records-word-row (the 기록 tab's
-   log rows keep their base look) -- matches .vocabulary-index-row's
-   asymmetric "index card" radius/shadow so 사용자 정의 용어 reads as the
-   same card family as the main word list above it. */
-.records-word-row.custom-term-card {
-  border-radius: 10px 10px 10px 3px;
-  box-shadow: none;
-}
-
-.records-word-row.custom-term-card:hover {
-  box-shadow: 0 6px 14px rgba(120, 98, 40, 0.1);
 }
 
 .custom-term-card-description {
@@ -8698,11 +8137,6 @@ input.reading-vocab-sticker-toggle:checked {
   align-items: flex-end;
 }
 
-/* Phase 171 -- .stats-logbook-footer/-footer-line removed: the policy/
-   attribution footnote now lives just below the scene frame as
-   .stats-scene-v2-footer/-footer-line (see the Phase 171 block near the
-   top of this file), no longer needing a border-top divider since it's no
-   longer sharing a box with the ledger content above it. */
 .info-panel-list {
   margin: 0;
   padding-left: 20px;
@@ -8834,11 +8268,6 @@ input.reading-vocab-sticker-toggle:checked {
 
   .records-level-bar {
     min-width: 28px;
-  }
-
-  .records-word-row,
-  .stats-word-slip-row {
-    align-items: flex-start;
   }
 
   /* Same app-wide mobile `button { width: 100% }` touch-target rule as the
@@ -15555,5 +14984,1359 @@ input.reading-vocab-sticker-toggle:checked {
 
   .deck-ledger-foot span:last-child {
     display: none;
+  }
+}
+
+/* ==========================================================================
+   Stats A -- two-page register (references/mockups/stats-two-view-three/
+   handoff). One quiet bound record book on a sage desk: header with the
+   학습 기록 / 어휘 현황 inner tabs, two page bodies, a footer row. The
+   paper texture is the existing phase126 file (byte-identical to the
+   handoff asset); cover, fold and rules are CSS. Phones/tablets stack both
+   pages into one continuous sheet. Everything is scoped under
+   .stats-register.
+   ========================================================================== */
+.tab-panel.stats-register {
+  --sr-desk: #77877d;
+  --sr-paper: #f6f4ee;
+  --sr-cover: #4a6350;
+  --sr-ink: #28342e;
+  --sr-muted: #66726b;
+  --sr-rule: #ccd0c5;
+  --sr-fold: #b2bfaa;
+  --sr-green: #3d6853;
+  --sr-rust: #b1694e;
+  --sr-mincho: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "MS PMincho", serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  height: calc(100svh - 50px);
+  min-height: 650px;
+  padding: 32px 48px;
+  background: var(--sr-desk);
+  color: var(--sr-ink);
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+.stats-register h1,
+.stats-register h2,
+.stats-register h3,
+.stats-register p {
+  margin: 0;
+}
+
+.stats-register button {
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: inherit;
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.stats-register button:not(:disabled):hover,
+.stats-register button:not(:disabled):active {
+  box-shadow: none;
+  transform: none;
+}
+
+.stats-register button:disabled {
+  cursor: default;
+}
+
+.stats-register button:focus-visible,
+.stats-register summary:focus-visible {
+  outline: 3px solid #53849a;
+  outline-offset: 3px;
+}
+
+.stats-register strong small {
+  margin-left: 5px;
+  color: var(--sr-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.stats-reg-book {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  width: min(1380px, 100%);
+  height: 100%;
+  max-height: 750px;
+  border: 7px solid var(--sr-cover);
+  border-bottom-width: 11px;
+  border-radius: 5px;
+  background: var(--sr-paper);
+  box-shadow: 0 10px 22px #263e3024;
+}
+
+.stats-reg-book::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: url("/brand/decor/phase126/paper-page-texture-web.webp");
+  background-size: 650px;
+  opacity: 0.16;
+  pointer-events: none;
+}
+
+.stats-reg-head {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 32px;
+  padding: 23px 35px 18px;
+  border-bottom: 1px solid #b9c5b1;
+}
+
+.stats-reg-title {
+  min-width: 150px;
+}
+
+.stats-reg-title h1 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.stats-reg-eyebrow {
+  margin-bottom: 3px;
+  color: var(--sr-muted);
+  font-size: 10px;
+}
+
+.stats-reg-scope {
+  margin-left: auto;
+  color: var(--sr-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.stats-reg-tabs {
+  display: flex;
+  align-self: stretch;
+  align-items: flex-end;
+  gap: 26px;
+}
+
+.stats-register .stats-reg-tabs button {
+  min-height: 44px;
+  padding: 11px 0;
+  border-bottom: 2px solid transparent;
+  color: var(--sr-muted);
+  font-size: 14px;
+}
+
+.stats-register .stats-reg-tabs button[aria-selected="true"] {
+  border-bottom-color: var(--sr-green);
+  color: var(--sr-green);
+  font-weight: 700;
+}
+
+.stats-register .stats-reg-tabs button:hover {
+  color: var(--sr-green);
+}
+
+.stats-reg-body {
+  display: grid;
+  grid-template-columns: 1.22fr 1fr;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.stats-reg-page {
+  min-width: 0;
+  min-height: 0;
+  padding: 24px 34px 22px;
+  overflow: auto;
+}
+
+.stats-reg-page:first-child {
+  border-right: 1px solid var(--sr-fold);
+}
+
+.stats-reg-page:only-child {
+  grid-column: 1 / -1;
+  border-right: 0;
+}
+
+.stats-reg-foot {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 11px 35px 14px;
+  border-top: 1px solid var(--sr-rule);
+  color: var(--sr-muted);
+  font-size: 10px;
+}
+
+.stats-reg-foot-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.stats-register .stats-reg-text-link {
+  color: var(--sr-green);
+  font-size: inherit;
+  text-decoration: underline;
+  text-decoration-color: #9fb1a1;
+  text-underline-offset: 3px;
+}
+
+.stats-reg-foot .stats-reg-text-link {
+  color: var(--sr-muted);
+}
+
+.stats-reg-notice summary {
+  cursor: pointer;
+  list-style: none;
+  text-decoration: underline;
+  text-decoration-color: #b8c1b5;
+  text-underline-offset: 3px;
+}
+
+.stats-reg-notice summary::-webkit-details-marker {
+  display: none;
+}
+
+.stats-reg-notice > div {
+  position: absolute;
+  right: 28px;
+  bottom: calc(100% + 6px);
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  width: min(360px, calc(100% - 40px));
+  padding: 12px 14px;
+  border: 1px solid var(--sr-rule);
+  background: var(--sr-paper);
+  box-shadow: 0 6px 16px #263e301f;
+  color: var(--sr-ink);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.stats-reg-quiet {
+  color: var(--sr-muted);
+  font-size: 12px;
+}
+
+.stats-reg-error {
+  color: var(--sr-rust);
+  font-size: 13px;
+}
+
+/* --- 학습 기록: calendar page ----------------------------------------- */
+.stats-reg-calendar-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-reg-month-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.stats-reg-month-controls strong {
+  font-size: 20px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stats-register .stats-reg-icon-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #bdc7b8;
+  border-radius: 3px;
+}
+
+.stats-register .stats-reg-icon-button:not(:disabled):hover {
+  background: #e4eadd;
+}
+
+.stats-register .stats-reg-icon-button:disabled {
+  opacity: 0.3;
+}
+
+.stats-reg-icon-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.stats-reg-icon-button.is-prev svg {
+  transform: scaleX(-1);
+}
+
+.stats-reg-calendar {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.stats-reg-weekdays,
+.stats-reg-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.stats-reg-weekdays {
+  padding: 8px 0;
+  border-top: 1px solid #a5b3a0;
+  border-bottom: 1px solid var(--sr-rule);
+  color: var(--sr-muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+.stats-reg-days {
+  flex: 1;
+  grid-auto-rows: minmax(44px, 1fr);
+}
+
+.stats-register .stats-reg-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 0 9px;
+  border-right: 1px solid #cbd1c5;
+  border-bottom: 1px solid #cbd1c5;
+  color: var(--sr-ink);
+}
+
+.stats-register .stats-reg-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.stats-register .stats-reg-day:not(:disabled):hover {
+  background: #e8ecdf;
+}
+
+.stats-register .stats-reg-day.is-selected,
+.stats-register .stats-reg-day.is-selected:hover {
+  background: #e0e8da;
+  box-shadow: inset 0 0 0 1.5px #55745b;
+}
+
+.stats-register .stats-reg-day.is-outside {
+  color: #bbc0b4;
+}
+
+.stats-register .stats-reg-day.is-future {
+  color: #a7afa1;
+}
+
+.stats-reg-day-num {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-reg-day.is-today .stats-reg-day-num {
+  color: var(--sr-green);
+  font-weight: 700;
+}
+
+.stats-reg-day-count {
+  color: #44654e;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.stats-reg-day-count small {
+  margin-left: 3px;
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.stats-reg-day-mark {
+  position: absolute;
+  bottom: 5px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+}
+
+.stats-reg-day-mark.is-active {
+  background: #658873;
+}
+
+.stats-reg-month-summary {
+  margin-top: 18px;
+}
+
+.stats-reg-month-summary > p:first-child {
+  margin-bottom: 6px;
+  color: var(--sr-muted);
+  font-size: 11px;
+}
+
+.stats-reg-month-summary > div {
+  display: flex;
+  gap: 32px;
+}
+
+.stats-reg-month-summary > div > span {
+  color: var(--sr-muted);
+  font-size: 11px;
+}
+
+.stats-reg-month-summary strong {
+  display: block;
+  color: var(--sr-ink);
+  font-size: 25px;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.stats-reg-pending {
+  color: var(--sr-ink);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* --- 학습 기록: selected-day page ------------------------------------- */
+.stats-reg-day-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-reg-day-heading {
+  margin-bottom: 18px;
+}
+
+.stats-reg-day-heading .stats-reg-eyebrow {
+  margin-bottom: 5px;
+  font-size: 11px;
+}
+
+.stats-reg-day-heading h2 {
+  font-size: 21px;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.stats-reg-daily-numbers {
+  display: flex;
+  gap: 36px;
+  margin-bottom: 22px;
+}
+
+.stats-reg-daily-numbers > span {
+  color: var(--sr-muted);
+  font-size: 12px;
+}
+
+.stats-reg-daily-numbers strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--sr-ink);
+  font-size: 32px;
+  font-weight: 550;
+}
+
+.stats-reg-ratings {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stats-reg-rating {
+  padding-top: 9px;
+  border-top: 2px solid #648471;
+}
+
+.stats-reg-rating.is-r0 {
+  border-color: #b17a61;
+}
+
+.stats-reg-rating.is-r1 {
+  border-color: #9b8b59;
+}
+
+.stats-reg-rating.is-r3 {
+  border-color: #7493a0;
+}
+
+.stats-reg-rating > span {
+  color: var(--sr-muted);
+  font-size: 11px;
+}
+
+.stats-reg-rating strong {
+  display: block;
+  font-size: 21px;
+  font-weight: 550;
+  line-height: 1.6;
+}
+
+.stats-reg-dated-words {
+  margin-top: 25px;
+}
+
+.stats-reg-dated-words h3,
+.stats-reg-rest h3 {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.stats-reg-dated-words h3 small {
+  margin-left: 8px;
+  color: var(--sr-muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.stats-reg-day-status {
+  padding-top: 22px;
+  border-top: 1px solid var(--sr-rule);
+}
+
+.stats-reg-word {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--sr-rule);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.stats-reg-word:last-of-type {
+  border-bottom: 0;
+}
+
+.stats-reg-word > span:first-child {
+  flex: 1;
+  min-width: 90px;
+}
+
+.stats-reg-word > span:last-child {
+  flex: 1.1;
+}
+
+.stats-reg-word b,
+.stats-reg-missed-row b {
+  font-family: var(--sr-mincho);
+  font-weight: 500;
+}
+
+.stats-reg-word b {
+  font-size: 20px;
+}
+
+.stats-reg-word small,
+.stats-reg-missed-row small {
+  display: block;
+  color: var(--sr-muted);
+  font-size: 10px;
+}
+
+.stats-reg-dated-words .stats-reg-quiet {
+  margin-top: 12px;
+}
+
+.stats-reg-rest {
+  padding: 24px 0 36px;
+  color: var(--sr-muted);
+}
+
+.stats-reg-rest > span {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 30px;
+}
+
+.stats-reg-rest p {
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.stats-reg-unlinked {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 22px 0 0;
+  border-top: 1px solid var(--sr-rule);
+  color: var(--sr-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.stats-reg-unlinked-title {
+  color: var(--sr-ink);
+  font-size: 15px;
+  font-weight: 550;
+}
+
+.stats-reg-unlinked .stats-reg-text-link {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.stats-reg-streak {
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--sr-rule);
+  color: var(--sr-muted);
+  font-size: 11px;
+}
+
+.stats-reg-streak strong {
+  color: var(--sr-green);
+  font-size: 25px;
+  font-weight: 500;
+}
+
+.stats-reg-streak > span:last-child {
+  margin-left: auto;
+  font-size: 10px;
+}
+
+/* --- 어휘 현황 ------------------------------------------------------ */
+.stats-reg-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.stats-reg-total > span:first-child {
+  color: var(--sr-muted);
+  font-size: 12px;
+}
+
+.stats-reg-total > strong {
+  font-size: 39px;
+  font-weight: 550;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-reg-learned {
+  color: var(--sr-green);
+  font-size: 12px;
+}
+
+.stats-reg-composition {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+  margin: 15px 0 17px;
+  background: #e3e6dc;
+}
+
+.stats-reg-composition > span {
+  flex-basis: 0;
+}
+
+.stats-reg-composition .is-known,
+.stats-reg-dot.is-known {
+  background: #4f7b63;
+}
+
+.stats-reg-composition .is-uncertain,
+.stats-reg-dot.is-uncertain {
+  background: #9286ad;
+}
+
+.stats-reg-composition .is-unknown,
+.stats-reg-dot.is-unknown {
+  background: #bf846b;
+}
+
+.stats-reg-composition .is-unclassified,
+.stats-reg-dot.is-unclassified {
+  background: #bcb394;
+}
+
+.stats-reg-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+}
+
+.stats-reg-four {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+}
+
+.stats-reg-four > div {
+  min-width: 0;
+  padding-right: 10px;
+  border-right: 1px solid var(--sr-rule);
+}
+
+.stats-reg-four > div:last-child {
+  border-right: 0;
+}
+
+.stats-reg-four span {
+  color: var(--sr-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.stats-reg-four strong {
+  display: block;
+  font-size: 24px;
+  font-weight: 550;
+  line-height: 1.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-reg-empty-line {
+  margin-top: 16px;
+}
+
+.stats-reg-section h2 {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--sr-rule);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.stats-reg-decks {
+  margin-top: 25px;
+}
+
+.stats-reg-deck {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--sr-rule);
+}
+
+.stats-reg-deck:last-child {
+  border-bottom: 0;
+}
+
+.stats-reg-deck > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stats-reg-deck strong {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.stats-reg-deck b {
+  color: var(--sr-green);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.stats-reg-meter {
+  height: 3px;
+  margin: 8px 0;
+  background: #dce0d5;
+}
+
+.stats-reg-meter i {
+  display: block;
+  height: 100%;
+  background: #60816a;
+}
+
+.stats-reg-deck p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--sr-muted);
+  font-size: 10px;
+}
+
+.stats-reg-review-page {
+  padding-bottom: 15px;
+}
+
+.stats-reg-stages h2,
+.stats-reg-lifetime h2 {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+}
+
+.stats-reg-stage-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.stats-reg-stage-bars > div {
+  display: grid;
+  grid-template-columns: 36px 1fr 34px;
+  align-items: center;
+  gap: 12px;
+  color: var(--sr-muted);
+  font-size: 11px;
+}
+
+.stats-reg-stage-bars i {
+  height: 7px;
+  background: #e0e5d9;
+}
+
+.stats-reg-stage-bars i b {
+  display: block;
+  height: 100%;
+  background: #6b8d73;
+}
+
+.stats-reg-stage-bars strong {
+  color: var(--sr-ink);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.stats-reg-lifetime {
+  margin-top: 18px;
+}
+
+.stats-reg-lifetime > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.stats-reg-lifetime > div > span {
+  color: var(--sr-muted);
+  font-size: 11px;
+}
+
+.stats-reg-lifetime strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--sr-ink);
+  font-size: 25px;
+  font-weight: 550;
+}
+
+.stats-reg-missed {
+  margin-top: 18px;
+}
+
+.stats-reg-missed h2 {
+  margin-bottom: 7px;
+  padding-bottom: 8px;
+}
+
+.stats-reg-missed-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--sr-rule);
+  font-size: 12px;
+}
+
+.stats-reg-missed-row:last-child {
+  border-bottom: 0;
+}
+
+.stats-reg-missed-row b {
+  font-size: 19px;
+}
+
+.stats-reg-missed-row small {
+  margin-top: 3px;
+}
+
+.stats-reg-missed-row em {
+  color: var(--sr-rust);
+  font-size: 10px;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.stats-reg-due {
+  margin-left: auto;
+  color: var(--sr-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.stats-reg-due b {
+  margin: 0 2px;
+  color: var(--sr-ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.stats-reg-due small {
+  margin-left: 6px;
+  font-size: 10px;
+}
+
+.stats-reg-recent ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stats-reg-recent li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  column-gap: 16px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--sr-rule);
+}
+
+.stats-reg-recent li:last-child {
+  border-bottom: 0;
+}
+
+.stats-reg-recent b {
+  font-family: var(--sr-mincho);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.stats-reg-recent small {
+  grid-column: 1;
+  grid-row: 2;
+  color: var(--sr-muted);
+  font-size: 10px;
+}
+
+.stats-reg-recent li > span {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  font-size: 12px;
+}
+
+.stats-reg-refresh-error {
+  flex: 1 1 260px;
+  min-width: 0;
+  color: #9a4f34;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* --- Desktop shell ------------------------------------------------- */
+@media (min-width: 1024px) {
+  body:has(.stats-register) .app-shell-content {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body:has(.stats-register) .library-canvas-info {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1250px) {
+  .tab-panel.stats-register {
+    padding: 24px 28px;
+  }
+
+  .stats-reg-head {
+    gap: 26px;
+    padding: 20px 27px 16px;
+  }
+
+  .stats-reg-title {
+    min-width: 125px;
+  }
+
+  .stats-reg-title h1 {
+    font-size: 22px;
+  }
+
+  .stats-reg-tabs {
+    gap: 22px;
+  }
+
+  .stats-register .stats-reg-tabs button {
+    font-size: 13px;
+  }
+
+  .stats-reg-page {
+    padding: 23px 25px 20px;
+  }
+
+  .stats-reg-body {
+    grid-template-columns: 1.13fr 1fr;
+  }
+
+  .stats-reg-foot {
+    padding-left: 27px;
+    padding-right: 27px;
+  }
+
+  .stats-reg-month-controls strong {
+    font-size: 18px;
+  }
+
+  .stats-reg-daily-numbers {
+    gap: 26px;
+  }
+
+  .stats-reg-ratings {
+    gap: 10px;
+  }
+
+  .stats-reg-rating strong small {
+    display: none;
+  }
+
+  .stats-reg-four {
+    gap: 9px;
+  }
+
+  .stats-reg-four span {
+    font-size: 10px;
+  }
+
+  .stats-reg-four strong {
+    font-size: 21px;
+  }
+
+  .stats-reg-total > strong {
+    font-size: 34px;
+  }
+
+  .stats-reg-missed-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+  }
+
+  .stats-reg-missed-row > span:first-child {
+    grid-row: 1 / 3;
+  }
+
+  .stats-reg-missed-row em {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+/* --- Phones and tablets: one continuous sheet ---------------------- */
+@media (max-width: 1023px) {
+  body:has(.stats-register) {
+    background: #7e8d80;
+  }
+
+  body:has(.stats-register) .page {
+    padding: 0;
+  }
+
+  body:has(.stats-register) .app-toolbar {
+    margin-bottom: 0;
+  }
+
+  .tab-panel.stats-register {
+    display: block;
+    height: auto;
+    min-height: calc(100svh - 52px);
+    padding: 18px 18px 24px;
+    background: #7e8d80;
+  }
+
+  .stats-reg-book {
+    width: 100%;
+    height: auto;
+    max-height: none;
+    border-width: 5px;
+  }
+
+  .stats-reg-head {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 15px 20px;
+    padding: 23px 22px 0;
+  }
+
+  .stats-reg-title {
+    min-width: 0;
+  }
+
+  .stats-reg-scope {
+    font-size: 10px;
+  }
+
+  .stats-reg-tabs {
+    order: 3;
+    align-items: stretch;
+    gap: 25px;
+    width: 100%;
+  }
+
+  .stats-register .stats-reg-tabs button {
+    min-height: 47px;
+    padding: 12px 0;
+    font-size: 14px;
+  }
+
+  .stats-reg-body {
+    display: flex;
+    flex-direction: column;
+    flex: auto;
+  }
+
+  .stats-reg-page {
+    padding: 23px 22px;
+    overflow: visible;
+  }
+
+  .stats-reg-page:first-child {
+    border-right: 0;
+    border-bottom: 1px solid var(--sr-fold);
+  }
+
+  .stats-reg-page:only-child {
+    border-bottom: 0;
+  }
+
+  .stats-reg-foot {
+    padding: 13px 22px 17px;
+    font-size: 9px;
+  }
+
+  .stats-reg-notice > div {
+    right: 12px;
+    width: calc(100% - 24px);
+  }
+
+  .stats-reg-month-controls {
+    gap: 15px;
+  }
+
+  .stats-reg-month-controls strong {
+    font-size: 18px;
+  }
+
+  .stats-register .stats-reg-icon-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .stats-reg-days {
+    flex: none;
+    grid-auto-rows: 55px;
+  }
+
+  .stats-register .stats-reg-day {
+    gap: 3px;
+    padding: 6px 0 9px;
+  }
+
+  .stats-reg-day-num {
+    font-size: 11px;
+  }
+
+  .stats-reg-day-count {
+    font-size: 13px;
+  }
+
+  .stats-reg-day-count small {
+    margin-left: 2px;
+    font-size: 8px;
+  }
+
+  .stats-reg-month-summary {
+    margin-top: 22px;
+  }
+
+  .stats-reg-month-summary > div {
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .stats-reg-month-summary strong {
+    font-size: 23px;
+  }
+
+  .stats-reg-daily-numbers {
+    gap: 32px;
+  }
+
+  .stats-reg-ratings {
+    gap: 12px;
+  }
+
+  .stats-reg-rating strong small {
+    display: none;
+  }
+
+  .stats-reg-word {
+    gap: 14px;
+    padding: 13px 0;
+  }
+
+  .stats-reg-word > span:first-child {
+    flex: 0.9;
+  }
+
+  .stats-reg-streak {
+    margin-top: 25px;
+    gap: 12px;
+  }
+
+  .stats-reg-total {
+    gap: 10px;
+  }
+
+  .stats-reg-total > strong {
+    font-size: 37px;
+  }
+
+  .stats-reg-learned {
+    font-size: 11px;
+  }
+
+  .stats-reg-four {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 18px;
+  }
+
+  .stats-reg-four > div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .stats-reg-four strong {
+    font-size: 25px;
+  }
+
+  .stats-reg-deck {
+    padding: 13px 0;
+  }
+
+  .stats-reg-deck p {
+    flex-wrap: wrap;
+    gap: 4px 10px;
+  }
+
+  .stats-reg-stage-bars {
+    gap: 14px;
+  }
+
+  .stats-reg-lifetime > div {
+    gap: 12px;
+  }
+
+  .stats-reg-lifetime strong small {
+    font-size: 10px;
+  }
+
+  .stats-reg-missed-row {
+    grid-template-columns: 1fr auto;
+    gap: 5px;
+  }
+
+  .stats-reg-missed-row > span:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .stats-reg-missed-row em {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+@media (max-width: 350px) {
+  .tab-panel.stats-register {
+    padding: 12px 10px 18px;
+  }
+
+  .stats-reg-head,
+  .stats-reg-page {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .stats-reg-title h1 {
+    font-size: 22px;
+  }
+
+  .stats-reg-scope {
+    font-size: 9px;
+  }
+
+  .stats-reg-days {
+    grid-auto-rows: 52px;
+  }
+
+  .stats-reg-month-controls strong {
+    font-size: 16px;
+  }
+
+  .stats-reg-month-summary > div {
+    gap: 14px;
+  }
+
+  .stats-reg-month-summary > div > span {
+    font-size: 10px;
+  }
+
+  .stats-reg-day-heading h2 {
+    font-size: 19px;
+  }
+
+  .stats-reg-daily-numbers {
+    gap: 26px;
+  }
+
+  .stats-reg-total > strong {
+    font-size: 33px;
+  }
+
+  .stats-reg-four span,
+  .stats-reg-lifetime > div > span {
+    font-size: 10px;
+  }
+
+  .stats-reg-lifetime strong {
+    font-size: 23px;
+  }
+
+  .stats-reg-streak {
+    flex-wrap: wrap;
+    gap: 10px;
   }
 }

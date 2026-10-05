@@ -171,6 +171,53 @@ export type StudyStats = {
   streak_days: number;
 };
 
+// Read-only Asia/Seoul date-by-date history (GET /stats/history and
+// /stats/history/day). Reviews are personal + subscribed log rows; saved
+// words are the user's current personal words only.
+export type StudyHistoryRatings = {
+  again: number;
+  hard: number;
+  good: number;
+  easy: number;
+};
+
+export type StudyHistoryDayCounts = {
+  date: string;
+  review_count: number;
+  ratings: StudyHistoryRatings;
+  saved_word_count: number;
+};
+
+export type StudyHistoryMonth = {
+  month: string;
+  timezone: string;
+  today: string;
+  as_of: string;
+  review_sources: string[];
+  saved_words_scope: string;
+  days: StudyHistoryDayCounts[];
+  summary: { review_count: number; saved_word_count: number; active_days: number };
+  current_streak: {
+    days: number;
+    starts_on: string | null;
+    ends_on: string | null;
+    capped: boolean;
+    definition: string;
+  };
+};
+
+export type StudyHistoryDay = {
+  date: string;
+  timezone: string;
+  review_sources: string[];
+  saved_words_scope: string;
+  review_count: number;
+  ratings: StudyHistoryRatings;
+  saved_word_count: number;
+  saved_words: { id: number; surface: string; reading: string; meaning_ko: string }[];
+  has_more_saved_words: boolean;
+};
+
 export type VocabSort =
   | "created_desc"
   | "created_asc"

@@ -65,6 +65,11 @@ from app.repositories.shared_deck_repository import (
     shared_deck_word_access_allowed,
 )
 from app.repositories.stats_repository import build_stats
+from app.repositories.stats_history_repository import (
+    HistoryRangeError,
+    build_history_day,
+    build_history_month,
+)
 from app.repositories.user_repository import (
     create_user,
     email_exists,
@@ -121,6 +126,8 @@ from app.schemas import (
     SharedDeckRepublishResponse,
     SharedDeckSummaryResponse,
     StatsResponse,
+    StatsHistoryDayResponse,
+    StatsHistoryMonthResponse,
     StudyItemsResponse,
     StudyLexemeItemResponse,
     StudyReviewRequest,
@@ -779,6 +786,32 @@ def get_learning_stats(
     if deck_id is not None and not get_deck_by_id(user_id, deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
     return StatsResponse(**build_stats(user_id, deck_id=deck_id))
+
+
+# Read-only, Asia/Seoul date-by-date history for the Stats tab. Never writes
+# and never touches SRS state; see stats_history_repository for the contract.
+@app.get("/stats/history", response_model=StatsHistoryMonthResponse)
+def get_stats_history_month(
+    http_request: Request, month: str = Query(..., pattern=r"^\d{4}-\d{2}$")
+) -> StatsHistoryMonthResponse:
+    user_id = current_user_id(http_request)
+    try:
+        return StatsHistoryMonthResponse(**build_history_month(user_id, month))
+    except HistoryRangeError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get("/stats/history/day", response_model=StatsHistoryDayResponse)
+def get_stats_history_day(
+    http_request: Request,
+    date: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
+    limit: int = Query(default=5, ge=1, le=20),
+) -> StatsHistoryDayResponse:
+    user_id = current_user_id(http_request)
+    try:
+        return StatsHistoryDayResponse(**build_history_day(user_id, date, limit=limit))
+    except HistoryRangeError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.post("/study-items/{item_id}/review", response_model=VocabItemResponse)
