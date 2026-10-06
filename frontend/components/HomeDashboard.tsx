@@ -15,7 +15,7 @@ type HomeDashboardProps = {
   onOpenAccount: () => void;
   onGoToVocab: () => void;
   onGoToSharedDecks: () => void;
-  onGoToAnalyze: () => void;
+  onGoToPlan: () => void;
   onGoToStats: () => void;
 };
 
@@ -41,7 +41,7 @@ export function HomeDashboard({
   onOpenAccount,
   onGoToVocab,
   onGoToSharedDecks,
-  onGoToAnalyze,
+  onGoToPlan,
   onGoToStats,
 }: HomeDashboardProps) {
   const dueTodayCount = studyStats?.due_today_count ?? 0;
@@ -85,7 +85,7 @@ export function HomeDashboard({
     { key: "vocab", name: "단어장", hint: "모은 단어", onClick: onGoToVocab },
     { key: "study", name: "복습", hint: "다시 익히기", onClick: onGoToStudy },
     { key: "decks", name: "덱", hint: "학습 묶음", onClick: onGoToSharedDecks },
-    { key: "analyze", name: "분류", hint: "상태 살피기", onClick: onGoToAnalyze },
+    { key: "plan", name: "학습 계획", hint: "오늘 할 일", onClick: onGoToPlan },
     { key: "stats", name: "통계", hint: "기록 보기", onClick: onGoToStats },
   ];
 

@@ -2785,11 +2785,6 @@
   color: var(--muted);
 }
 
-.analyze-panel {
-  --screen-accent: var(--tone-coral);
-  --screen-accent-soft: #f7e9e2;
-}
-
 .study-panel {
   /* Was --tone-indigo (a cool purple) -- stood out against the rest of the
      app's warm amber/ink-green/coral/brown/dusty-blue accent set. Teal
@@ -2924,10 +2919,6 @@
 
 .app-fade-in {
   animation: app-fade-in var(--motion-base) var(--ease-soft) both;
-}
-
-.app-slide-up {
-  animation: app-slide-up var(--motion-base) var(--ease-soft) both;
 }
 
 .app-pop {
@@ -4507,12 +4498,6 @@ button {
     border-radius: 14px;
   }
 
-  .card-stack-surface::before,
-  .card-stack-surface::after {
-    left: 4px;
-    right: 4px;
-  }
-
   .meaning-actions-row {
     flex-direction: column;
     align-items: stretch;
@@ -4567,42 +4552,6 @@ button {
    call sites add them as additional classes alongside each screen's
    existing card, so the underlying markup/props/handlers never change.
    ========================================================================== */
-
-/* card-stack-surface -- a modifier class (add alongside an existing card)
-   that adds two faint card-shaped layers behind it via ::before/::after,
-   reading as "one card sitting on top of a small stack" instead of a
-   single flat card floating on empty page background. Needs the host to
-   already have (or here sets) position:relative and its own opaque
-   background/border-radius for the illusion to read correctly. */
-.card-stack-surface {
-  position: relative;
-}
-
-.card-stack-surface::before,
-.card-stack-surface::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 6px;
-  right: 6px;
-  height: 100%;
-  border-radius: inherit;
-  border: 1px solid var(--border);
-  background: var(--panel-bg);
-  pointer-events: none;
-}
-
-.card-stack-surface::before {
-  z-index: -1;
-  transform: translateY(7px) scale(0.98);
-  opacity: 0.65;
-}
-
-.card-stack-surface::after {
-  z-index: -2;
-  transform: translateY(14px) scale(0.96);
-  opacity: 0.35;
-}
 
 /* index-card-shell -- base "this is an index card" treatment (thin border,
    small radius, soft shadow) reused wherever a single word/deck/word-panel
@@ -4707,21 +4656,6 @@ button {
   margin: 0;
   color: var(--muted);
   font-size: 13px;
-}
-
-.analyze-form {
-  display: grid;
-  gap: 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px;
-  background: var(--panel-bg);
-  box-shadow: 0 10px 24px rgba(120, 98, 40, 0.04);
-}
-
-.analyze-form label {
-  color: var(--text-secondary);
-  font-weight: 700;
 }
 
 textarea {
@@ -4963,313 +4897,14 @@ button:focus-visible {
   font-size: 12px;
 }
 
-.draft-status {
-  color: var(--muted);
-  font-size: 13px;
-  margin: -4px 0 14px;
-  text-align: center;
-}
-
-/* Intro-stage CTA pair (분류 카드 만들기 + 이전 분류 이어하기) -- primary and
-   secondary sit side by side instead of the secondary living in its own
-   boxed "draft panel" below the form, so the intro reads as one CTA
-   decision rather than a form plus a separate status widget. */
-.analyze-cta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-/* Card Stage's only chrome above the flashcard itself -- two small ghost
-   links, not a "분석 결과" dashboard heading, so mid-classification still
-   reads as a card stack rather than a results screen with an escape hatch
-   bolted on. */
-.classify-stage-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-/* classify-stage-outer (renamed from the now-unused .result-section) --
-   deliberately no border/background of its own: the word card underneath
-   already carries the strong paper treatment, so wrapping it in a second
-   bordered box just read as boxy nesting. Plain layout spacing only. */
-.classify-stage-outer {
-  display: grid;
-  gap: 14px;
-}
-
-/* Casual Sticker Reader (Phase 71) -- analyze-work-scene: at >=1024px the
-   card-stage toolbar/draft-status move beside the flashcard instead of
-   stacking above it, with a sticky tally rail filling the space next to the
-   card -- the Analyze tab's own version of .reader-desk-scene/
-   .reader-inspector-rail's "main surface + pinned side rail" split. Below
-   1024px this is a plain block and .analyze-work-aside is hidden entirely,
-   so the layout is pixel-identical to before this Phase there. */
-.analyze-work-scene {
-  min-width: 0;
-}
-
-.analyze-work-main {
-  display: grid;
-  gap: 14px;
-  min-width: 0;
-}
-
-.analyze-work-aside {
-  display: none;
-}
-
-@media (min-width: 1024px) {
-  .analyze-work-scene {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(200px, 240px);
-    align-items: start;
-    gap: 20px;
-  }
-
-  .analyze-work-aside {
-    display: grid;
-    gap: 10px;
-    position: sticky;
-    top: 24px;
-    align-self: start;
-    padding: 16px;
-    border: 1px solid var(--paper-border);
-    border-radius: 4px 16px 16px 16px;
-    background: var(--paper-bg);
-    box-shadow: 0 10px 24px var(--paper-shadow);
-  }
-}
-
-.analyze-work-aside-label {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-/* analyze-tally -- live 아는/헷갈리는/모르는/건너뜀 readout beside the card
-   stack, reusing Study's completion-receipt "colored stamp dot + count"
-   recipe (.study-complete-stat) rather than inventing a second stat-tile
-   language for the same kind of number. */
-.analyze-tally {
-  display: grid;
-  gap: 4px;
-}
-
-.analyze-tally-stat {
-  position: relative;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 4px 6px 16px;
-}
-
-.analyze-tally-stat::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  transform: translateY(-50%);
-  background: var(--border-strong);
-}
-
-.analyze-tally-stat + .analyze-tally-stat {
-  border-top: 1px dashed var(--border);
-}
-
-.analyze-tally-stat span {
-  color: var(--muted);
-  font-size: 12.5px;
-  font-weight: 600;
-}
-
-.analyze-tally-stat strong {
-  color: var(--text);
-  font-size: 15px;
-}
-
-.analyze-tally-stat-known::before {
-  background: var(--sage-green);
-}
-
-.analyze-tally-stat-uncertain::before {
-  background: var(--sand-amber);
-}
-
-.analyze-tally-stat-unknown::before {
-  background: var(--accent);
-}
-
-.analyze-tally-stat-skip::before {
-  background: var(--muted);
-}
-
-/* classify-result-cards -- Phase 156. Was .classification-summary/
-   .final-summary: 4 plain rounded pills, the same generic-badge shape a
-   dashboard stat strip would use directly under a "완료" heading. Now a
-   small fanned stack of paper result cards -- the filled-in counterpart
-   of ClassifyCardTray's blank preview cards above the intro's CTA, so the
-   desk scene reads as slip -> blank card tray -> finished card bundle,
-   not form -> dashboard summary. */
-.classify-result-cards {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px 14px;
-  margin-bottom: 14px;
-}
-
-.classify-result-card {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  min-width: 68px;
-  padding: 10px 12px;
-  border: 1px solid var(--paper-border);
-  border-radius: 6px 6px 6px 2px;
-  background: var(--paper-bg);
-  box-shadow: 0 4px 10px rgba(120, 98, 40, 0.1);
-}
-
-.classify-result-card:nth-child(odd) {
-  transform: rotate(-3deg) translateY(2px);
-}
-
-.classify-result-card:nth-child(even) {
-  transform: rotate(3deg) translateY(-2px);
-}
-
-.classify-result-card span {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.classify-result-card strong {
-  color: var(--text);
-  font-size: 18px;
-}
-
-/* classify-word-card / classify-result-summary (renamed from .classify-card
-   / .classification-complete) -- flashcard-tier card (hero-card scale)
-   instead of a plain 10px-radius box, since this is the one card the
-   Analyze tab wants seen as immersive, not a form. The screen-accent top
-   edge ties it to the tab's coral accent, same language .reader-paper
-   already uses (Phase 115 -- .shared-hero-card dropped this same
-   border-top-accent recipe when it was flattened out of a boxed card into
-   an unboxed heading strip; see that class below). */
-.classify-word-card {
-  width: min(720px, 100%);
-  display: grid;
-  gap: 16px;
-  border: 1px solid var(--paper-border);
-  border-top: 2px solid var(--screen-accent, var(--accent));
-  border-radius: 20px;
-  padding: 28px;
-  margin: 0 auto;
-  background: var(--paper-bg);
-  box-shadow: 0 16px 36px var(--paper-shadow);
-}
-
-/* classify-result-summary -- Phase 165. Was sharing .classify-word-card's
-   bordered/border-top-accent "admin panel" box verbatim -- exactly the
-   "result summary가 dashboard card처럼 보임" failure this phase's brief
-   names. Split into its own rule: no ruled border/accent stripe, an
-   asymmetric corner radius + slight rotation instead (the same "finished
-   index card" language .classify-result-card/.classify-draft-chip already
-   use), so the completed classification reads as one more physical card
-   sitting on the desk, not a stats panel. */
-.classify-result-summary {
-  width: min(640px, 100%);
-  display: grid;
-  gap: 16px;
-  padding: 26px 24px;
-  margin: 0 auto;
-  border-radius: 4px 22px 22px 22px;
-  background: var(--paper-bg);
-  box-shadow: 0 14px 30px var(--paper-shadow);
-  transform: rotate(-0.5deg);
-}
-
 .classify-progress {
   display: flex;
   align-items: center;
   justify-content: flex-end;
 }
 
-/* classify-progress-marker -- Phase 156. Was plain right-aligned text
-   ("N / total") directly on .classify-progress -- functionally fine, but
-   this phase's brief asks for progress to read as a small work-in-
-   progress marker rather than a bare dashboard number. Wrapped in a
-   small pill tag (same .reading-deck-picker/.study-stamp-tag rounded-chip
-   family used elsewhere) with a card icon, so it reads as "카드 2/7"
-   sitting on the card rather than a stat readout. */
-.classify-progress-marker {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--soft-bg);
-  color: var(--muted);
-  font-size: 12.5px;
-  font-weight: 700;
-}
-
-.classify-progress-marker-icon {
-  flex: 0 0 auto;
-  width: 12px;
-  height: 12px;
-}
-
-/* Wraps ClassifyWordPrimary (word/reading/meaning) so it can re-play
-   .app-slide-up per card via a key on this div, the same "card advances"
-   pattern .study-front already uses in the review flow. Kept as its own
-   grid+gap (matching .classify-word-card's own gap) rather than putting the
-   class directly on .classify-word-card, since that outer card also holds
-   the action grid and nav button, which should stay put while only the
-   word content re-enters.
-
-   .classify-word-card-secondary (Phase 112) is ClassifyWordSecondary's own
-   matching wrapper -- same grid+gap+re-entrance treatment, but as a
-   separate sibling of .classify-actions instead of bundled into the block
-   above. Phase 111 found that bundling (base_form/POS tags + example
-   sentence together with word/meaning in one wrapper) pushed the 4-way
-   decision grid partially behind the fixed bottom nav on 320-390px phones,
-   on every card. Splitting them lets the mobile-only `order` rule below
-   move .classify-actions ahead of this block -- the meaning stays directly
-   above the decision either way, only the reference-only tags/example drop
-   below it on narrow screens. Desktop keeps default order (DOM order,
-   unchanged from before this split), so the card's visual rhythm there is
-   untouched. */
-.classify-word-card-content,
-.classify-word-card-secondary {
-  display: grid;
-  gap: 16px;
-}
-
 .classify-reading {
   margin-top: -6px;
-  text-align: center;
-}
-
-.classify-word {
-  color: var(--text);
-  font-size: 46px;
-  font-weight: 800;
-  line-height: 1.2;
-  text-align: center;
-}
-
-.term-badge-wrap {
   text-align: center;
 }
 
@@ -5312,84 +4947,6 @@ button:focus-visible {
   line-height: 1.55;
 }
 
-/* .classify-actions is shared with .bookmark-inspector's own 2x2 status
-   group below -- Quick Classify's word card additionally carries
-   .classify-action-grid as a semantic co-class (same element, same rules)
-   so the "이 4개는 하나의 분류 결정 그리드다" concept has its own name
-   without forking the shared layout rules. */
-.classify-actions {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.classify-actions button {
-  min-width: 0;
-  padding: 11px 10px;
-}
-
-/* Analyze tab only (TokenDetailSheet's compact 2-col version is untouched)
-   -- slightly taller/bolder action buttons so the 4-way classify decision
-   reads as the card's main event, not four same-weight form buttons. */
-.analyze-panel .classify-actions button {
-  min-height: 52px;
-  font-size: 14.5px;
-  font-weight: 800;
-}
-
-/* Marks the button matching the word's current status -- a shape/weight
-   cue (ring + bold), not color alone, so status is still legible without
-   relying on color perception. */
-.classify-actions button[data-active="true"] {
-  box-shadow: 0 0 0 3px rgba(120, 98, 40, 0.28) inset;
-  font-weight: 900;
-}
-
-.classify-actions button[data-active="true"]::after {
-  content: " ✓";
-}
-
-.card-navigation {
-  display: flex;
-  justify-content: flex-start;
-}
-
-.classify-result-summary {
-  justify-items: center;
-  text-align: center;
-}
-
-.classify-result-summary h3 {
-  margin: 0;
-  color: var(--text);
-  font-size: 22px;
-}
-
-/* Phase 154 -- was the plain default gradient button (the app-wide teal),
-   same color regardless of which tab it sits on. Every tab's own primary
-   action is now colored with that tab's own --screen-accent (Reading's
-   ink-green, Study's teal, Home's ink-green...) instead of one shared
-   generic color -- this brings Analyze's save action in line with that,
-   using its own coral accent. */
-.classify-save-button {
-  background: var(--screen-accent, var(--primary));
-}
-
-.classify-save-button:not(:disabled):hover {
-  background: var(--screen-accent, var(--primary));
-  filter: brightness(1.08);
-}
-
-/* Phase 156 -- dropped the bordered/filled panel-bg box: one more small
-   control row reading as a form field, right below the now-de-boxed
-   result cards. A plain checkbox line is enough; .classify-ledger-wrap's
-   own dashed "pull-tab" rule right below it already signals "opens a
-   folded record", so this doesn't need its own box to announce that. */
-.show-results-toggle {
-  justify-self: start;
-  padding: 4px 2px;
-}
-
 .result-heading {
   display: flex;
   align-items: center;
@@ -5421,102 +4978,6 @@ button:focus-visible {
 .result-heading span {
   color: var(--muted);
   font-size: 14px;
-}
-
-/* classify-ledger -- AnalyzeSection's opt-in "전체 결과를 목록으로 보기"
-   result list (the only <table> left in the app). Used to be a bare table
-   in a bordered/shadowed .table-wrap box with a forced 1520px min-width
-   that always required horizontal scroll, plus a sticky first column on
-   mobile -- read as a legacy admin data table. Still a real <table> (native
-   header/cell semantics matter for a 7-column list), but table-layout:
-   fixed + <colgroup> widths let it wrap to its container instead of
-   forcing scroll, and a receipt-style dashed top rule + dashed row
-   dividers replace the boxed border/shadow chrome. See the max-width:640px
-   block below for the stacked-row mobile variant. */
-.classify-ledger-wrap {
-  position: relative;
-  border-top: 1px dashed var(--border-strong);
-  padding-top: 10px;
-}
-
-/* Small centered pull-tab on the dashed top rule -- Phase 71: reads as
-   opening a drawer of the full record, not just a bare horizontal rule
-   ending the card stack above it. Decorative only, no layout impact. */
-.classify-ledger-wrap::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: 50%;
-  width: 46px;
-  height: 3px;
-  transform: translate(-50%, -50%);
-  border-radius: 999px;
-  background: var(--border-strong);
-  opacity: 0.7;
-}
-
-.classify-ledger {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-}
-
-.classify-ledger-col-surface {
-  width: 15%;
-}
-
-.classify-ledger-col-baseform {
-  width: 12%;
-}
-
-.classify-ledger-col-reading {
-  width: 10%;
-}
-
-.classify-ledger-col-pos {
-  width: 10%;
-}
-
-.classify-ledger-col-meaning {
-  width: 19%;
-}
-
-.classify-ledger-col-example {
-  width: 22%;
-}
-
-.classify-ledger-col-status {
-  width: 140px;
-}
-
-.classify-ledger th,
-.classify-ledger td {
-  padding: 10px 8px;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px dashed var(--border);
-  overflow-wrap: anywhere;
-}
-
-.classify-ledger th {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  border-bottom: 1px solid var(--border);
-}
-
-.classify-ledger td {
-  color: var(--text);
-  font-size: 14px;
-}
-
-.classify-ledger tr:last-child td {
-  border-bottom: 0;
-}
-
-.classify-ledger td .term-badge {
-  margin-top: 4px;
-  margin-bottom: 0;
 }
 
 select {
@@ -5874,85 +5335,6 @@ select {
   gap: 20px;
 }
 
-.study-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-
-/* Phase 104 -- pure-navigation actions living inside .study-actions (Study's
-   empty-state/completion CTA rows, Analyze's ClassifyResultSummary) drop
-   their button chrome for a plain underlined text action, the same
-   treatment Phase 102 gave Reading's "어휘 노트 보기". Each .study-actions
-   row keeps exactly one real primary button (원문 읽기 시작 / 한 번 더
-   복습 / the save button sitting above this row in Analyze); everything
-   else that's a same-tier navigation jump gets this class instead. Doesn't
-   touch the single "정답 보기" .study-actions row, which never gains this
-   class since it has nothing to demote. align-self opts out of the mobile
-   `.study-actions { align-items: stretch }` column layout below, so the
-   link keeps its intrinsic width instead of stretching full-bleed like the
-   buttons it sits next to/under. */
-.study-actions-link-button {
-  flex: 0 0 auto;
-  align-self: flex-start;
-  width: auto;
-  min-width: 0;
-  min-height: 0;
-  border: none;
-  border-radius: 0;
-  padding: 6px 2px;
-  color: var(--muted);
-  background: transparent;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  box-shadow: none;
-}
-
-.study-actions-link-button:not(:disabled):hover {
-  color: var(--screen-accent, var(--accent));
-  background: transparent;
-  box-shadow: none;
-  transform: none;
-}
-
-.rating-button {
-  display: grid;
-  gap: 4px;
-  justify-items: center;
-  min-width: 0;
-  padding: 12px 8px;
-  border-radius: 12px;
-  color: #ffffff;
-  font-weight: 700;
-  text-align: center;
-}
-
-/* On top of the base button's press-scale, a brief inset ring makes "this
-   is the rating I picked" unambiguous for the instant before the next card
-   replaces it -- since a rating never stays selected (the session moves
-   straight to the next card), this only needs to read during the press
-   itself. */
-.rating-button:not(:disabled):active {
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.55);
-}
-
-.rating-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.rating-label {
-  font-size: 15px;
-}
-
-.rating-hint {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 11px;
-  font-weight: 500;
-}
-
 /* Rating colors are deliberately softer than the app's semantic --danger/
    --warning (those read as "error"/"caution" elsewhere) -- a wrong recall
    is a normal, expected part of studying, not a mistake to flag red. Ramped
@@ -5968,47 +5350,12 @@ select {
   background: var(--sand-amber);
 }
 
-.rating-hard .rating-hint {
-  color: rgba(74, 47, 6, 0.75);
-}
-
 .rating-good {
   background: var(--primary);
 }
 
 .rating-easy {
   background: var(--sage-green);
-}
-
-/* 빠른 분류 (AnalyzeSection) reuses the same icon+label+hint rating-button
-   recipe as review, with its own semantic ramp instead of the review-result
-   colors: 아는=차분한 sage, 헷갈리는=amber(같은 sand-amber), 모르는=coral/
-   terracotta accent, 건너뛰기=조용한 ghost (필채우기 없이 태두리만). */
-.rating-classify-known {
-  background: var(--sage-green);
-}
-
-.rating-classify-uncertain {
-  color: #4a2f06;
-  background: var(--sand-amber);
-}
-
-.rating-classify-uncertain .rating-hint {
-  color: rgba(74, 47, 6, 0.75);
-}
-
-.rating-classify-unknown {
-  background: var(--accent);
-}
-
-.rating-classify-skip {
-  color: var(--muted);
-  background: var(--soft-bg);
-  border: 1px solid var(--border);
-}
-
-.rating-classify-skip .rating-hint {
-  color: var(--muted);
 }
 
 /* Completion gets the same hero radius/shadow tier as the active flashcard
@@ -7170,393 +6517,6 @@ input.reading-vocab-sticker-toggle:checked {
   box-shadow: 0 8px 20px rgba(120, 98, 40, 0.04);
 }
 
-/* classify-v2-* -- Phase 165 (V2 scene reconstruction pilot). Replaces the
-   Phase 156 classify-desk-scene/classify-source-slip/classify-stamp-button/
-   classify-card-tray rules above (CSS-drawn approximations of a desk) with
-   a real photographed scene: .classify-v2-scene is an aspect-ratio box
-   whose background-image IS the card-making desk (source slip, stamp +
-   ink pad, and a real card tray already exist in the photo), and every
-   live control below is an absolutely-positioned sibling placed against
-   that photo's actual objects. Desktop (16:9) and mobile (9:16) are two
-   different photo compositions, not a crop of one image, so every zone's
-   position is redefined at the >=1024px breakpoint rather than reused.
-   Percentages were measured against the source photos directly. */
-.classify-v2-root {
-  position: relative;
-  display: grid;
-  gap: 10px;
-  padding: 4px 2px 18px;
-  border-bottom: 1px dashed var(--paper-border);
-}
-
-/* Phase 173 -- was .classify-v2-heading, a title row in normal flow above
-   the scene. Now a small paper tag hanging off the desk photo's own top
-   edge, positioned against .classify-v2-root (which isn't clipped) rather
-   than .classify-v2-scene (which is, via overflow:hidden) -- right side at
-   both breakpoints, clear of the source-slip zone on the left. */
-.classify-v2-title-tag {
-  position: absolute;
-  z-index: 4;
-  right: 5%;
-  top: 4px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px 5px 8px;
-  border-radius: 3px 10px 10px 3px;
-  background: var(--panel-bg);
-  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.16);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 800;
-  transform: translateY(-60%) rotate(2deg);
-}
-
-.classify-v2-title-tag .shiori-mark {
-  width: 16px;
-  height: 16px;
-}
-
-/* The scene itself: mobile-first (9:16 photo) by default, desktop (16:9
-   photo) swapped in at >=1024px -- matching every other tab's existing
-   desktop-tier split, and satisfying the "16:9 never loads on mobile, 9:16
-   never loads on desktop" requirement via two disjoint background-image
-   rules rather than one asset cropped with object-position. */
-.classify-v2-scene {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 941 / 1672;
-  border-radius: 18px;
-  overflow: hidden;
-  background-color: var(--paper-bg);
-  background-image: url("/brand/decor/v2/v2-classify-card-desk-mobile-9x16.webp");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  box-shadow: 0 16px 36px var(--paper-shadow);
-}
-
-@media (min-width: 1024px) {
-  .classify-v2-scene {
-    aspect-ratio: 1672 / 941;
-    background-image: url("/brand/decor/v2/v2-classify-card-desk-desktop-16x9.webp");
-    /* Home Nav V1.1 seam repair -- top corners must read flush with the
-       toolbar's own torn paper edge, not as a second rounded frame
-       boundary. Only the lower corners (the photographed desk card's own
-       resting corners) keep their radius. */
-    border-radius: 0 0 18px 18px;
-  }
-
-  /* Home Nav V1.1 seam repair -- the toolbar's own paper strip already
-     carries this label as the active "분류" nav tab, and the tag's
-     top:4px + translateY(-60%) pushed it above .classify-v2-root (the
-     un-clipped wrapper it's positioned against) into the nav seam.
-     Removed from the desktop render tree entirely; mobile (outside this
-     media query) is unaffected. */
-  .classify-v2-title-tag {
-    display: none;
-  }
-}
-
-/* Source slip zone -- sits directly on the photographed lined paper (top
-   of the mobile photo, left third of the desktop photo). The textarea
-   itself is transparent (see below) so typed text reads as ink on that
-   same paper, not a white box floating over the photo. */
-.classify-v2-slip-zone {
-  position: absolute;
-  left: 9%;
-  top: 5%;
-  width: 78%;
-  height: 19%;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-@media (min-width: 1024px) {
-  .classify-v2-slip-zone {
-    left: 6%;
-    top: 17%;
-    width: 29%;
-    height: 45%;
-    gap: 4px;
-  }
-}
-
-.classify-v2-slip-label {
-  margin: 0 0 0 4px;
-  color: var(--muted);
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.classify-v2-slip-textarea {
-  box-sizing: border-box;
-  width: 100%;
-  flex: 1;
-  min-height: 0;
-  padding: 2px 6px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: #2c2013;
-  font-size: 12.5px;
-  line-height: 1.6;
-  resize: none;
-}
-
-@media (min-width: 1024px) {
-  .classify-v2-slip-textarea {
-    padding: 2px 10px;
-    font-size: 14px;
-    line-height: 1.85;
-  }
-}
-
-.classify-v2-slip-textarea::placeholder {
-  color: #7c6a52;
-  opacity: 0.75;
-}
-
-.classify-v2-slip-textarea:focus {
-  outline: none;
-  box-shadow: inset 0 0 0 1.5px var(--screen-accent, var(--primary));
-  border-radius: 4px 12px 12px 4px;
-}
-
-/* Deck select + "완벽히 아는 단어도 표시" -- two small opaque paper chips
-   (not translucent -- they need to stay legible sitting on top of the
-   photo regardless of what's directly beneath them). Mobile groups them
-   with the stamp cluster (the coral scalloped label in that photo has
-   open blank space for exactly this); desktop tucks them under the source
-   slip instead, closer to "near the slip" per this phase's brief. */
-.classify-v2-chip-row {
-  position: absolute;
-  left: 14%;
-  top: 25%;
-  width: 72%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-
-@media (min-width: 1024px) {
-  .classify-v2-chip-row {
-    left: 6%;
-    top: 64%;
-    width: 30%;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-  }
-}
-
-.classify-v2-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  max-width: 100%;
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: var(--panel-bg);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
-}
-
-.classify-v2-chip select {
-  min-width: 0;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-}
-
-.classify-v2-chip-icon {
-  flex: 0 0 auto;
-  width: 13px;
-  height: 13px;
-  color: var(--muted);
-}
-
-.classify-v2-chip-checkbox {
-  gap: 6px;
-}
-
-/* Stamp CTA -- positioned on the photo's own blank coral tag/label (both
-   compositions have one), styled as a solid postmark-style pill so
-   pressing it reads as stamping that tag, not submitting a form. A bare
-   class selector already beats the app-wide mobile `button { width: 100%
-   }` element selector regardless of source order, and this zone sets its
-   own centering, so nothing re-stretches it on mobile. */
-.classify-v2-stamp-button {
-  position: absolute;
-  left: 22%;
-  top: 55%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: auto;
-  min-width: 0;
-  padding: 12px 24px;
-  border: 1.5px dashed rgba(255, 255, 255, 0.65);
-  border-radius: 999px;
-  background: var(--screen-accent, var(--primary));
-  color: #fff;
-  font-weight: 800;
-  box-shadow: 0 6px 14px rgba(37, 43, 30, 0.22);
-  transform: rotate(-2deg);
-  transition:
-    transform var(--motion-fast) var(--ease-soft),
-    box-shadow var(--motion-fast) var(--ease-soft);
-}
-
-@media (min-width: 1024px) {
-  .classify-v2-stamp-button {
-    left: 40%;
-    top: 66%;
-    padding: 13px 26px;
-  }
-}
-
-.classify-v2-stamp-button:not(:disabled):hover {
-  transform: rotate(0deg) translateY(-1px);
-  box-shadow: 0 8px 18px rgba(37, 43, 30, 0.26);
-}
-
-.classify-v2-stamp-button:not(:disabled):active {
-  transform: rotate(-1deg) scale(0.97);
-}
-
-.classify-v2-stamp-button:disabled {
-  background: #a89a80;
-  color: #fff;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
-
-/* Card tray zone -- sits on the photographed card stack itself (bottom of
-   the mobile photo, right third of the desktop photo). No decorative
-   CSS card fan here any more -- the photo already shows real cards; this
-   zone only needs to carry the resumeable-draft receipt when one exists. */
-.classify-v2-tray-zone {
-  position: absolute;
-  left: 10%;
-  top: 68%;
-  width: 80%;
-  height: 28%;
-  display: grid;
-  align-content: start;
-  gap: 6px;
-}
-
-@media (min-width: 1024px) {
-  .classify-v2-tray-zone {
-    left: 63%;
-    top: 62%;
-    width: 33%;
-    height: 32%;
-  }
-}
-
-.classify-v2-tray-hint {
-  margin: 0;
-  padding: 5px 9px;
-  border-radius: 4px 10px 10px 4px;
-  background: var(--panel-bg);
-  box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
-  color: var(--text-secondary);
-  font-size: 10.5px;
-  line-height: 1.45;
-}
-
-@media (min-width: 1024px) {
-  .classify-v2-tray-hint {
-    font-size: 11.5px;
-  }
-}
-
-.classify-v2-draft-chip {
-  font-size: 10.5px;
-  box-shadow: 0 3px 8px rgba(37, 43, 30, 0.12);
-}
-
-@media (min-width: 1024px) {
-  .classify-v2-draft-chip {
-    font-size: 11.5px;
-  }
-}
-
-.classify-v2-copyright {
-  margin-top: 2px;
-}
-
-/* classify-draft-chip -- Phase 156. Was a plain centered <p> status line
-   below the form. Now a small receipt-style slip inside the card tray
-   (left accent bar instead of a border box), so "이전 분류 이어하기"
-   reads as another item sitting on the tray, not a status paragraph
-   competing with the desk's one real CTA. */
-.classify-draft-chip {
-  display: grid;
-  gap: 6px;
-  padding: 10px 12px;
-  border-radius: 3px 10px 10px 3px;
-  background: var(--paper-bg);
-  border-left: 3px solid var(--screen-accent, var(--accent));
-  color: var(--text-secondary);
-  font-size: 12.5px;
-}
-
-.classify-draft-chip-icon {
-  width: 13px;
-  height: 13px;
-  margin-right: 4px;
-  color: var(--screen-accent, var(--muted));
-  vertical-align: -2px;
-}
-
-.classify-draft-chip-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-
-/* Secondary actions ("이전 분류 이어하기", "삭제하고 새로 시작") -- a plain
-   underlined text link (same family as Home's .home-cover-sample/
-   Reading's .reading-summary-link-button), never a bordered/filled
-   button, so neither ever competes with the one real CTA. */
-.classify-quiet-link {
-  width: auto;
-  min-width: 0;
-  min-height: 0;
-  padding: 6px 2px;
-  border: none;
-  background: none;
-  color: var(--muted);
-  font-size: 12.5px;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--border);
-  box-shadow: none;
-}
-
-.classify-quiet-link:not(:disabled):hover {
-  color: var(--text-secondary);
-  text-decoration-color: var(--border-strong);
-  box-shadow: none;
-  transform: none;
-}
-
 /* Casual Sticker Reader (Phase 60) -- this was a 4-column grid of 7
    identically-bordered .stat-card tiles (a nested-box grid inside the
    already-boxed .stats-panel disclosure, plus a "big number, small label"
@@ -8126,10 +7086,6 @@ input.reading-vocab-sticker-toggle:checked {
   font-weight: 700;
 }
 
-.analyze-checkbox {
-  min-height: 40px;
-}
-
 .analyze-options {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) auto;
@@ -8148,482 +7104,7 @@ input.reading-vocab-sticker-toggle:checked {
   margin-top: 2px;
 }
 
-@media (max-width: 640px) {
-  /* Phase 172/173 -- was 18px 12px 32px, a leftover from before the base
-     .page rule above was progressively tightened (28px 20px 40px -> 12px
-     14px 28px -> 8px 14px 24px) to let each tab's V2 scene start higher/
-     bigger on the screen; this narrower-viewport override re-widened past
-     that tightened value, so it's kept in step with the same base numbers
-     instead of undoing them. */
-  .page {
-    padding: 8px 12px 24px;
-  }
-
-  .library-canvas {
-    width: 100%;
-  }
-
-  .header {
-    margin-bottom: 14px;
-  }
-
-  .header h1 {
-    font-size: 24px;
-  }
-
-  .header p {
-    font-size: 14px;
-    line-height: 1.55;
-  }
-
-  .tab-panel {
-    gap: 14px;
-  }
-
-  .account-menu-trigger-label {
-    max-width: 72px;
-  }
-
-  .account-menu-panel {
-    width: min(280px, 92vw);
-  }
-
-  .actions {
-    justify-content: stretch;
-  }
-
-  /* Phase 148 -- .study-hero-card removed from this shared 14px mobile
-     padding list: it's a flat unboxed heading strip now (see its own base
-     rule), not a bordered card, so forcing card-style padding back onto
-     it at this breakpoint would misalign it against the rest of the flat
-     heading content around it -- the same fix Phase 147 already made for
-     .shared-deck-card when it left the boxed-card family. */
-  .analyze-form,
-  .result-section,
-  .study-card,
-  .custom-term-section,
-  .panel-card {
-    padding: 14px;
-  }
-
-  /* Phase 147 -- the old .shared-deck-card was never added to the shared
-     14px mobile padding list above (its own smaller base padding suited
-     the shrunk shelf-card size better at this breakpoint too). Phase 158
-     replaced that card entirely with .book-spine (see .book-shelf-row's
-     own mobile override further below), which never joined this shared
-     list either, for the same reason. */
-
-  textarea {
-    min-height: 220px;
-    padding: 12px;
-    font-size: 16px;
-    line-height: 1.7;
-  }
-
-  .compact-textarea {
-    min-height: 96px;
-  }
-
-  .result-heading {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .deck-create,
-  .deck-share-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .deck-share-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .publish-deck-form button {
-    justify-self: stretch;
-  }
-
-  .advanced-backup-panel > button {
-    justify-self: stretch;
-  }
-
-  /* Phase 80 -- this used to turn each row into its own solid-bordered
-     white card once columns stack to 1fr, which reads as a list of admin
-     table cells even more than desktop's single divider line did. A
-     dashed underline (same tone as the desktop rule above) keeps rows
-     reading as notebook lines at every width instead of switching to a
-     boxed-card look specifically on phones. */
-
-  .analyze-options,
-  .stats-grid,
-  .deck-stat-row {
-    grid-template-columns: 1fr;
-  }
-
-  .records-level-strip {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .records-level-bar {
-    min-width: 28px;
-  }
-
-  /* Same app-wide mobile `button { width: 100% }` touch-target rule as the
-     reading tab's filter tabs -- opt these small status filter tabs back
-     out to their natural text width so they wrap side-by-side. */
-
-  .management-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .classify-word-card,
-  .classify-result-summary {
-    gap: 14px;
-    padding: 18px 16px;
-  }
-
-  /* Phase 112 -- tighter than the shared 14px/16px above, specifically for
-     the classify-card stage (.classify-result-summary keeps the shared
-     values; only this in-progress card needs the extra room). Every px
-     trimmed here shifts .classify-actions further clear of the fixed
-     bottom nav on 320-390px phones -- card-level gap/padding only, no
-     content removed, no button/icon/hint sizing touched. */
-  .classify-word-card {
-    gap: 8px;
-    padding: 10px;
-  }
-
-  /* Scoped to .classify-word-card (Analyze's own classify-card stage) so
-     Reading's TokenDetailSheet, which shares .token-sheet-meaning-block,
-     is unaffected -- same reasoning as the .classify-word-card .classify-
-     actions scoping above. */
-  .classify-word-card .token-sheet-meaning-block {
-    margin: 2px 0 2px;
-    padding: 10px 12px 8px;
-  }
-
-  /* Phase 112 (content-priority pass, Analyze) -- same order-only technique
-     Phase 110 used for Study's .study-answer-reveal: .classify-word-card is
-     `display: grid`, so a mobile-only `order` moves .classify-actions (the
-     4-way 아는/헷갈리는/모르는/건너뛰기 decision, this card's one real
-     choice) directly after the meaning above it, pushing the reference-only
-     .classify-word-card-secondary (base_form/POS tags + example sentence)
-     below the grid instead of above it. .classify-progress and
-     .classify-word-card-content (word/reading/meaning) keep the default
-     order (0) they already had, so they still render first, in DOM order.
-     No DOM/JSX/classify-save-status logic changed here -- only where these
-     already-existing pieces sit visually; desktop (>640px, outside this
-     media query) keeps the original order untouched. Scoped to
-     .classify-word-card so this doesn't touch .bookmark-inspector's own
-     reuse of .classify-actions (TokenDetailSheet's status grid has no
-     equivalent secondary block to reorder against). */
-  .classify-word-card .classify-actions {
-    order: 1;
-  }
-
-  .classify-word-card-secondary {
-    order: 2;
-  }
-
-  .classify-word-card .card-navigation {
-    order: 3;
-  }
-
-  .classify-word {
-    font-size: 28px;
-    line-break: anywhere;
-    overflow-wrap: anywhere;
-  }
-
-  .classify-details {
-    grid-template-columns: 1fr;
-  }
-
-  /* 2x2 (not a single stacked column) so all 4 classify/rating actions stay
-     reachable with a thumb without a long scroll -- explicit brief ask for
-     both 빠른 분류 and 복습's rating grids. */
-  .classify-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .classify-details div {
-    padding: 10px;
-  }
-
-  .context-example-block {
-    padding: 10px;
-  }
-
-  /* Phase 156 -- .classification-summary/span (2-per-row pill override)
-     removed: replaced by .classify-result-cards, which already wraps
-     naturally via flex-wrap without needing a forced 50% basis. */
-
-  .vocab-item-form {
-    grid-template-columns: 1fr;
-  }
-
-  .wide-field {
-    grid-column: auto;
-  }
-
-  .form-actions,
-  .row-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .study-card {
-    gap: 16px;
-    min-height: 0;
-  }
-
-  /* Tighter desk-stage padding on mobile -- the card already goes near
-     edge-to-edge, so the surrounding backdrop only needs a small margin,
-     not the desktop-scale "wide empty space" allowance. */
-  .desk-surface-stage {
-    padding: 12px 6px 20px;
-    border-radius: 16px;
-  }
-
-  .desk-surface-stage::after {
-    left: 5%;
-    right: 5%;
-    bottom: 12px;
-  }
-
-  .study-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .study-answer-reveal .meaning-actions-row {
-    order: 4;
-  }
-
-  /* Tighter vertical rhythm than the 20px desktop gap so the meaning hero
-     and the now-adjacent rating grid sit closer together -- less distance
-     to the one decision this screen exists for. */
-  .study-answer-reveal {
-    gap: 14px;
-  }
-
-  .rating-button {
-    padding: 14px 8px;
-  }
-
-  .reading-summary-next-actions {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: stretch;
-  }
-
-  .reading-summary-cta-button {
-    flex: 0 0 auto;
-    width: 100%;
-  }
-
-  .custom-term-table table {
-    min-width: 760px;
-  }
-
-  /* classify-ledger below 640px -- the fixed-column table row no longer
-     has room for 7 columns, so each row becomes a stacked label/value
-     list instead (a small sticky-note ledger entry, not a scrolling
-     table). The header row stays in the DOM for screen readers but is
-     visually hidden; .classify-ledger td::before prints the same label
-     text inline above each value so the row stays self-describing without
-     it. No horizontal scroll at any width down to 320px. */
-  .classify-ledger thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .classify-ledger,
-  .classify-ledger tbody,
-  .classify-ledger tr,
-  .classify-ledger td {
-    display: block;
-    width: 100%;
-  }
-
-  .classify-ledger tr {
-    padding: 10px 2px;
-    border-bottom: 1px dashed var(--border);
-  }
-
-  .classify-ledger tr:last-child {
-    border-bottom: none;
-  }
-
-  .classify-ledger td {
-    padding: 3px 2px;
-    border-bottom: none;
-  }
-
-  .classify-ledger td::before {
-    content: attr(data-label);
-    display: block;
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 700;
-    margin-bottom: 2px;
-  }
-
-  .example-text {
-    max-width: none;
-    -webkit-line-clamp: 3;
-  }
-
-  button {
-    width: 100%;
-    min-height: 44px;
-    padding: 11px 14px;
-  }
-
-  .compact-button,
-  .danger-button {
-    min-width: 0;
-    min-height: 42px;
-  }
-
-  .show-results-toggle {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .message,
-  .empty {
-    padding: 12px;
-    line-height: 1.55;
-  }
-
-  .analyze-cta-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  /* Phase 156 -- .classify-bookmark-button (removed; see .classify-stamp-
-     button above, now inside its own .classify-desk-cta-row which sets
-     `align-items: center` directly rather than reusing .analyze-cta-row)
-     and .classify-quiet-link (now only ever rendered inside .classify-
-     draft-chip-actions, a plain row with no ancestor `align-items:
-     stretch`) no longer sit inside .analyze-cta-row at all, so neither
-     needs this align-self opt-out any more. .analyze-cta-row's own
-     remaining occupant, .reading-open-button (the compact "원문 수정"
-     editor's submit), is meant to stay full-width on mobile, so this
-     block is intentionally left with nothing to override. */
-
-  .classify-stage-toolbar {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  /* Phase 154 -- both toolbar links ("읽기 탭에서 보기"/"지금까지 저장")
-     and the post-result "원문 수정"/"원문 접기" toggle are quiet
-     .ghost-button.compact-button instances with no width rule of their
-     own, so the app-wide mobile `button { width: 100% }` rule (an
-     unopposed element selector) was the one actually winning -- confirmed
-     via a real screenshot showing both as full-width stacked bars, the
-     exact "quiet action이 admin bar가 되지 않도록" regression this
-     phase's brief explicitly calls out. Both opt back out to their
-     natural content width here. */
-  .classify-stage-toolbar button,
-  .classify-source-toggle {
-    width: auto;
-    min-width: 0;
-  }
-}
-
 /* Coverage summary */
-
-.coverage-summary {
-  display: grid;
-  gap: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px;
-  background: var(--panel-bg);
-}
-
-.coverage-headline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.coverage-percent {
-  color: var(--text);
-  font-size: 21px;
-  font-weight: 800;
-}
-
-.coverage-percent-sub {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.coverage-stats-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.coverage-stat {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 6px 10px;
-  color: var(--text-secondary);
-  background: var(--soft-bg);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.coverage-stat-known {
-  border-color: #86efac;
-  background: #dcfce7;
-  color: #14532d;
-}
-
-.coverage-stat-uncertain {
-  border-color: #fcd34d;
-  background: #fef3c7;
-  color: #78350f;
-}
-
-.coverage-stat-unknown {
-  border-color: #fca5a5;
-  background: #fee2e2;
-  color: #7f1d1d;
-}
-
-.coverage-stat-unclassified {
-  border-color: #c7d2fe;
-  background: #e0e7ff;
-  color: #3730a5;
-}
-
-.coverage-stat-ignored {
-  border-color: var(--border);
-  background: #f1f5f9;
-  color: var(--muted);
-}
-
-.coverage-footnote {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-}
 
 /* Priority vocab list */
 
@@ -8713,13 +7194,8 @@ input.reading-vocab-sticker-toggle:checked {
 }
 
 @media (max-width: 640px) {
-  .coverage-summary,
   .priority-vocab-list {
     padding: 12px;
-  }
-
-  .coverage-percent {
-    font-size: 19px;
   }
 
   .priority-vocab-occurrence {
@@ -10143,111 +8619,6 @@ input.reading-vocab-sticker-toggle:checked {
   transform: none;
 }
 
-/* Phase 120 note: TokenDetailSheet.tsx (Reading inspector) no longer uses
-   any of the six rules below -- it switched to its own .token-note-* set
-   above. Kept here unchanged because AnalyzeSection.tsx's ClassifyWordCard
-   and StudySection.tsx's answer-reveal tags still render these exact
-   classes (see ClassifyWordPrimary/ClassifyWordSecondary and
-   .study-answer-tags) -- both out of scope this phase (Analyze has its own
-   future direction; Study is explicitly protected). */
-.token-sheet-reading {
-  color: var(--muted);
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.token-sheet-meaning-block {
-  position: relative;
-  margin: 8px 0 4px;
-  padding: 16px 16px 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: 4px 14px 14px 14px;
-  background: var(--soft-bg);
-}
-
-.token-sheet-meaning-block::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  left: 14px;
-  z-index: 1;
-  width: 34px;
-  height: 12px;
-  border: 1px solid rgba(var(--primary-rgb), 0.4);
-  background: rgba(var(--primary-rgb), 0.32);
-  transform: rotate(-3deg);
-  pointer-events: none;
-}
-
-.token-sheet-meaning-label {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.token-sheet-meaning-value {
-  margin: 0;
-  color: var(--text);
-  font-size: 19px;
-  font-weight: 800;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
-.token-sheet-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
-}
-
-.token-sheet-meta-tag {
-  padding: 3px 9px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--soft-bg);
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.context-example-block {
-  display: grid;
-  gap: 6px;
-  margin-top: 10px;
-  border: 1px solid #ecdfb8;
-  border-left: 4px solid #e8c25c;
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: #fdf9ee;
-}
-
-.context-example-label {
-  margin: 0;
-  color: #8a6d1f;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.context-example-text {
-  margin: 0;
-  color: var(--text);
-  font-size: 15px;
-  line-height: 1.7;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
-}
-
-.context-example-hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-}
-
 .example-highlight {
   border-radius: 3px;
   padding: 0 2px;
@@ -10527,9 +8898,7 @@ input.reading-vocab-sticker-toggle:checked {
      here rather than removed from the shared class list in TokenDetailSheet
      so the mobile/tablet floating presentations (which do want both) are
      untouched. */
-  .bookmark-inspector-pinned::before,
-  .bookmark-inspector-pinned.card-stack-surface::before,
-  .bookmark-inspector-pinned.card-stack-surface::after {
+  .bookmark-inspector-pinned::before {
     content: none;
   }
 
@@ -10605,10 +8974,6 @@ input.reading-vocab-sticker-toggle:checked {
        above) are untouched -- this only applies to the true mobile bottom
        sheet. */
     max-height: 42vh;
-  }
-
-  .classify-actions {
-    gap: 8px;
   }
 
   /* Phase 120 removed this tier's target classes from TokenDetailSheet
@@ -16338,5 +14703,1235 @@ input.reading-vocab-sticker-toggle:checked {
   .stats-reg-streak {
     flex-wrap: wrap;
     gap: 10px;
+  }
+}
+
+/* ===================================================================
+   학습 계획 C 패드 (Gate B) -- LearningPlanSection 전용 범위.
+   승인: references/plans/learning-plan-tab/handoff-c/approved/
+   c-final-1280x900@2x.png, c-final-390x844@3x.png.
+   세이지 작업면 위의 위쪽 천 제본 패드 한 장. 종이 질감은 기존 phase126
+   에셋을 재사용하고, 제본은 learning-plan-c 반복 타일(늘리지 않음)이다.
+   글자·숫자·막대·버튼은 모두 DOM이며 전체 장면 이미지를 배경으로 쓰지 않는다.
+   =================================================================== */
+.learning-plan {
+  --lp-desk: #7c8a7f;
+  --lp-paper: #f6f4ee;
+  --lp-ink: #28342e;
+  --lp-muted: #66726b;
+  --lp-rule: #d2d5cb;
+  --lp-fold: #c6cbbf;
+  --lp-progress: #4f7b62;
+  --lp-command: #2f5a45;
+  --lp-command-soft: #e3eadf;
+  --lp-late: #8b503b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100svh - 50px);
+  padding: 24px 48px 28px;
+  background: var(--lp-desk);
+  color: var(--lp-ink);
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  font-size: 14px;
+  letter-spacing: 0;
+}
+
+body:has(.learning-plan) {
+  background: #7c8a7f;
+}
+
+body:has(.learning-plan) .page {
+  padding: 0;
+}
+
+body:has(.learning-plan) .app-toolbar {
+  margin-bottom: 0;
+}
+
+@media (min-width: 1024px) {
+  body:has(.learning-plan) .app-shell-content {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.learning-plan :where(h1, h2, h3, p) {
+  margin: 0;
+}
+
+.learning-plan :where(button, select, input) {
+  font: inherit;
+  color: inherit;
+  letter-spacing: 0;
+}
+
+/* The app-wide `button`/`input` defaults (gradient pill, 120px min-width,
+   lift on hover) are for the older card UI. Reset them inside the pad with
+   :where() so the specific .learning-plan__* rules below still win. */
+.learning-plan :where(button) {
+  width: auto;
+  min-width: 0;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font-weight: inherit;
+  overflow-wrap: normal;
+  transition: none;
+  cursor: pointer;
+}
+
+.learning-plan :where(button):disabled {
+  background: none;
+  cursor: default;
+}
+
+.learning-plan button:not(:disabled):hover,
+.learning-plan button:not(:disabled):active {
+  box-shadow: none;
+  transform: none;
+}
+
+.learning-plan :where(input, select) {
+  border-radius: 0;
+}
+
+.learning-plan :focus-visible {
+  outline: 3px solid #386879;
+  outline-offset: 3px;
+}
+
+.learning-plan :where(svg) {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.learning-plan__pad {
+  width: min(1080px, 100%);
+  display: flex;
+  flex-direction: column;
+  filter: drop-shadow(0 10px 16px #263e301f);
+}
+
+.learning-plan__binding {
+  height: 30px;
+  border-radius: 4px 4px 0 0;
+  background: url("/brand/decor/learning-plan-c/learning-plan-binding-desktop@2x.webp") 0 0 / 44px 30px repeat-x;
+}
+
+.learning-plan__sheet {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 644px;
+  padding: 30px 44px 16px;
+  background-color: var(--lp-paper);
+}
+
+.learning-plan__sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url("/brand/decor/phase126/paper-page-texture-web.webp");
+  background-size: 650px;
+  opacity: 0.17;
+}
+
+.learning-plan__stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.learning-plan__stack i {
+  display: block;
+  width: 99.2%;
+  height: 5px;
+  background: #ebe8df;
+  border-bottom: 1px solid #dad6cb;
+}
+
+.learning-plan__stack i + i {
+  width: 98.4%;
+  background: #e4e1d7;
+}
+
+/* Old 빠른 분류 device draft notice, under the pad on the sage desk. */
+.learning-plan-legacy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 16px;
+  width: min(1080px, 100%);
+  margin: 14px 0 0;
+  color: #eef1ea;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.learning-plan-legacy__error {
+  color: #ffe1d4;
+  font-weight: 600;
+}
+
+.learning-plan-legacy button {
+  min-height: 44px;
+  color: #ffffff;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* --- Head ---------------------------------------------------------- */
+.learning-plan__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--lp-rule);
+}
+
+.learning-plan__head h1 {
+  font-size: 25px;
+  line-height: 1.35;
+  font-weight: 650;
+}
+
+.learning-plan__head p {
+  margin-top: 4px;
+  color: var(--lp-muted);
+  font-size: 12px;
+}
+
+.learning-plan__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--lp-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.learning-plan__state::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #829384;
+}
+
+.learning-plan__state--saved {
+  color: var(--lp-command);
+}
+
+.learning-plan__state--saved::before {
+  background: var(--lp-command);
+}
+
+.learning-plan__state--error {
+  color: var(--lp-late);
+}
+
+.learning-plan__state--error::before {
+  background: var(--lp-late);
+}
+
+.learning-plan__workflow {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  padding-top: 24px;
+}
+
+/* --- Inputs -------------------------------------------------------- */
+.learning-plan__inputs {
+  min-width: 0;
+  padding-right: 40px;
+}
+
+.learning-plan__step {
+  position: relative;
+  padding: 0 0 20px 32px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--lp-rule);
+}
+
+.learning-plan__step:last-of-type {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border: 0;
+}
+
+.learning-plan__step-number {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 20px;
+  color: #687b6a;
+  font-size: 17px;
+  line-height: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.learning-plan__step h2 {
+  margin-bottom: 10px;
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: 700;
+}
+
+.learning-plan__deck-select {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 24px 0 0;
+  border: 0;
+  border-bottom: 1px solid #839780;
+  border-radius: 0;
+  background: transparent;
+  font-size: 15px;
+  text-overflow: ellipsis;
+}
+
+.learning-plan__deck-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 12px;
+  margin-top: 9px;
+  color: var(--lp-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.learning-plan__inline-command {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lp-command);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.learning-plan__presets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid #b2bfaa;
+  border-radius: 3px;
+}
+
+.learning-plan__preset {
+  min-height: 44px;
+  border: 0;
+  border-right: 1px solid #c8d0be;
+  background: none;
+  font-size: 13px;
+}
+
+.learning-plan__preset:last-child {
+  border-right: 0;
+}
+
+.learning-plan__preset[aria-pressed="true"] {
+  background: var(--lp-command-soft);
+  box-shadow: inset 0 -2px 0 var(--lp-command);
+  color: var(--lp-command);
+  font-weight: 700;
+}
+
+.learning-plan__dates {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr);
+  align-items: end;
+  gap: 9px;
+  margin-top: 13px;
+}
+
+.learning-plan__date {
+  display: block;
+  min-width: 0;
+}
+
+.learning-plan__date span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--lp-muted);
+  font-size: 12px;
+}
+
+.learning-plan__date input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px solid #9baa91;
+  border-radius: 0;
+  background: none;
+  font-size: 13px;
+  caret-color: var(--lp-command);
+}
+
+.learning-plan__date input[aria-invalid="true"] {
+  border-bottom-color: var(--lp-late);
+}
+
+.learning-plan__date-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  color: var(--lp-muted);
+}
+
+.learning-plan__date-arrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+.learning-plan__caption {
+  margin-top: 9px;
+  color: var(--lp-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.learning-plan__field-error {
+  margin-top: 9px;
+  color: var(--lp-late);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.learning-plan__daily-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.learning-plan__stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #a5b499;
+  border-radius: 3px;
+}
+
+.learning-plan__stepper:has(input[aria-invalid="true"]) {
+  border-color: var(--lp-late);
+}
+
+.learning-plan__stepper button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--lp-command);
+  font-size: 18px;
+}
+
+.learning-plan__stepper button:disabled {
+  color: #aab4a8;
+}
+
+.learning-plan__stepper input {
+  width: 56px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.learning-plan__unit {
+  margin-right: 5px;
+  color: var(--lp-muted);
+  font-size: 12px;
+}
+
+.learning-plan__recommended {
+  max-width: 160px;
+  color: var(--lp-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.learning-plan__recommended strong {
+  color: var(--lp-ink);
+  font-weight: 600;
+}
+
+/* --- Result -------------------------------------------------------- */
+.learning-plan__result {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-left: 38px;
+  border-left: 1px dashed var(--lp-fold);
+}
+
+.learning-plan__result-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 17px;
+}
+
+.learning-plan__result-top h2 {
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: 700;
+}
+
+.learning-plan__basis {
+  color: var(--lp-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.learning-plan__fraction-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.learning-plan__fraction {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.learning-plan__fraction strong {
+  font-size: 34px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.learning-plan__fraction span {
+  color: var(--lp-muted);
+  font-size: 16px;
+}
+
+.learning-plan__percent {
+  color: var(--lp-command);
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.learning-plan__meter {
+  position: relative;
+  height: 24px;
+  margin-top: 15px;
+  overflow: hidden;
+  background: #e0e5d9;
+}
+
+.learning-plan__meter i {
+  display: block;
+  height: 100%;
+  background: var(--lp-progress);
+  box-shadow: 2px 0 0 var(--lp-paper);
+}
+
+.learning-plan__result[data-unknown="true"] .learning-plan__meter {
+  background: none;
+  border: 1px dashed #a9b3a2;
+}
+
+.learning-plan__result[data-unknown="true"] .learning-plan__meter i {
+  display: none;
+}
+
+.learning-plan__meter-caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  color: var(--lp-muted);
+  font-size: 12px;
+}
+
+.learning-plan__meter-caption b {
+  color: var(--lp-ink);
+  font-weight: 600;
+}
+
+.learning-plan__capacity {
+  flex: 1;
+  margin-top: 27px;
+  padding-top: 22px;
+  border-top: 1px solid var(--lp-rule);
+}
+
+.learning-plan__capacity h3 {
+  margin: 0 0 15px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.learning-plan__capacity-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 60px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  color: var(--lp-muted);
+  font-size: 12px;
+}
+
+.learning-plan__capacity-row b {
+  color: var(--lp-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.learning-plan__track {
+  height: 9px;
+  background: #e0e5d9;
+}
+
+.learning-plan__track i {
+  display: block;
+  height: 100%;
+  background: #94a38b;
+}
+
+.learning-plan__capacity-row--plan .learning-plan__track i {
+  background: var(--lp-command);
+}
+
+.learning-plan__result[data-late="true"] .learning-plan__capacity-row--plan .learning-plan__track i {
+  background: var(--lp-late);
+}
+
+.learning-plan__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: 19px;
+  font-variant-numeric: tabular-nums;
+}
+
+.learning-plan__status strong {
+  color: var(--lp-command);
+  font-size: 23px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.learning-plan__status span {
+  color: var(--lp-command);
+  font-size: 14px;
+}
+
+.learning-plan__result[data-late="true"] .learning-plan__status strong,
+.learning-plan__result[data-late="true"] .learning-plan__status span {
+  color: var(--lp-late);
+}
+
+.learning-plan__result[data-unknown="true"] .learning-plan__status strong {
+  color: var(--lp-muted);
+}
+
+.learning-plan__adjust {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lp-late);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.learning-plan__dates-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 13px;
+  color: var(--lp-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.learning-plan__dates-mini b {
+  margin-left: 4px;
+  color: var(--lp-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.learning-plan__dates-mini span + span {
+  padding-left: 10px;
+  border-left: 1px solid var(--lp-rule);
+}
+
+.learning-plan__actions {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--lp-rule);
+}
+
+.learning-plan__action-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.learning-plan__save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 25px;
+  border: 1px solid var(--lp-command);
+  border-radius: 3px;
+  background: var(--lp-command);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.learning-plan__save svg {
+  width: 16px;
+  height: 16px;
+}
+
+.learning-plan__save:hover:not(:disabled) {
+  background: #244b38;
+}
+
+.learning-plan__save:disabled {
+  border-color: #87978a;
+  background: #87978a;
+}
+
+.learning-plan__start {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lp-command);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  white-space: nowrap;
+}
+
+.learning-plan__start:disabled {
+  color: var(--lp-muted);
+  text-decoration: none;
+}
+
+.learning-plan__feedback {
+  margin-top: 10px;
+  color: var(--lp-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.learning-plan__confirm {
+  margin-top: 12px;
+  padding: 12px 0 2px;
+  border-top: 1px dashed var(--lp-fold);
+  font-size: 13px;
+}
+
+.learning-plan__confirm p {
+  color: var(--lp-ink);
+  line-height: 1.5;
+}
+
+.learning-plan__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 16px;
+  margin-top: 6px;
+}
+
+.learning-plan__confirm-primary {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--lp-command);
+  border-radius: 3px;
+  color: var(--lp-command);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.learning-plan__confirm .learning-plan__inline-command {
+  font-size: 13px;
+}
+
+.learning-plan__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 12px;
+  margin-top: 8px;
+  color: var(--lp-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.learning-plan__notice--warning {
+  color: var(--lp-late);
+}
+
+.learning-plan__tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 44px;
+  margin-top: 8px;
+}
+
+.learning-plan__history {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lp-command);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.learning-plan__info {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lp-muted);
+}
+
+.learning-plan__info svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.7;
+}
+
+.learning-plan__basis-details {
+  padding-top: 10px;
+  border-top: 1px dashed var(--lp-rule);
+  color: var(--lp-muted);
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.learning-plan__basis-details[hidden] {
+  display: none;
+}
+
+.learning-plan__basis-details p + p {
+  margin-top: 5px;
+}
+
+/* --- Wide desktop -------------------------------------------------- */
+@media (min-width: 1600px) {
+  .learning-plan__pad {
+    width: 1140px;
+  }
+
+  .learning-plan__sheet {
+    padding: 36px 48px 20px;
+  }
+
+  .learning-plan__workflow {
+    padding-top: 28px;
+  }
+
+  .learning-plan__step {
+    padding-bottom: 24px;
+    margin-bottom: 22px;
+  }
+
+  .learning-plan__inputs {
+    padding-right: 46px;
+  }
+
+  .learning-plan__result {
+    padding-left: 42px;
+  }
+}
+
+/* --- Compact two-column (tablet / small laptop) -------------------- */
+@media (min-width: 701px) and (max-width: 1100px) {
+  .learning-plan {
+    padding: 18px 28px 26px;
+  }
+
+  .learning-plan__sheet {
+    min-height: 0;
+    padding: 20px 28px 12px;
+  }
+
+  .learning-plan__head {
+    padding-bottom: 14px;
+  }
+
+  .learning-plan__workflow {
+    grid-template-columns: 1.1fr 1fr;
+    padding-top: 18px;
+  }
+
+  .learning-plan__inputs {
+    padding-right: 26px;
+  }
+
+  .learning-plan__result {
+    padding-left: 26px;
+  }
+
+  .learning-plan__step {
+    padding-left: 28px;
+    padding-bottom: 14px;
+    margin-bottom: 12px;
+  }
+
+  .learning-plan__step h2 {
+    margin-bottom: 8px;
+  }
+
+  .learning-plan__dates {
+    grid-template-columns: minmax(0, 1fr) 12px minmax(0, 1fr);
+    gap: 5px;
+    margin-top: 9px;
+  }
+
+  .learning-plan__date input {
+    font-size: 12px;
+  }
+
+  .learning-plan__caption,
+  .learning-plan__deck-meta {
+    margin-top: 7px;
+  }
+
+  .learning-plan__recommended {
+    max-width: 130px;
+  }
+
+  .learning-plan__result-top {
+    margin-bottom: 14px;
+  }
+
+  .learning-plan__capacity {
+    margin-top: 22px;
+    padding-top: 18px;
+  }
+
+  .learning-plan__actions {
+    margin-top: 20px;
+  }
+
+  .learning-plan__action-row {
+    gap: 12px;
+  }
+
+  .learning-plan__save {
+    padding: 0 16px;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 850px) {
+  .learning-plan__dates {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .learning-plan__date-arrow {
+    display: none;
+  }
+
+  .learning-plan__date input {
+    font-size: 11px;
+  }
+
+  .learning-plan__daily-row {
+    gap: 10px;
+  }
+
+  .learning-plan__recommended {
+    max-width: none;
+  }
+
+  .learning-plan__inputs {
+    padding-right: 22px;
+  }
+
+  .learning-plan__result {
+    padding-left: 22px;
+  }
+
+  .learning-plan__step h2 {
+    font-size: 14px;
+  }
+
+  .learning-plan__action-row {
+    flex-wrap: wrap;
+    gap: 0 12px;
+  }
+
+  .learning-plan__save {
+    font-size: 13px;
+  }
+
+  .learning-plan__capacity-row {
+    grid-template-columns: 33px minmax(0, 1fr) 48px;
+    gap: 7px;
+  }
+
+  .learning-plan__dates-mini {
+    gap: 7px;
+  }
+
+  .learning-plan__dates-mini b {
+    font-size: 12px;
+  }
+
+  .learning-plan__dates-mini span + span {
+    padding-left: 7px;
+  }
+}
+
+/* --- Phone: one vertical pad, inputs then results ------------------ */
+@media (max-width: 700px) {
+  .learning-plan {
+    display: block;
+    min-height: calc(100svh - 56px);
+    padding: 14px 12px 28px;
+  }
+
+  .learning-plan__pad {
+    width: 100%;
+  }
+
+  .learning-plan__binding {
+    height: 22px;
+    background-image: url("/brand/decor/learning-plan-c/learning-plan-binding-mobile@3x.webp");
+    background-size: 44px 22px;
+  }
+
+  .learning-plan__sheet {
+    min-height: 0;
+    padding: 22px 20px 14px;
+  }
+
+  .learning-plan__head {
+    align-items: flex-start;
+    gap: 10px;
+    padding-bottom: 14px;
+  }
+
+  .learning-plan__head h1 {
+    font-size: 22px;
+  }
+
+  .learning-plan__state {
+    margin-top: 3px;
+    font-size: 11px;
+  }
+
+  .learning-plan__workflow {
+    display: block;
+    padding-top: 18px;
+  }
+
+  .learning-plan__inputs {
+    padding: 0;
+  }
+
+  .learning-plan__step {
+    padding-left: 28px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+  }
+
+  .learning-plan__step h2 {
+    margin-bottom: 9px;
+  }
+
+  .learning-plan__deck-select {
+    font-size: 14px;
+  }
+
+  .learning-plan__deck-meta,
+  .learning-plan__caption {
+    margin-top: 7px;
+  }
+
+  .learning-plan__dates {
+    grid-template-columns: minmax(0, 1fr) 12px minmax(0, 1fr);
+    gap: 7px;
+    margin-top: 9px;
+  }
+
+  .learning-plan__date input {
+    font-size: 12px;
+  }
+
+  .learning-plan__daily-row {
+    flex-wrap: nowrap;
+    gap: 10px;
+  }
+
+  .learning-plan__recommended {
+    max-width: 132px;
+    font-size: 11px;
+  }
+
+  .learning-plan__result {
+    margin-top: 24px;
+    padding: 24px 0 0;
+    border-left: 0;
+    border-top: 1px dashed var(--lp-fold);
+  }
+
+  .learning-plan__result-top {
+    margin-bottom: 20px;
+  }
+
+  .learning-plan__meter {
+    height: 22px;
+  }
+
+  .learning-plan__capacity {
+    margin-top: 25px;
+    padding-top: 22px;
+  }
+
+  .learning-plan__actions {
+    margin-top: 25px;
+  }
+
+  .learning-plan__action-row {
+    gap: 16px;
+  }
+
+  .learning-plan__save {
+    flex: 1 1 auto;
+    min-height: 48px;
+    padding: 0 16px;
+  }
+
+  .learning-plan__start {
+    min-height: 48px;
+  }
+
+  .learning-plan__tools {
+    margin-top: 7px;
+  }
+
+  .learning-plan__feedback {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 350px) {
+  .learning-plan {
+    padding: 12px 10px 24px;
+  }
+
+  .learning-plan__sheet {
+    padding: 20px 16px 12px;
+  }
+
+  .learning-plan__head h1 {
+    font-size: 21px;
+  }
+
+  .learning-plan__state {
+    font-size: 10px;
+  }
+
+  .learning-plan__step {
+    padding-left: 25px;
+  }
+
+  .learning-plan__dates {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .learning-plan__date-arrow {
+    display: none;
+  }
+
+  .learning-plan__date input {
+    font-size: 11px;
+  }
+
+  .learning-plan__daily-row {
+    flex-wrap: wrap;
+  }
+
+  .learning-plan__recommended {
+    max-width: none;
+    font-size: 12px;
+  }
+
+  .learning-plan__preset {
+    font-size: 12px;
+  }
+
+  .learning-plan__action-row {
+    gap: 12px;
+  }
+
+  .learning-plan__save {
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .learning-plan__dates-mini {
+    gap: 8px;
+    font-size: 11px;
+  }
+
+  .learning-plan__dates-mini b {
+    font-size: 13px;
   }
 }

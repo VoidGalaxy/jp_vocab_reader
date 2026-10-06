@@ -1,5 +1,6 @@
 import csv
 from io import StringIO
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,6 +51,7 @@ from app.repositories.deck_repository import (
     update_deck,
 )
 from app.repositories.feedback_repository import create_app_feedback, create_meaning_feedback
+from app.repositories.learning_plan_repository import get_plan_progress
 from app.repositories.lexeme_repository import (
     list_subscribed_lexeme_study_items,
     record_lexeme_review,
@@ -90,6 +92,7 @@ from app.repositories.vocab_repository import (
 from app.dictionary_service import lookup_meaning
 from app.settings import APP_NAME, get_cors_allow_origins
 from app.schemas import (
+    LearningPlanProgressResponse,
     ANALYZE_TEXT_MAX_LENGTH,
     AnalyzeRequest,
     AnalyzeResponse,
@@ -701,12 +704,22 @@ def get_study_lexeme_items(
     shared_deck_id: int | None = Query(default=None),
     due_only: bool = Query(default=False),
     limit: int | None = Query(default=None),
+    # 학습 계획 first-review queue: never-rated words only (last_reviewed_at
+    # IS NULL), filtered in SQL before LIMIT, known NOT excluded. Omitted =
+    # the existing behavior, unchanged.
+    first_review_only: bool = Query(default=False),
 ) -> list[StudyLexemeItemResponse]:
     if limit is not None and limit <= 0:
         raise HTTPException(status_code=400, detail="invalid limit")
+    if first_review_only and due_only:
+        raise HTTPException(status_code=400, detail="first_review_only cannot be combined with due_only")
     user_id = current_user_id(http_request)
     items = list_subscribed_lexeme_study_items(
-        user_id, shared_deck_id=shared_deck_id, due_only=due_only, limit=limit
+        user_id,
+        shared_deck_id=shared_deck_id,
+        due_only=due_only,
+        limit=limit,
+        first_review_only=first_review_only,
     )
     return [
         StudyLexemeItemResponse(
@@ -726,10 +739,11 @@ def get_study_lexeme_items(
             next_review_at=item.get("next_review_at"),
             correct_count=item["correct_count"],
             wrong_count=item["wrong_count"],
+            last_reviewed_at=item.get("last_reviewed_at"),
             source_label=item["source_label"],
         )
         for item in items
-        if item["status"] != "known"
+        if first_review_only or item["status"] != "known"
     ]
 
 
@@ -786,6 +800,23 @@ def get_learning_stats(
     if deck_id is not None and not get_deck_by_id(user_id, deck_id):
         raise HTTPException(status_code=404, detail="deck not found")
     return StatsResponse(**build_stats(user_id, deck_id=deck_id))
+
+
+# Read-only first-review progress of one deck for the 학습 계획 tab. Login
+# required (no dev-user fallback): plans are per signed-in account. A deck
+# that is not the user's, or not an active subscription, is a plain 404.
+# See app/repositories/learning_plan_repository.py for the metric.
+@app.get("/learning-plan/progress", response_model=LearningPlanProgressResponse)
+def get_learning_plan_progress(
+    http_request: Request,
+    deck_kind: Literal["personal", "subscribed"] = Query(...),
+    deck_id: int = Query(..., ge=1),
+) -> LearningPlanProgressResponse:
+    user_id = required_user_id(http_request)
+    progress = get_plan_progress(user_id, deck_kind, deck_id)
+    if progress is None:
+        raise HTTPException(status_code=404, detail="deck not found")
+    return LearningPlanProgressResponse(**progress)
 
 
 # Read-only, Asia/Seoul date-by-date history for the Stats tab. Never writes

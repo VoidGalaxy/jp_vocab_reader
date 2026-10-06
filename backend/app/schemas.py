@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -241,6 +243,21 @@ class HistorySavedWordResponse(BaseModel):
     meaning_ko: str
 
 
+class LearningPlanProgressResponse(BaseModel):
+    """First-review progress of one deck for the 학습 계획 tab (read-only)."""
+
+    deck_kind: Literal["personal", "subscribed"]
+    deck_id: int
+    total: int
+    seen: int
+    # "deck_cards": this personal deck's own cards (copies start fresh).
+    # "account_shared": the account's shared per-lexeme progress.
+    progress_scope: Literal["deck_cards", "account_shared"]
+    metric_version: str
+    today: str
+    as_of: str
+
+
 class StatsHistoryDayResponse(BaseModel):
     date: str
     timezone: str
@@ -443,6 +460,8 @@ class StudyLexemeItemResponse(BaseModel):
     next_review_at: str | None = None
     correct_count: int
     wrong_count: int
+    # Additive (학습 계획 Gate C-1b): null = never rated (first-review candidate).
+    last_reviewed_at: str | None = None
     source_label: str
 
 

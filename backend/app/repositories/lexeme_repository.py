@@ -289,6 +289,7 @@ def list_shared_deck_words_with_progress(
     due_only: bool = False,
     limit: int | None = None,
     exclude_known: bool = False,
+    first_review_only: bool = False,
 ) -> list[dict[str, Any]]:
     """shared_deck_words + lexemes, left-joined with this user's
     user_word_progress. A word with no progress row still comes back (as
@@ -341,6 +342,15 @@ def list_shared_deck_words_with_progress(
     showing known words unchanged -- only list_subscribed_lexeme_study_items
     (the study-queue path behind GET /study-items/lexemes, which never wants
     known words back regardless of due_only/limit) passes True.
+
+    first_review_only (학습 계획 Gate C-1b): keeps only words this user has
+    never rated -- no user_word_progress row, or a row whose
+    `last_reviewed_at` is still NULL -- in the WHERE clause, i.e. before
+    ORDER BY and LIMIT, so a deck whose first words were already rated still
+    fills up to `limit`. This is the same "first review" definition as GET
+    /learning-plan/progress. The status a word was classified with in
+    reading (known/uncertain/unknown/unclassified) and review_level are
+    deliberately NOT consulted, and exclude_known is ignored on this path.
     """
     params: list[Any] = [user_id, shared_deck_id]
     due_clause = ""
@@ -353,6 +363,13 @@ def list_shared_deck_words_with_progress(
               )
         """
         params.append(now_iso())
+
+    first_review_clause = ""
+    if first_review_only:
+        first_review_clause = """
+              AND user_word_progress.last_reviewed_at IS NULL
+        """
+        exclude_known = False
 
     exclude_known_clause = ""
     if exclude_known:
@@ -386,7 +403,8 @@ def list_shared_deck_words_with_progress(
                 user_word_progress.review_level,
                 user_word_progress.next_review_at,
                 user_word_progress.correct_count,
-                user_word_progress.wrong_count
+                user_word_progress.wrong_count,
+                user_word_progress.last_reviewed_at
             FROM shared_deck_words
             JOIN lexemes ON lexemes.id = shared_deck_words.lexeme_id
             LEFT JOIN user_word_progress
@@ -394,6 +412,7 @@ def list_shared_deck_words_with_progress(
                AND user_word_progress.user_id = ?
             WHERE shared_deck_words.shared_deck_id = ?
             {due_clause}
+            {first_review_clause}
             {exclude_known_clause}
             ORDER BY shared_deck_words.sort_order ASC, shared_deck_words.id ASC
             {limit_clause}
@@ -586,6 +605,7 @@ def list_subscribed_lexeme_study_items(
     shared_deck_id: int | None = None,
     due_only: bool = False,
     limit: int | None = None,
+    first_review_only: bool = False,
 ) -> list[dict[str, Any]]:
     """Study-queue view over every shared deck the user actively subscribes
     to (Phase 3, see docs/architecture/shared-lexeme-progress-storage.md --
@@ -698,8 +718,15 @@ def list_subscribed_lexeme_study_items(
     seen_lexeme_ids: set[int] = set()
     items: list[dict[str, Any]] = []
     for deck_id in subscribed_ids:
+        # first_review_only replaces the known exclusion: a never-rated word
+        # is a first-review candidate whatever status reading gave it.
         words = list_shared_deck_words_with_progress(
-            deck_id, user_id, due_only=due_only, limit=sql_limit, exclude_known=True
+            deck_id,
+            user_id,
+            due_only=due_only,
+            limit=sql_limit,
+            exclude_known=not first_review_only,
+            first_review_only=first_review_only,
         )
         for word in words:
             lexeme_id = word["lexeme_id"]

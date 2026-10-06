@@ -1,12 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AccountMenu } from "../components/AccountMenu";
-import { AnalyzeSection } from "../components/AnalyzeSection";
 import { AppShell, type NavAction } from "../components/AppShell";
 import { GlobalFeedbackModal } from "../components/GlobalFeedbackModal";
 import {
-  classifyMessageTone,
   getTokenGroupKey,
   getTokenStatus,
   isTokenSavedInDeck,
@@ -15,17 +13,30 @@ import {
 import type { ReadingSaveTarget } from "../components/coverageUtils";
 import { HomeDashboard } from "../components/HomeDashboard";
 import {
+  LearningPlanPanel,
+  type PlanDraftMemory,
+  type PlanDraftMemoryEntry,
+} from "../components/LearningPlanPanel";
+import { LegacyClassificationDraftNotice } from "../components/LegacyClassificationDraftNotice";
+import { learningPlanStorageScope } from "../components/learningPlanStorage";
+import {
   BookIcon,
   BookshelfIcon,
   CardFileIcon,
   CardsIcon,
   ChatIcon,
-  CheckCircleIcon,
   ClockIcon,
   HomeIcon,
+  PencilIcon,
 } from "../components/icons";
 import { StudyLogPage } from "../components/InfoSection";
 import { MeaningFeedbackModal } from "../components/MeaningFeedbackModal";
+import {
+  createPlanStudyLauncher,
+  type PlanStudyLauncher,
+  type PlanStudyTarget,
+  type StudySessionSnapshot,
+} from "../components/planStudyLauncher";
 import {
   analyzeLongTextInChunks,
   type ChunkAnalyzeProgress,
@@ -190,7 +201,7 @@ type AuthResponse = {
 
 type TabKey =
   | "home"
-  | "analyze"
+  | "plan"
   | "reading"
   | "vocab"
   | "study"
@@ -198,19 +209,13 @@ type TabKey =
   | "info";
 type VocabStatusFilter = "all" | TokenStatus;
 
-type ClassificationDraft = {
-  text: string;
-  deck_id: string;
-  include_known: boolean;
-  tokens: TokenWithStatus[];
-  current_index: number;
-  is_complete: boolean;
-  saved_at: string;
-};
-
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000";
+// Old 빠른 분류 device draft. Only LegacyClassificationDraftNotice touches it,
+// and only on an explicit user action (download / open text / delete).
 const CLASSIFICATION_DRAFT_KEY = "jp-vocab-reader:classification-draft";
+// Learning-plan device storage is scoped by backend environment + user id.
+const LEARNING_PLAN_STORAGE_SCOPE = learningPlanStorageScope(API_BASE_URL);
 const ACCESS_TOKEN_KEY = "jp-vocab-reader:access-token";
 // Client-side only sanity check for a friendlier signup/login error message --
 // the backend (see backend/app/main.py register_user) only rejects a blank
@@ -222,7 +227,7 @@ const AUTH_MIN_PASSWORD_LENGTH = 8;
 
 // User-facing screen names, "조용한 서재의 학습 책상" concept -- route/state
 // keys (TabKey) and every internal handler/variable stay on their original
-// functional names (analyze/reading/vocab/study/shared/info) on purpose, so
+// functional names (plan/reading/vocab/study/shared/info) on purpose, so
 // this rename never touches routing or state management, only what people
 // actually read. mobileLabel is a shorter form for the bottom tab bar only
 // (falls back to `label` when omitted) -- the sidebar/feedback-modal screen
@@ -234,11 +239,13 @@ const tabs: Array<{
   icon: (props: { className?: string }) => JSX.Element;
 }> = [
   { key: "home", label: "오늘의 책상", mobileLabel: "책상", icon: HomeIcon },
-  { key: "analyze", label: "빠른 분류", mobileLabel: "분류", icon: CheckCircleIcon },
   { key: "reading", label: "원문 읽기", mobileLabel: "읽기", icon: BookIcon },
   { key: "vocab", label: "내 단어장", mobileLabel: "단어", icon: CardFileIcon },
   { key: "study", label: "복습", icon: CardsIcon },
   { key: "shared", label: "덱 책장", mobileLabel: "덱", icon: BookshelfIcon },
+  // No shorter form: the approved C pad shows "학습 계획" in the desktop
+  // toolbar too, and the mobile drawer always uses the full label.
+  { key: "plan", label: "학습 계획", icon: PencilIcon },
   { key: "info", label: "통계", icon: ClockIcon },
 ];
 
@@ -372,78 +379,6 @@ function isQualityTag(value: unknown): value is QualityTag {
     value === "noun_phrase_candidate" ||
     value === "known_phrase"
   );
-}
-
-function parseClassificationDraft(value: string | null): ClassificationDraft | null {
-  if (!value) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(value) as Partial<ClassificationDraft>;
-    if (
-      typeof parsed.text !== "string" ||
-      typeof parsed.deck_id !== "string" ||
-      typeof parsed.include_known !== "boolean" ||
-      !Array.isArray(parsed.tokens) ||
-      typeof parsed.current_index !== "number" ||
-      typeof parsed.is_complete !== "boolean" ||
-      typeof parsed.saved_at !== "string"
-    ) {
-      return null;
-    }
-
-    const tokens = parsed.tokens.map((token) => {
-      if (
-        typeof token.surface !== "string" ||
-        typeof token.base_form !== "string" ||
-        typeof token.reading !== "string" ||
-        typeof token.part_of_speech !== "string" ||
-        typeof token.normalized_form !== "string" ||
-        typeof token.meaning_ko !== "string" ||
-        typeof token.example_sentence !== "string" ||
-        !isTokenStatus(token.status)
-      ) {
-        throw new Error("invalid token");
-      }
-      return {
-        ...token,
-        dictionary_gloss:
-          typeof token.dictionary_gloss === "string"
-            ? token.dictionary_gloss
-            : "",
-        quality_tag: isQualityTag(token.quality_tag)
-          ? token.quality_tag
-          : token.is_custom_term
-            ? "custom_term"
-            : "normal",
-        is_custom_term:
-          typeof token.is_custom_term === "boolean"
-            ? token.is_custom_term
-            : false,
-        isClassified:
-          typeof token.isClassified === "boolean"
-            ? token.isClassified
-            : token.status !== "unclassified",
-      };
-    });
-
-    const currentIndex = parsed.is_complete
-      ? tokens.length
-      : Math.max(0, Math.min(parsed.current_index, tokens.length));
-
-    return {
-      text: parsed.text,
-      deck_id: parsed.deck_id,
-      include_known: parsed.include_known,
-      tokens,
-      current_index: currentIndex,
-      is_complete: parsed.is_complete,
-      saved_at: parsed.saved_at,
-    };
-  } catch {
-    return null;
-  }
 }
 
 // Reading-tab work-in-progress persistence -- browser-local only (never
@@ -674,7 +609,6 @@ export default function HomePage() {
   // renders there -- the reading tab needs its own failure signal it can put a
   // retry button next to.
   const [deckLoadError, setDeckLoadError] = useState("");
-  const [selectedSaveDeckId, setSelectedSaveDeckId] = useState("");
   // "" = no deck chosen yet on the 단어 탭 (see the vocab-list effect below) --
   // distinct from "all", which is an explicit "전체 단어장" choice. Keeping
   // these separate is what lets the tab open without an eager full fetch:
@@ -682,13 +616,6 @@ export default function HomePage() {
   const [selectedVocabDeckId, setSelectedVocabDeckId] = useState("");
   const [selectedStudyDeckId, setSelectedStudyDeckId] = useState("all");
   const [studyMode, setStudyMode] = useState<StudyMode>("today");
-  const [includeKnown, setIncludeKnown] = useState(false);
-  const [currentAnalyzeCardIndex, setCurrentAnalyzeCardIndex] = useState(0);
-  const [showAllAnalyzeResults, setShowAllAnalyzeResults] = useState(false);
-  const [pendingClassificationDraft, setPendingClassificationDraft] =
-    useState<ClassificationDraft | null>(null);
-  const [classificationDraftSavedAt, setClassificationDraftSavedAt] =
-    useState("");
   const [vocabSearch, setVocabSearch] = useState("");
   const [vocabStatusFilter, setVocabStatusFilter] =
     useState<VocabStatusFilter>("all");
@@ -715,10 +642,6 @@ export default function HomePage() {
     createBlankVocabForm(),
   );
   const [isCreatingDeck, setIsCreatingDeck] = useState(false);
-  const [text, setText] = useState("");
-  const [tokens, setTokens] = useState<TokenWithStatus[]>([]);
-  const [ignoredTokenCount, setIgnoredTokenCount] = useState(0);
-  const [deckVocabItems, setDeckVocabItems] = useState<VocabItem[]>([]);
   const [readingText, setReadingText] = useState("");
   // Snapshot of the exact text that produced readingTokens -- kept separate
   // from readingText (the live textarea value) so the original-layout
@@ -838,6 +761,9 @@ export default function HomePage() {
   );
   const [againNextReviewAt, setAgainNextReviewAt] = useState<string | null>(null);
   const answerShownAtRef = useRef<number | null>(null);
+  // 학습 계획 실행(Gate C-1b)의 세션 보호용 식별자. 세션을 새로 시작·교체·
+  // 초기화할 때마다 바뀐다. 카드 진행은 currentStudyIndex로 따로 본다.
+  const studySessionIdRef = useRef(0);
   const [hasStartedStudy, setHasStartedStudy] = useState(false);
   const [isLoadingStudyStats, setIsLoadingStudyStats] = useState(false);
   const [isLoadingInfoStats, setIsLoadingInfoStats] = useState(false);
@@ -845,6 +771,22 @@ export default function HomePage() {
   // its token) changes. StudyLogPage is keyed on it, and the stats loaders
   // drop responses that started under an older account.
   const [statsAccountEpoch, setStatsAccountEpoch] = useState(0);
+  // 학습 계획 계정 경계: currentUser·덱 목록이 어느 account epoch에서 왔는지.
+  // 지금 epoch과 다르면(로그인·로그아웃·만료 직후) 계획 화면에는 계정/덱이
+  // 없는 것으로 넘겨 이전 계정의 계획·덱이 한 프레임도 쓰이지 않게 한다.
+  const [currentUserEpoch, setCurrentUserEpoch] = useState<number | null>(null);
+  const [decksEpoch, setDecksEpoch] = useState<number | null>(null);
+  const [sharedDecksEpoch, setSharedDecksEpoch] = useState<number | null>(null);
+  // 학습 계획의 미저장 편집(탭 왕복용). 메모리에만 있고 기기에 쓰지 않으며,
+  // 계정 경계(resetStatsForAccountChange)에서 즉시 비운다.
+  const planDraftMemoryRef = useRef(new Map<string, PlanDraftMemoryEntry>());
+  const planDraftMemory = useRef<PlanDraftMemory>({
+    read: (key) => planDraftMemoryRef.current.get(key) ?? null,
+    write: (key, entry) => {
+      if (entry) planDraftMemoryRef.current.set(key, entry);
+      else planDraftMemoryRef.current.delete(key);
+    },
+  }).current;
   const statsAccountEpochRef = useRef(0);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoadingCurrentUser, setIsLoadingCurrentUser] = useState(false);
@@ -889,6 +831,7 @@ export default function HomePage() {
   const [isPublishingDeck, setIsPublishingDeck] = useState(false);
 
   function resetStudySession() {
+    studySessionIdRef.current += 1;
     setStudyItems([]);
     setCurrentStudyIndex(0);
     setHasStartedStudy(false);
@@ -902,15 +845,9 @@ export default function HomePage() {
 
   useEffect(() => {
     void initializeUserSession();
-    const draft = parseClassificationDraft(
-      window.localStorage.getItem(CLASSIFICATION_DRAFT_KEY),
-    );
-    if (draft) {
-      setPendingClassificationDraft(draft);
-      setClassificationDraftSavedAt(draft.saved_at);
-    } else {
-      window.localStorage.removeItem(CLASSIFICATION_DRAFT_KEY);
-    }
+    // 이전 분류 초안(classification-draft)은 여기서 읽거나 지우지 않는다.
+    // 학습 계획 탭의 LegacyClassificationDraftNotice가 사용자가 고를 때만
+    // 보관·읽기 열기·삭제를 한다(깨진 초안 자동 삭제 경로 제거, Gate D).
 
     const readingSession = parseReadingSession(
       window.localStorage.getItem(READING_SESSION_KEY),
@@ -990,29 +927,6 @@ export default function HomePage() {
     await refreshUserScopedData();
   }
 
-  useEffect(() => {
-    if (tokens.length === 0) {
-      return;
-    }
-
-    const savedAt = new Date().toISOString();
-    const draft: ClassificationDraft = {
-      text,
-      deck_id: selectedSaveDeckId,
-      include_known: includeKnown,
-      tokens,
-      current_index: currentAnalyzeCardIndex,
-      is_complete: currentAnalyzeCardIndex >= tokens.length,
-      saved_at: savedAt,
-    };
-    window.localStorage.setItem(
-      CLASSIFICATION_DRAFT_KEY,
-      JSON.stringify(draft),
-    );
-    setClassificationDraftSavedAt(savedAt);
-    setPendingClassificationDraft(null);
-  }, [text, selectedSaveDeckId, includeKnown, tokens, currentAnalyzeCardIndex]);
-
   const defaultDeck =
     decks.find((deck) => deck.name === "기본 단어장") ?? decks[0];
   const defaultVocabFormDeckId =
@@ -1066,7 +980,7 @@ export default function HomePage() {
   }, [activeTab]);
 
   // The reading tab is reachable through several paths (nav/handleTabChange,
-  // 분석 탭's "읽기 탭에서 보기", home's 샘플 CTA, and a localStorage-restored
+  // the 학습 계획 tab's old-draft "읽기에서 열기", home's 샘플 CTA, and a localStorage-restored
   // session), and decks are otherwise fetched only once on mount -- so a
   // failed first /decks call used to leave the deck select permanently empty
   // with no way back short of a page reload. Watching activeTab instead of
@@ -1125,6 +1039,7 @@ export default function HomePage() {
       const user = await requestJson<CurrentUser>("/me");
       if (epoch === statsAccountEpochRef.current) {
         setCurrentUser(user);
+        setCurrentUserEpoch(epoch);
       }
     } catch (error) {
       if (isHttpError(error, 401)) {
@@ -1137,6 +1052,7 @@ export default function HomePage() {
       }
       if (epoch === statsAccountEpochRef.current) {
         setCurrentUser(null);
+        setCurrentUserEpoch(epoch);
         setAuthMessage(getErrorMessage(error, "현재 사용자 정보를 불러오지 못했습니다."));
       }
     } finally {
@@ -1189,6 +1105,7 @@ export default function HomePage() {
       setAccessToken(response.access_token);
       resetStatsForAccountChange();
       setCurrentUser(response.user);
+      setCurrentUserEpoch(statsAccountEpochRef.current);
       setAuthPassword("");
       setAuthMessage(
         authMode === "login"
@@ -1228,50 +1145,16 @@ export default function HomePage() {
     await refreshUserScopedData();
   }
 
-  function clearClassificationDraft() {
-    window.localStorage.removeItem(CLASSIFICATION_DRAFT_KEY);
-    setPendingClassificationDraft(null);
-    setClassificationDraftSavedAt("");
-  }
-
-  function restoreClassificationDraft() {
-    const draft = pendingClassificationDraft;
-    if (!draft) {
-      return;
-    }
-
-    const restoredDeckId = decks.some((deck) => String(deck.id) === draft.deck_id)
-      ? draft.deck_id
-      : defaultDeck
-        ? String(defaultDeck.id)
-        : "";
-    setText(draft.text);
-    setSelectedSaveDeckId(restoredDeckId);
-    setIncludeKnown(draft.include_known);
-    setTokens(draft.tokens);
-    setCurrentAnalyzeCardIndex(draft.current_index);
-    setShowAllAnalyzeResults(false);
-    setClassificationDraftSavedAt(draft.saved_at);
-    setPendingClassificationDraft(null);
-    setActiveTab("analyze");
-    void loadDeckVocabItemsForCoverage(restoredDeckId);
-  }
-
   async function loadDecks() {
+    const epoch = statsAccountEpochRef.current;
     setIsLoadingDecks(true);
     try {
       const data = await requestJson<DecksResponse>("/decks");
       setDeckLoadError("");
       setDecks(data.items);
+      setDecksEpoch(epoch);
       const defaultDeck =
         data.items.find((deck) => deck.name === "기본 단어장") ?? data.items[0];
-      setSelectedSaveDeckId((currentDeckId) =>
-        data.items.some((deck) => String(deck.id) === currentDeckId)
-          ? currentDeckId
-          : defaultDeck
-            ? String(defaultDeck.id)
-            : "",
-      );
       setReadingSelectedDeckId((currentDeckId) =>
         data.items.some((deck) => String(deck.id) === currentDeckId)
           ? currentDeckId
@@ -1288,113 +1171,6 @@ export default function HomePage() {
       setDeckLoadError(failureMessage);
     } finally {
       setIsLoadingDecks(false);
-    }
-  }
-
-  async function handleAnalyze(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!text.trim()) {
-      setMessage("분석할 일본어 원문을 입력해 주세요.");
-      setTokens([]);
-      setCurrentAnalyzeCardIndex(0);
-      setShowAllAnalyzeResults(false);
-      clearClassificationDraft();
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setMessage("");
-
-    try {
-      const response = await apiFetch("/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text,
-          deck_id: selectedSaveDeckId ? Number(selectedSaveDeckId) : null,
-          include_known: includeKnown,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`원문을 분석하지 못했어요. (${response.status})`);
-      }
-
-      const data = (await response.json()) as AnalyzeResponse;
-      setTokens(
-        data.tokens.map((token) => ({
-          ...token,
-          status: "unclassified",
-          isClassified: false,
-        })),
-      );
-      setIgnoredTokenCount(data.ignored_token_count || 0);
-      setCurrentAnalyzeCardIndex(0);
-      setShowAllAnalyzeResults(false);
-      setPendingClassificationDraft(null);
-      void loadDeckVocabItemsForCoverage(selectedSaveDeckId);
-    } catch (error) {
-      setMessage(getErrorMessage(error, "원문을 분석하지 못했어요. 잠시 후 다시 시도해주세요."));
-      setTokens([]);
-      setIgnoredTokenCount(0);
-      setCurrentAnalyzeCardIndex(0);
-      setShowAllAnalyzeResults(false);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }
-
-  async function saveSelectedTokens() {
-    const selectedTokens = tokens.filter(
-      (token) =>
-        token.status === "unknown" ||
-        token.status === "uncertain" ||
-        token.status === "known",
-    );
-    if (selectedTokens.length === 0) {
-      setMessage("저장할 단어를 분류해 주세요.");
-      return;
-    }
-
-    setIsSaving(true);
-    setMessage("");
-
-    try {
-      await Promise.all(
-        selectedTokens.map((token) =>
-          requestJson<VocabItem>("/vocab-items", {
-            method: "POST",
-            body: JSON.stringify({
-              ...token,
-              deck_id: selectedSaveDeckId ? Number(selectedSaveDeckId) : null,
-            }),
-          }),
-        ),
-      );
-      const unknownCount = selectedTokens.filter(
-        (token) => token.status === "unknown",
-      ).length;
-      const uncertainCount = selectedTokens.filter(
-        (token) => token.status === "uncertain",
-      ).length;
-      const knownCount = selectedTokens.filter(
-        (token) => token.status === "known",
-      ).length;
-      setMessage(
-        `완벽히 아는 단어 ${knownCount}개, 헷갈리는 단어 ${uncertainCount}개, 모르는 단어 ${unknownCount}개를 저장했습니다.`,
-      );
-      clearClassificationDraft();
-      setTokens([]);
-      setCurrentAnalyzeCardIndex(0);
-      setShowAllAnalyzeResults(false);
-      await loadVocabItems();
-    } catch (error) {
-      setMessage(getAuthAwareErrorMessage(error, "단어를 저장하지 못했어요. 잠시 후 다시 시도해주세요."));
-    } finally {
-      setIsSaving(false);
     }
   }
 
@@ -1433,35 +1209,12 @@ export default function HomePage() {
     }
   }
 
-  function handleSelectedSaveDeckChange(deckId: string) {
-    setSelectedSaveDeckId(deckId);
-    if (tokens.length > 0) {
-      void loadDeckVocabItemsForCoverage(deckId);
-    }
-  }
-
-  async function loadDeckVocabItemsForCoverage(deckId: string) {
-    if (!deckId) {
-      setDeckVocabItems([]);
-      return;
-    }
-
-    try {
-      const data = await requestJson<VocabItemsResponse>(
-        `/vocab-items?deck_id=${deckId}`,
-      );
-      setDeckVocabItems(data.items);
-    } catch {
-      setDeckVocabItems([]);
-    }
-  }
-
   // Reading tab: analyzes text with include_known always true so already-known
   // words still render in the natural text flow (just muted), then derives
   // each token's live status from the selected deck's saved vocab items so
   // colors match the deck the user picked. The original text only ever lives
-  // in this component's React state (and the classification draft in
-  // localStorage) -- it is never sent anywhere for server-side storage.
+  // in this component's React state (and the local reading session) -- it
+  // is never sent anywhere for server-side storage.
   //
   // Long text is split into chunks (splitTextIntoChunks) and each chunk is
   // sent to /analyze one at a time (analyzeLongTextInChunks) -- never all at
@@ -1650,16 +1403,6 @@ export default function HomePage() {
     clearReadingSession();
   }
 
-  // Sends the analyze-tab's current text/deck straight into reading-tab state
-  // (in-memory only) and kicks off the same read-only analysis there -- no
-  // localStorage/server hop needed since both tabs live in one page.
-  function viewCurrentTextInReadingTab() {
-    setReadingText(text);
-    setReadingSelectedDeckId(selectedSaveDeckId);
-    setActiveTab("reading");
-    void performReadingAnalyze(text, selectedSaveDeckId);
-  }
-
   // Reading tab's own empty-state "샘플 문장으로 체험" button -- only fills
   // the textarea and leaves "분석하기" as the next explicit step (the
   // button only ever renders when the textarea is already empty, so there's
@@ -1673,8 +1416,7 @@ export default function HomePage() {
 
   // Home hero's "샘플로 체험하기" CTA -- jumps to the reading tab with the
   // sample pre-filled and immediately analyzed (reusing the same
-  // text+deck -> performReadingAnalyze pipeline viewCurrentTextInReadingTab
-  // above already uses), so a first-time visitor sees real token cards
+  // text+deck -> performReadingAnalyze pipeline the reading tab itself uses), so a first-time visitor sees real token cards
   // without a second click. Guards against silently discarding an
   // in-progress reading session when jumping in from a different tab, the
   // same way resetReadingSession above already confirms before clearing.
@@ -2034,6 +1776,11 @@ export default function HomePage() {
   const handleAuthExpiredRef = useRef<() => void>(() => {});
   handleAuthExpiredRef.current = () => {
     resetStatsForAccountChange();
+    // 학습 계획 Gate D: the expired account's study queue and deck choice must
+    // not stay on screen or be resumed by the next account (sign-out already
+    // does this through refreshUserScopedData).
+    resetStudySession();
+    setSelectedStudyDeckId("all");
     const epoch = statsAccountEpochRef.current;
     setAuthMessage("로그인이 만료되어 로그아웃되었습니다. 다시 로그인해주세요.");
     void (async () => {
@@ -2053,6 +1800,7 @@ export default function HomePage() {
 
   function resetStatsForAccountChange() {
     statsAccountEpochRef.current += 1;
+    planDraftMemoryRef.current.clear();
     setStatsAccountEpoch(statsAccountEpochRef.current);
     setInfoStats(null);
     setInfoStatsMessage("");
@@ -2099,9 +1847,11 @@ export default function HomePage() {
       setSharedDeckMessage("");
     }
 
+    const epoch = statsAccountEpochRef.current;
     try {
       const data = await requestJson<SharedDeckSummary[]>("/shared-decks");
       setSharedDecks(data);
+      setSharedDecksEpoch(epoch);
       if (
         selectedSharedDeckId !== null &&
         !data.some((deck) => deck.id === selectedSharedDeckId)
@@ -2250,7 +2000,6 @@ export default function HomePage() {
         );
         const importedDeckId = String(result.deck_id);
         setSelectedVocabDeckId(importedDeckId);
-        setSelectedSaveDeckId(importedDeckId);
         await loadDecks();
         await loadVocabItems(importedDeckId);
         await loadCustomTerms(importedDeckId);
@@ -2417,7 +2166,6 @@ export default function HomePage() {
       });
       await loadDecks();
       setSelectedVocabDeckId(String(deck.id));
-      setSelectedSaveDeckId(String(deck.id));
       setNewDeckName("");
       setNewDeckDescription("");
       setDeckMessage("덱을 저장했습니다.");
@@ -2715,7 +2463,6 @@ export default function HomePage() {
     const replaceIfMatch = (item: VocabItem) =>
       item.id === updated.id ? updated : item;
     setVocabItems((current) => current.map(replaceIfMatch));
-    setDeckVocabItems((current) => current.map(replaceIfMatch));
     setReadingDeckVocabItems((current) => current.map(replaceIfMatch));
     // studyItems mixes in lexeme study cards (item_type: "lexeme") alongside
     // vocab ones -- only re-tag the matching *vocab* card, and keep it as a
@@ -2856,29 +2603,6 @@ export default function HomePage() {
     }
   }
 
-  function updateTokenStatus(index: number, status: TokenStatus) {
-    setTokens((currentTokens) =>
-      currentTokens.map((token, tokenIndex) =>
-        tokenIndex === index ? { ...token, status, isClassified: true } : token,
-      ),
-    );
-  }
-
-  function classifyCurrentToken(status: TokenStatus) {
-    setTokens((currentTokens) =>
-      currentTokens.map((token, tokenIndex) =>
-        tokenIndex === currentAnalyzeCardIndex
-          ? { ...token, status, isClassified: true }
-          : token,
-      ),
-    );
-    setCurrentAnalyzeCardIndex((index) => Math.min(index + 1, tokens.length));
-  }
-
-  function moveToPreviousAnalyzeCard() {
-    setCurrentAnalyzeCardIndex((index) => Math.max(index - 1, 0));
-  }
-
   async function updateVocabStatus(itemId: number, status: TokenStatus) {
     const previousItems = vocabItems;
     setVocabItems((currentItems) =>
@@ -2995,7 +2719,6 @@ export default function HomePage() {
       setDeckPackageFile(null);
       await loadDecks();
       setSelectedVocabDeckId(String(result.deck_id));
-      setSelectedSaveDeckId(String(result.deck_id));
       await loadVocabItems(String(result.deck_id));
       await loadCustomTerms(String(result.deck_id));
       setVocabMessage(
@@ -3106,7 +2829,13 @@ export default function HomePage() {
   }
 
   async function fetchLexemeStudyItems(
-    options: { sharedDeckId?: number; dueOnly?: boolean; limit?: number } = {},
+    options: {
+      sharedDeckId?: number;
+      dueOnly?: boolean;
+      limit?: number;
+      // 학습 계획 첫 학습 큐: 서버가 미평가 단어만 고른 뒤 LIMIT (known 제외 없음).
+      firstReviewOnly?: boolean;
+    } = {},
   ) {
     const params = new URLSearchParams();
     if (options.sharedDeckId !== undefined) {
@@ -3114,6 +2843,9 @@ export default function HomePage() {
     }
     if (options.dueOnly) {
       params.set("due_only", "true");
+    }
+    if (options.firstReviewOnly) {
+      params.set("first_review_only", "true");
     }
     if (options.limit !== undefined) {
       params.set("limit", String(options.limit));
@@ -3255,6 +2987,7 @@ export default function HomePage() {
   ) {
     const deckId = options.deckId ?? selectedStudyDeckId;
     const mode = options.mode ?? studyMode;
+    studySessionIdRef.current += 1;
     setIsLoadingStudy(true);
     setStudyMessage("");
     setStudyItems([]);
@@ -3280,6 +3013,76 @@ export default function HomePage() {
     } finally {
       setIsLoadingStudy(false);
     }
+  }
+
+  // ---- 학습 계획 → 복습 탭 실행 (Gate C-1b) ----
+  // LearningPlanPanel(studyLauncher prop)에 넘길 실행기. 화면 노출과 메뉴
+  // 연결은 Gate D. 하루량으로 큐를 자르지 않는다: 개인 new는 기존 new 모드
+  // 그대로(미평가 카드 전부), 구독 new는 서버 first_review_only 큐(기존
+  // NEW_LEXEME_STUDY_LIMIT), today는 기존 today 모드 그대로다.
+  async function fetchPlanStudyQueue(target: PlanStudyTarget): Promise<StudyCardItem[]> {
+    if (target.deck.kind === "personal") {
+      return fetchStudyItems(String(target.deck.id), target.mode);
+    }
+    if (target.mode === "new") {
+      const items = await fetchLexemeStudyItems({
+        sharedDeckId: target.deck.id,
+        firstReviewOnly: true,
+        limit: NEW_LEXEME_STUDY_LIMIT,
+      });
+      // 상태값으로 다시 거르지 않는다: 첫 학습 여부는 서버가 last_reviewed_at으로 판단.
+      return items.map(toLexemeStudyCardItem);
+    }
+    return fetchStudyItems(`${SHARED_DECK_STUDY_ID_PREFIX}${target.deck.id}`, "today");
+  }
+
+  function replaceStudySessionFromPlan(target: PlanStudyTarget, items: StudyCardItem[]) {
+    const deckId =
+      target.deck.kind === "personal"
+        ? String(target.deck.id)
+        : `${SHARED_DECK_STUDY_ID_PREFIX}${target.deck.id}`;
+    studySessionIdRef.current += 1;
+    setSelectedStudyDeckId(deckId);
+    setStudyMode(target.mode);
+    setStudyItems(items);
+    setCurrentStudyIndex(0);
+    setIsAnswerVisible(false);
+    setSessionCounts(createEmptySessionCounts());
+    setNextUpcomingReviewAt(null);
+    setAgainNextReviewAt(null);
+    answerShownAtRef.current = null;
+    setStudyMessage("");
+    setHasStartedStudy(true);
+    setActiveTab("study");
+    void loadStudyStats(deckId);
+  }
+
+  // 실행기는 비동기 조회 뒤에 "지금" 세션을 다시 확인해야 하므로 최신 상태를
+  // ref로 읽는다(렌더마다 갱신).
+  const planStudyStateRef = useRef({ studyItems, currentStudyIndex, hasStartedStudy });
+  planStudyStateRef.current = { studyItems, currentStudyIndex, hasStartedStudy };
+  const planStudyActionsRef = useRef({ fetchPlanStudyQueue, replaceStudySessionFromPlan });
+  planStudyActionsRef.current = { fetchPlanStudyQueue, replaceStudySessionFromPlan };
+  const planStudyLauncherRef = useRef<PlanStudyLauncher | null>(null);
+  if (!planStudyLauncherRef.current) {
+    planStudyLauncherRef.current = createPlanStudyLauncher<StudyCardItem>({
+      getSession: (): StudySessionSnapshot => {
+        const { studyItems: items, currentStudyIndex: index, hasStartedStudy: started } =
+          planStudyStateRef.current;
+        const remaining = started ? Math.max(items.length - index, 0) : 0;
+        return {
+          id: studySessionIdRef.current,
+          position: index,
+          inProgress: remaining > 0,
+          remaining,
+        };
+      },
+      getAccountEpoch: () => statsAccountEpochRef.current,
+      fetchQueue: (target) => planStudyActionsRef.current.fetchPlanStudyQueue(target),
+      replaceSession: (target, items) =>
+        planStudyActionsRef.current.replaceStudySessionFromPlan(target, items),
+      resumeSession: () => setActiveTab("study"),
+    });
   }
 
   function changeStudyMode(mode: StudyMode) {
@@ -3438,6 +3241,63 @@ export default function HomePage() {
   // up so the landing hero's CTAs can vary by auth state too.
   const isDevUser = !currentUser || currentUser.auth_provider === "dev";
 
+  // ---- 학습 계획 탭 입력 (Gate D) ----
+  // 실제 로그인 계정만, 그리고 지금 account epoch에서 확인된 것만 넘긴다.
+  const planUserId =
+    currentUser && currentUser.auth_provider !== "dev" && currentUserEpoch === statsAccountEpoch
+      ? currentUser.id
+      : null;
+  const planAccount = useMemo(
+    () => (planUserId === null ? null : { userId: planUserId }),
+    [planUserId],
+  );
+  const planPersonalDecks = useMemo(
+    () =>
+      planUserId !== null && decksEpoch === statsAccountEpoch && !isLoadingDecks && !deckLoadError
+        ? decks.map((deck) => ({ id: deck.id, name: deck.name }))
+        : null,
+    [planUserId, decksEpoch, statsAccountEpoch, isLoadingDecks, deckLoadError, decks],
+  );
+  const planSubscribedDecks = useMemo(
+    () =>
+      planUserId !== null && sharedDecksEpoch === statsAccountEpoch && !isLoadingSharedDecks
+        ? sharedDecks
+            .filter((deck) => deck.mode === "subscribed" && deck.imported_at)
+            .map((deck) => ({ id: deck.id, title: deck.title }))
+        : null,
+    [planUserId, sharedDecksEpoch, statsAccountEpoch, isLoadingSharedDecks, sharedDecks],
+  );
+
+  // 이전 분류 초안의 원문을 읽기 입력칸으로만 옮긴다(자동 분석·초안 삭제 없음).
+  function openLegacyDraftTextInReading(text: string): boolean {
+    const hasExistingReadingWork =
+      readingText.trim() !== "" || readingTokens.length > 0;
+    if (
+      hasExistingReadingWork &&
+      !window.confirm(
+        "현재 읽기 작업을 이전 분류 초안의 원문으로 바꿀까요? 기존 원문과 분석 결과가 사라지고, 초안은 그대로 남아요.",
+      )
+    ) {
+      return false;
+    }
+    setReadingText(text);
+    setAnalyzedReadingText("");
+    setReadingTokens([]);
+    setReadingDeckVocabItems([]);
+    setReadingStorageWarning("");
+    setIsReadingTextCollapsed(false);
+    setRecentlySavedVocabItemIds([]);
+    setCurrentSelectedTokenKey(null);
+    setReadingScrollFraction(null);
+    setReadingTabletDocumentScrollFraction(null);
+    setIsReadingSessionRestored(false);
+    setReadingMessage(
+      "이전 분류 초안의 원문을 불러왔어요. 분석하기를 눌러 다시 확인해 주세요. 저장하지 않은 분류 판단은 옮겨지지 않아요.",
+    );
+    setActiveTab("reading");
+    return true;
+  }
+
   function openAccountMenu() {
     setIsAccountMenuOpen(true);
   }
@@ -3484,7 +3344,7 @@ export default function HomePage() {
     navFor("study"),
     navFor("vocab"),
     navFor("shared"),
-    navFor("analyze"),
+    navFor("plan"),
     navFor("info"),
   ];
 
@@ -3537,40 +3397,29 @@ export default function HomePage() {
             onOpenAccount={openAccountMenu}
             onGoToVocab={() => void handleTabChange("vocab")}
             onGoToSharedDecks={() => void handleTabChange("shared")}
-            onGoToAnalyze={() => void handleTabChange("analyze")}
+            onGoToPlan={() => void handleTabChange("plan")}
             onGoToStats={() => void handleTabChange("info")}
           />
         ) : null}
 
-        {activeTab === "analyze" ? (
-          <AnalyzeSection
-            text={text}
-            tokens={tokens}
-            ignoredTokenCount={ignoredTokenCount}
-            deckVocabItems={deckVocabItems}
-            isAnalyzing={isAnalyzing}
-            isSaving={isSaving}
-            message={message}
-            decks={decks}
-            selectedDeckId={selectedSaveDeckId}
-            includeKnown={includeKnown}
-            currentCardIndex={currentAnalyzeCardIndex}
-            showAllResults={showAllAnalyzeResults}
-            pendingDraft={pendingClassificationDraft}
-            draftSavedAt={classificationDraftSavedAt}
-            onTextChange={setText}
-            onSelectedDeckChange={handleSelectedSaveDeckChange}
-            onIncludeKnownChange={setIncludeKnown}
-            onAnalyze={handleAnalyze}
-            onSaveSelected={() => void saveSelectedTokens()}
-            onStatusChange={updateTokenStatus}
-            onClassifyCurrent={classifyCurrentToken}
-            onPreviousCard={moveToPreviousAnalyzeCard}
-            onShowAllResultsChange={setShowAllAnalyzeResults}
-            onRestoreDraft={restoreClassificationDraft}
-            onDiscardDraft={clearClassificationDraft}
-            onViewInReadingTab={viewCurrentTextInReadingTab}
-            onGoToVocab={() => void handleTabChange("vocab")}
+        {activeTab === "plan" ? (
+          <LearningPlanPanel
+            account={planAccount}
+            storageScope={LEARNING_PLAN_STORAGE_SCOPE}
+            personalDecks={planPersonalDecks}
+            subscribedDecks={planSubscribedDecks}
+            request={(path) => requestJson<unknown>(path)}
+            getErrorStatus={(error) => (error instanceof ApiError ? error.status : null)}
+            onOpenAccount={openAccountMenu}
+            onGoToHistory={() => void handleTabChange("info")}
+            studyLauncher={planStudyLauncherRef.current ?? undefined}
+            draftMemory={planDraftMemory}
+            footer={
+              <LegacyClassificationDraftNotice
+                storageKey={CLASSIFICATION_DRAFT_KEY}
+                onOpenInReading={openLegacyDraftTextInReading}
+              />
+            }
           />
         ) : null}
 
