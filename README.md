@@ -180,6 +180,16 @@ npm run start
 
 Set `NEXT_PUBLIC_API_BASE_URL` to the deployed backend URL before building or deploying the frontend.
 
+Frontend 검사:
+
+```bash
+cd frontend
+npm test
+npm run typecheck
+```
+
+`npm test`는 `.mts` 테스트를 Node 내장 타입 제거로 바로 실행하므로 Node 22.18 이상이 필요하다. 로컬 기준 버전은 `frontend/.nvmrc`(24)다.
+
 프론트엔드는 `분석`, `단어장`, `공유`, `학습`, `정보` 탭으로 구성된다. 탭을 이동해도 현재 분석 결과와 학습 상태는 화면 안에서 유지된다.
 
 ## 현재 UI 구조

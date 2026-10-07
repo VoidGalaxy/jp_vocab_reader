@@ -37,6 +37,7 @@ import {
   type PlanStudyTarget,
   type StudySessionSnapshot,
 } from "../components/planStudyLauncher";
+import { runAccountScopedRefresh } from "../components/accountScopedRefresh";
 import {
   analyzeLongTextInChunks,
   type ChunkAnalyzeProgress,
@@ -832,6 +833,7 @@ export default function HomePage() {
 
   function resetStudySession() {
     studySessionIdRef.current += 1;
+    setIsLoadingStudy(false);
     setStudyItems([]);
     setCurrentStudyIndex(0);
     setHasStartedStudy(false);
@@ -1016,17 +1018,18 @@ export default function HomePage() {
     }
   }
 
+  // Reloads only. The deck selections and the study session are reset once,
+  // synchronously, at the account boundary (resetStatsForAccountChange), so a
+  // refresh that finishes late can't clear a session started in the meantime,
+  // and a refresh whose account changed stops after its current request.
   async function refreshUserScopedData() {
-    // "" (not "all") -- 단어 탭이 아직 열리지 않았으므로 여기서 전체 단어를
-    // 미리 불러오지 않는다. 실제 fetch는 사용자가 덱을 선택했을 때만 일어난다.
-    setSelectedVocabDeckId("");
-    setSelectedStudyDeckId("all");
-    await loadDecks();
-    await loadStudyStats("all");
-    await loadInfoStats();
-    await loadInfoWordHighlights();
-    await loadSharedDecks();
-    resetStudySession();
+    await runAccountScopedRefresh(() => statsAccountEpochRef.current, [
+      () => loadDecks(),
+      () => loadStudyStats("all"),
+      () => loadInfoStats(),
+      () => loadInfoWordHighlights(),
+      () => loadSharedDecks(),
+    ]);
   }
 
   async function loadCurrentUser() {
@@ -1150,6 +1153,7 @@ export default function HomePage() {
     setIsLoadingDecks(true);
     try {
       const data = await requestJson<DecksResponse>("/decks");
+      if (epoch !== statsAccountEpochRef.current) return;
       setDeckLoadError("");
       setDecks(data.items);
       setDecksEpoch(epoch);
@@ -1163,6 +1167,7 @@ export default function HomePage() {
             : "",
       );
     } catch (error) {
+      if (epoch !== statsAccountEpochRef.current) return;
       const failureMessage = getAuthAwareErrorMessage(
         error,
         "덱 목록을 불러오지 못했습니다.",
@@ -1170,11 +1175,14 @@ export default function HomePage() {
       setDeckMessage(failureMessage);
       setDeckLoadError(failureMessage);
     } finally {
-      setIsLoadingDecks(false);
+      if (epoch === statsAccountEpochRef.current) {
+        setIsLoadingDecks(false);
+      }
     }
   }
 
   async function loadVocabItems(deckId: string = selectedVocabDeckId) {
+    const epoch = statsAccountEpochRef.current;
     setIsLoadingVocab(true);
     setVocabMessage("");
 
@@ -1199,13 +1207,17 @@ export default function HomePage() {
       }
       const query = params.toString() ? `?${params.toString()}` : "";
       const data = await requestJson<VocabItemsResponse>(`/vocab-items${query}`);
+      if (epoch !== statsAccountEpochRef.current) return;
       setVocabItems(data.items);
     } catch (error) {
+      if (epoch !== statsAccountEpochRef.current) return;
       setVocabMessage(
         getAuthAwareErrorMessage(error, "단어장 목록을 불러오지 못했습니다."),
       );
     } finally {
-      setIsLoadingVocab(false);
+      if (epoch === statsAccountEpochRef.current) {
+        setIsLoadingVocab(false);
+      }
     }
   }
 
@@ -1359,10 +1371,12 @@ export default function HomePage() {
     deckId: string,
     baseTokens: TokenWithStatus[],
   ) {
+    const epoch = statsAccountEpochRef.current;
     try {
       const deckVocabResponse = await requestJson<VocabItemsResponse>(
         `/vocab-items?deck_id=${deckId}`,
       );
+      if (epoch !== statsAccountEpochRef.current) return;
       const deckItems = deckVocabResponse.items;
       setReadingDeckVocabItems(deckItems);
       setReadingTokens(deriveReadingTokens(baseTokens, deckItems, deckId));
@@ -1711,6 +1725,7 @@ export default function HomePage() {
   }
 
   async function loadCustomTerms(deckId: string = selectedVocabDeckId) {
+    const epoch = statsAccountEpochRef.current;
     try {
       const safeDeckId = isSharedDeckStudyId(deckId) ? "all" : deckId;
       const query =
@@ -1718,8 +1733,10 @@ export default function HomePage() {
       const data = await requestJson<CustomTermsResponse>(
         `/custom-terms${query}`,
       );
+      if (epoch !== statsAccountEpochRef.current) return;
       setCustomTerms(data.items);
     } catch (error) {
+      if (epoch !== statsAccountEpochRef.current) return;
       setVocabMessage(
         getAuthAwareErrorMessage(error, "사용자 정의 용어를 불러오지 못했습니다."),
       );
@@ -1727,6 +1744,7 @@ export default function HomePage() {
   }
 
   async function loadStudyStats(deckId: string = selectedStudyDeckId) {
+    const epoch = statsAccountEpochRef.current;
     setIsLoadingStudyStats(true);
     setStudyStatsMessage("");
 
@@ -1735,13 +1753,17 @@ export default function HomePage() {
       const query =
         safeDeckId !== "all" && safeDeckId !== "" ? `?deck_id=${safeDeckId}` : "";
       const data = await requestJson<StatsResponse>(`/stats${query}`);
+      if (epoch !== statsAccountEpochRef.current) return;
       setStudyStats(data);
     } catch (error) {
+      if (epoch !== statsAccountEpochRef.current) return;
       setStudyStatsMessage(
         getAuthAwareErrorMessage(error, "학습 통계를 불러오지 못했습니다."),
       );
     } finally {
-      setIsLoadingStudyStats(false);
+      if (epoch === statsAccountEpochRef.current) {
+        setIsLoadingStudyStats(false);
+      }
     }
   }
 
@@ -1775,21 +1797,18 @@ export default function HomePage() {
   // check does, and reload the stats data for it.
   const handleAuthExpiredRef = useRef<() => void>(() => {});
   handleAuthExpiredRef.current = () => {
+    // Also clears the expired account's study queue and deck choice (학습 계획
+    // Gate D) so the next account can't resume them.
     resetStatsForAccountChange();
-    // 학습 계획 Gate D: the expired account's study queue and deck choice must
-    // not stay on screen or be resumed by the next account (sign-out already
-    // does this through refreshUserScopedData).
-    resetStudySession();
-    setSelectedStudyDeckId("all");
     const epoch = statsAccountEpochRef.current;
     setAuthMessage("로그인이 만료되어 로그아웃되었습니다. 다시 로그인해주세요.");
     void (async () => {
       // Stop as soon as a newer sign-in takes over; it reloads for itself.
+      // Otherwise reload every account-scoped list the way sign-out does, so
+      // decks, words and study numbers of the expired account don't linger.
       await loadCurrentUser();
       if (epoch !== statsAccountEpochRef.current) return;
-      await loadInfoStats();
-      if (epoch !== statsAccountEpochRef.current) return;
-      await loadInfoWordHighlights();
+      await refreshUserScopedData();
     })();
   };
   useEffect(() => {
@@ -1808,6 +1827,21 @@ export default function HomePage() {
     setInfoHardWords([]);
     setIsLoadingInfoStats(true);
     setIsLoadingInfoWords(true);
+    // Other tabs' account-scoped data. Loaders drop responses from an older
+    // epoch, so their loading flags are reset here too.
+    setDecks([]);
+    setVocabItems([]);
+    setCustomTerms([]);
+    setStudyStats(null);
+    setSelectedSharedDeckId(null);
+    setSelectedSharedDeck(null);
+    setIsLoadingVocab(false);
+    setIsLoadingSharedDeckDetail(false);
+    // "" (not "all") -- 단어 탭은 새 계정에서 덱을 고를 때까지 단어를 불러오지
+    // 않는다. 복습 세션도 여기서 한 번만 비운다(늦은 갱신이 지우지 않도록).
+    setSelectedVocabDeckId("");
+    setSelectedStudyDeckId("all");
+    resetStudySession();
   }
 
   // 기록 탭의 "최근 담은 단어" / "자주 틀린 단어" -- 이미 존재하는
@@ -1850,6 +1884,7 @@ export default function HomePage() {
     const epoch = statsAccountEpochRef.current;
     try {
       const data = await requestJson<SharedDeckSummary[]>("/shared-decks");
+      if (epoch !== statsAccountEpochRef.current) return;
       setSharedDecks(data);
       setSharedDecksEpoch(epoch);
       if (
@@ -1860,6 +1895,7 @@ export default function HomePage() {
         setSelectedSharedDeck(null);
       }
     } catch (error) {
+      if (epoch !== statsAccountEpochRef.current) return;
       setSharedDeckMessage(
         getErrorMessage(
           error,
@@ -1867,7 +1903,9 @@ export default function HomePage() {
         ),
       );
     } finally {
-      setIsLoadingSharedDecks(false);
+      if (epoch === statsAccountEpochRef.current) {
+        setIsLoadingSharedDecks(false);
+      }
     }
   }
 
@@ -1876,6 +1914,7 @@ export default function HomePage() {
       closeSharedDeckDetail();
       return;
     }
+    const epoch = statsAccountEpochRef.current;
     setSelectedSharedDeckId(sharedDeckId);
     setIsLoadingSharedDeckDetail(true);
     setSharedDeckMessage("");
@@ -1884,13 +1923,17 @@ export default function HomePage() {
       const data = await requestJson<SharedDeckDetail>(
         `/shared-decks/${sharedDeckId}`,
       );
+      if (epoch !== statsAccountEpochRef.current) return;
       setSelectedSharedDeck(data);
     } catch (error) {
+      if (epoch !== statsAccountEpochRef.current) return;
       setSharedDeckMessage(
         getAuthAwareErrorMessage(error, "공유 덱 상세 정보를 불러오지 못했습니다."),
       );
     } finally {
-      setIsLoadingSharedDeckDetail(false);
+      if (epoch === statsAccountEpochRef.current) {
+        setIsLoadingSharedDeckDetail(false);
+      }
     }
   }
 
@@ -2988,6 +3031,12 @@ export default function HomePage() {
     const deckId = options.deckId ?? selectedStudyDeckId;
     const mode = options.mode ?? studyMode;
     studySessionIdRef.current += 1;
+    // A newer session (or an account change, which resets the session) makes
+    // this fetch's result stale.
+    const sessionId = studySessionIdRef.current;
+    const epoch = statsAccountEpochRef.current;
+    const isCurrent = () =>
+      sessionId === studySessionIdRef.current && epoch === statsAccountEpochRef.current;
     setIsLoadingStudy(true);
     setStudyMessage("");
     setStudyItems([]);
@@ -3001,17 +3050,21 @@ export default function HomePage() {
 
     try {
       const items = await fetchStudyItems(deckId, mode);
+      if (!isCurrent()) return;
       setStudyItems(items);
       setHasStartedStudy(true);
       if (items.length === 0) {
         setStudyMessage(getEmptyStudyMessage(mode, deckId));
       }
     } catch (error) {
+      if (!isCurrent()) return;
       setStudyMessage(
         getAuthAwareErrorMessage(error, "학습 대상 단어를 불러오지 못했습니다."),
       );
     } finally {
-      setIsLoadingStudy(false);
+      if (isCurrent()) {
+        setIsLoadingStudy(false);
+      }
     }
   }
 
@@ -3042,6 +3095,7 @@ export default function HomePage() {
         ? String(target.deck.id)
         : `${SHARED_DECK_STUDY_ID_PREFIX}${target.deck.id}`;
     studySessionIdRef.current += 1;
+    setIsLoadingStudy(false);
     setSelectedStudyDeckId(deckId);
     setStudyMode(target.mode);
     setStudyItems(items);

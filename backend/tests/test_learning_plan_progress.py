@@ -5,6 +5,15 @@ and never whatever DATABASE_URL is already set).
 
 Run directly:      python tests/test_learning_plan_progress.py
 Or via discovery:   python -m unittest discover -s tests
+
+PostgreSQL comparison (opt-in): set LEARNING_PLAN_TEST_POSTGRES_URL to a
+freshly created, empty database on localhost named jp_vocab_test[_...] (e.g.
+postgresql://user:pass@localhost:5432/jp_vocab_test_plan) and run this file
+directly. tests/_local_postgres_guard.py checks the target on what psycopg
+parses, then makes one read-only connection to confirm the database is empty,
+before init_db() or any write; anything else stops the run. A plain
+DATABASE_URL is never used. The run leaves its tables behind, so the next run
+needs a new database.
 """
 
 from __future__ import annotations
@@ -19,9 +28,31 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-_SCRATCH_DB = Path(tempfile.gettempdir()) / "jp_vocab_reader_learning_plan_test.db"
-_SCRATCH_DB.unlink(missing_ok=True)
-os.environ["DATABASE_URL"] = f"sqlite:///{_SCRATCH_DB.as_posix()}"
+_POSTGRES_URL = os.environ.get("LEARNING_PLAN_TEST_POSTGRES_URL", "").strip()
+if _POSTGRES_URL:
+    # Once per run, before any test class runs init_db() or writes: the URL
+    # is checked on what psycopg parses (query host/hostaddr, host lists,
+    # sockets, service, PG* env, test-only dbname), then one read-only
+    # connection confirms the database is empty. Later classes in the same
+    # run then see only the tables this run created.
+    from _local_postgres_guard import (
+        UnsafePostgresTarget,
+        assert_empty_postgres_test_database,
+        validate_local_postgres_test_url,
+    )
+
+    try:
+        _checked_url = validate_local_postgres_test_url(_POSTGRES_URL)
+        assert_empty_postgres_test_database(_checked_url)
+    except UnsafePostgresTarget as error:
+        raise SystemExit(f"LEARNING_PLAN_TEST_POSTGRES_URL refused: {error}") from None
+    os.environ["DATABASE_URL"] = _checked_url
+    _EXPECTED_DATABASE_URL: str | None = _checked_url
+else:
+    _EXPECTED_DATABASE_URL = None
+    _SCRATCH_DB = Path(tempfile.gettempdir()) / "jp_vocab_reader_learning_plan_test.db"
+    _SCRATCH_DB.unlink(missing_ok=True)
+    os.environ["DATABASE_URL"] = f"sqlite:///{_SCRATCH_DB.as_posix()}"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -52,6 +83,21 @@ from app.repositories.vocab_repository import (  # noqa: E402
 from app.schemas import DeckCreate, DeckPackage, VocabItemCreate, VocabItemUpdate  # noqa: E402
 
 
+def _require_checked_target() -> None:
+    """PostgreSQL mode: every class init and every test start re-confirms
+    that DATABASE_URL is still the URL the guard checked. Another test module
+    imported in the same run (unittest discovery) may have pointed it at its
+    own SQLite file; then this fails before init_db() or any write instead of
+    quietly testing SQLite and reporting a PostgreSQL pass. Only direct runs
+    of this file are supported in PostgreSQL mode."""
+    if _EXPECTED_DATABASE_URL is not None and os.environ.get("DATABASE_URL") != _EXPECTED_DATABASE_URL:
+        raise RuntimeError(
+            "LEARNING_PLAN_TEST_POSTGRES_URL is set, but DATABASE_URL no longer points at the "
+            "checked PostgreSQL test database (changed by another test module?). Nothing was "
+            "initialized or written. Run tests/test_learning_plan_progress.py directly."
+        )
+
+
 def _user(email: str) -> int:
     return int(create_user(email=email, display_name=email, password_hash="x")["id"])
 
@@ -72,9 +118,11 @@ def _shared_deck(owner_id: int, title: str) -> int:
 class LearningPlanProgressTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        _require_checked_target()
         init_db()
 
     def setUp(self) -> None:
+        _require_checked_target()
         self.user = _user(f"plan-{self.id()}@example.test")
         self.other = _user(f"other-{self.id()}@example.test")
         self.deck = create_deck(self.user, DeckCreate(name=f"deck {self.id()}"))[0]["id"]
@@ -206,8 +254,12 @@ class LearningPlanProgressTest(unittest.TestCase):
 class LearningPlanProgressEndpointTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
+        _require_checked_target()
         init_db()
         cls.client = TestClient(main.app)
+
+    def setUp(self) -> None:
+        _require_checked_target()
 
     def _register(self, email: str) -> str:
         response = self.client.post(
@@ -266,10 +318,12 @@ class FirstReviewQueueTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        _require_checked_target()
         init_db()
         cls.client = TestClient(main.app)
 
     def setUp(self) -> None:
+        _require_checked_target()
         tag = self.id().rsplit(".", 1)[-1]
         self.owner = _user(f"owner-{tag}@example.test")
         self.user = _user(f"learner-{tag}@example.test")
