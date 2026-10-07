@@ -2,6 +2,12 @@
 
 This stage adds PostgreSQL connection support while preserving the existing SQLite development fallback.
 
+## Current Verification Boundary (2026-10-07)
+
+This document records the migration foundation, not proof that every current feature has been tested on PostgreSQL. The learning-plan progress/first-review changes in `433f04e` and the safety changes in `0fb5a0f` passed SQLite tests and mocked PostgreSQL guard tests; a real local PostgreSQL comparison is still pending.
+
+Local QA must never use Neon or a production database. Use a session-only SQLite override by default. The opt-in learning-plan comparison uses `LEARNING_PLAN_TEST_POSTGRES_URL`, a fresh empty loopback test database, and direct execution only. It rejects unsafe targets, non-empty databases and later connection-setting changes before initialization. It leaves test tables behind; do not clear an existing database to make the check pass. See [work-handoff.md](work-handoff.md#postgresql-비교) for the current procedure and limits.
+
 ## 1. SQLite Fallback
 
 If `DATABASE_URL` is empty or unset, the backend continues to use the existing SQLite database at `backend/vocab.db`.
