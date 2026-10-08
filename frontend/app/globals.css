@@ -276,7 +276,9 @@
   .reading-scene-v2-frame {
     aspect-ratio: auto;
     width: 100%;
-    height: calc(100svh - 50px);
+    /* --reading-notice-space: 읽기 저장 안내 한 줄이 지면 위에서 차지하는 높이
+       (없으면 0). 장면·안전영역·도구 좌표가 모두 같은 가용 높이를 쓴다. */
+    height: calc(100svh - 50px - var(--reading-notice-space, 0px));
     overflow: hidden;
     /* Cloth mean, only visible outside a source's supported ratio range. */
     background: #636e60;
@@ -295,10 +297,10 @@
     --folio-right-width: 696;
     --folio-safe-y: 229.5;
     --folio-safe-height: 1008;
-    --folio-render-h: calc(min(100svh - 50px, 100vw * var(--folio-core-h) / var(--folio-core-w)) * var(--folio-h) / var(--folio-core-h));
+    --folio-render-h: calc(min(100svh - 50px - var(--reading-notice-space, 0px), 100vw * var(--folio-core-h) / var(--folio-core-w)) * var(--folio-h) / var(--folio-core-h));
     --folio-render-w: calc(var(--folio-render-h) * var(--folio-w) / var(--folio-h));
     --folio-offset-x: calc((100vw - var(--folio-render-w)) / 2);
-    --folio-offset-y: calc((100svh - 50px - var(--folio-render-h)) / 2);
+    --folio-offset-y: calc((100svh - 50px - var(--reading-notice-space, 0px) - var(--folio-render-h)) / 2);
   }
 
   /* Home Nav V1.1 seam repair (references/mockups/home-nav-prep/
@@ -7388,7 +7390,7 @@ input.reading-vocab-sticker-toggle:checked {
 
   .reading-panel .reading-scene-v2-frame {
     width: 100vw;
-    height: calc(100dvh - 70px);
+    height: calc(100dvh - 70px - var(--reading-notice-space, 0px));
     aspect-ratio: auto;
     overflow: hidden;
   }
@@ -15933,5 +15935,198 @@ body:has(.learning-plan) .app-toolbar {
 
   .learning-plan__dates-mini b {
     font-size: 13px;
+  }
+}
+
+/* --- 읽기 기기 저장 안내 (읽기 저장 경계 Gate C·D·E) ----------------------
+   읽기 지면 바로 위의 한 줄 안내. 높이는 --reading-notice-space로 장면 계산에서
+   빠진다. 긴 설명과 복구 동작은 "자세히" 대화상자(.reading-storage-details)에만. */
+:root {
+  --reading-notice-space: 0px;
+}
+
+.reading-storage-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(1080px, calc(100% - 24px));
+  min-height: 44px;
+  margin: 4px auto;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--sheet-bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.reading-storage-line.is-alert {
+  border-color: #c98b6b;
+  background: #fff4ec;
+}
+
+.reading-storage-line__text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reading-storage-line.is-alert .reading-storage-line__text {
+  color: #8a3b1f;
+  font-weight: 600;
+}
+
+.reading-storage-line__extra {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.reading-storage-line__details {
+  flex: none;
+  min-width: 64px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.reading-switch-dialog__card.reading-storage-details {
+  display: grid;
+  gap: 12px;
+  width: min(560px, 100%);
+  max-height: min(80vh, 640px);
+  overflow-y: auto;
+}
+
+.reading-storage-details__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.reading-storage-details__head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.reading-storage-details__head button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.reading-storage-notice__block p,
+.reading-storage-notice__message {
+  margin: 0;
+}
+
+.reading-storage-notice__message {
+  color: var(--text-secondary);
+}
+
+.reading-storage-notice__actions,
+.reading-switch-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin-top: 8px;
+}
+
+.reading-storage-notice__actions button,
+.reading-switch-dialog__actions button,
+.reading-account-gate button {
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.reading-storage-notice__actions button.is-primary,
+.reading-switch-dialog__actions button.is-primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.reading-storage-notice__actions button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.reading-account-gate {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(560px, calc(100% - 32px));
+  margin: 48px auto;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--sheet-bg);
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: center;
+}
+
+.reading-account-gate p {
+  margin: 0;
+}
+
+.reading-switch-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(30, 24, 14, 0.45);
+}
+
+.reading-switch-dialog__card {
+  width: min(440px, 100%);
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--sheet-bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  box-shadow: 0 16px 40px rgba(30, 24, 14, 0.3);
+}
+
+.reading-switch-dialog__card h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.reading-switch-dialog__card p {
+  margin: 0 0 6px;
+}
+
+
+/* 태블릿·폰은 장면 위로 "원문 읽기" 머리표가 살짝 올라오므로, 한 줄 안내 아래에
+   그만큼 여백을 둔다(이 여백도 --reading-notice-space에 포함된다). */
+@media (max-width: 1023px) {
+  .reading-storage-line {
+    margin-bottom: 18px;
   }
 }

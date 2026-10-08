@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test components/learningPlan.test.mts components/learningPlanStorage.test.mts components/planStudyLauncher.test.mts components/accountScopedRefresh.test.mts",
+    "test": "node --test components/learningPlan.test.mts components/learningPlanStorage.test.mts components/planStudyLauncher.test.mts components/accountScopedRefresh.test.mts components/readingSessionStorage.test.mts components/readingSessionFlow.test.mts",
     "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {

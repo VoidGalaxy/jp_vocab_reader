@@ -20,6 +20,40 @@ import {
 import { LegacyClassificationDraftNotice } from "../components/LegacyClassificationDraftNotice";
 import { learningPlanStorageScope } from "../components/learningPlanStorage";
 import {
+  LEGACY_READING_SESSION_KEY,
+  copyToEmptyReadingSession,
+  detachServerLinks,
+  originalTextDownload,
+  rawBackupDownload,
+  readLegacyReadingSession,
+  readLegacyReadingSessionRaw,
+  readReadingSession,
+  readingSessionKey,
+  readingStorageCapability,
+  removeReadingSession,
+  saveReadingSession,
+  type ReadingDownload,
+  type ReadingOwner,
+  type ReadingSessionData,
+  type ReadingSessionVersion,
+  type ReadingStorageEnv,
+  type SaveResult,
+} from "../components/readingSessionStorage";
+import {
+  captureReadingContext as captureReadingContextFrom,
+  createRequestSequence,
+  recheckAfterUnverified,
+  requiresDeckConfirmation,
+  type LastStorageAttempt,
+} from "../components/readingSessionFlow";
+import {
+  ReadingAccountGate,
+  ReadingStorageNotice,
+  ReadingSwitchDialog,
+  type ReadingRecoveryOffer,
+  type ReadingStorageStatus,
+} from "../components/ReadingStorageNotice";
+import {
   BookIcon,
   BookshelfIcon,
   CardFileIcon,
@@ -53,7 +87,6 @@ import type {
   AppFeedbackCategory,
   Deck,
   MeaningFeedbackTarget,
-  QualityTag,
   SessionReviewCounts,
   StudyMode,
   Token,
@@ -363,216 +396,92 @@ function vocabItemToForm(item: VocabItem): VocabFormData {
   };
 }
 
-function isTokenStatus(value: unknown): value is TokenStatus {
-  return (
-    value === "known" ||
-    value === "uncertain" ||
-    value === "unknown" ||
-    value === "unclassified"
-  );
-}
-
-function isQualityTag(value: unknown): value is QualityTag {
-  return (
-    value === "normal" ||
-    value === "custom_term" ||
-    value === "compound_verb" ||
-    value === "noun_phrase_candidate" ||
-    value === "known_phrase"
-  );
-}
-
-// Reading-tab work-in-progress persistence -- browser-local only (never
-// sent to the server beyond the existing /analyze call). Lets a user
-// refresh or switch tabs and pick the reading session back up: original
-// text, analyzed tokens/status, the selected word, and the last save
-// message. Deliberately excludes readingDeckVocabItems -- that's re-fetched
-// fresh on restore so "already saved"/example-sentence state reflects the
-// live server rather than a possibly-stale local copy.
-const READING_SESSION_KEY = "jp-vocab-reader:reading-session-v1";
-// Long original texts (chunk-analyzed novels/web-novel excerpts) can now
-// legitimately run well past the old 20,000-char ceiling -- raised so a
-// full chunked read still gets to persist locally. Still bounded (and still
-// wrapped in try/catch below) so a truly enormous paste can't hang the tab
-// on a slow localStorage write or silently blow the origin's quota.
-const MAX_READING_SESSION_TEXT_LENGTH = 200000;
+// 읽기 원문·상태의 기기 저장은 readingSessionStorage.ts(v3, 백엔드 환경 +
+// 계정/방문자별 키)가 맡는다. 옛 공통 키(reading-session-v1)는 여기서 자동
+// 복원·쓰기·삭제하지 않고, 복구 안내에서 읽기·복사·다운로드만 한다.
+const READING_STORAGE_SCOPE = learningPlanStorageScope(API_BASE_URL);
 const MAX_MEANING_KO_LENGTH = 200;
 
-// v2 adds scrollFraction (last reading-progress bookmark) alongside the
-// existing selectedTokenKey. v1 payloads (written before this branch) are
-// still readable -- they just parse with scrollFraction: null, same as any
-// session that was never scrolled/saved under v2.
-const READING_SESSION_VERSION = 2;
-
-type ReadingSession = {
-  version: 1 | 2;
-  originalText: string;
-  analyzedText: string;
-  deckId: string;
-  tokens: TokenWithStatus[];
-  selectedTokenKey: string | null;
-  message: string;
-  isTextCollapsed: boolean;
-  recentlySavedVocabItemIds: number[];
-  // 0..1 fraction of how far the user had scrolled through the reader text
-  // container -- null if never recorded (v1 session, or never scrolled).
-  scrollFraction: number | null;
-  // Tablet can scroll both its reading pane and the document.
-  tabletDocumentScrollFraction: number | null;
-  updatedAt: string;
-};
-
-function parseReadingSession(value: string | null): ReadingSession | null {
-  if (!value) {
-    return null;
-  }
-
+function getReadingStorageEnv(): ReadingStorageEnv {
+  let storage: Storage | null = null;
   try {
-    const parsed = JSON.parse(value) as Partial<ReadingSession>;
-    if (
-      (parsed.version !== 1 && parsed.version !== 2) ||
-      typeof parsed.originalText !== "string" ||
-      typeof parsed.analyzedText !== "string" ||
-      typeof parsed.deckId !== "string" ||
-      !Array.isArray(parsed.tokens) ||
-      typeof parsed.message !== "string" ||
-      typeof parsed.isTextCollapsed !== "boolean" ||
-      !Array.isArray(parsed.recentlySavedVocabItemIds) ||
-      typeof parsed.updatedAt !== "string"
-    ) {
-      return null;
-    }
-
-    const tokens = parsed.tokens.map((token) => {
-      if (
-        typeof token.surface !== "string" ||
-        typeof token.base_form !== "string" ||
-        typeof token.reading !== "string" ||
-        typeof token.part_of_speech !== "string" ||
-        typeof token.normalized_form !== "string" ||
-        typeof token.meaning_ko !== "string" ||
-        typeof token.example_sentence !== "string" ||
-        !isTokenStatus(token.status)
-      ) {
-        throw new Error("invalid token");
-      }
-      return {
-        ...token,
-        dictionary_gloss:
-          typeof token.dictionary_gloss === "string"
-            ? token.dictionary_gloss
-            : "",
-        quality_tag: isQualityTag(token.quality_tag)
-          ? token.quality_tag
-          : token.is_custom_term
-            ? "custom_term"
-            : "normal",
-        is_custom_term:
-          typeof token.is_custom_term === "boolean"
-            ? token.is_custom_term
-            : false,
-        occurrence_count:
-          typeof token.occurrence_count === "number"
-            ? token.occurrence_count
-            : 1,
-        isClassified:
-          typeof token.isClassified === "boolean"
-            ? token.isClassified
-            : token.status !== "unclassified",
-        savedExampleSentence:
-          typeof token.savedExampleSentence === "string" ||
-          token.savedExampleSentence === null
-            ? token.savedExampleSentence
-            : null,
-      };
-    });
-
-    const recentlySavedVocabItemIds = parsed.recentlySavedVocabItemIds.filter(
-      (id): id is number => typeof id === "number",
-    );
-
-    const scrollFraction =
-      typeof parsed.scrollFraction === "number" &&
-      Number.isFinite(parsed.scrollFraction)
-        ? Math.min(Math.max(parsed.scrollFraction, 0), 1)
-        : null;
-    const tabletDocumentScrollFraction =
-      typeof parsed.tabletDocumentScrollFraction === "number" &&
-      Number.isFinite(parsed.tabletDocumentScrollFraction)
-        ? Math.min(Math.max(parsed.tabletDocumentScrollFraction, 0), 1)
-        : null;
-
-    return {
-      version: parsed.version,
-      originalText: parsed.originalText,
-      analyzedText: parsed.analyzedText,
-      deckId: parsed.deckId,
-      tokens,
-      selectedTokenKey:
-        typeof parsed.selectedTokenKey === "string"
-          ? parsed.selectedTokenKey
-          : null,
-      message: parsed.message,
-      isTextCollapsed: parsed.isTextCollapsed,
-      recentlySavedVocabItemIds,
-      scrollFraction,
-      tabletDocumentScrollFraction,
-      updatedAt: parsed.updatedAt,
-    };
+    storage = typeof window === "undefined" ? null : window.localStorage;
   } catch {
-    return null;
+    storage = null;
   }
+  const locks =
+    typeof navigator !== "undefined" && navigator.locks && typeof navigator.locks.request === "function"
+      ? (navigator.locks as unknown as ReadingStorageEnv["locks"])
+      : null;
+  return { storage, locks };
 }
 
-// Returns whether the session was actually persisted (or intentionally
-// cleared because there was nothing to save) -- false means "skipped due to
-// size or a localStorage failure", which the caller surfaces as a soft
-// inline notice rather than silently losing the user's place.
-function persistReadingSession(
-  session: Omit<ReadingSession, "version" | "updatedAt">,
-): boolean {
-  if (typeof window === "undefined") {
-    return true;
-  }
-  try {
-    if (
-      session.originalText.length > MAX_READING_SESSION_TEXT_LENGTH ||
-      session.analyzedText.length > MAX_READING_SESSION_TEXT_LENGTH
-    ) {
-      // Too long to keep re-persisting on every keystroke -- drop it rather
-      // than risk a slow/failing localStorage write, or restoring a huge
-      // blob later. The user can still work with it in-memory this session.
-      window.localStorage.removeItem(READING_SESSION_KEY);
-      return false;
-    }
-    if (!session.originalText && session.tokens.length === 0) {
-      window.localStorage.removeItem(READING_SESSION_KEY);
-      return true;
-    }
-    const payload: ReadingSession = {
-      version: READING_SESSION_VERSION,
-      ...session,
-      updatedAt: new Date().toISOString(),
-    };
-    window.localStorage.setItem(READING_SESSION_KEY, JSON.stringify(payload));
-    return true;
-  } catch {
-    // localStorage can throw (quota exceeded, disabled, private mode) --
-    // never let persistence failures break the reading tab itself.
-    return false;
-  }
+function emptyReadingData(): ReadingSessionData {
+  return {
+    originalText: "",
+    analyzedText: "",
+    deckId: "",
+    tokens: [],
+    selectedTokenKey: null,
+    message: "",
+    isTextCollapsed: true,
+    recentlySavedVocabItemIds: [],
+    scrollFraction: null,
+    tabletDocumentScrollFraction: null,
+  };
 }
 
-function clearReadingSession() {
-  if (typeof window === "undefined") {
-    return;
-  }
-  try {
-    window.localStorage.removeItem(READING_SESSION_KEY);
-  } catch {
-    // ignore
-  }
+function isEmptyReadingData(data: ReadingSessionData): boolean {
+  return !data.originalText.trim() && !data.analyzedText && data.tokens.length === 0;
 }
+
+function readingDataJson(data: ReadingSessionData): string {
+  return JSON.stringify(data);
+}
+
+function triggerDownload(file: ReadingDownload) {
+  const blob = new Blob([file.content], { type: file.mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = file.fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function readingSaveFailureMessage(result: SaveResult): string {
+  const previous =
+    "previous" in result
+      ? result.previous === "kept"
+        ? "이전에 저장한 내용은 그대로 있어요."
+        : result.previous === "none"
+          ? "아직 이 기기에 저장된 내용이 없어서, 창을 닫으면 지금 글이 사라져요."
+          : "이전 저장본이 남아 있는지는 확인하지 못했어요."
+      : "";
+  if (result.kind === "tooLarge") {
+    return `글이 너무 길어(20만 자 초과) 이 기기에 저장하지 않았어요. ${previous}`;
+  }
+  if (result.kind === "error") {
+    const cause =
+      result.reason === "quota"
+        ? "브라우저 저장 공간이 부족해"
+        : result.reason === "denied"
+          ? "브라우저가 저장을 막아"
+          : result.reason === "lock_failed"
+            ? "저장 잠금을 얻지 못해"
+            : result.reason === "unavailable"
+              ? "저장된 내용을 확인하지 못해"
+              : result.reason === "not_persisted"
+                ? "저장이 반영되지 않아"
+                : "알 수 없는 문제로";
+    return `${cause} 이 기기에 저장하지 못했어요. ${previous}`;
+  }
+  return "";
+}
+
+type ReadingAccount = { epoch: number; owner: ReadingOwner | null };
 
 // Shared by a fresh /analyze response and by session restore (re-deriving
 // from freshly-fetched deck items rather than trusting possibly-stale
@@ -694,7 +603,72 @@ export default function HomePage() {
   >(null);
   const [isReadingSessionRestored, setIsReadingSessionRestored] =
     useState(false);
+  // ---- 읽기 기기 저장 경계 (Gate C) ----
+  // 어느 owner(계정/방문자)의 읽기 자료를 열지: /me 또는 로그인 응답으로
+  // 확인한 계정과 그 account epoch. owner null = 확인 실패(복원·저장 금지).
+  const [readingAccount, setReadingAccount] = useState<ReadingAccount | null>(null);
+  // 지금 화면에 복원(hydrate)된 owner 키. 이 키와 확인한 owner가 같아야 읽기
+  // 지면을 보여 주고 자동 저장한다.
+  const [readingHydratedKey, setReadingHydratedKey] = useState<string | null>(null);
+  const readingKeyRef = useRef<string | null>(null);
+  const readingOwnerRef = useRef<ReadingOwner | null>(null);
+  // 계정 경계·다른 창 자료 불러오기마다 바뀐다. ReadingTab key와 읽기 요청
+  // 가드에 쓴다.
+  const readingGenerationRef = useRef(0);
+  const [readingGeneration, setReadingGeneration] = useState(0);
+  // 이 창이 마지막으로 확인한 저장 버전(키 없음 = null)과 그때의 내용.
+  const readingBaseRef = useRef<ReadingSessionVersion | null>(null);
+  const readingPersistedJsonRef = useRef<string | null>(null);
+  // 확인하지 못한 마지막 저장소 시도(저장 내용 또는 삭제). 재확인 판단에 쓴다.
+  const readingLastAttemptRef = useRef<LastStorageAttempt>(null);
+  const [readingLastAttemptKind, setReadingLastAttemptKind] = useState<"save" | "remove">("save");
+  // 읽기 작업 ID: 계정 경계뿐 아니라 새 원문(초기화)·원문 교체·새 분석·복원마다
+  // 바뀐다. 이전 작업의 늦은 응답·catch·finally가 새 작업을 바꾸지 않게 한다.
+  const readingWorkIdRef = useRef(0);
+  const readingSelectedDeckIdRef = useRef("");
+  // 같은 종류 요청이 겹칠 때 마지막 요청만 결과·진행 표시를 바꾼다.
+  const readingDeckRequestSeqRef = useRef(createRequestSequence());
+  const readingBatchSeqRef = useRef(createRequestSequence());
+  const meaningEditSeqRef = useRef(createRequestSequence());
+  const feedbackSeqRef = useRef(createRequestSequence());
+  const [readingStorageStatus, setReadingStorageStatus] =
+    useState<ReadingStorageStatus>("ready");
+  const readingStorageStatusRef = useRef<ReadingStorageStatus>("ready");
+  const readingSaveChainRef = useRef<Promise<unknown>>(Promise.resolve());
+  // 저장하지 못한 편집: 그 owner 키에만 묶어 이 창 메모리에만 둔다.
+  const readingRecoveryRef = useRef(new Map<string, ReadingSessionData>());
+  const [readingRecoveryAvailable, setReadingRecoveryAvailable] = useState(false);
+  const [readingRecoveryOffer, setReadingRecoveryOffer] =
+    useState<ReadingRecoveryOffer | null>(null);
+  const [readingNoticeMessage, setReadingNoticeMessage] = useState("");
+  const [isReadingNoticeBusy, setIsReadingNoticeBusy] = useState(false);
+  // 덱 확인 요청 진행 표시(요청 순번별). 덱을 바꾸면 이전 덱 요청은 무효가 된다.
+  const [isReadingDeckConfirmBusy, setIsReadingDeckConfirmBusy] = useState(false);
+  // 전체 사본을 가져온 뒤, 이 계정의 덱을 다시 확인하기 전에는 서버 저장 금지.
+  const [readingDeckConfirmRequired, setReadingDeckConfirmRequired] = useState(false);
+  const [readingSwitchPrompt, setReadingSwitchPrompt] = useState<{
+    reason: string;
+    resolve: (proceed: boolean) => void;
+  } | null>(null);
+  const readingSwitchPromptRef = useRef<{ resolve: (proceed: boolean) => void } | null>(null);
   const [vocabItems, setVocabItems] = useState<VocabItem[]>([]);
+  // 렌더마다 갱신되는 지금 읽기 상태의 저장용 스냅샷(비동기 저장·경계에서 읽음).
+  const readingDataRef = useRef<ReadingSessionData>(emptyReadingData());
+  readingSelectedDeckIdRef.current = readingSelectedDeckId;
+  readingDataRef.current = {
+    originalText: readingText,
+    analyzedText: analyzedReadingText,
+    // 가져온 분류의 덱을 확인하기 전에는 덱 연결을 저장하지 않는다(새로고침해도
+    // 확인을 다시 요구하도록).
+    deckId: readingDeckConfirmRequired ? "" : readingSelectedDeckId,
+    tokens: readingTokens,
+    selectedTokenKey: currentSelectedTokenKey,
+    message: readingMessage,
+    isTextCollapsed: isReadingTextCollapsed,
+    recentlySavedVocabItemIds,
+    scrollFraction: readingScrollFraction,
+    tabletDocumentScrollFraction: readingTabletDocumentScrollFraction,
+  };
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingVocab, setIsAddingVocab] = useState(false);
@@ -707,12 +681,16 @@ export default function HomePage() {
     null,
   );
   const [meaningEditDraft, setMeaningEditDraft] = useState("");
+  const meaningEditItemIdRef = useRef<number | null>(null);
+  meaningEditItemIdRef.current = meaningEditItemId;
   const [isSavingMeaningEdit, setIsSavingMeaningEdit] = useState(false);
   const [meaningEditMessage, setMeaningEditMessage] = useState("");
   // "뜻 오류 신고" -- one shared modal, openable from any of the same three
   // places, tracked centrally so only one report can be in progress at once.
   const [meaningFeedbackTarget, setMeaningFeedbackTarget] =
     useState<MeaningFeedbackTarget | null>(null);
+  const meaningFeedbackTargetRef = useRef<MeaningFeedbackTarget | null>(null);
+  meaningFeedbackTargetRef.current = meaningFeedbackTarget;
   const [feedbackSuggestedMeaning, setFeedbackSuggestedMeaning] =
     useState("");
   const [feedbackReason, setFeedbackReason] = useState("");
@@ -851,67 +829,53 @@ export default function HomePage() {
     // 학습 계획 탭의 LegacyClassificationDraftNotice가 사용자가 고를 때만
     // 보관·읽기 열기·삭제를 한다(깨진 초안 자동 삭제 경로 제거, Gate D).
 
-    const readingSession = parseReadingSession(
-      window.localStorage.getItem(READING_SESSION_KEY),
-    );
-    if (readingSession) {
-      // The saved-word CTA/basket are real data and stay restored no matter
-      // how old the session is, but the save confirmation message ("단어
-      // N개를 저장했습니다...") reads as a just-now event -- only restore it
-      // when the session was last touched today, otherwise leave it blank.
-      const sessionUpdatedAt = new Date(readingSession.updatedAt);
-      const isMessageFresh =
-        !Number.isNaN(sessionUpdatedAt.getTime()) &&
-        sessionUpdatedAt.toDateString() === new Date().toDateString();
-      setReadingText(readingSession.originalText);
-      setAnalyzedReadingText(readingSession.analyzedText);
-      setReadingSelectedDeckId(readingSession.deckId);
-      setReadingTokens(readingSession.tokens);
-      setReadingMessage(isMessageFresh ? readingSession.message : "");
-      setIsReadingTextCollapsed(readingSession.isTextCollapsed);
-      setRecentlySavedVocabItemIds(readingSession.recentlySavedVocabItemIds);
-      setCurrentSelectedTokenKey(readingSession.selectedTokenKey);
-      setReadingScrollFraction(readingSession.scrollFraction);
-      setReadingTabletDocumentScrollFraction(readingSession.tabletDocumentScrollFraction);
-      setIsReadingSessionRestored(true);
-      if (readingSession.deckId && readingSession.tokens.length > 0) {
-        void refreshReadingDeckVocabItems(
-          readingSession.deckId,
-          readingSession.tokens,
-        );
-      }
-    } else {
-      clearReadingSession();
-    }
+    // 읽기 자료는 여기서 복원하지 않는다. 계정(owner)을 확인한 뒤
+    // hydrateReadingForOwner가 그 owner의 v3 키만 연다.
   }, []);
 
-  // Debounced auto-save: covers every meaningful reading-tab checkpoint
-  // (analyze complete, per-word status change, batch save, word selection,
-  // and textarea edits) in one place, rather than threading explicit
-  // persist calls through each handler. A short debounce keeps large-text
-  // typing from writing to localStorage on every keystroke.
+  // 계정 확인 → 해당 owner 자료 복원 → 자동 저장 활성화.
+  const readingOwnerKey =
+    readingAccount && readingAccount.epoch === statsAccountEpoch && readingAccount.owner
+      ? readingSessionKey(READING_STORAGE_SCOPE, readingAccount.owner)
+      : null;
+  const readingGateState: "pending" | "failed" | "ready" =
+    !readingAccount || readingAccount.epoch !== statsAccountEpoch
+      ? "pending"
+      : readingAccount.owner
+        ? "ready"
+        : "failed";
+
   useEffect(() => {
+    if (!readingOwnerKey || !readingAccount?.owner) return;
+    if (readingKeyRef.current === readingOwnerKey) return;
+    const owner = readingAccount.owner;
+    const key = readingOwnerKey;
+    const epoch = statsAccountEpochRef.current;
+    let cancelled = false;
+    // 경계에서 시작한 이전 owner 저장(같은 계정이면 같은 키)이 끝난 뒤에 연다.
+    void readingSaveChainRef.current.then(() => {
+      if (cancelled || statsAccountEpochRef.current !== epoch || readingKeyRef.current !== null) return;
+      hydrateReadingForOwner(owner, key);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readingOwnerKey, statsAccountEpoch]);
+
+  // Debounced auto-save (600ms), 복원이 끝난 현재 owner 키에만. 바뀐 내용이
+  // 없거나, 빈 영역을 처음 연 상태(빈 세션)면 저장하지 않는다.
+  useEffect(() => {
+    const key = readingKeyRef.current;
+    if (!key || readingHydratedKey !== key) return;
+    if (readingStorageStatusRef.current !== "ready") return;
+    const generation = readingGenerationRef.current;
     const timeoutId = window.setTimeout(() => {
-      const persisted = persistReadingSession({
-        originalText: readingText,
-        analyzedText: analyzedReadingText,
-        deckId: readingSelectedDeckId,
-        tokens: readingTokens,
-        selectedTokenKey: currentSelectedTokenKey,
-        message: readingMessage,
-        isTextCollapsed: isReadingTextCollapsed,
-        recentlySavedVocabItemIds,
-        scrollFraction: readingScrollFraction,
-        tabletDocumentScrollFraction: readingTabletDocumentScrollFraction,
-      });
-      setReadingStorageWarning(
-        persisted
-          ? ""
-          : "브라우저 저장 공간이 부족해 이어읽기 저장은 생략되었습니다.",
-      );
+      void queueReadingSave(key, generation);
     }, 600);
     return () => window.clearTimeout(timeoutId);
   }, [
+    readingHydratedKey,
     readingText,
     analyzedReadingText,
     readingSelectedDeckId,
@@ -923,6 +887,622 @@ export default function HomePage() {
     readingScrollFraction,
     readingTabletDocumentScrollFraction,
   ]);
+
+  // 안내 카드의 결과 문구는 잠시 보여 주고 지운다(상태 안내는 따로 남는다).
+  useEffect(() => {
+    if (!readingNoticeMessage) return;
+    const timeoutId = window.setTimeout(() => setReadingNoticeMessage(""), 6000);
+    return () => window.clearTimeout(timeoutId);
+  }, [readingNoticeMessage]);
+
+  // 복원 뒤 읽기 덱이 비어 있으면(빈 영역·원문만 복사·경계 직후) 지금 계정의
+  // 덱 목록에서 기본 덱을 고른다. 덱 목록은 같은 account epoch에서 받은 것만 쓴다.
+  useEffect(() => {
+    if (!readingHydratedKey || readingSelectedDeckId) return;
+    if (decksEpoch !== statsAccountEpoch || decks.length === 0) return;
+    const fallback = decks.find((deck) => deck.name === "기본 단어장") ?? decks[0];
+    setReadingSelectedDeckId(String(fallback.id));
+  }, [readingHydratedKey, readingSelectedDeckId, decks, decksEpoch, statsAccountEpoch]);
+
+  // 다른 창의 저장소 변경: 인증 키가 바뀌면 이 창도 계정 경계를 지난다.
+  // 지금 owner의 읽기 키가 바뀌면 덮어쓰지 않도록 자동 저장을 멈추고 알린다.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.storageArea && event.storageArea !== window.localStorage) return;
+      if (event.key === null || event.key === ACCESS_TOKEN_KEY) {
+        handleExternalAuthChangeRef.current();
+        return;
+      }
+      if (event.key === readingKeyRef.current && readingStorageStatusRef.current === "ready") {
+        setReadingStorage("conflict");
+        setReadingNoticeMessage("");
+        // 목적지가 더는 비어 있지 않으므로 복사 제안도 거둔다.
+        setReadingRecoveryOffer(null);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  function setReadingStorage(status: ReadingStorageStatus) {
+    readingStorageStatusRef.current = status;
+    setReadingStorageStatus(status);
+  }
+
+  function applyReadingData(data: ReadingSessionData, restored: boolean) {
+    setReadingText(data.originalText);
+    setAnalyzedReadingText(data.analyzedText);
+    setReadingSelectedDeckId(data.deckId);
+    setReadingTokens(data.tokens);
+    setReadingMessage(data.message);
+    setIsReadingTextCollapsed(data.isTextCollapsed);
+    setRecentlySavedVocabItemIds(data.recentlySavedVocabItemIds);
+    setCurrentSelectedTokenKey(data.selectedTokenKey);
+    setReadingScrollFraction(data.scrollFraction);
+    setReadingTabletDocumentScrollFraction(data.tabletDocumentScrollFraction);
+    setIsReadingSessionRestored(restored);
+    readingDataRef.current = data;
+  }
+
+  function clearReadingScreen() {
+    setReadingText("");
+    setAnalyzedReadingText("");
+    setReadingSelectedDeckId("");
+    setReadingTokens([]);
+    setReadingDeckVocabItems([]);
+    setReadingMessage("");
+    setReadingStorageWarning("");
+    setIsReadingTextCollapsed(true);
+    setRecentlySavedVocabItemIds([]);
+    setCurrentSelectedTokenKey(null);
+    setReadingScrollFraction(null);
+    setReadingTabletDocumentScrollFraction(null);
+    setIsReadingSessionRestored(false);
+    setIsReadingAnalyzing(false);
+    setReadingAnalyzeProgress(null);
+    setIsSavingReadingBatch(false);
+    readingDataRef.current = emptyReadingData();
+  }
+
+  // 읽기 작업 교체: 이전 작업의 요청 결과를 무효화한다. 일괄 저장 진행 표시도
+  // 이전 작업 것이므로 끈다(새 작업의 요청은 새 순번으로 다시 켠다).
+  function bumpReadingWork() {
+    readingWorkIdRef.current += 1;
+    readingBatchSeqRef.current.invalidate();
+    readingDeckRequestSeqRef.current.invalidate();
+    setIsSavingReadingBatch(false);
+    setIsReadingDeckConfirmBusy(false);
+  }
+
+  // 세대 교체: 작업 교체 + ReadingTab 자식 상태(바구니·검색·옵션)도 새로 만든다.
+  function bumpReadingGeneration() {
+    readingGenerationRef.current += 1;
+    setReadingGeneration(readingGenerationRef.current);
+    bumpReadingWork();
+  }
+
+  function abortReadingAnalysis() {
+    readingAnalyzeAbortRef.current?.abort();
+    readingAnalyzeAbortRef.current = null;
+    setIsReadingAnalyzing(false);
+    setReadingAnalyzeProgress(null);
+  }
+
+  // 읽기 요청 가드: 시작할 때의 owner 키·account epoch·읽기 작업 ID(와 덱)가
+  // 그대로일 때만 응답·catch·finally를 적용한다.
+  function captureReadingContext() {
+    return captureReadingContextFrom({
+      ownerKey: () => readingKeyRef.current,
+      accountEpoch: () => statsAccountEpochRef.current,
+      workId: () => readingWorkIdRef.current,
+      deckId: () => readingSelectedDeckIdRef.current,
+    });
+  }
+
+  // 저장소에서 읽은 세션을 화면에 적용하는 모든 경로(최초 복원·다른 창 내용
+  // 불러오기·복사)가 같은 규칙을 쓴다. 덱 연결 없이 토큰만 있으면 덱 확인 요구.
+  function applyStoredReadingSession(
+    session: ReadingSessionData,
+    version: ReadingSessionVersion,
+    restored: boolean,
+  ) {
+    applyReadingData(session, restored);
+    readingBaseRef.current = version;
+    readingPersistedJsonRef.current = readingDataJson(session);
+    const needsDeck = requiresDeckConfirmation(session);
+    setReadingDeckConfirmRequired(needsDeck);
+    if (!needsDeck && session.deckId && session.tokens.length > 0) {
+      void refreshReadingDeckVocabItems(session.deckId, session.tokens);
+    }
+  }
+
+  function hydrateReadingForOwner(owner: ReadingOwner, key: string) {
+    const env = getReadingStorageEnv();
+    readingKeyRef.current = key;
+    readingOwnerRef.current = owner;
+    readingBaseRef.current = null;
+    readingPersistedJsonRef.current = null;
+    readingLastAttemptRef.current = null;
+    setReadingRecoveryOffer(null);
+    setReadingNoticeMessage("");
+    setReadingDeckConfirmRequired(false);
+    abortReadingAnalysis();
+    clearReadingScreen();
+    bumpReadingGeneration();
+
+    const capability = readingStorageCapability(env);
+    let status: ReadingStorageStatus = capability === "full" ? "ready" : "readOnly";
+    if (capability === "unavailable") {
+      status = "unavailable";
+    } else {
+      const stored = readReadingSession(env, READING_STORAGE_SCOPE, owner);
+      if (stored.kind === "ok") {
+        applyStoredReadingSession(
+          stored.value.session,
+          { instanceId: stored.value.instanceId, revision: stored.value.revision },
+          true,
+        );
+      } else if (stored.kind === "corrupt") {
+        status = "corrupt";
+      } else if (stored.kind === "unavailable") {
+        status = "unavailable";
+      } else {
+        // 빈 영역: 이전 공통 자료나 방문자 자료가 있으면 복사를 제안만 한다.
+        const legacy = readLegacyReadingSession(env);
+        const guest =
+          owner.kind === "user"
+            ? readReadingSession(env, READING_STORAGE_SCOPE, { kind: "guest" })
+            : null;
+        const offer: ReadingRecoveryOffer = {
+          legacy: legacy.kind === "ok" ? "ok" : legacy.kind === "corrupt" ? "corrupt" : null,
+          legacyUpdatedAt: legacy.kind === "ok" ? legacy.value.updatedAt : null,
+          guest:
+            guest?.kind === "ok" && !isEmptyReadingData(guest.value.session),
+          guestUpdatedAt: guest?.kind === "ok" ? guest.value.updatedAt : null,
+        };
+        if (offer.legacy || offer.guest) setReadingRecoveryOffer(offer);
+      }
+    }
+    setReadingStorage(status);
+    setReadingRecoveryAvailable(readingRecoveryRef.current.has(key));
+    setReadingHydratedKey(key);
+  }
+
+  // 저장은 창 안에서 한 줄로 세운다(같은 base로 겹쳐 쓰지 않게).
+  function queueReadingSave(key: string, generation: number): Promise<SaveResult | null> {
+    const run = readingSaveChainRef.current.then(() => saveReadingNow(key, generation));
+    readingSaveChainRef.current = run.catch(() => undefined);
+    return run;
+  }
+
+  async function saveReadingNow(key: string, generation: number): Promise<SaveResult | null> {
+    const owner = readingOwnerRef.current;
+    if (!owner || readingKeyRef.current !== key || readingGenerationRef.current !== generation) {
+      return null;
+    }
+    if (readingStorageStatusRef.current !== "ready") return null;
+    const data = readingDataRef.current;
+    const json = readingDataJson(data);
+    if (json === readingPersistedJsonRef.current) {
+      // 저장소가 이미 지금 내용과 같다: 남은 실패 안내는 더는 맞지 않는다.
+      setReadingStorageWarning("");
+      return { kind: "ok", version: readingBaseRef.current! };
+    }
+    // 빈 영역을 처음 연 상태 그대로면 빈 세션을 만들지 않는다(복구 목적지 보존).
+    if (readingPersistedJsonRef.current === null && isEmptyReadingData(data)) return null;
+    readingLastAttemptRef.current = { kind: "save", json };
+    setReadingLastAttemptKind("save");
+    const result = await saveReadingSession(getReadingStorageEnv(), {
+      scope: READING_STORAGE_SCOPE,
+      owner,
+      base: readingBaseRef.current,
+      session: data,
+      isCurrent: () => readingKeyRef.current === key && readingGenerationRef.current === generation,
+    });
+    if (readingKeyRef.current !== key || readingGenerationRef.current !== generation) {
+      return result;
+    }
+    handleReadingSaveResult(key, result, data, json);
+    return result;
+  }
+
+  function handleReadingSaveResult(
+    key: string,
+    result: SaveResult,
+    data: ReadingSessionData,
+    json: string,
+  ) {
+    if (result.kind === "ok") {
+      readingBaseRef.current = result.version;
+      readingPersistedJsonRef.current = json;
+      readingRecoveryRef.current.delete(key);
+      setReadingStorageWarning("");
+      // 이 영역에 처음 저장했으면 더는 빈 목적지가 아니므로 복사 제안을 거둔다.
+      setReadingRecoveryOffer(null);
+      return;
+    }
+    if (result.kind === "cancelled") return;
+    readingRecoveryRef.current.set(key, data);
+    if (result.kind === "conflict") {
+      setReadingStorage("conflict");
+    } else if (result.kind === "unverified") {
+      // 확인 실패가 이전 쓰기 실패 안내를 대신한다(두 안내가 엇갈리지 않게).
+      setReadingStorageWarning("");
+      setReadingStorage("unverified");
+    } else if (result.kind === "corrupt") {
+      setReadingStorage("corrupt");
+    } else if (result.kind === "unsupported") {
+      setReadingStorage("readOnly");
+    } else {
+      setReadingStorageWarning(readingSaveFailureMessage(result));
+    }
+  }
+
+  // 계정 경계: 이전 owner의 내용을 화면에서 즉시 지우고, 저장하지 못한 최신
+  // 편집은 그 owner 키에만 묶어 둔다(가능하면 그 키에 바로 저장도 시도).
+  function resetReadingForBoundary() {
+    const key = readingKeyRef.current;
+    const owner = readingOwnerRef.current;
+    const data = readingDataRef.current;
+    const json = readingDataJson(data);
+    const dirty =
+      key !== null &&
+      json !== readingPersistedJsonRef.current &&
+      !(readingPersistedJsonRef.current === null && isEmptyReadingData(data));
+    if (key && owner && dirty) {
+      readingRecoveryRef.current.set(key, data);
+      if (readingStorageStatusRef.current === "ready") {
+        const base = readingBaseRef.current;
+        readingSaveChainRef.current = readingSaveChainRef.current
+          .then(() =>
+            saveReadingSession(getReadingStorageEnv(), {
+              scope: READING_STORAGE_SCOPE,
+              owner,
+              base,
+              session: data,
+              isCurrent: () => true,
+            }),
+          )
+          .then((result) => {
+            if (result.kind === "ok") readingRecoveryRef.current.delete(key);
+          })
+          .catch(() => undefined);
+      }
+    }
+    // 열려 있던 수동 전환 확인창과 그 대기 중 전환은 취소한다. 이전 확인으로
+    // 새 계정을 로그아웃하거나 로그인하지 않는다.
+    const pendingPrompt = readingSwitchPromptRef.current;
+    readingSwitchPromptRef.current = null;
+    setReadingSwitchPrompt(null);
+    pendingPrompt?.resolve(false);
+    abortReadingAnalysis();
+    readingKeyRef.current = null;
+    readingOwnerRef.current = null;
+    readingBaseRef.current = null;
+    readingPersistedJsonRef.current = null;
+    readingLastAttemptRef.current = null;
+    bumpReadingGeneration();
+    clearReadingScreen();
+    setReadingHydratedKey(null);
+    setReadingStorage("ready");
+    setReadingRecoveryOffer(null);
+    setReadingRecoveryAvailable(false);
+    setReadingNoticeMessage("");
+    setIsReadingNoticeBusy(false);
+    setReadingDeckConfirmRequired(false);
+    // 읽기에서 열 수 있는 뜻 수정·신고 창도 이전 계정 것이므로 닫는다.
+    setMeaningEditItemId(null);
+    setMeaningEditDraft("");
+    setMeaningEditMessage("");
+    setMeaningFeedbackTarget(null);
+    setIsSavingMeaningEdit(false);
+    setIsSubmittingFeedback(false);
+  }
+
+  function hasUnsavedReadingEdits(): boolean {
+    const key = readingKeyRef.current;
+    if (!key) return false;
+    const data = readingDataRef.current;
+    const json = readingDataJson(data);
+    if (json === readingPersistedJsonRef.current) return false;
+    return !(readingPersistedJsonRef.current === null && isEmptyReadingData(data));
+  }
+
+  // 수동 계정 전환(로그인·로그아웃) 전: 최신 편집을 지금 owner에 저장하고,
+  // 저장하지 못하면 머무르기 / 내려받기 / 계속을 묻는다. 내려받기는 전환
+  // 승인이 아니다.
+  async function prepareReadingForManualSwitch(): Promise<boolean> {
+    const key = readingKeyRef.current;
+    const epoch = statsAccountEpochRef.current;
+    if (!key || !hasUnsavedReadingEdits()) return true;
+    let reason = "";
+    if (readingStorageStatusRef.current === "ready") {
+      const result = await queueReadingSave(key, readingGenerationRef.current);
+      // 저장을 기다리는 사이 만료·다른 창 변경으로 계정이 바뀌었으면 이 전환은 취소.
+      if (statsAccountEpochRef.current !== epoch) return false;
+      if (!hasUnsavedReadingEdits()) return true;
+      reason =
+        result && result.kind !== "ok"
+          ? result.kind === "conflict"
+            ? "다른 창에서 이 읽기 자료가 바뀌어 저장하지 않았어요."
+            : result.kind === "unverified"
+              ? "저장했는지 확인하지 못했어요."
+              : readingSaveFailureMessage(result) || "이 기기에 저장하지 못했어요."
+          : "이 기기에 저장하지 못했어요.";
+    } else {
+      reason =
+        readingStorageStatusRef.current === "readOnly"
+          ? "이 브라우저에서는 읽기 자료를 자동 저장할 수 없어요."
+          : "지금 읽기 자료의 저장이 멈춰 있어요.";
+    }
+    const proceed = await new Promise<boolean>((resolve) => {
+      readingSwitchPromptRef.current = { resolve };
+      setReadingSwitchPrompt({ reason, resolve });
+    });
+    return proceed && statsAccountEpochRef.current === epoch;
+  }
+
+  function resolveReadingSwitch(proceed: boolean) {
+    const prompt = readingSwitchPromptRef.current;
+    readingSwitchPromptRef.current = null;
+    setReadingSwitchPrompt(null);
+    prompt?.resolve(proceed);
+  }
+
+  function readingOwnerLabel(): string {
+    const owner = readingOwnerRef.current;
+    if (!owner) return "";
+    if (owner.kind === "guest") return "방문자";
+    return currentUser?.display_name ? `${currentUser.display_name} 계정` : "이 계정";
+  }
+
+  async function copyIntoCurrentReading(source: "legacy" | "guest", mode: "textOnly" | "full") {
+    const key = readingKeyRef.current;
+    const owner = readingOwnerRef.current;
+    if (!key || !owner || isReadingNoticeBusy) return;
+    const env = getReadingStorageEnv();
+    const read =
+      source === "legacy"
+        ? readLegacyReadingSession(env)
+        : readReadingSession(env, READING_STORAGE_SCOPE, { kind: "guest" });
+    if (read.kind !== "ok") {
+      setReadingNoticeMessage("가져올 자료를 읽지 못했어요. 원래 자료는 그대로 있어요.");
+      return;
+    }
+    const label = readingOwnerLabel();
+    if (
+      !window.confirm(
+        `이 자료가 본인 것이 맞나요?\n${label}의 빈 읽기 영역으로 ${
+          mode === "textOnly" ? "원문만" : "분류·위치까지"
+        } 복사해요. 원래 자료는 지우지 않아요.`,
+      )
+    ) {
+      return;
+    }
+    const ctx = captureReadingContext();
+    setIsReadingNoticeBusy(true);
+    try {
+      const result = await copyToEmptyReadingSession(env, {
+        scope: READING_STORAGE_SCOPE,
+        owner,
+        source: read.value.session,
+        mode,
+        isCurrent: ctx.isCurrent,
+      });
+      if (!ctx.isCurrent()) return;
+      if (result.kind === "ok") {
+        const stored = readReadingSession(env, READING_STORAGE_SCOPE, owner);
+        if (stored.kind === "ok") {
+          abortReadingAnalysis();
+          bumpReadingGeneration();
+          applyStoredReadingSession(stored.value.session, result.version, false);
+        }
+        setReadingRecoveryOffer(null);
+        setReadingNoticeMessage(
+          mode === "textOnly"
+            ? "원문을 가져왔어요. 덱을 고르고 분석하기를 눌러 주세요."
+            : "분류까지 가져왔어요. 이 계정의 덱을 확인하면 단어를 저장할 수 있어요.",
+        );
+      } else if (result.kind === "destinationExists") {
+        setReadingRecoveryOffer(null);
+        setReadingNoticeMessage("이 영역에 이미 읽기 자료가 있어 복사하지 않았어요.");
+      } else if (result.kind === "unsupported") {
+        setReadingNoticeMessage("이 브라우저에서는 복사할 수 없어요. 원자료를 내려받아 두세요.");
+      } else if (result.kind === "unverified") {
+        setReadingNoticeMessage("복사했는지 확인하지 못했어요. 새로고침해서 확인해 주세요.");
+        setReadingStorage("unverified");
+      } else if (result.kind !== "cancelled") {
+        setReadingNoticeMessage("복사하지 못했어요. 원래 자료는 그대로 있어요.");
+      }
+    } finally {
+      // 안내 버튼의 진행 표시는 결과 적용 여부와 무관하게 끝낸다.
+      setIsReadingNoticeBusy(false);
+    }
+  }
+
+  function downloadLegacyReadingRaw() {
+    const raw = readLegacyReadingSessionRaw(getReadingStorageEnv());
+    if (raw === null) {
+      setReadingNoticeMessage("내려받을 이전 자료가 없어요.");
+      return;
+    }
+    triggerDownload(rawBackupDownload(raw));
+  }
+
+  function downloadCurrentReadingText() {
+    triggerDownload(originalTextDownload(readingDataRef.current));
+  }
+
+  function downloadStoredReadingRaw() {
+    const key = readingKeyRef.current;
+    if (!key) return;
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw !== null) triggerDownload(rawBackupDownload(raw));
+    } catch {
+      setReadingNoticeMessage("저장소를 읽지 못했어요.");
+    }
+  }
+
+  // 충돌: 사용자가 고를 때만 저장된 내용을 이 창으로 불러온다(내 편집은 덮어쓰기
+  // 전에 내려받을 수 있게 안내에 남는다).
+  function loadStoredReadingIntoWindow() {
+    const owner = readingOwnerRef.current;
+    const key = readingKeyRef.current;
+    if (!owner || !key) return;
+    if (
+      hasUnsavedReadingEdits() &&
+      !window.confirm("이 창의 편집 대신 저장된 내용을 불러올까요? 이 창의 편집은 사라져요.")
+    ) {
+      return;
+    }
+    const stored = readReadingSession(getReadingStorageEnv(), READING_STORAGE_SCOPE, owner);
+    abortReadingAnalysis();
+    bumpReadingGeneration();
+    if (stored.kind === "ok") {
+      applyStoredReadingSession(
+        stored.value.session,
+        { instanceId: stored.value.instanceId, revision: stored.value.revision },
+        true,
+      );
+      setReadingRecoveryOffer(null);
+      setReadingStorage("ready");
+    } else if (stored.kind === "empty") {
+      clearReadingScreen();
+      setReadingDeckConfirmRequired(false);
+      readingBaseRef.current = null;
+      readingPersistedJsonRef.current = null;
+      setReadingStorage("ready");
+    } else {
+      setReadingStorage(stored.kind === "corrupt" ? "corrupt" : "unavailable");
+    }
+    readingRecoveryRef.current.delete(key);
+    setReadingRecoveryAvailable(false);
+    setReadingNoticeMessage("");
+  }
+
+  // 확인 실패: 저장된 값이 이 창이 마지막으로 쓰려던 내용과 같을 때만 그 버전을
+  // 채택하고 자동 저장을 재개한다. 다르면 다른 창 자료일 수 있으므로 충돌로 둔다.
+  function recheckReadingStorage() {
+    const owner = readingOwnerRef.current;
+    if (!owner) return;
+    const stored = readReadingSession(getReadingStorageEnv(), READING_STORAGE_SCOPE, owner);
+    const outcome = recheckAfterUnverified(stored, readingLastAttemptRef.current, readingDataJson);
+    if (outcome.kind === "unavailable") {
+      setReadingNoticeMessage("아직 저장소를 읽을 수 없어요.");
+      return;
+    }
+    if (outcome.kind === "conflict") {
+      setReadingStorage("conflict");
+      setReadingNoticeMessage("");
+      return;
+    }
+    if (outcome.kind === "adopt") {
+      readingBaseRef.current = { instanceId: outcome.instanceId, revision: outcome.revision };
+      readingPersistedJsonRef.current = outcome.json;
+      setReadingNoticeMessage("저장된 것을 확인했어요. 자동 저장을 다시 시작해요.");
+    } else {
+      readingBaseRef.current = null;
+      readingPersistedJsonRef.current = null;
+      setReadingNoticeMessage("지워진 것을 확인했어요. 자동 저장을 다시 시작해요.");
+    }
+    readingLastAttemptRef.current = null;
+    setReadingStorageWarning("");
+    setReadingStorage("ready");
+    // 확인을 기다리는 동안의 편집도 이어서 저장한다.
+    if (readingKeyRef.current) void queueReadingSave(readingKeyRef.current, readingGenerationRef.current);
+  }
+
+  async function resetCorruptReadingStorage() {
+    const owner = readingOwnerRef.current;
+    if (!owner) return;
+    if (!window.confirm("읽을 수 없는 이 영역의 읽기 자료를 지울까요? 먼저 원자료를 내려받아 둘 수 있어요.")) {
+      return;
+    }
+    const ctx = captureReadingContext();
+    readingLastAttemptRef.current = { kind: "remove" };
+    setReadingLastAttemptKind("remove");
+    const result = await removeReadingSession(getReadingStorageEnv(), {
+      scope: READING_STORAGE_SCOPE,
+      owner,
+      expected: "corrupt",
+      isCurrent: ctx.isCurrent,
+    });
+    if (!ctx.isCurrent()) return;
+    if (result.kind === "ok") {
+      readingBaseRef.current = null;
+      readingPersistedJsonRef.current = null;
+      readingLastAttemptRef.current = null;
+      setReadingStorage("ready");
+      setReadingNoticeMessage("지웠어요. 새로 읽을 수 있어요.");
+    } else if (result.kind === "unverified") {
+      // 지워졌을 수도 있다. 성공·보존 어느 쪽으로도 말하지 않고 재확인을 기다린다.
+      setReadingStorage("unverified");
+      setReadingNoticeMessage("");
+    } else if (result.kind === "conflict") {
+      setReadingStorage("conflict");
+    } else if (result.kind !== "cancelled") {
+      setReadingNoticeMessage("지우지 못했어요. 자료는 그대로 있어요.");
+    }
+  }
+
+  function restoreReadingRecovery() {
+    const key = readingKeyRef.current;
+    if (!key) return;
+    const snapshot = readingRecoveryRef.current.get(key);
+    if (!snapshot) return;
+    abortReadingAnalysis();
+    bumpReadingGeneration();
+    // 내용만 되살린다. 저장 버전(base)은 그대로라, 그사이 다른 창이 바꿨으면 충돌로 멈춘다.
+    applyReadingData(snapshot, false);
+    // 덱 확인 전이던 사본은 되살려도 덱 확인을 다시 요구한다(스냅샷의 덱은 비어 있다).
+    setReadingDeckConfirmRequired(requiresDeckConfirmation(snapshot));
+    readingRecoveryRef.current.delete(key);
+    setReadingRecoveryAvailable(false);
+  }
+
+  function downloadReadingRecovery() {
+    const key = readingKeyRef.current;
+    const snapshot = key ? readingRecoveryRef.current.get(key) : null;
+    if (snapshot) triggerDownload(originalTextDownload(snapshot));
+  }
+
+  function discardReadingRecovery() {
+    const key = readingKeyRef.current;
+    if (key) readingRecoveryRef.current.delete(key);
+    setReadingRecoveryAvailable(false);
+  }
+
+  // 전체 사본: 사용자가 이 계정의 덱을 확인하면, 그 덱의 서버 항목과 일치하는
+  // 단어만 서버 사실로 바꾸고 나머지는 가져온 로컬 분류로 둔다.
+  async function confirmImportedReadingDeck() {
+    const deckId = readingSelectedDeckIdRef.current;
+    if (!deckId) return;
+    const ctx = captureReadingContext();
+    const seq = readingDeckRequestSeqRef.current.start();
+    setIsReadingDeckConfirmBusy(true);
+    try {
+      const response = await requestJson<VocabItemsResponse>(`/vocab-items?deck_id=${deckId}`);
+      // 요청 당시 덱이 지금도 선택돼 있고, 이 요청이 마지막일 때만 적용한다.
+      if (!ctx.isCurrentForDeck() || !readingDeckRequestSeqRef.current.isLatest(seq)) return;
+      const deckItems = response.items;
+      setReadingDeckVocabItems(deckItems);
+      setReadingTokens((current) => {
+        const derived = deriveReadingTokens(current, deckItems, deckId);
+        return current.map((token, index) =>
+          derived[index].savedVocabItemId ? derived[index] : token,
+        );
+      });
+      setReadingDeckConfirmRequired(false);
+      setReadingNoticeMessage("이 계정의 덱과 연결했어요.");
+    } catch (error) {
+      if (!ctx.isCurrentForDeck() || !readingDeckRequestSeqRef.current.isLatest(seq)) return;
+      setReadingNoticeMessage(getAuthAwareErrorMessage(error, "덱을 확인하지 못했어요."));
+    } finally {
+      // 마지막 요청만 진행 표시를 끈다(오래된 finally가 새 요청 표시를 끄지 않게).
+      if (readingDeckRequestSeqRef.current.isLatest(seq)) setIsReadingDeckConfirmBusy(false);
+    }
+  }
 
   async function initializeUserSession() {
     await loadCurrentUser();
@@ -1037,15 +1617,26 @@ export default function HomePage() {
     // account epoch; a result from an older epoch must not touch the user,
     // the token or the message.
     const epoch = statsAccountEpochRef.current;
+    const sentToken = getAccessToken();
     setIsLoadingCurrentUser(true);
     try {
       const user = await requestJson<CurrentUser>("/me");
       if (epoch === statsAccountEpochRef.current) {
         setCurrentUser(user);
         setCurrentUserEpoch(epoch);
+        // 토큰 없이 받은 dev 사용자는 등록 계정이 아니라 방문자다.
+        setReadingAccount({
+          epoch,
+          owner: user.auth_provider === "dev" ? { kind: "guest" } : { kind: "user", userId: user.id },
+        });
       }
     } catch (error) {
       if (isHttpError(error, 401)) {
+        // 토큰 없이 보낸 /me의 401은 만료 처리가 이어지지 않으므로, 확인 실패로
+        // 둔다(읽기 복원·저장 금지, "다시 확인" 가능).
+        if (!sentToken && epoch === statsAccountEpochRef.current) {
+          setReadingAccount({ epoch, owner: null });
+        }
         // A stale/invalid/tampered token. apiFetch already cleared it (only
         // if it is still the stored token) and fired AUTH_EXPIRED_EVENT,
         // whose handler resets the stats, falls back to the dev user and
@@ -1056,6 +1647,8 @@ export default function HomePage() {
       if (epoch === statsAccountEpochRef.current) {
         setCurrentUser(null);
         setCurrentUserEpoch(epoch);
+        // 확인 실패: 방문자로 임의 전환하지 않고 읽기 복원·저장을 멈춘다.
+        setReadingAccount({ epoch, owner: null });
         setAuthMessage(getErrorMessage(error, "현재 사용자 정보를 불러오지 못했습니다."));
       }
     } finally {
@@ -1086,6 +1679,11 @@ export default function HomePage() {
       return;
     }
 
+    // 지금 owner의 저장하지 못한 읽기 편집을 먼저 처리한다(취소하면 머문다).
+    if (!(await prepareReadingForManualSwitch())) {
+      return;
+    }
+
     setIsSubmittingAuth(true);
     setAuthMessage("");
     try {
@@ -1109,6 +1707,10 @@ export default function HomePage() {
       resetStatsForAccountChange();
       setCurrentUser(response.user);
       setCurrentUserEpoch(statsAccountEpochRef.current);
+      setReadingAccount({
+        epoch: statsAccountEpochRef.current,
+        owner: { kind: "user", userId: response.user.id },
+      });
       setAuthPassword("");
       setAuthMessage(
         authMode === "login"
@@ -1140,6 +1742,9 @@ export default function HomePage() {
   }
 
   async function handleLogout() {
+    if (!(await prepareReadingForManualSwitch())) {
+      return;
+    }
     clearAccessToken();
     resetStatsForAccountChange();
     setAuthPassword("");
@@ -1254,6 +1859,10 @@ export default function HomePage() {
       return;
     }
 
+    // 새 분석은 이전 작업(상태 저장·일괄 저장·재조회)의 늦은 응답을 무효화한다.
+    bumpReadingWork();
+    const ctx = captureReadingContext();
+    const startToken = getAccessToken();
     setIsReadingAnalyzing(true);
     setReadingMessage("");
     setRecentlySavedVocabItemIds([]);
@@ -1271,6 +1880,12 @@ export default function HomePage() {
         analyzeLongTextInChunks(
           chunks,
           async (chunkText, signal) => {
+            // 각 조각을 보내기 전에: 계정·읽기 세대가 바뀌었거나 토큰이 바뀌었으면
+            // 이전 원문을 새 계정 토큰으로 보내지 않고 멈춘다.
+            if (!ctx.isCurrent() || getAccessToken() !== startToken) {
+              abortController.abort();
+              throw new DOMException("reading context changed", "AbortError");
+            }
             const response = await apiFetch("/analyze", {
               method: "POST",
               headers: {
@@ -1290,12 +1905,19 @@ export default function HomePage() {
           },
           {
             signal: abortController.signal,
-            onProgress: (progress) => setReadingAnalyzeProgress(progress),
+            onProgress: (progress) => {
+              if (ctx.isCurrent()) setReadingAnalyzeProgress(progress);
+            },
           },
         ),
         requestJson<VocabItemsResponse>(`/vocab-items?deck_id=${deckId}`),
       ]);
 
+      if (!ctx.isCurrent()) return;
+      if (!ctx.isCurrentForDeck()) {
+        setReadingMessage("분석하는 동안 읽기 덱이 바뀌어 결과를 적용하지 않았어요. 다시 분석해 주세요.");
+        return;
+      }
       if (outcome.cancelled) {
         // A user-initiated cancel mid-analysis shouldn't wipe out whatever
         // reading session (if any) was already on screen before this
@@ -1320,6 +1942,8 @@ export default function HomePage() {
       setReadingDeckVocabItems(deckItems);
       setAnalyzedReadingText(analyzeText);
       setIsReadingTextCollapsed(true);
+      // 새로 분석한 토큰은 지금 계정 덱의 서버 사실에서 다시 계산됐다.
+      setReadingDeckConfirmRequired(false);
 
       if (outcome.failedChunkCount > 0) {
         setReadingMessage(
@@ -1339,14 +1963,19 @@ export default function HomePage() {
         );
       }
     } catch (error) {
+      if (!ctx.isCurrent()) return;
       setReadingMessage(
         `원문을 분석하지 못했어요. 잠시 후 다시 시도해주세요. (${getErrorMessage(error, "알 수 없는 문제")})`,
       );
       setReadingTokens([]);
     } finally {
-      setIsReadingAnalyzing(false);
-      setReadingAnalyzeProgress(null);
-      readingAnalyzeAbortRef.current = null;
+      if (ctx.isCurrent()) {
+        setIsReadingAnalyzing(false);
+        setReadingAnalyzeProgress(null);
+      }
+      if (readingAnalyzeAbortRef.current === abortController) {
+        readingAnalyzeAbortRef.current = null;
+      }
     }
   }
 
@@ -1371,12 +2000,19 @@ export default function HomePage() {
     deckId: string,
     baseTokens: TokenWithStatus[],
   ) {
-    const epoch = statsAccountEpochRef.current;
+    const ctx = captureReadingContext();
+    const seq = readingDeckRequestSeqRef.current.start();
     try {
       const deckVocabResponse = await requestJson<VocabItemsResponse>(
         `/vocab-items?deck_id=${deckId}`,
       );
-      if (epoch !== statsAccountEpochRef.current) return;
+      if (
+        !ctx.isCurrent() ||
+        readingSelectedDeckIdRef.current !== deckId ||
+        !readingDeckRequestSeqRef.current.isLatest(seq)
+      ) {
+        return;
+      }
       const deckItems = deckVocabResponse.items;
       setReadingDeckVocabItems(deckItems);
       setReadingTokens(deriveReadingTokens(baseTokens, deckItems, deckId));
@@ -1384,6 +2020,14 @@ export default function HomePage() {
       // Restored tokens still render fine with their last-known status;
       // this refresh is a nice-to-have, not required for the tab to work.
     }
+  }
+
+  // 사용자가 읽기 덱을 바꾸면 이전 덱의 확인·재조회 요청은 무효다(응답은 덱 검사로
+  // 버려지고, 그 진행 표시도 여기서 끈다).
+  function handleReadingDeckChange(deckId: string) {
+    readingDeckRequestSeqRef.current.invalidate();
+    setIsReadingDeckConfirmBusy(false);
+    setReadingSelectedDeckId(deckId);
   }
 
   function handleReadingSelectedTokenKeyChange(key: string | null) {
@@ -1402,6 +2046,10 @@ export default function HomePage() {
     ) {
       return;
     }
+    // 이전 분석·상태 저장·일괄 저장·재조회의 늦은 응답이 초기화한 화면을 다시
+    // 채우지 않도록 작업을 바꾸고 분석을 멈춘다.
+    abortReadingAnalysis();
+    bumpReadingGeneration();
     setReadingText("");
     setAnalyzedReadingText("");
     setReadingTokens([]);
@@ -1414,7 +2062,47 @@ export default function HomePage() {
     setReadingScrollFraction(null);
     setReadingTabletDocumentScrollFraction(null);
     setIsReadingSessionRestored(false);
-    clearReadingSession();
+    setReadingDeckConfirmRequired(false);
+    readingDataRef.current = { ...emptyReadingData(), deckId: readingSelectedDeckIdRef.current };
+    // 삭제는 저장 줄 뒤에 세운다: 이미 예약·진행 중인 저장이 끝난 뒤의 버전으로 지운다.
+    const key = readingKeyRef.current;
+    if (key) {
+      const run = readingSaveChainRef.current.then(() => removeCurrentReadingSession(key));
+      readingSaveChainRef.current = run.catch(() => undefined);
+    }
+  }
+
+  // 사용자가 확인한 초기화: 지금 owner 키 하나만, 이 창이 아는 버전일 때만 지운다.
+  async function removeCurrentReadingSession(key: string) {
+    const owner = readingOwnerRef.current;
+    if (!owner || readingKeyRef.current !== key) return;
+    const base = readingBaseRef.current;
+    if (!base || readingStorageStatusRef.current !== "ready") {
+      if (readingStorageStatusRef.current === "ready") readingPersistedJsonRef.current = null;
+      return;
+    }
+    readingLastAttemptRef.current = { kind: "remove" };
+    setReadingLastAttemptKind("remove");
+    const sameOwner = () => readingKeyRef.current === key;
+    const result = await removeReadingSession(getReadingStorageEnv(), {
+      scope: READING_STORAGE_SCOPE,
+      owner,
+      expected: base,
+      isCurrent: sameOwner,
+    });
+    if (!sameOwner()) return;
+    if (result.kind === "ok") {
+      readingBaseRef.current = null;
+      readingPersistedJsonRef.current = null;
+      readingLastAttemptRef.current = null;
+    } else if (result.kind === "conflict") {
+      setReadingStorage("conflict");
+    } else if (result.kind === "unverified") {
+      // 지워졌는지 알 수 없다: 자동 저장을 멈추고 재확인·내려받기만 둔다.
+      setReadingStorage("unverified");
+    } else if (result.kind !== "cancelled") {
+      setReadingStorageWarning("이 기기에 저장된 읽기 자료를 지우지 못했어요. 저장된 자료는 그대로 있어요.");
+    }
   }
 
   // Reading tab's own empty-state "샘플 문장으로 체험" button -- only fills
@@ -1435,6 +2123,10 @@ export default function HomePage() {
   // in-progress reading session when jumping in from a different tab, the
   // same way resetReadingSession above already confirms before clearing.
   function startSampleReadingFromHome() {
+    if (!readingKeyRef.current || readingHydratedKey !== readingKeyRef.current) {
+      setActiveTab("reading");
+      return;
+    }
     const hasExistingReadingWork =
       readingText.trim() !== "" || readingTokens.length > 0;
     if (
@@ -1450,6 +2142,8 @@ export default function HomePage() {
     // actually starts, so a still-empty deckId below would otherwise leave
     // a stale CTA/message from the old (possibly days-old, restored)
     // session sitting under the freshly-loaded sample text.
+    abortReadingAnalysis();
+    bumpReadingWork();
     setRecentlySavedVocabItemIds([]);
     setReadingMessage("");
     setCurrentSelectedTokenKey(null);
@@ -1486,6 +2180,11 @@ export default function HomePage() {
     if (!token || !readingSelectedDeckId) {
       return;
     }
+    if (readingDeckConfirmRequired) {
+      setReadingMessage("가져온 분류는 아직 이 계정 단어장과 연결되지 않았어요. 아래 안내에서 덱을 확인해 주세요.");
+      return;
+    }
+    const ctx = captureReadingContext();
     if (token.status === status) {
       return;
     }
@@ -1516,6 +2215,9 @@ export default function HomePage() {
         status,
         readingDeckVocabItems,
       );
+      // 이미 서버에 도착한 저장은 되돌리지 않는다. 계정·작업·덱이 바뀌었으면
+      // 화면에만 적용하지 않는다.
+      if (!ctx.isCurrentForDeck()) return;
       setReadingDeckVocabItems((current) => {
         const exists = current.some((item) => item.id === saved.id);
         return exists
@@ -1528,6 +2230,7 @@ export default function HomePage() {
         ),
       );
     } catch (error) {
+      if (!ctx.isCurrentForDeck()) return;
       setReadingTokens((current) =>
         current.map((item, itemIndex) =>
           itemIndex === index ? previousToken : item,
@@ -1563,6 +2266,8 @@ export default function HomePage() {
     const toPersist = targets.filter((target) => !target.alreadySaved);
     const skipped = targets.filter((target) => target.alreadySaved);
 
+    const ctx = captureReadingContext();
+    const seq = readingBatchSeqRef.current.start();
     setIsSavingReadingBatch(true);
     setReadingMessage("");
 
@@ -1578,6 +2283,12 @@ export default function HomePage() {
       ),
     );
 
+    // 이미 서버에 도착한 저장은 되돌리지 않는다. 계정·작업·덱이 바뀌었거나 더
+    // 새 일괄 저장이 있으면 결과를 화면에 적용하지 않는다.
+    if (!ctx.isCurrentForDeck() || !readingBatchSeqRef.current.isLatest(seq)) {
+      if (readingBatchSeqRef.current.isLatest(seq)) setIsSavingReadingBatch(false);
+      return [];
+    }
     const succeeded: { index: number; item: VocabItem }[] = [];
     let failureCount = 0;
     results.forEach((result, resultIndex) => {
@@ -1684,6 +2395,10 @@ export default function HomePage() {
       isSavingReadingBatch ||
       selectedTokenIndexes.length === 0
     ) {
+      return [];
+    }
+    if (readingDeckConfirmRequired) {
+      setReadingMessage("가져온 분류는 아직 이 계정 단어장과 연결되지 않았어요. 아래 안내에서 덱을 확인해 주세요.");
       return [];
     }
 
@@ -1795,6 +2510,19 @@ export default function HomePage() {
   // Mid-session token expiry: same account boundary as sign-out -- clear the
   // stats/records first, then fall back to the dev account like the /me
   // check does, and reload the stats data for it.
+  // 다른 창에서 로그인·로그아웃·토큰 교체가 일어나면(이 창은 storage 이벤트로
+  // 안다) 만료와 같은 경계를 지난다: 이전 내용을 즉시 숨기고 다시 확인한다.
+  const handleExternalAuthChangeRef = useRef<() => void>(() => {});
+  handleExternalAuthChangeRef.current = () => {
+    resetStatsForAccountChange();
+    const epoch = statsAccountEpochRef.current;
+    setAuthMessage("다른 창에서 계정이 바뀌어 화면을 다시 불러왔어요.");
+    void (async () => {
+      await loadCurrentUser();
+      if (epoch !== statsAccountEpochRef.current) return;
+      await refreshUserScopedData();
+    })();
+  };
   const handleAuthExpiredRef = useRef<() => void>(() => {});
   handleAuthExpiredRef.current = () => {
     // Also clears the expired account's study queue and deck choice (학습 계획
@@ -1842,6 +2570,9 @@ export default function HomePage() {
     setSelectedVocabDeckId("");
     setSelectedStudyDeckId("all");
     resetStudySession();
+    // 읽기: 원문·토큰·서버 IDs·선택·위치·안내·진행 상태를 비우고 ReadingTab
+    // 자식 상태(바구니·검색·옵션)도 새로 만든다. 다음 owner 확인 뒤 그 키만 연다.
+    resetReadingForBoundary();
   }
 
   // 기록 탭의 "최근 담은 단어" / "자주 틀린 단어" -- 이미 존재하는
@@ -2502,7 +3233,11 @@ export default function HomePage() {
   // Applies a fresh meaning_ko everywhere this vocab item might already be
   // cached across tabs, so the edit shows up immediately without needing a
   // full reload of each tab's own data.
-  function applyUpdatedVocabItemEverywhere(updated: VocabItem) {
+  function applyUpdatedVocabItemEverywhere(
+    updated: VocabItem,
+    options: { includeReading?: boolean } = {},
+  ) {
+    const includeReading = options.includeReading ?? true;
     const replaceIfMatch = (item: VocabItem) =>
       item.id === updated.id ? updated : item;
     setVocabItems((current) => current.map(replaceIfMatch));
@@ -2517,6 +3252,7 @@ export default function HomePage() {
           : item,
       ),
     );
+    if (!includeReading) return;
     setReadingTokens((current) =>
       current.map((token) =>
         token.savedVocabItemId === updated.id
@@ -2540,6 +3276,13 @@ export default function HomePage() {
       return;
     }
 
+    const epoch = statsAccountEpochRef.current;
+    const readingCtx = captureReadingContext();
+    const editedItemId = meaningEditItemId;
+    const seq = meaningEditSeqRef.current.start();
+    // 같은 편집 창(같은 항목)의 마지막 요청일 때만 편집 창 상태를 바꾼다.
+    const isSameEdit = () =>
+      meaningEditSeqRef.current.isLatest(seq) && meaningEditItemIdRef.current === editedItemId;
     setIsSavingMeaningEdit(true);
     setMeaningEditMessage("");
 
@@ -2551,14 +3294,21 @@ export default function HomePage() {
           body: JSON.stringify({ meaning_ko: trimmed }),
         },
       );
-      applyUpdatedVocabItemEverywhere(updated);
+      if (epoch !== statsAccountEpochRef.current) return;
+      // 서버 항목은 같은 계정의 사실이므로 목록에는 반영하되, 읽기 작업이
+      // 바뀌었으면 새 작업의 토큰은 건드리지 않는다.
+      applyUpdatedVocabItemEverywhere(updated, { includeReading: readingCtx.isCurrent() });
+      if (!isSameEdit()) return;
       setMeaningEditItemId(null);
       setMeaningEditDraft("");
       setMeaningEditMessage("");
     } catch (error) {
+      if (epoch !== statsAccountEpochRef.current || !isSameEdit()) return;
       setMeaningEditMessage(getAuthAwareErrorMessage(error, "뜻 수정에 실패했습니다."));
     } finally {
-      setIsSavingMeaningEdit(false);
+      if (epoch === statsAccountEpochRef.current && meaningEditSeqRef.current.isLatest(seq)) {
+        setIsSavingMeaningEdit(false);
+      }
     }
   }
 
@@ -2578,6 +3328,14 @@ export default function HomePage() {
       return;
     }
 
+    const epoch = statsAccountEpochRef.current;
+    const target = meaningFeedbackTarget;
+    const seq = feedbackSeqRef.current.start();
+    // 같은 신고 창의 마지막 요청일 때만 그 창의 안내를 바꾼다.
+    const isSameReport = () =>
+      epoch === statsAccountEpochRef.current &&
+      feedbackSeqRef.current.isLatest(seq) &&
+      meaningFeedbackTargetRef.current === target;
     setIsSubmittingFeedback(true);
     setFeedbackMessage("");
 
@@ -2595,11 +3353,15 @@ export default function HomePage() {
           source: meaningFeedbackTarget.source,
         }),
       });
+      if (!isSameReport()) return;
       setFeedbackMessage("신고를 보냈어요. 사전 품질 개선에 참고할게요.");
     } catch (error) {
+      if (!isSameReport()) return;
       setFeedbackMessage(getAuthAwareErrorMessage(error, "신고 접수에 실패했습니다."));
     } finally {
-      setIsSubmittingFeedback(false);
+      if (epoch === statsAccountEpochRef.current && feedbackSeqRef.current.isLatest(seq)) {
+        setIsSubmittingFeedback(false);
+      }
     }
   }
 
@@ -3324,6 +4086,12 @@ export default function HomePage() {
 
   // 이전 분류 초안의 원문을 읽기 입력칸으로만 옮긴다(자동 분석·초안 삭제 없음).
   function openLegacyDraftTextInReading(text: string): boolean {
+    // 지금 확인된 owner의 읽기 영역에만 원문을 연다. 분석·삭제·계정 귀속은
+    // 하지 않는다(저장은 그 owner의 자동 저장 규칙을 따른다).
+    if (!readingKeyRef.current || readingHydratedKey !== readingKeyRef.current) {
+      window.alert("계정을 확인한 뒤 다시 시도해 주세요.");
+      return false;
+    }
     const hasExistingReadingWork =
       readingText.trim() !== "" || readingTokens.length > 0;
     if (
@@ -3334,6 +4102,9 @@ export default function HomePage() {
     ) {
       return false;
     }
+    abortReadingAnalysis();
+    bumpReadingGeneration();
+    setReadingDeckConfirmRequired(false);
     setReadingText(text);
     setAnalyzedReadingText("");
     setReadingTokens([]);
@@ -3477,8 +4248,59 @@ export default function HomePage() {
           />
         ) : null}
 
-        {activeTab === "reading" ? (
+        {activeTab === "reading" && (readingGateState !== "ready" || readingHydratedKey !== readingOwnerKey) ? (
+          <ReadingAccountGate
+            failed={readingGateState === "failed"}
+            onRetry={() => void loadCurrentUser()}
+          />
+        ) : null}
+
+        {activeTab === "reading" && readingGateState === "ready" && readingHydratedKey === readingOwnerKey ? (
+          <ReadingStorageNotice
+            ownerLabel={readingOwnerLabel()}
+            status={readingStorageStatus}
+            unverifiedAction={readingLastAttemptKind}
+            offer={readingRecoveryOffer}
+            hasUnsavedRecovery={readingRecoveryAvailable}
+            deckConfirm={
+              readingDeckConfirmRequired
+                ? {
+                    deckName:
+                      decks.find((deck) => String(deck.id) === readingSelectedDeckId)?.name ?? "",
+                  }
+                : null
+            }
+            busy={isReadingNoticeBusy}
+            deckConfirmBusy={isReadingDeckConfirmBusy}
+            message={readingNoticeMessage}
+            saveWarning={readingStorageWarning}
+            onCopy={(source, mode) => void copyIntoCurrentReading(source, mode)}
+            onDownloadLegacy={downloadLegacyReadingRaw}
+            onDismissOffer={() => setReadingRecoveryOffer(null)}
+            onDownloadCurrent={downloadCurrentReadingText}
+            onLoadStored={loadStoredReadingIntoWindow}
+            onRecheck={recheckReadingStorage}
+            onDownloadStoredRaw={downloadStoredReadingRaw}
+            onResetCorrupt={() => void resetCorruptReadingStorage()}
+            onRestoreRecovery={restoreReadingRecovery}
+            onDownloadRecovery={downloadReadingRecovery}
+            onDiscardRecovery={discardReadingRecovery}
+            onConfirmDeck={() => void confirmImportedReadingDeck()}
+          />
+        ) : null}
+
+        {readingSwitchPrompt ? (
+          <ReadingSwitchDialog
+            reason={readingSwitchPrompt.reason}
+            onStay={() => resolveReadingSwitch(false)}
+            onDownload={downloadCurrentReadingText}
+            onContinue={() => resolveReadingSwitch(true)}
+          />
+        ) : null}
+
+        {activeTab === "reading" && readingGateState === "ready" && readingHydratedKey === readingOwnerKey ? (
           <ReadingTab
+            key={`reading-${readingGeneration}`}
             text={readingText}
             analyzedText={analyzedReadingText}
             tokens={readingTokens}
@@ -3492,7 +4314,7 @@ export default function HomePage() {
             analyzeProgress={readingAnalyzeProgress}
             onCancelAnalyze={cancelReadingAnalyze}
             message={readingMessage}
-            storageWarning={readingStorageWarning}
+            storageWarning=""
             isTextCollapsed={isReadingTextCollapsed}
             isSavingBatch={isSavingReadingBatch}
             recentlySavedCount={recentlySavedVocabItemIds.length}
@@ -3504,7 +4326,7 @@ export default function HomePage() {
             onTabletDocumentScrollChange={setReadingTabletDocumentScrollFraction}
             onTextChange={setReadingText}
             onLoadSampleText={loadSampleReadingText}
-            onSelectedDeckChange={setReadingSelectedDeckId}
+            onSelectedDeckChange={handleReadingDeckChange}
             onAnalyze={handleReadingAnalyze}
             onStatusChange={(index, status) =>
               void handleReadingStatusChange(index, status)
