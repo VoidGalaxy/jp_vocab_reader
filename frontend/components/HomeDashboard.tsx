@@ -1,11 +1,10 @@
 "use client";
 
-import type { StudyStats } from "./types";
+import type { HomeReviewView } from "./srsMetrics";
 
 type HomeDashboardProps = {
-  isDevUser: boolean;
-  studyStats: StudyStats | null;
-  isStudyStatsLoading: boolean;
+  /** 복습 카드 표시(Gate D-1): page가 legacy·FSRS 지표에서 계산한다. */
+  reviewView: HomeReviewView;
   onStartReading: () => void;
   onTryWithSample: () => void;
   onStartTodayReview: () => void;
@@ -19,8 +18,6 @@ type HomeDashboardProps = {
   onGoToStats: () => void;
 };
 
-type ReviewState = "login" | "loading" | "zero" | "due";
-
 // Home B2 binding scene (references/mockups/home-b2-binding-final/gateA).
 // One textless photographed scene -- a bound cover above a six-file tray --
 // with every word and hit zone as live DOM on top of it. Desktop (>=1024px)
@@ -31,9 +28,7 @@ type ReviewState = "login" | "loading" | "zero" | "due";
 // (tablet) or 2+2+2 (mobile, compact) stay one continuous tray. No text or
 // button is baked into any image.
 export function HomeDashboard({
-  isDevUser,
-  studyStats,
-  isStudyStatsLoading,
+  reviewView,
   onStartReading,
   onTryWithSample,
   onStartTodayReview,
@@ -44,41 +39,21 @@ export function HomeDashboard({
   onGoToPlan,
   onGoToStats,
 }: HomeDashboardProps) {
-  const dueTodayCount = studyStats?.due_today_count ?? 0;
-  const reviewState: ReviewState = isDevUser
-    ? "login"
-    : isStudyStatsLoading
-      ? "loading"
-      : dueTodayCount > 0
-        ? "due"
-        : "zero";
-
+  const reviewState = reviewView.state;
+  // 확인 중·실패·확인 불가·실제 0을 구별한다(srsMetrics.homeReviewView). 실패를 0으로 보이지 않는다.
   const review = {
-    login: {
-      value: "로그인 필요",
-      note: "로그인하고 기록 남기기 →",
-      label: "로그인하고 복습 기록 남기기",
-      onClick: onOpenAccount,
-    },
-    loading: {
-      value: "확인 중",
-      note: "잠시만요",
-      label: "오늘 복습 수 확인 중",
-      onClick: undefined,
-    },
-    zero: {
-      value: "0개",
-      note: "오늘은 모두 끝냈어요",
-      label: "오늘 복습 0개, 복습 탭으로 이동",
-      onClick: onGoToStudy,
-    },
-    due: {
-      value: `${dueTodayCount}개`,
-      note: "복습 시작 →",
-      label: `오늘 복습 ${dueTodayCount}개 시작하기`,
-      onClick: onStartTodayReview,
-    },
-  }[reviewState];
+    value: reviewView.value,
+    note: reviewView.note,
+    label: reviewView.aria,
+    onClick:
+      reviewView.action === "start"
+        ? onStartTodayReview
+        : reviewView.action === "study"
+          ? onGoToStudy
+          : reviewView.action === "account"
+            ? onOpenAccount
+            : undefined,
+  };
 
   const files = [
     { key: "reading", name: "읽기", hint: "원문에서 시작", onClick: onStartReading },
@@ -130,7 +105,7 @@ export function HomeDashboard({
               aria-busy={reviewState === "loading" ? true : undefined}
               aria-label={review.label}
             >
-              <span className="home-binding-review-label">오늘 복습</span>
+              <span className="home-binding-review-label">{reviewView.label}</span>
               <strong className="home-binding-review-value">{review.value}</strong>
               <span className="home-binding-review-note">{review.note}</span>
             </button>

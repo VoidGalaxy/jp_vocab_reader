@@ -4,6 +4,7 @@ from datetime import timedelta
 from typing import Any
 
 from app.database import get_connection, now_iso, now_utc, row_to_dict
+from app.repositories.stats_history_repository import build_today_seoul
 from app.repositories.lexeme_repository import (
     get_lexeme_review_rating_counts_since,
     get_subscribed_lexeme_stats_summary,
@@ -218,6 +219,9 @@ def build_stats(user_id: int, deck_id: int | None = None) -> dict[str, Any]:
         "lexeme_hard_count": lexeme_hard_count,
         "vocab_completed_today": vocab_completed_today,
         "lexeme_completed_today": lexeme_completed_today,
+        # Gate D-1: Asia/Seoul "today", always account-wide. The UTC fields
+        # above are unchanged (APPROVAL 2026-10-09 item 9).
+        "today_seoul": build_today_seoul(user_id, now),
     }
 
 

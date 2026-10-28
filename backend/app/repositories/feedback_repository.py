@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.account_write import begin_account_write
 from app.database import get_connection, now_iso, row_to_dict
 
 
@@ -19,6 +20,7 @@ def create_meaning_feedback(
 ) -> None:
     timestamp = now_iso()
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         connection.execute(
             """
             INSERT INTO meaning_feedback (
@@ -71,6 +73,8 @@ def create_app_feedback(
 ) -> None:
     timestamp = now_iso()
     with get_connection() as connection:
+        if user_id is not None:
+            begin_account_write(connection, user_id)
         connection.execute(
             """
             INSERT INTO app_feedback (

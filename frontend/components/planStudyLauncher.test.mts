@@ -155,3 +155,35 @@ test("큐를 하루량으로 자르지 않음: 받은 그대로 교체", async (
   await p;
   assert.equal(state.replaced[0].items.length, 30);
 });
+
+// ---- Gate C-2c 보정: 실제 교체 뒤에만 started, 빈 큐 원인 ---------------------------------
+
+test("교체를 거절하면(false) started가 아니고 기존 세션 그대로", async () => {
+  let replaced = 0;
+  const launcher = createPlanStudyLauncher<string>({
+    getSession: () => ({ id: 1, position: 0, inProgress: false, remaining: 0 }),
+    getAccountEpoch: () => 0,
+    fetchQueue: async () => ["prepared"],
+    replaceSession: () => { replaced += 1; return false; },
+    resumeSession: () => {},
+  });
+  const outcome = await launcher.start(target);
+  assert.equal(outcome.kind, "sessionChanged");
+  assert.equal(replaced, 1);
+});
+
+test("emptyReason이 원인을 주면 교체하지 않고 empty와 원인", async () => {
+  let replaced = 0;
+  for (const reason of ["goal_reached", "new_unknown", "no_cards"] as const) {
+    const launcher = createPlanStudyLauncher<string>({
+      getSession: () => ({ id: 1, position: 0, inProgress: false, remaining: 0 }),
+      getAccountEpoch: () => 0,
+      fetchQueue: async () => ["prepared-but-empty"],
+      emptyReason: () => reason,
+      replaceSession: () => { replaced += 1; },
+      resumeSession: () => {},
+    });
+    assert.deepEqual(await launcher.start(target), { kind: "empty", reason });
+  }
+  assert.equal(replaced, 0);
+});

@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
+from app.account_write import begin_account_write
 from app.database import get_connection, now_iso, row_to_dict
 from app.schemas import DeckPackage
 
@@ -116,6 +117,7 @@ def import_deck_package(user_id: int, package: DeckPackage) -> dict[str, Any]:
     seen_custom_terms: set[str] = set()
 
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         deck_name = get_unique_imported_deck_name(
             connection, user_id, str(deck_payload.get("name") or "")
         )
@@ -179,6 +181,11 @@ def import_deck_package(user_id: int, package: DeckPackage) -> dict[str, Any]:
                 ),
             )
             imported_vocab_count += 1
+
+        # Gate C-2a: the deck was created in this transaction, so every card in
+        # it is new; FSRS-mode accounts get fresh FSRS cards (legacy otherwise).
+        from app.srs.storage import initialize_new_personal_cards
+        initialize_new_personal_cards(connection, user_id, deck_id=deck_id)
 
         for raw_term in custom_term_payloads:
             values = {

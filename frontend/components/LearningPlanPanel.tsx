@@ -84,6 +84,17 @@ export type LearningPlanPanelProps = {
   draftMemory?: PlanDraftMemory;
   /** 테스트용 시계 주입. 기본은 현재 시각. */
   now?: () => Date;
+  /**
+   * FSRS 계정(Gate D-1): 저장된 계획 덱 범위의 오늘 새 단어 문구(계획 하루량 기준).
+   * legacy 계정이면 null을 돌려준다(줄을 보이지 않음). 실패하면 throw.
+   */
+  loadTodayNew?: (deck: PlanDeckRef, dailyWords: number | null) => Promise<string | null>;
+  /**
+   * 오늘 새 단어를 다시 조회하라는 명시적 신호(Gate D-1 보정). 값이 바뀌면 같은 날·같은 계획이어도
+   * 다시 읽는다(복습 방식 판별 완료, 앱 복귀, 서울 자정). loadTodayNew 함수가 렌더마다 새로 만들어져도
+   * 이 값이 그대로면 다시 조회하지 않는다.
+   */
+  todayNewRefreshKey?: string;
 };
 
 const DEFAULT_DAILY_WORDS = 10;
@@ -136,6 +147,8 @@ export function LearningPlanPanel({
   footer,
   draftMemory,
   now = () => new Date(),
+  loadTodayNew,
+  todayNewRefreshKey,
 }: LearningPlanPanelProps) {
   const storageKey = account ? learningPlanStorageKey(storageScope, account.userId) : null;
 
@@ -289,6 +302,41 @@ export function LearningPlanPanel({
     // request/getErrorStatus는 부모가 매번 새로 만들 수 있어 의존성에서 뺀다.
   }, [isLoaded, account?.userId, storageKey, currentDeckKey, retryToken, localToday]);
 
+  // ---- 오늘 새 단어(계획 범위, FSRS 계정만, Gate D-1) ----
+  // 저장된 계획의 덱·하루량 기준. 첫 학습 진도(first-review-v1)·예상일과는 별개 지표다.
+  const [todayNew, setTodayNew] = useState<{ key: string; text: string } | null>(null);
+  const todayNewRequestRef = useRef(0);
+  const savedDeckKey = saved?.deck ? deckKey(saved.deck) : null;
+  const savedDailyWords = saved ? saved.dailyWords : null;
+  useEffect(() => {
+    const deck = saved?.deck ?? null;
+    if (!isLoaded || !account || !deck || !loadTodayNew) {
+      todayNewRequestRef.current += 1;
+      setTodayNew(null);
+      return;
+    }
+    const key = `${deckKey(deck)}:${savedDailyWords ?? ""}`;
+    const epoch = epochRef.current;
+    const id = ++todayNewRequestRef.current;
+    // 같은 계획을 다시 읽을 때는 직전 문구를 두고(깜빡임 없음), 계획이 바뀌었으면 확인 중.
+    setTodayNew((current) => (current && current.key === key ? current : { key, text: "오늘 이 덱 새 단어 확인 중" }));
+    loadTodayNew(deck, savedDailyWords).then(
+      (text) => {
+        if (epoch !== epochRef.current || id !== todayNewRequestRef.current) return;
+        setTodayNew(text === null ? null : { key, text });
+      },
+      () => {
+        if (epoch !== epochRef.current || id !== todayNewRequestRef.current) return;
+        setTodayNew({ key, text: "오늘 이 덱 새 단어: 확인할 수 없음" });
+      },
+    );
+    // loadTodayNew는 부모가 매번 새로 만들 수 있어 의존성에서 뺀다(있고 없음만 본다). 다시 읽는 시점은
+    // todayNewRefreshKey가 정한다. 늦은 응답은 계정 세대(epochRef)와 요청 번호로 버린다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, account?.userId, savedDeckKey, savedDailyWords, localToday, retryToken, Boolean(loadTodayNew), todayNewRefreshKey]);
+  const todayNewText =
+    todayNew && savedDeckKey !== null && savedDeckKey === currentDeckKey ? todayNew.text : null;
+
   // ---- 다른 창의 같은 키 변경 ----
   const isDirty = !(saved ? sameDraft(saved, draft) : !touched);
   const dirtyRef = useRef(isDirty);
@@ -378,7 +426,13 @@ export function LearningPlanPanel({
         return;
       case "empty":
         setConfirmState(null);
-        setLaunchMessage(emptyMessage(target.mode));
+        setLaunchMessage(
+          outcome.reason === "goal_reached"
+            ? "오늘 새 단어 목표를 이미 채웠어요. 지금 복습은 그대로예요."
+            : outcome.reason === "new_unknown"
+              ? "오늘 새 단어 수를 확인할 수 없어 새 단어를 멈췄어요. 지금 복습은 그대로예요."
+              : emptyMessage(target.mode),
+        );
         return;
       case "failed":
         setConfirmState(null);
@@ -392,7 +446,7 @@ export function LearningPlanPanel({
 
   async function launch(mode: PlanStudyMode) {
     if (!studyLauncher || !saved?.deck) return;
-    const target: PlanStudyTarget = { deck: saved.deck, mode };
+    const target: PlanStudyTarget = { deck: saved.deck, mode, dailyNew: saved.dailyWords };
     const epoch = epochRef.current;
     setLaunchMessage("");
     setIsStarting(true);
@@ -492,6 +546,7 @@ export function LearningPlanPanel({
               mode: confirmState.target.mode,
               remaining: confirmState.session.remaining,
               busy: confirmState.busy,
+              guard: confirmState.session.guard,
             } satisfies PlanStartConfirm)
           : null
       }
@@ -501,6 +556,7 @@ export function LearningPlanPanel({
       footer={footer}
       signedOut={!account}
       onRetryProgress={() => setRetryToken((n) => n + 1)}
+      todayNewText={todayNewText}
       onGoToHistory={onGoToHistory}
     />
   );

@@ -4086,6 +4086,11 @@ button {
   font-size: 15px;
 }
 
+/* Gate D-1: 조회 실패·확인 불가. 0과 구별되는 문구라 값 글씨를 줄인다. */
+.home-binding-review--unknown .home-binding-review-value {
+  font-size: 15px;
+}
+
 .home-binding-review--loading .home-binding-review-value {
   color: #5b6f64;
   font-weight: 700;
@@ -10191,6 +10196,11 @@ input.reading-vocab-sticker-toggle:checked {
   margin-top: 9px;
 }
 
+/* FSRS 연습(Gate C-2c): 평가 대신 두 버튼. 같은 버튼 모양을 두 칸으로 나눈다. */
+.study-book-rates--practice {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .study-book .study-book-rate {
   --tone: var(--sb-good);
   display: flex;
@@ -10267,6 +10277,19 @@ input.reading-vocab-sticker-toggle:checked {
 .study-book-saving {
   margin-right: auto;
   color: var(--sb-green);
+}
+
+/* FSRS 평가 시도 상태(Gate C-2c): 전송 중·결과 미확정·연습 안내. 도구 줄과 따로 둔다. */
+.study-book-attempt {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  margin-top: 6px;
+  color: var(--sb-green);
+  font-size: 11.5px;
+  line-height: 1.4;
 }
 
 .study-book-done-stats {

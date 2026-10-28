@@ -17,12 +17,14 @@
 | 순서 | 작업 | 완료 조건 |
 | --- | --- | --- |
 | 1 | 문서·인계 정리 | 현재 7탭과 계약·미검증·제외 자료를 문서화하고 검토·승인 후 반영 |
-| 2 | 읽기 저장 계정 경계 설계 | 기기 공통 자료의 소유·이전·보존 정책 승인 후 격리 구현·검증 |
+| 2 | [읽기 저장 계정 경계 설계](plans/reading-storage-boundary/PLAN.md) | 기기 공통 자료의 소유·이전·보존 정책 승인 후 격리 구현·검증 |
 | 3 | 실제 로컬 PostgreSQL 검증 | 새 빈 테스트 DB에서 진도·권한·신규 큐·통계 날짜 비교, 운영 DB 사용 금지 |
 | 4 | SRS·학습 완료 기준 설계 | 첫 평가/기억 안정/숙련 정의와 간격·계획 예측 기준 승인 후 별도 구현 |
 | 5 | 운영 준비 재점검 | 인증 정책·백업 복구·오류 관찰·배포·핵심 흐름 검증의 증거 확보 |
 
 문서 정리 완료는 제품 코드 변경이나 운영 검증 완료를 뜻하지 않는다. 전체 상용화 범위가 확정되기 전 임의의 총 진행률을 부여하지 않는다.
+
+- SRS 전환 CLI 최초 `apply`(운영 준비 5의 일부): 합성 검증(C11)과 실제 로컬 PG 검증(C12)을 마감했다([계획·실행 기록](plans/srs-improvement/gate-e/OPS_APPLY_REAL_PG_PLAN.md), [증거 목록](plans/srs-improvement/gate-e/OPS_APPLY_REAL_PG_EVIDENCE.md)). 재개·완료 재호출·상태 보정은 미구현이고, 운영 활성화·실제 장애·실제 백업·복원 검증은 포함하지 않는다. 쓰기 프로필의 시퀀스 USAGE는 [최소 권한 조정](plans/srs-improvement/gate-e/OPS_APPLY_SEQUENCE_PRIVILEGE_PLAN.md)으로 계약에서 뺐고, PostgreSQL 18.6 최초 `apply` 경로에서 합성 회귀와 실제 로컬 PG 재확인(3/3)으로 마감했다. 미완료 실행 재개: [resume 계약·합성 구현](plans/srs-improvement/gate-e/OPS_MIGRATION_RESUME_PLAN.md) RS2·RS2b·RS3 합성 마감, 실제 로컬 PG 검증은 [RS4 계획·기록](plans/srs-improvement/gate-e/OPS_MIGRATION_RESUME_REAL_PG_PLAN.md) 1차 실행은 G1 시험 장치 결함으로 중단(0/25), PostgreSQL 18.6 개인 카드 resume 경로로 마감(1차 0/25·2차 25/25·보완 3/3 따로 집계, [증거 목록](plans/srs-improvement/gate-e/OPS_MIGRATION_RESUME_REAL_PG_EVIDENCE.md)). 구독 카드 재개·실제 장애·운영 실행은 미검증, 마감 검토 대기.
 
 ### 선택적 후속 작업
 

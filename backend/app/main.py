@@ -4,6 +4,9 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.account_write import AccountWriteError
 
 from app.ai_explainer import (
     AIExplanationError,
@@ -91,6 +94,8 @@ from app.repositories.vocab_repository import (
 )
 from app.dictionary_service import lookup_meaning
 from app.settings import APP_NAME, get_cors_allow_origins
+from app.srs.storage import SrsWriteError
+from app.srs.queue import QueueError as StudyQueueError, build_queue as build_study_queue, parse_request as parse_study_queue_request
 from app.schemas import (
     LearningPlanProgressResponse,
     ANALYZE_TEXT_MAX_LENGTH,
@@ -120,6 +125,7 @@ from app.schemas import (
     MAX_FEEDBACK_FIELD_LENGTH,
     LexemeProgressUpdateRequest,
     LexemeReviewRequest,
+    LexemeReviewResponse,
     LexemeWordProgressResponse,
     MeaningFeedbackRequest,
     MeaningFeedbackResponse,
@@ -132,8 +138,12 @@ from app.schemas import (
     StatsHistoryDayResponse,
     StatsHistoryMonthResponse,
     StudyItemsResponse,
+    StudyQueueResponse,
     StudyLexemeItemResponse,
     StudyReviewRequest,
+    PersonalReviewResponse,
+    FsrsReviewResponse,
+    MinimizedPersonalReceiptReplay,
     RESULT_TO_RATING,
     VALID_APP_FEEDBACK_CATEGORIES,
     VALID_REVIEW_RATINGS,
@@ -147,6 +157,11 @@ from app.schemas import (
 
 
 app = FastAPI(title="JP Vocab Reader API")
+
+
+@app.exception_handler(AccountWriteError)
+async def account_write_error_handler(request: Request, error: AccountWriteError) -> JSONResponse:
+    return JSONResponse(status_code=error.status_code, content={"detail": error.code})
 
 app.add_middleware(
     CORSMiddleware,
@@ -510,6 +525,8 @@ def patch_deck(deck_id: int, deck: DeckUpdate, http_request: Request) -> DeckRes
 
     try:
         updated_deck = update_deck(user_id, deck_id, deck)
+    except AccountWriteError:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=400, detail="deck update failed") from exc
     if not updated_deck:
@@ -519,7 +536,10 @@ def patch_deck(deck_id: int, deck: DeckUpdate, http_request: Request) -> DeckRes
 
 @app.delete("/decks/{deck_id}", response_model=DeckDeleteResponse)
 def remove_deck(deck_id: int, http_request: Request) -> DeckDeleteResponse:
-    deleted = delete_deck_with_items(current_user_id(http_request), deck_id)
+    try:
+        deleted = delete_deck_with_items(current_user_id(http_request), deck_id)
+    except SrsWriteError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.code) from error
     if deleted is None:
         raise HTTPException(status_code=400, detail="default deck cannot be deleted")
     if deleted is False:
@@ -660,6 +680,8 @@ def patch_shared_deck_word_progress(
         raise HTTPException(status_code=404, detail="shared deck not found")
     try:
         progress = update_word_status(user_id, lexeme_id, body.status)
+    except AccountWriteError:
+        raise
     except ValueError:
         raise HTTPException(status_code=400, detail="invalid status")
     if not progress:
@@ -669,25 +691,38 @@ def patch_shared_deck_word_progress(
 
 @app.post(
     "/shared-decks/{shared_deck_id}/words/{lexeme_id}/review",
-    response_model=LexemeWordProgressResponse,
+    # Gate D-2 U9: legacy answer / pre-U9 receipt replay (LexemeReviewResponse) or the
+    # FSRS result-only answer (sent as canonical JSON, see fsrs_review_body).
+    response_model=LexemeReviewResponse | FsrsReviewResponse,
+    response_model_exclude_unset=True,
 )
 def post_shared_deck_word_review(
     shared_deck_id: int,
     lexeme_id: int,
     body: LexemeReviewRequest,
     http_request: Request,
-) -> LexemeWordProgressResponse:
+) -> LexemeReviewResponse:
     if body.rating not in VALID_REVIEW_RATINGS:
         raise HTTPException(status_code=400, detail="invalid review rating")
     user_id = current_user_id(http_request)
     if not shared_deck_word_access_allowed(shared_deck_id, user_id, lexeme_id):
         raise HTTPException(status_code=404, detail="shared deck not found")
-    progress = record_lexeme_review(
-        user_id, lexeme_id, body.rating, shared_deck_id=shared_deck_id
-    )
+    try:
+        # Gate C-2a: only an explicit JSON null (key present) is a first review
+        # of a word without progress; a missing key keeps the existing behavior.
+        first_review = "expected_card_version" in body.model_fields_set and body.expected_card_version is None
+        progress = record_lexeme_review(
+            user_id, lexeme_id, body.rating, shared_deck_id=shared_deck_id,
+            request_id=body.request_id, expected_card_version=body.expected_card_version, session_id=body.session_id,
+            first_review=first_review,
+        )
+    except SrsWriteError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.code) from error
     if not progress:
         raise HTTPException(status_code=404, detail="word not found")
-    return LexemeWordProgressResponse(**progress)
+    if "srs" in progress:
+        return fsrs_review_body(progress)
+    return LexemeReviewResponse(**progress)
 
 
 # --- Phase 3: subscribed shared-deck words in the SRS study queue -----------
@@ -782,6 +817,19 @@ def get_vocab_items(
     )
 
 
+@app.get("/study-queue", response_model=StudyQueueResponse)
+def get_study_queue(http_request: Request) -> StudyQueueResponse:
+    """Gate C-1: read-only unified queue for FSRS-mode accounts. Legacy and
+    shadow accounts get 409 and keep using /study-items and friends, whose
+    behavior is unchanged. Never writes (see app/srs/queue.py)."""
+    user_id = required_user_id(http_request)
+    try:
+        queue_request = parse_study_queue_request(user_id, http_request.query_params.multi_items())
+        return StudyQueueResponse(**build_study_queue(queue_request))
+    except StudyQueueError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.code) from error
+
+
 @app.get("/study-items", response_model=StudyItemsResponse)
 def get_study_items(
     http_request: Request, deck_id: int | None = Query(default=None)
@@ -845,23 +893,44 @@ def get_stats_history_day(
         raise HTTPException(status_code=400, detail=str(error)) from error
 
 
-@app.post("/study-items/{item_id}/review", response_model=VocabItemResponse)
+@app.post(
+    "/study-items/{item_id}/review",
+    # Gate D-2 U9: legacy answer or un-minimized pre-U9 receipt replay
+    # (PersonalReviewResponse), the FSRS result-only answer, or a minimized pre-U9 replay.
+    response_model=PersonalReviewResponse | FsrsReviewResponse | MinimizedPersonalReceiptReplay,
+    response_model_exclude_unset=True,
+)
 def post_study_review(
     item_id: int, review: StudyReviewRequest, http_request: Request
-) -> VocabItemResponse:
+) -> PersonalReviewResponse:
     rating = review.rating or RESULT_TO_RATING.get(review.result or "")
     if rating not in VALID_REVIEW_RATINGS:
         raise HTTPException(status_code=400, detail="invalid review rating")
+    if "expected_card_version" in review.model_fields_set and review.expected_card_version is None:
+        # Personal cards always exist; an explicit null is only for subscribed first reviews.
+        raise HTTPException(status_code=422, detail="null_card_version_not_allowed")
 
-    updated_item = record_review(
-        current_user_id(http_request),
-        item_id,
-        rating,
-        response_time_ms=review.response_time_ms,
-    )
+    try:
+        updated_item = record_review(
+            current_user_id(http_request), item_id, rating, response_time_ms=review.response_time_ms,
+            request_id=review.request_id, expected_card_version=review.expected_card_version, session_id=review.session_id,
+        )
+    except SrsWriteError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.code) from error
     if not updated_item:
         raise HTTPException(status_code=404, detail="vocab item not found")
-    return VocabItemResponse(**updated_item)
+    if "srs" in updated_item:
+        return fsrs_review_body(updated_item)
+    return PersonalReviewResponse(**updated_item)
+
+
+def fsrs_review_body(result: dict) -> Response:
+    """Gate D-2 U9: an FSRS review answer (first or retried from its receipt) is sent
+    as the receipt's canonical JSON, so the bytes of a first answer and its retry are
+    identical. Legacy answers keep their response models."""
+    from app.srs.receipts import canonical_json
+
+    return Response(content=canonical_json(result).encode("utf-8"), media_type="application/json")
 
 
 @app.get("/vocab-items/export.csv")
@@ -1047,6 +1116,10 @@ def explain_vocab_item(item_id: int, http_request: Request) -> VocabItemResponse
 
 @app.delete("/vocab-items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_vocab_item(item_id: int, http_request: Request) -> Response:
-    if not delete_vocab_item(current_user_id(http_request), item_id):
+    try:
+        deleted = delete_vocab_item(current_user_id(http_request), item_id)
+    except SrsWriteError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.code) from error
+    if not deleted:
         raise HTTPException(status_code=404, detail="vocab item not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

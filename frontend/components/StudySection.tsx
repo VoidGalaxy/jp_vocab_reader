@@ -20,6 +20,46 @@ import {
   SparkleIcon,
 } from "./icons";
 import { MeaningQuickEdit } from "./MeaningQuickEdit";
+import { formatSeoulTime } from "./fsrsStudy";
+import type { FsrsPrimary } from "./useFsrsStudy";
+
+// FSRS 계정의 복습 회차 (Gate C-2c, CONTRACT 2-4·4-2·4-4). 이 값이 없으면
+// 기존(legacy) 화면을 그대로 그린다. 상태 판단은 studySession.ts가 하고, 여기서는
+// 같은 책 지면 안에서 문구와 조작만 바꾼다.
+export type FsrsStudySectionState = {
+  /** checking: 모드 판별 중(시작 막음), mode_error: 판별 실패(legacy로 바꾸지 않음). */
+  phase: "checking" | "mode_error" | "ready" | "session";
+  primary: FsrsPrimary | null;
+  isPractice: boolean;
+  /** 서버 연습 목록이 비었음. 연습은 한 번 이상 복습해 예약이 있는 단어만 나온다(현재 제한). */
+  practiceEmpty?: boolean;
+  isRecent: boolean;
+  attemptStatus: "sending" | "unknown" | null;
+  pendingRating: ReviewResult | null;
+  noticeText: string;
+  errorText: string;
+  canReload: boolean;
+  goalLine: string | null;
+  goalReachedText: string;
+  notMigratedNote: boolean;
+  nextDueAt: string | null;
+  reviewed: number;
+  ratings: Record<ReviewResult, number>;
+  firstReviews: number;
+  deferredCount: number;
+  pendingLater: number;
+  onRetryProbe: () => void;
+  onRetryAttempt: () => void;
+  onReload: () => void;
+  onEnd: () => void;
+  onRestart: () => void;
+  onPracticeNext: (again: boolean) => void;
+  onPracticeRecent?: () => void;
+  /** Gate D-1: 지금 복습·오늘 새 단어 한 줄(이 덱 범위). 확인 중·확인 불가 문구 포함. */
+  metricsLine?: string;
+  /** 학습 현황 패널용(같은 범위·같은 정의). */
+  statsPanel?: { dueNow: string; todayReviews: string; scopeLabel: string };
+};
 
 // Review open book (references/mockups/review-redesign/b-book-asset/handoff).
 // Desktop reuses the Reading tab's C folio images byte-unchanged and lays the
@@ -79,6 +119,7 @@ type StudySectionProps = {
   // ever fails with 401 for them; the ready page says so and offers sign-in.
   isGuest?: boolean;
   onOpenAccount?: () => void;
+  fsrs?: FsrsStudySectionState;
 };
 
 const studyModeLabels: Record<StudyMode, string> = {
@@ -143,7 +184,7 @@ function getMeaningSenses(meaningKo: string | null | undefined): string[] {
   return [getDisplayMeaning(meaningKo)];
 }
 
-type BookState = "ready" | "empty" | "question" | "answer" | "complete";
+type BookState = "ready" | "empty" | "question" | "answer" | "complete" | "waiting";
 
 export function StudySection({
   items,
@@ -186,6 +227,7 @@ export function StudySection({
   onReview,
   isGuest = false,
   onOpenAccount,
+  fsrs,
 }: StudySectionProps) {
   // 학습 현황 (StatsPanel) used to be a collapsed disclosure on the board;
   // it now opens in place of the right page's content outside a session.
@@ -250,18 +292,31 @@ export function StudySection({
   const isCardMessageVisible =
     Boolean(message) && (!isAnswerVisible || messageTone === "error");
 
-  const bookState: BookState = isComplete
-    ? "complete"
-    : currentItem
-      ? isAnswerVisible
-        ? "answer"
-        : "question"
-      : hasStarted
-        ? "empty"
-        : "ready";
+  const isFsrsSession = fsrs?.phase === "session";
+  const bookState: BookState = fsrs
+    ? isFsrsSession
+      ? fsrs.primary === "ended"
+        ? "complete"
+        : currentItem
+          ? isAnswerVisible
+            ? "answer"
+            : "question"
+          : "waiting"
+      : "ready"
+    : isComplete
+      ? "complete"
+      : currentItem
+        ? isAnswerVisible
+          ? "answer"
+          : "question"
+        : hasStarted
+          ? "empty"
+          : "ready";
   const isSessionPage = bookState === "question" || bookState === "answer";
   const showStats = isStatsOpen && !isSessionPage;
-  const pressedResult = isReviewing ? pendingResult : null;
+  const pressedResult = fsrs ? fsrs.pendingRating : isReviewing ? pendingResult : null;
+  const ratingsLocked = fsrs ? fsrs.attemptStatus !== null : isReviewing;
+  const fsrsStartBlocked = Boolean(fsrs && fsrs.phase !== "ready" && fsrs.phase !== "session");
 
   // Revealing the answer or rating a card unmounts the button that had
   // focus. Hand focus to the new page's natural next stop (the answer text,
@@ -302,7 +357,16 @@ export function StudySection({
     : "";
   const isEditingMeaning = Boolean(currentItem) && meaningEditItemId === currentItem?.id;
 
-  const headCount = isSessionPage
+  const fsrsCount = fsrs
+    ? fsrs.isPractice
+      ? "연습"
+      : `이번 회차 ${fsrs.reviewed}장`
+    : "";
+  const headCount = isFsrsSession
+    ? fsrsCount
+    : fsrs
+      ? "복습 회차"
+      : isSessionPage
     ? visibleProgress
     : bookState === "complete"
       ? `${totalStudied} / ${items.length}`
@@ -318,7 +382,9 @@ export function StudySection({
       : bookState === "answer"
         ? "정답과 평가"
         : bookState === "complete"
-          ? "오늘의 기록"
+          ? fsrs
+            ? "이번 회차 기록"
+            : "오늘의 기록"
           : "복습 노트";
 
   const navLinks = (
@@ -359,7 +425,7 @@ export function StudySection({
             onClick={() => onStudyModeChange(mode)}
           >
             <span>{studyModeLabels[mode]}</span>
-            <b>{stats ? studyModeCounts[mode] : "-"}</b>
+            {fsrs ? null : <b>{stats ? studyModeCounts[mode] : "-"}</b>}
           </button>
         ))}
       </div>
@@ -380,14 +446,27 @@ export function StudySection({
             stats={stats}
             isLoading={isStatsLoading}
             message={statsMessage}
+            fsrs={fsrs?.statsPanel}
           />
         </div>
       );
     }
 
     if (bookState === "ready") {
-      const lead =
-        readyCount === null
+      const fsrsLead = !fsrs
+        ? null
+        : fsrs.phase === "checking"
+          ? "복습 방식을 확인하는 중이에요"
+          : fsrs.phase === "mode_error"
+            ? "복습 방식을 확인하지 못했어요. 다시 확인해 주세요."
+            : fsrs.isPractice
+              ? "카드를 넘기며 연습해 볼까요?"
+              : studyMode === "recent"
+                ? "방금 담은 단어로 복습 회차를 시작해 볼까요?"
+                : "복습 회차를 시작해 볼까요?";
+      const lead = fsrsLead !== null
+        ? fsrsLead
+        : readyCount === null
           ? isStatsLoading
             ? "복습 카드를 세는 중이에요"
             : "학습할 카드를 불러와 볼까요?"
@@ -398,6 +477,16 @@ export function StudySection({
         <div className="study-book-center">
           <span className="study-book-label">{modeLabel}</span>
           <p className="study-book-lead">{lead}</p>
+          {fsrs?.phase === "ready" && fsrs.isPractice ? (
+            <p className="study-book-explainer">
+              연습 · 예약에 반영되지 않아요. 한 번 이상 복습한 단어만 나와요.
+            </p>
+          ) : null}
+          {fsrs?.phase === "ready" && fsrs.metricsLine ? (
+            <p className="study-book-explainer study-book-fineprint" role="status">
+              {fsrs.metricsLine}
+            </p>
+          ) : null}
           {statsProblem ? (
             <p
               className={`message message--${classifyMessageTone(statsProblem)} study-book-message`}
@@ -407,24 +496,34 @@ export function StudySection({
             </p>
           ) : null}
           {pageMessage}
-          <button
-            type="button"
-            className="study-book-primary"
-            onClick={onStart}
-            disabled={isLoading}
-          >
-            {isLoading
-              ? "불러오는 중..."
-              : studyMode === "today"
-                ? "오늘 복습 시작"
-                : "학습 시작"}
-          </button>
+          {fsrs?.phase === "mode_error" ? (
+            <button type="button" className="study-book-primary" onClick={fsrs.onRetryProbe}>
+              다시 확인
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="study-book-primary"
+              onClick={onStart}
+              disabled={isLoading || fsrsStartBlocked}
+            >
+              {fsrs?.phase === "checking"
+                ? "확인 중..."
+                : isLoading
+                  ? "불러오는 중..."
+                  : fsrs?.isPractice
+                    ? "연습 시작"
+                    : studyMode === "today"
+                      ? "오늘 복습 시작"
+                      : "학습 시작"}
+            </button>
+          )}
           {studyMode !== "new" ? (
             <button
               type="button"
               className="study-book-secondary"
               onClick={() => onQuickStart("new")}
-              disabled={isLoading}
+              disabled={isLoading || fsrsStartBlocked}
             >
               새 단어 학습
             </button>
@@ -452,6 +551,46 @@ export function StudySection({
               기준이에요.
             </p>
           ) : null}
+        </div>
+      );
+    }
+
+    if (bookState === "waiting" && fsrs) {
+      return renderFsrsWaiting(fsrs);
+    }
+
+    if (bookState === "complete" && fsrs) {
+      return (
+        <div className="study-book-center">
+          <span className="study-book-label">이번 회차 기록</span>
+          <p className="study-book-lead">
+            {fsrs.isPractice
+              ? "연습 회차를 마쳤어요"
+              : `이번 회차에서 ${fsrs.reviewed}장을 평가했어요`}
+          </p>
+          {fsrs.isPractice ? (
+            <p className="study-book-explainer">연습은 예약에 반영되지 않아요.</p>
+          ) : (
+            <>
+              <div className="study-book-done-stats">
+                {ratingButtons.map(({ result, label }) => (
+                  <div key={result} data-tone={result}>
+                    {label}
+                    <b>{fsrs.ratings[result]}</b>
+                  </div>
+                ))}
+              </div>
+              <p className="study-book-explainer">
+                처음 평가한 카드 {fsrs.firstReviews}장 · 이번 회차에서 미룬 카드 {fsrs.deferredCount}장
+              </p>
+              {fsrs.nextDueAt ? (
+                <p className="study-book-explainer">{formatNextReview(fsrs.nextDueAt)}</p>
+              ) : null}
+            </>
+          )}
+          <button type="button" className="study-book-primary" onClick={fsrs.onRestart}>
+            새 회차 시작
+          </button>
         </div>
       );
     }
@@ -535,12 +674,27 @@ export function StudySection({
           >
             정답 보기
           </button>
-          {studyMode === "recent" ? (
+          {fsrs ? (
+            <>
+              {fsrs.isPractice ? (
+                <p className="study-book-explainer">연습 · 예약에 반영되지 않아요</p>
+              ) : null}
+              {fsrs.noticeText ? (
+                <p className="message message--info study-book-message" role="status">
+                  {fsrs.noticeText}
+                </p>
+              ) : null}
+              {fsrs.goalLine && !fsrs.isPractice ? (
+                <p className="study-book-explainer study-book-fineprint">{fsrs.goalLine}</p>
+              ) : null}
+            </>
+          ) : null}
+          {!fsrs && studyMode === "recent" ? (
             <p className="study-book-explainer">
               원문 읽기에서 담은 단어를 바로 복습해요. ({items.length}개 단어)
             </p>
           ) : null}
-          {showNewLexemeLimitHint ? (
+          {!fsrs && showNewLexemeLimitHint ? (
             <p className="study-book-explainer">새 단어는 한 번에 30개씩 가볍게 시작해요.</p>
           ) : null}
           {isCardMessageVisible ? (
@@ -616,6 +770,134 @@ export function StudySection({
     return null;
   }
 
+  function renderFsrsWaiting(state: FsrsStudySectionState) {
+    const end = (
+      <button type="button" className="study-book-secondary" onClick={state.onEnd}>
+        이번 회차 마치기
+      </button>
+    );
+    const again = (
+      <button type="button" className="study-book-secondary" onClick={state.onRestart}>
+        새 회차로 다시 보기
+      </button>
+    );
+    const practiceRecent =
+      state.isRecent && state.pendingLater > 0 && state.onPracticeRecent ? (
+        <button type="button" className="study-book-secondary" onClick={state.onPracticeRecent}>
+          남은 단어 연습하기
+        </button>
+      ) : null;
+    let label = "복습 회차";
+    let lead = "";
+    let explainer: string | null = null;
+    let actions: JSX.Element | null = end;
+    switch (state.primary) {
+      case "loading":
+        lead = "카드를 불러오는 중이에요";
+        actions = null;
+        break;
+      case "error":
+        lead = state.errorText;
+        actions = (
+          <>
+            {state.canReload ? (
+              <button type="button" className="study-book-primary" onClick={state.onReload}>
+                다시 불러오기
+              </button>
+            ) : null}
+            {end}
+          </>
+        );
+        break;
+      case "soon":
+        lead = `다음 카드는 ${formatSeoulTime(state.nextDueAt)}에 돌아와요`;
+        explainer = "이 화면에서 기다리면 그때 이어서 보여 드려요.";
+        break;
+      case "deferred_only":
+        lead = "이번 회차에서 미룬 단어만 남았어요";
+        explainer = "여러 번 다시 본 단어는 이번 회차에서 잠시 미뤘어요. 예약은 그대로예요.";
+        actions = (
+          <>
+            {end}
+            {again}
+          </>
+        );
+        break;
+      case "deferred_limit":
+        lead = "이번 회차에서 미룬 단어가 많아 여기서 회차를 마칠게요";
+        actions = (
+          <>
+            {end}
+            {again}
+          </>
+        );
+        break;
+      case "new_unknown":
+        lead = "오늘 새 단어 수를 확인할 수 없어 새 단어는 멈췄어요";
+        actions = (
+          <>
+            {end}
+            {practiceRecent}
+          </>
+        );
+        break;
+      case "goal_reached":
+        lead = state.goalReachedText;
+        actions = (
+          <>
+            {end}
+            {practiceRecent}
+          </>
+        );
+        break;
+      case "practice_done":
+        label = "연습";
+        lead = state.practiceEmpty ? "연습할 단어가 없어요" : "준비한 카드를 모두 넘겼어요";
+        explainer = state.practiceEmpty
+          ? "연습에는 한 번 이상 복습한 단어만 나와요. 새 단어는 오늘 복습이나 새 단어 학습에서 시작해요."
+          : "연습은 예약에 반영되지 않아요.";
+        actions = (
+          <>
+            {end}
+            <button type="button" className="study-book-secondary" onClick={state.onRestart}>
+              다시 연습하기
+            </button>
+          </>
+        );
+        break;
+      default:
+        lead = "지금 할 복습을 마쳤어요";
+        explainer = state.nextDueAt ? formatNextReview(state.nextDueAt) : null;
+        actions = (
+          <>
+            {end}
+            {practiceRecent}
+          </>
+        );
+    }
+    return (
+      <div className="study-book-center">
+        <span className="study-book-label">{label}</span>
+        <p className="study-book-lead" role="status">
+          {lead}
+        </p>
+        {explainer ? <p className="study-book-explainer">{explainer}</p> : null}
+        {state.noticeText ? (
+          <p className="message message--info study-book-message">{state.noticeText}</p>
+        ) : null}
+        {actions}
+        {state.goalLine && !state.isPractice ? (
+          <p className="study-book-explainer study-book-fineprint">{state.goalLine}</p>
+        ) : null}
+        {state.notMigratedNote ? (
+          <p className="study-book-explainer study-book-fineprint">
+            일부 단어는 아직 새 복습 방식으로 옮겨지지 않았어요.
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <section
       className="tab-panel study-panel study-book"
@@ -689,14 +971,14 @@ export function StudySection({
                     )}
                     {selectableStudyModes.map((mode) => (
                       <option key={mode} value={mode}>
-                        {studyModeLabels[mode]} ({studyModeCounts[mode]}개)
+                        {fsrs ? studyModeLabels[mode] : `${studyModeLabels[mode]} (${studyModeCounts[mode]}개)`}
                       </option>
                     ))}
                   </select>
                 </label>
               </div>
             </details>
-            {isSessionPage ? (
+            {isSessionPage && !fsrs ? (
               <span
                 className="study-book-count"
                 role="progressbar"
@@ -736,7 +1018,11 @@ export function StudySection({
           ) : bookState === "complete" ? (
             <div className="study-book-word-area study-book-word-area--done">
               <p className="study-book-lead">
-                {studyMode === "recent" ? "방금 담은 단어를 다시 봤어요" : "오늘 복습을 마쳤어요"}
+                {fsrs
+                  ? "이번 회차를 마쳤어요"
+                  : studyMode === "recent"
+                    ? "방금 담은 단어를 다시 봤어요"
+                    : "오늘 복습을 마쳤어요"}
               </p>
             </div>
           ) : (
@@ -761,6 +1047,32 @@ export function StudySection({
 
           {bookState === "answer" && currentItem ? (
             <>
+              {fsrs?.isPractice ? (
+              <div className="study-book-rates study-book-rates--practice" role="group" aria-label="연습">
+                <button
+                  type="button"
+                  className="study-book-rate"
+                  data-tone="again"
+                  aria-label="다시 볼게요: 이번 연습에서 한 번 더"
+                  onClick={() => fsrs.onPracticeNext(true)}
+                >
+                  <BookmarkIcon className="study-book-rate-icon" />
+                  <b>다시 볼게요</b>
+                  <small>연습만</small>
+                </button>
+                <button
+                  type="button"
+                  className="study-book-rate"
+                  data-tone="good"
+                  aria-label="알겠어요: 다음 카드로"
+                  onClick={() => fsrs.onPracticeNext(false)}
+                >
+                  <CheckCircleIcon className="study-book-rate-icon" />
+                  <b>알겠어요</b>
+                  <small>연습만</small>
+                </button>
+              </div>
+              ) : (
               <div className="study-book-rates" role="group" aria-label="복습 평가">
                 {ratingButtons.map(({ result, label, hint, icon: Icon }) => (
                   <button
@@ -774,7 +1086,7 @@ export function StudySection({
                       setPendingResult(result);
                       onReview(result);
                     }}
-                    disabled={isReviewing}
+                    disabled={ratingsLocked}
                   >
                     <Icon className="study-book-rate-icon" />
                     <b>{label}</b>
@@ -782,8 +1094,24 @@ export function StudySection({
                   </button>
                 ))}
               </div>
+              )}
+              {fsrs && (fsrs.isPractice || fsrs.attemptStatus) ? (
+                // FSRS 시도 상태는 도구 줄과 따로 둔다(좁은 화면에서 겹치지 않게).
+                <div className="study-book-attempt" role="status">
+                  {fsrs.isPractice ? <span>연습 · 예약에 반영되지 않아요</span> : null}
+                  {fsrs.attemptStatus === "sending" ? <span>저장하는 중...</span> : null}
+                  {fsrs.attemptStatus === "unknown" ? (
+                    <>
+                      <span>저장 여부를 확인하지 못했어요</span>
+                      <button type="button" className="study-book-link" onClick={fsrs.onRetryAttempt}>
+                        다시 시도
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
               <div className="study-book-tools">
-                {isReviewing ? (
+                {!fsrs && isReviewing ? (
                   <span className="study-book-saving" role="status">
                     저장하는 중...
                   </span>

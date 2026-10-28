@@ -6,3 +6,4 @@ openai>=2.0,<3.0
 python-dotenv>=1.0,<2.0
 PyJWT>=2.8,<3.0
 psycopg[binary]>=3.2,<4.0
+fsrs==6.3.2

@@ -69,6 +69,12 @@ const sortOptions: Array<{ value: VocabSort; label: string }> = [
 type VocabSectionProps = {
   items: VocabItem[];
   stats: StudyStats | null;
+  /**
+   * FSRS 계정(Gate D-1): 카드별 legacy 복습 레벨·"복습 단계 낮은순" 정렬을 숨기고,
+   * "복습 예정" 대신 큐와 같은 정의의 "지금 복습"(선택한 개인 덱 범위)을 쓴다.
+   * dueNow: 숫자, 확인 중·확인 불가·범위 밖이면 null(숫자를 보이지 않음).
+   */
+  fsrs?: { dueNow: number | null; dueText: string };
   isLoading: boolean;
   isExportingCsv: boolean;
   isExportingDeckPackage: boolean;
@@ -179,6 +185,7 @@ export function VocabSection({
   searchText,
   statusFilter,
   dueOnly,
+  fsrs,
   sortValue,
   newDeckName,
   newDeckDescription,
@@ -303,6 +310,8 @@ export function VocabSection({
       ? stats.scope === "all"
       : isSpecificDeck && stats.scope === "deck" && String(stats.deck_id) === selectedDeckId);
   function countFor(value: "all" | TokenStatus | "due"): number | null {
+    // FSRS: "지금 복습"은 /stats가 아니라 이 덱 범위의 큐 집계다(확인 중·불가면 null).
+    if (value === "due" && fsrs) return fsrs.dueNow;
     if (!statsMatchDeck || !stats) {
       return null;
     }
@@ -318,7 +327,7 @@ export function VocabSection({
       case "unclassified":
         return stats.unclassified_count;
       case "due":
-        return stats.due_today_count;
+        return fsrs ? fsrs.dueNow : stats.due_today_count;
     }
   }
   const sortLabel =
@@ -367,7 +376,7 @@ export function VocabSection({
         aria-pressed={dueOnly}
         onClick={() => onDueOnlyChange(!dueOnly)}
       >
-        복습 예정
+        {fsrs ? "지금 복습" : "복습 예정"}
         {countFor("due") !== null ? <b>{countFor("due")}</b> : null}
       </button>
     </>
@@ -380,7 +389,11 @@ export function VocabSection({
         value={sortValue}
         onChange={(event) => onSortChange(event.target.value as VocabSort)}
       >
-        {sortOptions.map((option) => (
+        {sortOptions
+          // FSRS 계정은 legacy 복습 레벨이 기억 단계가 아니므로 이 정렬을 숨긴다(이미 선택돼 있으면
+          // page가 "다음 복습 가까운순"으로 바꾼다).
+          .filter((option) => !(fsrs && option.value === "review_level_asc"))
+          .map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
@@ -490,7 +503,8 @@ export function VocabSection({
                   <strong>{getDisplayMeaning(item.meaning_ko)}</strong>
                   <span className="vocab-file-status">
                     {statusShortLabels[item.status]}
-                    {isDue ? <em> · 복습 예정</em> : null}
+                    {/* FSRS 계정은 카드별 표시 기준이 큐와 달라 숨긴다(필터는 서버가 큐와 같은 기준으로 거름). */}
+                    {isDue && !fsrs ? <em> · 복습 예정</em> : null}
                   </span>
                 </span>
               </button>
@@ -499,6 +513,7 @@ export function VocabSection({
                 <VocabItemDetail
                   id={detailId}
                   item={item}
+                  hideLevel={Boolean(fsrs)}
                   decks={decks}
                   editingItemId={editingItemId}
                   editVocabForm={editVocabForm}
@@ -579,8 +594,8 @@ export function VocabSection({
             </button>
           </div>
           <p className="vocab-file-manage-note">
-            전체 {stats ? stats.total_vocab_count : items.length}개 · 복습 예정{" "}
-            {stats ? stats.due_today_count : "-"}개 · 어려운 단어{" "}
+            전체 {stats ? stats.total_vocab_count : items.length}개 ·{" "}
+            {fsrs ? `지금 복습 ${fsrs.dueText}` : `복습 예정 ${stats ? stats.due_today_count : "-"}개`} · 어려운 단어{" "}
             {stats ? stats.hard_count : "-"}개
           </p>
         </section>
@@ -903,7 +918,7 @@ export function VocabSection({
                 aria-pressed={dueOnly}
                 onClick={() => onDueOnlyChange(!dueOnly)}
               >
-                복습 예정
+                {fsrs ? "지금 복습" : "복습 예정"}
               </button>
             </div>
             <span className="vocab-file-index-foot">
@@ -1084,6 +1099,8 @@ export function VocabSection({
 type VocabItemDetailProps = {
   id: string;
   item: VocabItem;
+  /** FSRS 계정: legacy 복습 레벨을 숨긴다(Gate D-1). */
+  hideLevel?: boolean;
   decks: Deck[];
   editingItemId: number | null;
   editVocabForm: VocabFormData;
@@ -1108,6 +1125,7 @@ type VocabItemDetailProps = {
 function VocabItemDetail({
   id,
   item,
+  hideLevel = false,
   decks,
   editingItemId,
   editVocabForm,
@@ -1132,7 +1150,7 @@ function VocabItemDetail({
     item.base_form && item.base_form !== item.surface ? `기본형 ${item.base_form}` : "",
     item.part_of_speech,
     item.deck_name,
-    `복습 레벨 ${item.review_level}`,
+    hideLevel ? "" : `복습 레벨 ${item.review_level}`,
     `맞음 ${item.correct_count} · 다시 ${item.wrong_count}`,
     formatNextReview(item.next_review_at),
     item.last_reviewed_at ? `마지막 복습 ${formatDateTime(item.last_reviewed_at)}` : "",

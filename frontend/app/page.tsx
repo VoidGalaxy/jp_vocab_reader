@@ -81,6 +81,32 @@ import { SharedDeckSection } from "../components/SharedDeckSection";
 import { buildRatingFeedbackMessage, withObjectParticle } from "../components/shared";
 import { splitTextIntoChunks } from "../components/textChunking";
 import { StudySection } from "../components/StudySection";
+import type { FsrsStudySectionState } from "../components/StudySection";
+import { useFsrsStudy } from "../components/useFsrsStudy";
+import {
+  MODE_PROBE_PATH,
+  goalReachedText,
+  haltText,
+  newGoalLine,
+  noticeText,
+  probeOutcome,
+  queuePath,
+  queueTargetFor,
+} from "../components/fsrsStudy";
+import {
+  dueNowCount,
+  homeReviewView,
+  metricsSummary,
+  msUntilSeoulMidnight,
+  parseQueueCounts,
+  planTodayText,
+  statusDistribution,
+  todayReviewsText,
+} from "../components/srsMetrics";
+import type { MetricsEntry } from "../components/srsMetrics";
+import { effectiveNewRemaining, newGoalDisplay, parseQueueResponse } from "../components/studySession";
+import type { FetchResult } from "../components/fsrsStudy";
+import type { PreparedSession } from "../components/useFsrsStudy";
 import { VocabSection } from "../components/VocabSection";
 import type {
   ReviewResult,
@@ -120,6 +146,18 @@ type StudyItemsResponse = {
 };
 
 const SHARED_DECK_STUDY_ID_PREFIX = "shared:";
+
+// 학습 계획 실행기가 FSRS 계정에서 넘기는 항목(Gate C-2c 보정): 새 회차용 티켓으로 큐·카드
+// 내용을 받아 검증까지 마친 준비된 회차. 교체 때 이 회차를 그대로 쓰고 다시 조회하지 않는다.
+type FsrsPlanItem = { fsrsPrepared: PreparedSession };
+
+/** 실행기의 세션 비교용 지문: 회차·진행 수·출제 차례·시도 상태 중 하나라도 바뀌면 달라진다. */
+function fsrsSessionFingerprint(parts: string): number {
+  let hash = 5381;
+  for (let i = 0; i < parts.length; i += 1) hash = ((hash * 33) ^ parts.charCodeAt(i)) >>> 0;
+  return hash;
+}
+type SrsModeStatus = "checking" | "fsrs" | "legacy" | "error";
 
 function isSharedDeckStudyId(deckId: string) {
   return deckId.startsWith(SHARED_DECK_STUDY_ID_PREFIX);
@@ -716,6 +754,11 @@ export default function HomePage() {
   const [deckMessage, setDeckMessage] = useState("");
   const [studyMessage, setStudyMessage] = useState("");
   const [studyStatsMessage, setStudyStatsMessage] = useState("");
+  // 홈(legacy) 표시 전용(Gate D-1 보정): 가장 최근 /stats 조회가 실패했는지. 다시 조회를 시작해도
+  // 성공 응답이 올 때까지 남겨, 이전 숫자를 실패 뒤의 사실처럼 보이지 않게 한다. 다른 화면은
+  // 기존대로 studyStats(이전 값 보존)와 studyStatsMessage를 쓴다.
+  const [studyStatsFailed, setStudyStatsFailed] = useState(false);
+  const studyStatsSeqRef = useRef(0);
   const [infoStatsMessage, setInfoStatsMessage] = useState("");
   const [studyItems, setStudyItems] = useState<StudyCardItem[]>([]);
   const [studyStats, setStudyStats] = useState<StudyStats | null>(null);
@@ -767,6 +810,166 @@ export default function HomePage() {
     },
   }).current;
   const statsAccountEpochRef = useRef(0);
+
+  // ---- FSRS 복습 회차 (Gate C-2c) ----
+  // 계정 epoch마다 GET /study-queue?limit=1로 복습 방식을 판별한다. 409
+  // srs_mode_not_fsrs만 기존(legacy) 경로, 200은 FSRS, 그 밖은 오류(legacy로 바꾸지
+  // 않음). 판별 전·오류 중에는 복습 시작을 막는다. 토큰 없는 방문자(공용 dev 계정)는
+  // 큐 API가 로그인 계정 전용이라 판별 요청 없이 기존 경로를 쓴다.
+  const [srsProbe, setSrsProbeState] = useState<{ epoch: number; status: SrsModeStatus } | null>(null);
+  const srsProbeRef = useRef<{ epoch: number; status: SrsModeStatus } | null>(null);
+  const srsProbeSeqRef = useRef(0);
+  // 이 epoch의 계정 확인(/me) 결과. 토큰 없는 기존 경로는 "방문자로 확인된" 경우에만 허용한다.
+  const confirmedAccountRef = useRef<{ epoch: number; kind: "guest" | "user" | "failed" } | null>(null);
+  function setSrsProbe(value: { epoch: number; status: SrsModeStatus }) {
+    srsProbeRef.current = value;
+    setSrsProbeState(value);
+  }
+  function srsModeNow(): SrsModeStatus {
+    const probe = srsProbeRef.current;
+    return probe && probe.epoch === statsAccountEpochRef.current ? probe.status : "checking";
+  }
+  const fsrsStudy = useFsrsStudy({
+    getAccountEpoch: () => statsAccountEpochRef.current,
+    get: (path) => fetchResult(path),
+    post: (path, body) => fetchResult(path, { method: "POST", body: JSON.stringify(body) }),
+    loadRecentPracticeCards: async (ids) => {
+      // recent 묶음 연습: 기존 읽기 전용 목록에서 지정한 개인 카드만(평가 POST 없음).
+      const data = await requestJson<VocabItemsResponse>("/vocab-items");
+      const wanted = new Set(ids);
+      return data.items.filter((item) => wanted.has(item.id)).map(toVocabStudyCardItem);
+    },
+    onReviewSaved: () => {
+      void loadStudyStats(selectedStudyDeckId);
+      refreshSrsMetricsRef.current();
+    },
+    onModeChanged: () => {
+      void runSrsProbe();
+    },
+  });
+
+  // ---- FSRS 화면 지표 (Gate D-1) ----
+  // `/study-queue`(limit=1) 한 번으로 범주 집계와 신규 목표를 받는다. 회차 컨트롤러와 따로 조회하므로
+  // 지금 회차의 큐·카드·출제 차례·평가 시도를 바꾸지 않는다. 범위별 순번과 계정 epoch로
+  // 옛 응답을 버리고, 계정이 바뀌면 epoch가 달라져 이전 숫자는 즉시 보이지 않는다.
+  const [srsMetrics, setSrsMetrics] = useState<{ epoch: number; entries: Record<string, MetricsEntry> }>({
+    epoch: -1,
+    entries: {},
+  });
+  const srsMetricsRef = useRef(srsMetrics);
+  srsMetricsRef.current = srsMetrics;
+  const srsMetricsSeqRef = useRef<Record<string, number>>({});
+
+  function putSrsMetric(epoch: number, key: string, entry: MetricsEntry, keepExisting = false) {
+    setSrsMetrics((current) => {
+      const base = current.epoch === epoch ? current.entries : {};
+      if (keepExisting && base[key] && base[key].status === "ok") return current.epoch === epoch ? current : { epoch, entries: base };
+      return { epoch, entries: { ...base, [key]: entry } };
+    });
+  }
+
+  async function loadSrsMetric(key: string, deckId: string, planDailyNew?: number | null): Promise<MetricsEntry | null> {
+    if (srsModeNow() !== "fsrs") return null;
+    const target = queueTargetFor(deckId, "today", { planDailyNew: planDailyNew ?? null });
+    if (!target) return null;
+    const epoch = statsAccountEpochRef.current;
+    const seq = (srsMetricsSeqRef.current[key] ?? 0) + 1;
+    srsMetricsSeqRef.current[key] = seq;
+    // 새로고침 중에는 이전 값을 그대로 둔다(같은 계정). 처음이면 확인 중.
+    putSrsMetric(epoch, key, { status: "loading" }, true);
+    const result = await fetchResult(queuePath(target, [], { limit: 1 }));
+    if (epoch !== statsAccountEpochRef.current || seq !== srsMetricsSeqRef.current[key]) return null;
+    let entry: MetricsEntry = { status: "error" };
+    if (result.kind === "ok") {
+      const counts = parseQueueCounts(result.body);
+      const snapshot = parseQueueResponse(result.body);
+      if (counts && snapshot) {
+        entry = {
+          status: "ok",
+          counts,
+          goal: newGoalDisplay(snapshot.newGoal),
+          effectiveRemaining: effectiveNewRemaining(snapshot.newGoal),
+        };
+        if (planDailyNew !== undefined) {
+          planTodayTextRef.current[key] = planTodayText(snapshot.newGoal);
+        }
+      }
+    } else if (result.kind === "http" && result.status === 409 && result.detail === "srs_mode_not_fsrs") {
+      void runSrsProbe();
+    }
+    putSrsMetric(epoch, key, entry);
+    return entry;
+  }
+  const planTodayTextRef = useRef<Record<string, string>>({});
+  const refreshSrsMetricsRef = useRef<() => void>(() => {});
+
+  async function runSrsProbe() {
+    const epoch = statsAccountEpochRef.current;
+    const seq = ++srsProbeSeqRef.current;
+    if (!getAccessToken()) {
+      // 큐 API는 로그인 계정 전용이라 토큰이 없으면 판별할 수 없다. 계정 확인이 끝나 공용 방문자
+      // 계정으로 확인된 경우에만 기존 경로를 쓰고, /me 실패·인증 오류는 오류로 둔다.
+      const account = confirmedAccountRef.current;
+      const guest = account !== null && account.epoch === epoch && account.kind === "guest";
+      setSrsProbe({ epoch, status: guest ? "legacy" : "error" });
+      if (guest) fsrsStudy.reset();
+      return;
+    }
+    setSrsProbe({ epoch, status: "checking" });
+    const result = await fetchResult(MODE_PROBE_PATH);
+    if (epoch !== statsAccountEpochRef.current || seq !== srsProbeSeqRef.current) return;
+    const status = probeOutcome(result);
+    setSrsProbe({ epoch, status });
+    if (status === "legacy") fsrsStudy.reset();
+  }
+
+  /** "다시 확인": 계정 확인이 끝나지 않았으면 /me부터 다시 본다. */
+  async function retrySrsProbe() {
+    const epoch = statsAccountEpochRef.current;
+    const account = confirmedAccountRef.current;
+    if (!account || account.epoch !== epoch || account.kind === "failed") {
+      await loadCurrentUser();
+      if (epoch !== statsAccountEpochRef.current) return;
+    }
+    await runSrsProbe();
+  }
+
+  // FSRS 회차 교체 보호(CONTRACT 1-5·1-6): 대기 화면 포함 활성 회차는 확인을 거치고,
+  // 평가 전송 중이면 바꾸지 않는다.
+  function confirmFsrsReplace(): boolean {
+    const guard = fsrsStudy.replaceGuard();
+    if (guard === "free") return true;
+    if (guard === "wait") {
+      window.alert("평가를 저장하는 중이에요. 저장이 끝난 뒤 다시 시도해 주세요.");
+      return false;
+    }
+    if (guard === "confirm_unsaved") {
+      return window.confirm(
+        "저장 여부를 확인하지 못한 평가가 있어요. 그래도 지금 회차를 마치고 새 회차를 시작할까요?",
+      );
+    }
+    return window.confirm(
+      "진행 중인 복습 회차가 있어요. 지금 회차를 마치고 새 회차를 시작할까요? 지금까지 평가한 기록은 그대로 남아요.",
+    );
+  }
+
+  /** FSRS 회차 시작. 확인을 통과한 뒤에만 onAccepted(모드·덱 선택 반영)를 부른다. */
+  function launchFsrs(deckId: string, mode: StudyMode, onAccepted?: () => void): boolean {
+    if (srsModeNow() !== "fsrs") return false;
+    if (!confirmFsrsReplace()) return false;
+    onAccepted?.();
+    const target = queueTargetFor(deckId, mode, { recentIds: recentlySavedVocabItemIds });
+    studySessionIdRef.current += 1;
+    setStudyMessage("");
+    if (!target) {
+      fsrsStudy.reset();
+      setStudyMessage(getEmptyStudyMessage(mode, deckId));
+      return false;
+    }
+    fsrsStudy.start(target);
+    return true;
+  }
+
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoadingCurrentUser, setIsLoadingCurrentUser] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -832,6 +1035,44 @@ export default function HomePage() {
     // 읽기 자료는 여기서 복원하지 않는다. 계정(owner)을 확인한 뒤
     // hydrateReadingForOwner가 그 owner의 v3 키만 연다.
   }, []);
+
+  // 복습 방식 판별: 이 epoch의 계정 확인(/me)이 끝난 뒤 한 번.
+  useEffect(() => {
+    if (currentUserEpoch === null || currentUserEpoch !== statsAccountEpoch) return;
+    void runSrsProbe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statsAccountEpoch, currentUserEpoch]);
+
+  // FSRS 지표 갱신(Gate D-1): 보이는 화면·범위·계정·모드가 바뀌면, 서울 자정이 지나면, 앱으로 돌아오면.
+  // 회차 컨트롤러와 별개 조회라 보고 있는 카드·회차 기록은 그대로다.
+  const [seoulMidnightTick, setSeoulMidnightTick] = useState(0);
+  useEffect(() => {
+    const id = window.setTimeout(() => setSeoulMidnightTick((n) => n + 1), msUntilSeoulMidnight(Date.now()) + 1000);
+    return () => window.clearTimeout(id);
+  }, [seoulMidnightTick]);
+  useEffect(() => {
+    refreshSrsMetricsRef.current();
+    if (seoulMidnightTick > 0 && (activeTab === "home" || activeTab === "study")) void loadStudyStats(selectedStudyDeckId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedStudyDeckId, selectedVocabDeckId, srsProbe?.status, srsProbe?.epoch, statsAccountEpoch, seoulMidnightTick]);
+  // 앱 복귀 횟수(Gate D-1 보정): 학습 계획의 오늘 새 단어처럼 자식이 직접 조회하는 지표의 명시적 갱신 신호.
+  const [appReturnTick, setAppReturnTick] = useState(0);
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      refreshSrsMetricsRef.current();
+      setAppReturnTick((n) => n + 1);
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
+  useEffect(() => {
+    if (srsProbe?.status === "fsrs" && srsProbe.epoch === statsAccountEpoch && vocabSort === "review_level_asc") {
+      setVocabSort("next_review_asc");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [srsProbe?.status, srsProbe?.epoch, statsAccountEpoch, vocabSort]);
 
   // 계정 확인 → 해당 owner 자료 복원 → 자동 저장 활성화.
   const readingOwnerKey =
@@ -1622,6 +1863,7 @@ export default function HomePage() {
     try {
       const user = await requestJson<CurrentUser>("/me");
       if (epoch === statsAccountEpochRef.current) {
+        confirmedAccountRef.current = { epoch, kind: user.auth_provider === "dev" ? "guest" : "user" };
         setCurrentUser(user);
         setCurrentUserEpoch(epoch);
         // 토큰 없이 받은 dev 사용자는 등록 계정이 아니라 방문자다.
@@ -1636,6 +1878,8 @@ export default function HomePage() {
         // 둔다(읽기 복원·저장 금지, "다시 확인" 가능).
         if (!sentToken && epoch === statsAccountEpochRef.current) {
           setReadingAccount({ epoch, owner: null });
+          confirmedAccountRef.current = { epoch, kind: "failed" };
+          setSrsProbe({ epoch, status: "error" });
         }
         // A stale/invalid/tampered token. apiFetch already cleared it (only
         // if it is still the stored token) and fired AUTH_EXPIRED_EVENT,
@@ -1645,6 +1889,7 @@ export default function HomePage() {
         return;
       }
       if (epoch === statsAccountEpochRef.current) {
+        confirmedAccountRef.current = { epoch, kind: "failed" };
         setCurrentUser(null);
         setCurrentUserEpoch(epoch);
         // 확인 실패: 방문자로 임의 전환하지 않고 읽기 복원·저장을 멈춘다.
@@ -2460,6 +2705,7 @@ export default function HomePage() {
 
   async function loadStudyStats(deckId: string = selectedStudyDeckId) {
     const epoch = statsAccountEpochRef.current;
+    const seq = ++studyStatsSeqRef.current;
     setIsLoadingStudyStats(true);
     setStudyStatsMessage("");
 
@@ -2470,8 +2716,10 @@ export default function HomePage() {
       const data = await requestJson<StatsResponse>(`/stats${query}`);
       if (epoch !== statsAccountEpochRef.current) return;
       setStudyStats(data);
+      if (seq === studyStatsSeqRef.current) setStudyStatsFailed(false);
     } catch (error) {
       if (epoch !== statsAccountEpochRef.current) return;
+      if (seq === studyStatsSeqRef.current) setStudyStatsFailed(true);
       setStudyStatsMessage(
         getAuthAwareErrorMessage(error, "학습 통계를 불러오지 못했습니다."),
       );
@@ -2561,6 +2809,7 @@ export default function HomePage() {
     setVocabItems([]);
     setCustomTerms([]);
     setStudyStats(null);
+    setStudyStatsFailed(false);
     setSelectedSharedDeckId(null);
     setSelectedSharedDeck(null);
     setIsLoadingVocab(false);
@@ -2570,6 +2819,8 @@ export default function HomePage() {
     setSelectedVocabDeckId("");
     setSelectedStudyDeckId("all");
     resetStudySession();
+    // FSRS 회차·시도도 버린다. 이전 계정 요청은 다시 보내지 않는다(epoch 확인).
+    fsrsStudy.reset();
     // 읽기: 원문·토큰·서버 IDs·선택·위치·안내·진행 상태를 비우고 ReadingTab
     // 자식 상태(바구니·검색·옵션)도 새로 만든다. 다음 owner 확인 뒤 그 키만 연다.
     resetReadingForBoundary();
@@ -3298,6 +3549,8 @@ export default function HomePage() {
       // 서버 항목은 같은 계정의 사실이므로 목록에는 반영하되, 읽기 작업이
       // 바뀌었으면 새 작업의 토큰은 건드리지 않는다.
       applyUpdatedVocabItemEverywhere(updated, { includeReading: readingCtx.isCurrent() });
+      // FSRS 회차의 지금 카드에도 반영한다. 요청을 보낸 계정의 회차·같은 id의 카드에만.
+      fsrsStudy.patchPersonalCard(epoch, updated.id, { meaning_ko: updated.meaning_ko });
       if (!isSameEdit()) return;
       setMeaningEditItemId(null);
       setMeaningEditDraft("");
@@ -3792,6 +4045,11 @@ export default function HomePage() {
   ) {
     const deckId = options.deckId ?? selectedStudyDeckId;
     const mode = options.mode ?? studyMode;
+    if (srsModeNow() !== "legacy") {
+      // FSRS 계정은 회차 모듈로. 판별 중·오류면 시작하지 않는다.
+      launchFsrs(deckId, mode);
+      return;
+    }
     studySessionIdRef.current += 1;
     // A newer session (or an account change, which resets the session) makes
     // this fetch's result stale.
@@ -3835,7 +4093,24 @@ export default function HomePage() {
   // 연결은 Gate D. 하루량으로 큐를 자르지 않는다: 개인 new는 기존 new 모드
   // 그대로(미평가 카드 전부), 구독 new는 서버 first_review_only 큐(기존
   // NEW_LEXEME_STUDY_LIMIT), today는 기존 today 모드 그대로다.
-  async function fetchPlanStudyQueue(target: PlanStudyTarget): Promise<StudyCardItem[]> {
+  async function fetchPlanStudyQueue(
+    target: PlanStudyTarget,
+  ): Promise<Array<StudyCardItem | FsrsPlanItem>> {
+    const srsMode = srsModeNow();
+    if (srsMode === "fsrs") {
+      // FSRS 계정: /study-queue 덱 범위 + plan_daily_new. 새 회차를 따로 준비해 그 회차의 티켓으로
+      // 큐·카드 내용을 받아 검증한다. 기존 회차는 교체 전까지 건드리지 않는다.
+      const deckId =
+        target.deck.kind === "personal"
+          ? String(target.deck.id)
+          : `${SHARED_DECK_STUDY_ID_PREFIX}${target.deck.id}`;
+      const fsrsTarget = queueTargetFor(deckId, target.mode, { planDailyNew: target.dailyNew ?? null });
+      if (!fsrsTarget) throw new Error("invalid plan target");
+      const prepared = await fsrsStudy.prepare(fsrsTarget);
+      if (!prepared) throw new Error("study queue failed or unreadable");
+      return [{ fsrsPrepared: prepared }];
+    }
+    if (srsMode !== "legacy") throw new Error("study mode not ready");
     if (target.deck.kind === "personal") {
       return fetchStudyItems(String(target.deck.id), target.mode);
     }
@@ -3851,11 +4126,28 @@ export default function HomePage() {
     return fetchStudyItems(`${SHARED_DECK_STUDY_ID_PREFIX}${target.deck.id}`, "today");
   }
 
-  function replaceStudySessionFromPlan(target: PlanStudyTarget, items: StudyCardItem[]) {
+  function replaceStudySessionFromPlan(
+    target: PlanStudyTarget,
+    queueItems: Array<StudyCardItem | FsrsPlanItem>,
+  ): boolean {
     const deckId =
       target.deck.kind === "personal"
         ? String(target.deck.id)
         : `${SHARED_DECK_STUDY_ID_PREFIX}${target.deck.id}`;
+    const first = queueItems[0];
+    if (first && "fsrsPrepared" in first) {
+      // 검증을 마친 준비 회차로 교체한다. 계정이 바뀌었거나 평가가 전송 중이면 바꾸지 않고
+      // false(기존 회차 그대로, 실행기는 started를 돌려주지 않음).
+      if (!fsrsStudy.adopt(first.fsrsPrepared)) return false;
+      studySessionIdRef.current += 1;
+      setSelectedStudyDeckId(deckId);
+      setStudyMode(target.mode);
+      setStudyMessage("");
+      setActiveTab("study");
+      void loadStudyStats(deckId);
+      return true;
+    }
+    const items = queueItems as StudyCardItem[];
     studySessionIdRef.current += 1;
     setIsLoadingStudy(false);
     setSelectedStudyDeckId(deckId);
@@ -3871,6 +4163,7 @@ export default function HomePage() {
     setHasStartedStudy(true);
     setActiveTab("study");
     void loadStudyStats(deckId);
+    return true;
   }
 
   // 실행기는 비동기 조회 뒤에 "지금" 세션을 다시 확인해야 하므로 최신 상태를
@@ -3879,10 +4172,32 @@ export default function HomePage() {
   planStudyStateRef.current = { studyItems, currentStudyIndex, hasStartedStudy };
   const planStudyActionsRef = useRef({ fetchPlanStudyQueue, replaceStudySessionFromPlan });
   planStudyActionsRef.current = { fetchPlanStudyQueue, replaceStudySessionFromPlan };
+  const srsModeNowRef = useRef(srsModeNow);
+  srsModeNowRef.current = srsModeNow;
+  const fsrsStudyRef = useRef(fsrsStudy);
+  fsrsStudyRef.current = fsrsStudy;
   const planStudyLauncherRef = useRef<PlanStudyLauncher | null>(null);
   if (!planStudyLauncherRef.current) {
-    planStudyLauncherRef.current = createPlanStudyLauncher<StudyCardItem>({
+    planStudyLauncherRef.current = createPlanStudyLauncher<StudyCardItem | FsrsPlanItem>({
       getSession: (): StudySessionSnapshot => {
+        if (srsModeNowRef.current() !== "legacy") {
+          // FSRS: 활성 회차(대기 화면 포함)면 진행 중. 회차·진행 수·출제 차례·시도 상태가 바뀌면
+          // position이 달라져, 준비하는 동안 기존 회차가 진행됐으면 교체하지 않는다.
+          const session = fsrsStudyRef.current.getSession();
+          const guard = fsrsStudyRef.current.replaceGuard();
+          return {
+            id: studySessionIdRef.current,
+            position: session
+              ? fsrsSessionFingerprint(
+                  `${session.sessionId}|${session.status}|${session.reviewed}|${session.presentation}|` +
+                    `${session.attempt ? session.attempt.requestId : ""}|${session.attemptStatus ?? ""}`,
+                )
+              : 0,
+            inProgress: guard !== "free",
+            remaining: 0,
+            guard: guard === "free" ? undefined : guard,
+          };
+        }
         const { studyItems: items, currentStudyIndex: index, hasStartedStudy: started } =
           planStudyStateRef.current;
         const remaining = started ? Math.max(items.length - index, 0) : 0;
@@ -3895,6 +4210,10 @@ export default function HomePage() {
       },
       getAccountEpoch: () => statsAccountEpochRef.current,
       fetchQueue: (target) => planStudyActionsRef.current.fetchPlanStudyQueue(target),
+      emptyReason: (items) => {
+        const first = items[0];
+        return first && "fsrsPrepared" in first ? fsrsStudyRef.current.emptyReason(first.fsrsPrepared) : null;
+      },
       replaceSession: (target, items) =>
         planStudyActionsRef.current.replaceStudySessionFromPlan(target, items),
       resumeSession: () => setActiveTab("study"),
@@ -3902,6 +4221,16 @@ export default function HomePage() {
   }
 
   function changeStudyMode(mode: StudyMode) {
+    if (srsModeNow() !== "legacy") {
+      const session = fsrsStudy.getSession();
+      if (session && session.status === "active") {
+        launchFsrs(selectedStudyDeckId, mode, () => setStudyMode(mode));
+        return;
+      }
+      fsrsStudy.reset();
+      setStudyMode(mode);
+      return;
+    }
     setStudyMode(mode);
     if (hasStartedStudy) {
       void startStudy({ mode });
@@ -3911,6 +4240,13 @@ export default function HomePage() {
   }
 
   function quickStartStudy(mode: StudyMode, deckId?: string) {
+    if (srsModeNow() !== "legacy") {
+      launchFsrs(deckId ?? selectedStudyDeckId, mode, () => {
+        setStudyMode(mode);
+        if (deckId !== undefined) setSelectedStudyDeckId(deckId);
+      });
+      return;
+    }
     setStudyMode(mode);
     if (deckId !== undefined) {
       setSelectedStudyDeckId(deckId);
@@ -3922,6 +4258,20 @@ export default function HomePage() {
   }
 
   function changeStudyDeck(deckId: string) {
+    if (srsModeNow() !== "legacy") {
+      const session = fsrsStudy.getSession();
+      const select = () => {
+        setSelectedStudyDeckId(deckId);
+        void loadStudyStats(deckId);
+      };
+      if (session && session.status === "active") {
+        launchFsrs(deckId, studyMode, select);
+        return;
+      }
+      fsrsStudy.reset();
+      select();
+      return;
+    }
     setSelectedStudyDeckId(deckId);
     void loadStudyStats(deckId);
     if (hasStartedStudy) {
@@ -3934,6 +4284,15 @@ export default function HomePage() {
   function startStudyFromVocabDeck() {
     if (selectedVocabDeckId === "all" || selectedVocabDeckId === "") {
       setVocabMessage("학습할 특정 덱을 먼저 선택해 주세요.");
+      return;
+    }
+    if (srsModeNow() !== "legacy") {
+      const deckId = selectedVocabDeckId;
+      const started = launchFsrs(deckId, studyMode, () => {
+        setSelectedStudyDeckId(deckId);
+        void loadStudyStats(deckId);
+      });
+      if (started) setActiveTab("study");
       return;
     }
     setSelectedStudyDeckId(selectedVocabDeckId);
@@ -4053,6 +4412,127 @@ export default function HomePage() {
   const isStudyComplete =
     hasStartedStudy && studyItems.length > 0 && currentStudyIndex >= studyItems.length;
 
+  // FSRS 계정의 복습 탭 상태(legacy 계정이면 undefined → 기존 화면 그대로).
+  const srsModeForRender: SrsModeStatus =
+    srsProbe && srsProbe.epoch === statsAccountEpoch ? srsProbe.status : "checking";
+  const fsrsSnap = fsrsStudy.snapshot();
+
+  // FSRS 지표(Gate D-1): 범위 키 = 덱 선택값. 복습 탭·홈은 복습 탭 덱, 통계는 계정 전체, 단어는 개인 덱.
+  const isDevUserForHome = !currentUser || currentUser.auth_provider === "dev";
+  const metricsMode: "checking" | "fsrs" | "error" =
+    srsModeForRender === "fsrs" ? "fsrs" : srsModeForRender === "error" ? "error" : "checking";
+  const metricEntries = srsMetrics.epoch === statsAccountEpoch ? srsMetrics.entries : {};
+  const studyMetricEntry: MetricsEntry | undefined = metricEntries[`deck:${selectedStudyDeckId}`];
+  const accountMetricEntry: MetricsEntry | undefined = metricEntries["deck:all"];
+  const vocabMetricKey =
+    selectedVocabDeckId !== "all" && selectedVocabDeckId !== "" && !isSharedDeckStudyId(selectedVocabDeckId)
+      ? `deck:${selectedVocabDeckId}`
+      : null;
+  const vocabMetricEntry: MetricsEntry | undefined = vocabMetricKey ? metricEntries[vocabMetricKey] : undefined;
+
+  function dueNowText(entry: MetricsEntry | undefined): string {
+    if (metricsMode === "checking" || !entry || entry.status === "loading") return "확인 중";
+    if (metricsMode === "error" || entry.status === "error") return "확인할 수 없음";
+    return `${dueNowCount(entry.counts)}개`;
+  }
+
+  // FSRS 홈은 계정 전체 범위(Gate D-1 보정): 숫자와 시작 범위가 복습 탭 덱 선택과 무관하게 같다.
+  // legacy 홈은 기존대로 복습 탭 덱의 /stats를 쓴다.
+  const homeReview = homeReviewView(
+    isDevUserForHome
+      ? { kind: "guest" }
+      : srsModeForRender === "legacy"
+        ? { kind: "legacy", stats: studyStats, loading: isLoadingStudyStats, failed: studyStatsFailed }
+        : { kind: "fsrs", mode: metricsMode, entry: accountMetricEntry },
+  );
+
+  const infoSrs =
+    srsModeForRender === "fsrs" || srsModeForRender === "error"
+      ? {
+          dueNow: dueNowText(accountMetricEntry),
+          distribution: accountMetricEntry?.status === "ok" ? statusDistribution(accountMetricEntry.counts) : null,
+          distributionNote:
+            accountMetricEntry?.status === "error" || srsModeForRender === "error"
+              ? "학습 상태를 확인할 수 없어요."
+              : "학습 상태를 불러오는 중이에요.",
+        }
+      : undefined;
+
+  const vocabFsrs =
+    srsModeForRender === "legacy"
+      ? undefined
+      : {
+          dueNow: vocabMetricEntry?.status === "ok" ? dueNowCount(vocabMetricEntry.counts) : null,
+          dueText: vocabMetricKey ? dueNowText(vocabMetricEntry) : "-",
+        };
+
+  // 지금 보이는 화면의 지표만 새로 받는다(탭·덱 변경, 평가 저장, 서울 자정, 앱 복귀).
+  function refreshSrsMetrics() {
+    if (srsModeNow() !== "fsrs") return;
+    if (activeTab === "study") void loadSrsMetric(`deck:${selectedStudyDeckId}`, selectedStudyDeckId);
+    if (activeTab === "home" || activeTab === "info") void loadSrsMetric("deck:all", "all");
+    if (activeTab === "vocab" && vocabMetricKey) void loadSrsMetric(vocabMetricKey, selectedVocabDeckId);
+  }
+  refreshSrsMetricsRef.current = refreshSrsMetrics;
+  const fsrsSectionState: FsrsStudySectionState | undefined =
+    srsModeForRender === "legacy" && !fsrsSnap.session ? undefined : buildFsrsSectionState();
+
+  function buildFsrsSectionState(): FsrsStudySectionState {
+    const session = fsrsSnap.session;
+    const view = fsrsSnap.view;
+    const target = fsrsSnap.target;
+    const practiceModes: StudyMode[] = ["unknown", "uncertain", "all"];
+    return {
+      phase: session
+        ? "session"
+        : srsModeForRender === "error"
+          ? "mode_error"
+          : srsModeForRender === "fsrs"
+            ? "ready"
+            : "checking",
+      primary: view ? view.primary : null,
+      isPractice: session ? fsrsSnap.isPractice : practiceModes.indexOf(studyMode) !== -1,
+      practiceEmpty: fsrsSnap.practiceEmpty,
+      isRecent: target?.kind === "selected",
+      attemptStatus: session ? session.attemptStatus : null,
+      pendingRating: session?.attempt ? session.attempt.payload.rating : null,
+      noticeText: session ? noticeText(session.notice) : "",
+      errorText: session?.halted
+        ? haltText(session.halted)
+        : "카드를 불러오지 못했어요. 지금 회차는 그대로예요.",
+      canReload: Boolean(session && !session.halted),
+      goalLine: view ? newGoalLine(view.newGoal) : null,
+      goalReachedText: goalReachedText(view ? view.newGoal : null),
+      notMigratedNote: Boolean(view && view.notMigratedNote),
+      nextDueAt: view ? view.nextDueAt : null,
+      reviewed: session ? session.reviewed : 0,
+      ratings: session ? session.ratings : createEmptySessionCounts(),
+      firstReviews: session ? session.firstReviewsThisSession : 0,
+      deferredCount: session ? session.excluded.length : 0,
+      pendingLater: fsrsSnap.pendingLater,
+      metricsLine:
+        srsModeForRender === "legacy" ? undefined : metricsSummary(studyMetricEntry, metricsMode),
+      statsPanel:
+        srsModeForRender === "fsrs"
+          ? {
+              dueNow: dueNowText(studyMetricEntry),
+              todayReviews: todayReviewsText(studyStats?.today_seoul),
+              scopeLabel: getDeckDisplayName(selectedStudyDeckId),
+            }
+          : undefined,
+      onRetryProbe: () => void retrySrsProbe(),
+      onRetryAttempt: fsrsStudy.retryNow,
+      onReload: fsrsStudy.refetch,
+      onEnd: fsrsStudy.end,
+      onRestart: fsrsStudy.restart,
+      onPracticeNext: fsrsStudy.practiceNext,
+      onPracticeRecent:
+        target?.kind === "selected"
+          ? () => fsrsStudy.start({ kind: "recent_practice", cardIds: target.cardIds })
+          : undefined,
+    };
+  }
+
   // Same "not really signed in" check AccountMenu uses internally, lifted
   // up so the landing hero's CTAs can vary by auth state too.
   const isDevUser = !currentUser || currentUser.auth_provider === "dev";
@@ -4135,6 +4615,18 @@ export default function HomePage() {
   // start button (quickStartStudy/startStudy are unchanged).
   function goToStudyToday() {
     setActiveTab("study");
+    if (srsModeNow() !== "legacy") {
+      // FSRS: 홈 숫자와 같은 계정 전체 범위로 명시적으로 시작한다(Gate D-1 보정). 진행 중 회차는
+      // launchFsrs의 교체 확인을 그대로 거치고, 확인을 통과했을 때만 복습 탭 덱을 전체로 맞춘다.
+      let deckId = selectedStudyDeckId;
+      launchFsrs("all", "today", () => {
+        setStudyMode("today");
+        setSelectedStudyDeckId("all");
+        deckId = "all";
+      });
+      void loadStudyStats(deckId);
+      return;
+    }
     void loadStudyStats(selectedStudyDeckId);
     quickStartStudy("today");
   }
@@ -4212,9 +4704,7 @@ export default function HomePage() {
       <section className={`library-canvas library-canvas-${activeTab}`}>
         {activeTab === "home" ? (
           <HomeDashboard
-            isDevUser={isDevUser}
-            studyStats={studyStats}
-            isStudyStatsLoading={isLoadingStudyStats}
+            reviewView={homeReview}
             onStartReading={() => void handleTabChange("reading")}
             onTryWithSample={startSampleReadingFromHome}
             onStartTodayReview={goToStudyToday}
@@ -4239,6 +4729,16 @@ export default function HomePage() {
             onGoToHistory={() => void handleTabChange("info")}
             studyLauncher={planStudyLauncherRef.current ?? undefined}
             draftMemory={planDraftMemory}
+            todayNewRefreshKey={`${srsModeForRender}:${appReturnTick}:${seoulMidnightTick}`}
+            loadTodayNew={async (deck, dailyWords) => {
+              if (srsModeNow() !== "fsrs") return null;
+              const deckId = deck.kind === "personal" ? String(deck.id) : `${SHARED_DECK_STUDY_ID_PREFIX}${deck.id}`;
+              const key = `plan:${deckId}:${dailyWords ?? ""}`;
+              const entry = await loadSrsMetric(key, deckId, dailyWords ?? null);
+              if (!entry) throw new Error("plan metrics unavailable");
+              if (entry.status !== "ok") return "오늘 이 덱 새 단어: 확인할 수 없음";
+              return planTodayTextRef.current[key] ?? "오늘 이 덱 새 단어: 확인할 수 없음";
+            }}
             footer={
               <LegacyClassificationDraftNotice
                 storageKey={CLASSIFICATION_DRAFT_KEY}
@@ -4400,6 +4900,7 @@ export default function HomePage() {
             onStatusFilterChange={setVocabStatusFilter}
             onDueOnlyChange={setVocabDueOnly}
             onSortChange={setVocabSort}
+            fsrs={vocabFsrs}
             onNewDeckNameChange={setNewDeckName}
             onNewDeckDescriptionChange={setNewDeckDescription}
             onCreateDeck={() => void createDeck()}
@@ -4487,10 +4988,10 @@ export default function HomePage() {
         {activeTab === "study" ? (
           <StudySection
             items={studyItems}
-            currentItem={currentStudyItem}
+            currentItem={fsrsSectionState ? fsrsSnap.card ?? undefined : currentStudyItem}
             currentIndex={currentStudyIndex}
             isComplete={isStudyComplete}
-            isAnswerVisible={isAnswerVisible}
+            isAnswerVisible={fsrsSectionState ? fsrsSnap.isAnswerVisible : isAnswerVisible}
             isLoading={isLoadingStudy}
             isReviewing={isReviewing}
             message={studyMessage}
@@ -4537,12 +5038,23 @@ export default function HomePage() {
             onGoToVocab={goToVocabFromStudy}
             onGoToReading={() => setActiveTab("reading")}
             onShowAnswer={() => {
+              if (fsrsSectionState) {
+                fsrsStudy.showAnswer();
+                return;
+              }
               answerShownAtRef.current = Date.now();
               setIsAnswerVisible(true);
             }}
-            onReview={(result) => void submitStudyReview(result)}
+            onReview={(result) => {
+              if (fsrsSectionState) {
+                fsrsStudy.rate(result);
+                return;
+              }
+              void submitStudyReview(result);
+            }}
             isGuest={currentUser?.auth_provider === "dev"}
             onOpenAccount={openAccountMenu}
+            fsrs={fsrsSectionState}
           />
         ) : null}
 
@@ -4567,6 +5079,7 @@ export default function HomePage() {
                 `/stats/history/day?date=${encodeURIComponent(date)}&limit=5`,
               )
             }
+            srs={infoSrs}
           />
         ) : null}
       </section>
@@ -4627,6 +5140,29 @@ async function requestJson<T>(
   }
 
   return (await response.json()) as T;
+}
+
+// FSRS 회차용 요청(Gate C-2c): 상태 코드와 서버 detail을 그대로 돌려준다. 네트워크
+// 오류와, 성공 응답인데 본문을 읽지 못한 경우는 결과 미확정(network)이다.
+async function fetchResult(path: string, init: RequestInit = {}): Promise<FetchResult> {
+  let response: Response;
+  try {
+    response = await apiFetch(path, init);
+  } catch {
+    return { kind: "network" };
+  }
+  let body: unknown = null;
+  try {
+    body = await response.json();
+  } catch {
+    if (response.ok) return { kind: "network" };
+  }
+  if (response.ok) return { kind: "ok", body };
+  const detail =
+    body && typeof body === "object" && typeof (body as { detail?: unknown }).detail === "string"
+      ? ((body as { detail: string }).detail)
+      : null;
+  return { kind: "http", status: response.status, detail };
 }
 
 async function apiFetch(

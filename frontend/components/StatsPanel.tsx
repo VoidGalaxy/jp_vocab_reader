@@ -9,6 +9,11 @@ type StatsPanelProps = {
   isLoading: boolean;
   message: string;
   showDeckStats?: boolean;
+  /**
+   * FSRS 계정(Gate D-1): legacy "오늘 복습"(분류 기준 due)과 평균 레벨 대신 큐와 같은 지표를 쓴다.
+   * dueNow: "지금 복습" 값(확인 중·확인 불가 문구 포함), todayReviews: 서울 기준 오늘 평가.
+   */
+  fsrs?: { dueNow: string; todayReviews: string; scopeLabel: string };
 };
 
 export function StatsPanel({
@@ -17,6 +22,7 @@ export function StatsPanel({
   isLoading,
   message,
   showDeckStats = false,
+  fsrs,
 }: StatsPanelProps) {
   return (
     <section className="stats-panel">
@@ -47,19 +53,26 @@ export function StatsPanel({
             <StatCard label="완벽히 아는 단어" value={stats.known_count} />
             <StatCard label="헷갈리는 단어" value={stats.uncertain_count} />
             <StatCard label="모르는 단어" value={stats.unknown_count} />
-            <StatCard label="오늘 복습" value={stats.due_today_count} />
+            {fsrs ? (
+              <>
+                <StatCard label={`지금 복습 · ${fsrs.scopeLabel}`} value={fsrs.dueNow} />
+                <StatCard label="오늘 평가(서울)" value={fsrs.todayReviews} />
+              </>
+            ) : (
+              <StatCard label="오늘 복습" value={stats.due_today_count} />
+            )}
             <StatCard label="총 맞음" value={stats.total_correct_count} />
             <StatCard label="총 틀림" value={stats.total_wrong_count} />
           </div>
           <div className="progress-summary">
             <div>
               <strong>진행률 {formatPercent(stats.learned_rate)}</strong>
-              <span>평균 복습 레벨 {stats.average_review_level.toFixed(1)}</span>
+              {fsrs ? null : <span>평균 복습 레벨 {stats.average_review_level.toFixed(1)}</span>}
             </div>
             <ProgressBar value={stats.learned_rate} />
           </div>
 
-          {showDeckStats && stats.deck_stats.length > 0 ? (
+          {showDeckStats && !fsrs && stats.deck_stats.length > 0 ? (
             <div className="deck-stats-list">
               <h3>덱별 통계</h3>
               {stats.deck_stats.map((deck) => (
@@ -73,11 +86,11 @@ export function StatsPanel({
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="stat-card">
       <span>{label}</span>
-      <strong>{value.toLocaleString("ko-KR")}</strong>
+      <strong>{typeof value === "number" ? value.toLocaleString("ko-KR") : value}</strong>
     </div>
   );
 }

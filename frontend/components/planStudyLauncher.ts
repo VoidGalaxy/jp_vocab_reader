@@ -17,32 +17,53 @@ import type { PlanDeckRef } from "./learningPlan";
 
 export type PlanStudyMode = "new" | "today";
 
-export type PlanStudyTarget = { deck: PlanDeckRef; mode: PlanStudyMode };
+export type PlanStudyTarget = {
+  deck: PlanDeckRef;
+  mode: PlanStudyMode;
+  /** 계획 하루량(FSRS 계정의 /study-queue plan_daily_new, Gate C-2c). legacy 큐는 쓰지 않는다. */
+  dailyNew?: number | null;
+};
 
 /** 세션 식별: id는 시작/교체/초기화마다 바뀌고, position은 카드 진행마다 바뀐다. */
 export type StudySessionSnapshot = {
   id: number;
   position: number;
-  /** 아직 평가하지 않은 카드가 남아 있는가. */
+  /** 아직 평가하지 않은 카드가 남아 있는가. FSRS 계정은 활성 회차(대기 화면 포함)인가. */
   inProgress: boolean;
   remaining: number;
+  /**
+   * FSRS 회차의 교체 보호(Gate C-2c, CONTRACT 1-5). 없으면 legacy 세션이다.
+   * wait: 평가 전송 중이라 바꿀 수 없음, confirm_unsaved: 저장 여부 미확인 평가가 있음.
+   */
+  guard?: "confirm" | "confirm_unsaved" | "wait";
 };
 
 export type PlanStudyAdapter<Item> = {
   getSession(): StudySessionSnapshot;
   getAccountEpoch(): number;
   fetchQueue(target: PlanStudyTarget): Promise<Item[]>;
-  /** 새 큐로 세션을 바꾸고 복습 탭으로 이동. 성공·비어 있지 않을 때만 호출된다. */
-  replaceSession(target: PlanStudyTarget, items: Item[]): void;
+  /**
+   * 받은 큐가 실제로는 비었는지와 그 원인(Gate C-2c 보정). FSRS 회차는 준비한 회차 하나를
+   * 항목으로 넘기므로 여기서 비었는지 판단한다. 없으면 항목 수로만 본다.
+   */
+  emptyReason?(items: Item[]): PlanEmptyReason | null;
+  /**
+   * 새 큐로 세션을 바꾸고 복습 탭으로 이동. 성공·비어 있지 않을 때만 호출된다.
+   * false를 돌려주면 바꾸지 않은 것이다(기존 세션 그대로). 그때 started를 돌려주지 않는다.
+   */
+  replaceSession(target: PlanStudyTarget, items: Item[]): void | boolean;
   /** 기존 세션 그대로 복습 탭으로 이동. */
   resumeSession(): void;
 };
+
+/** 빈 큐의 원인. 없으면(legacy) 원인을 구분하지 않는다. */
+export type PlanEmptyReason = "goal_reached" | "new_unknown" | "no_cards";
 
 export type PlanStudyOutcome =
   | { kind: "started"; count: number }
   | { kind: "needsConfirm"; session: StudySessionSnapshot }
   | { kind: "resumed" }
-  | { kind: "empty" }
+  | { kind: "empty"; reason?: PlanEmptyReason }
   | { kind: "failed" }
   | { kind: "cancelled" }
   | { kind: "busy" }
@@ -87,7 +108,10 @@ export function createPlanStudyLauncher<Item>(adapter: PlanStudyAdapter<Item>): 
       if (epoch !== adapter.getAccountEpoch()) return { kind: "stale" };
       if (!sameSession(adapter.getSession(), expected)) return { kind: "sessionChanged" };
       if (items.length === 0) return { kind: "empty" };
-      adapter.replaceSession(target, items);
+      const reason = adapter.emptyReason ? adapter.emptyReason(items) : null;
+      if (reason) return { kind: "empty", reason };
+      // 실제로 교체됐을 때만 started. 교체를 거절하면 기존 세션은 그대로다.
+      if (adapter.replaceSession(target, items) === false) return { kind: "sessionChanged" };
       return { kind: "started", count: items.length };
     } finally {
       if (myTicket === ticket) busy = false;

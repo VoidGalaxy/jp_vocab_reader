@@ -307,3 +307,62 @@ def build_history_day(
         ],
         "has_more_saved_words": len(words) > limit,
     }
+
+
+def build_today_seoul(user_id: int, now: datetime | None = None) -> dict[str, Any]:
+    """Gate D-1: today's numbers on the Asia/Seoul calendar day, account-wide.
+
+    Additive to /stats; the existing UTC fields there keep their meaning.
+    - reviews: evaluation log rows (personal + subscribed) on the Seoul day.
+      Every stored time is read as a real UTC instant (same reader as the
+      daily new-word goal). If any log time of the account cannot be read,
+      that log might belong to today, so the total is "unknown" with the
+      verified rows as a lower bound -- never a silent 0 or a dropped row.
+    - introduced: the same definition as the study queue's new-word goal
+      (app/srs/goals.py): cards whose first original log falls on the day,
+      exact or unknown with a verified lower bound.
+    Read-only.
+    """
+    from app.srs import goals
+
+    at = now or now_utc()
+    day = at.astimezone(SEOUL).date()
+    counts = {"personal": dict.fromkeys(RATINGS, 0), "subscribed": dict.fromkeys(RATINGS, 0)}
+    unreadable = 0
+    with get_connection() as connection:
+        rows = connection.execute(
+            "SELECT 'personal' AS source, rating, reviewed_at AS event_at FROM review_logs WHERE user_id = ? "
+            "UNION ALL SELECT 'subscribed' AS source, rating, created_at AS event_at "
+            "FROM lexeme_review_logs WHERE user_id = ?",
+            (user_id, user_id),
+        ).fetchall()
+        introduced = goals.introduction_count(connection, user_id, at)
+    for row in rows:
+        when = goals.read_utc(row["event_at"])
+        if when is None:
+            unreadable += 1
+            continue
+        if when.astimezone(SEOUL).date() == day and row["rating"] in RATINGS:
+            counts[row["source"]][row["rating"]] += 1
+    personal = sum(counts["personal"].values())
+    subscribed = sum(counts["subscribed"].values())
+    by_rating = {rating: counts["personal"][rating] + counts["subscribed"][rating] for rating in RATINGS}
+    return {
+        "date": day.isoformat(),
+        "timezone": TIMEZONE_NAME,
+        "scope": "account",
+        "reviews": {
+            "status": "unknown" if unreadable else "exact",
+            "total": None if unreadable else personal + subscribed,
+            "at_least": personal + subscribed,
+            "personal": personal,
+            "subscribed": subscribed,
+            "by_rating": by_rating,
+            "unreadable_time_logs": unreadable,
+        },
+        "introduced": {
+            "status": introduced.status,
+            "count": introduced.count,
+            "at_least": introduced.at_least,
+        },
+    }

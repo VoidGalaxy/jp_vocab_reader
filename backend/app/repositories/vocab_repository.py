@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.account_write import begin_account_write
 from app.database import (
     DEFAULT_DECK_NAME,
     VOCAB_ITEM_FIELDS,
     compute_review_schedule,
     get_connection,
+    is_postgres_connection,
     now_iso,
     now_utc,
     row_to_dict,
@@ -81,6 +83,15 @@ def normalize_vocab_create(item: VocabItemCreate) -> dict[str, Any]:
     }
 
 
+def _is_fsrs_account(user_id: int) -> bool:
+    """Read-only: the account's SRS mode is explicitly 'fsrs' (Gate D-1 filter only)."""
+    from app.srs.goals import account_goal
+
+    with get_connection() as connection:
+        settings = account_goal(connection, user_id)
+    return settings is not None and settings["srs_mode"] == "fsrs"
+
+
 def list_vocab_items(
     user_id: int,
     deck_id: int | None = None,
@@ -97,7 +108,12 @@ def list_vocab_items(
     if status is not None:
         where_clauses.append("vocab_items.status = ?")
         params.append(status)
-    if due_only:
+    # Gate D-1 correction: an FSRS account's "지금 복습" filter is the study
+    # queue's own decision (app/srs/queue.py classify -> learning/relearning/
+    # review due), applied after the SQL conditions below; the legacy rule is
+    # untouched.
+    fsrs_due = due_only and _is_fsrs_account(user_id)
+    if due_only and not fsrs_due:
         # TODO(postgres): ISO datetime string comparison works in SQLite here;
         # revisit with TIMESTAMPTZ and explicit timezone semantics.
         where_clauses.append(
@@ -132,6 +148,14 @@ def list_vocab_items(
     }.get(sort or "", "vocab_items.created_at DESC, vocab_items.id DESC")
 
     with get_connection() as connection:
+        due_ids = None
+        if fsrs_due:
+            from app.srs import queue
+
+            # One read view and the queue's clock for both the decision and the
+            # list, so the count chip (/study-queue) and this list agree.
+            queue._begin_snapshot(connection)
+            due_ids = queue.personal_due_now_ids(connection, user_id, deck_id, queue._now())
         rows = connection.execute(
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
@@ -142,7 +166,10 @@ def list_vocab_items(
             """,
             tuple(params),
         ).fetchall()
-    return [row_to_dict(row) for row in rows]
+    items = [row_to_dict(row) for row in rows]
+    if due_ids is not None:
+        items = [item for item in items if item["id"] in due_ids]
+    return items
 
 
 def list_known_vocab_keys(user_id: int, deck_id: int | None = None) -> set[tuple[str, str]]:
@@ -224,6 +251,7 @@ def create_or_update_vocab_item(
     timestamp = now_iso()
     normalized = normalize_vocab_create(item)
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         deck_id = resolve_deck_id(connection, user_id, normalized["deck_id"])
         existing = connection.execute(
             f"""
@@ -301,6 +329,12 @@ def create_or_update_vocab_item(
                 False,
             )
 
+        new_item_id = cursor.lastrowid
+        # Gate C-2a: a newly inserted card in an FSRS-mode account starts as a
+        # fresh FSRS card (same transaction). The update-existing path above
+        # never reaches here, so it keeps its SRS columns.
+        from app.srs.storage import initialize_new_personal_cards
+        initialize_new_personal_cards(connection, user_id, item_id=new_item_id)
         row = connection.execute(
             f"""
             SELECT {VOCAB_ITEM_FIELDS}
@@ -309,7 +343,7 @@ def create_or_update_vocab_item(
             WHERE vocab_items.id = ?
               AND vocab_items.user_id = ?
             """,
-            (cursor.lastrowid, user_id),
+            (new_item_id, user_id),
         ).fetchone()
     return row_to_dict(row), True
 
@@ -345,6 +379,7 @@ def update_vocab_item(
     values["updated_at"] = timestamp
 
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         values["deck_id"] = resolve_deck_id(connection, user_id, values["deck_id"])
         columns = ", ".join(f"{column} = ?" for column in values)
         params = [*values.values(), item_id, user_id]
@@ -378,6 +413,7 @@ def update_context_explanation(
 ) -> dict[str, Any] | None:
     timestamp = now_iso()
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         cursor = connection.execute(
             """
             UPDATE vocab_items
@@ -404,7 +440,23 @@ def update_context_explanation(
 
 
 def delete_vocab_item(user_id: int, item_id: int) -> bool:
+    from app.srs.identity import record_personal_deletions
+    from app.srs.storage import begin_card_write
+
     with get_connection() as connection:
+        # Gate D-2 U4 follow-up (E4): the account write lock first, as reviews and
+        # migration apply take it, then the ledger row (with the card's past-learning
+        # mark) and the delete in one transaction.
+        begin_card_write(connection, user_id)
+        # Gate D-2 U9 review fix: this card's pre-U9 receipts lose their content copy
+        # in the same transaction (only its own, only content fields).
+        from app.srs import receipts
+        if connection.execute("SELECT 1 FROM vocab_items WHERE id = ? AND user_id = ?", (item_id, user_id)).fetchone():
+            receipts.strip_card_receipts(connection, user_id, [item_id])
+            # Gate D-2 U10-a: the card's snapshot records lose their content copy too.
+            from app.srs.migration import strip_card_snapshots
+            strip_card_snapshots(connection, user_id, [item_id])
+        record_personal_deletions(connection, "id = ? AND user_id = ?", (item_id, user_id))
         cursor = connection.execute(
             """
             DELETE FROM vocab_items
@@ -453,21 +505,54 @@ def record_review(
     item_id: int,
     rating: str,
     response_time_ms: int | None = None,
+    *,
+    request_id: str | None = None,
+    expected_card_version: int | None = None,
+    session_id: str | None = None,
 ) -> dict[str, Any] | None:
+    from app.srs.engine import CardKey
+    from app.srs.reviews import find_receipt, record_fsrs_review
+    from app.srs.storage import begin_card_write
+
     reviewed_at = now_utc()
     timestamp = reviewed_at.isoformat()
     with get_connection() as connection:
+        begin_card_write(connection, user_id)
+        row_lock = " FOR UPDATE" if is_postgres_connection(connection) else ""
         existing = connection.execute(
             """
-            SELECT review_level, next_review_at, deck_id
+            SELECT *
             FROM vocab_items
             WHERE id = ?
               AND user_id = ?
-            """,
+            """ + row_lock,
             (item_id, user_id),
         ).fetchone()
         if not existing:
             return None
+
+        key = CardKey("personal", user_id, item_id)
+        receipt = find_receipt(connection, key, rating, request_id, expected_card_version,
+                               session_id, None, response_time_ms)
+        if receipt is not None:
+            return receipt
+        # Gate D-2 U12 (approved 2026-10-18): a card flagged identity unknown takes no new
+        # review, whatever its engine or the account mode and with or without a
+        # request_id. Checked under the account write lock (the flag takes the same lock),
+        # after ownership (404 above) and the stored-answer rules, before any write. A
+        # database without the SRS columns has no flag table either (same schema step).
+        from app.srs.identity import is_identity_unknown
+        from app.srs.storage import SrsWriteError
+        if "srs_engine" in existing.keys() and is_identity_unknown(connection, user_id, "personal", item_id):
+            raise SrsWriteError("card_identity_unknown")
+        if dict(existing).get("srs_engine", "legacy") == "fsrs":
+            return record_fsrs_review(connection, key, dict(existing), rating, request_id,
+                                      expected_card_version, session_id, response_time_ms=response_time_ms)
+        if expected_card_version is not None and existing["srs_card_version"] != expected_card_version:
+            # Gate D-2 U8: a versioned (FSRS-client) request made before this card was
+            # rolled back to legacy is stale; it is not recorded as a legacy review.
+            from app.srs.storage import SrsWriteError
+            raise SrsWriteError("card_version_conflict")
 
         current_level = int(existing["review_level"])
         previous_next_review_at = existing["next_review_at"]
@@ -480,6 +565,7 @@ def record_review(
         # all mean the word was remembered (just with varying ease), so they all
         # count toward correct_count to keep that legacy counter meaningful.
         count_column = "wrong_count" if rating == "again" else "correct_count"
+        version_update = "srs_card_version = srs_card_version + 1," if "srs_card_version" in existing.keys() else ""
         connection.execute(
             f"""
             UPDATE vocab_items
@@ -487,6 +573,7 @@ def record_review(
                 review_level = ?,
                 next_review_at = ?,
                 last_reviewed_at = ?,
+                {version_update}
                 updated_at = ?
             WHERE id = ?
               AND user_id = ?

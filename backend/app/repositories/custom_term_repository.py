@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
+from app.account_write import begin_account_write
 from app.database import CUSTOM_TERM_FIELDS, get_connection, now_iso, row_to_dict
 from app.schemas import CustomTermCreate, CustomTermUpdate
 
@@ -120,6 +121,7 @@ def create_custom_term(
     timestamp = now_iso()
     normalized = normalize_custom_term_data(term)
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         deck_id = resolve_term_deck_id(connection, user_id, normalized["deck_id"])
         existing = get_existing_custom_term(
             connection, user_id, normalized["term"], deck_id
@@ -170,6 +172,7 @@ def update_custom_term(
     timestamp = now_iso()
     normalized = normalize_custom_term_data(term, existing)
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         deck_id = resolve_term_deck_id(connection, user_id, normalized["deck_id"])
         duplicate = get_existing_custom_term(
             connection, user_id, normalized["term"], deck_id, exclude_id=term_id
@@ -212,6 +215,7 @@ def update_custom_term(
 
 def delete_custom_term(user_id: int, term_id: int) -> bool:
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         cursor = connection.execute(
             """
             DELETE FROM custom_terms

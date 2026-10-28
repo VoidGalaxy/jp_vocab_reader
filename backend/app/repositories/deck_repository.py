@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.account_write import begin_account_write
 from app.database import (
     DEFAULT_DECK_NAME,
     get_connection,
@@ -45,6 +46,7 @@ def get_deck_by_id(user_id: int, deck_id: int) -> dict[str, Any] | None:
 def get_or_create_default_deck_id(user_id: int) -> int:
     timestamp = now_iso()
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         row = connection.execute(
             """
             SELECT id
@@ -78,6 +80,7 @@ def create_deck(user_id: int, deck: DeckCreate) -> tuple[dict[str, Any], bool]:
     name = deck.name.strip()
     description = deck.description.strip()
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         existing = connection.execute(
             f"""
             SELECT {DECK_FIELDS}
@@ -123,6 +126,7 @@ def update_deck(
         else existing["description"]
     )
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         connection.execute(
             """
             UPDATE decks
@@ -145,7 +149,11 @@ def update_deck(
 
 
 def delete_deck_with_items(user_id: int, deck_id: int) -> dict[str, int] | bool | None:
+    from app.srs.storage import begin_card_write
+
     with get_connection() as connection:
+        # Gate D-2 U4 follow-up (E4): account write lock before reading or deleting.
+        begin_card_write(connection, user_id)
         default_deck = connection.execute(
             """
             SELECT id
@@ -170,6 +178,19 @@ def delete_deck_with_items(user_id: int, deck_id: int) -> dict[str, int] | bool 
         if not existing:
             return False
 
+        from app.srs.identity import record_personal_deletions
+
+        # Gate D-2 U9 review fix: the deck's cards' pre-U9 receipts lose their content
+        # copy in this transaction, before the ledger rows and the delete.
+        from app.srs import receipts
+        card_ids = [int(r["id"]) for r in connection.execute(
+            "SELECT id FROM vocab_items WHERE deck_id = ? AND user_id = ?", (deck_id, user_id)).fetchall()]
+        receipts.strip_card_receipts(connection, user_id, card_ids)
+        # Gate D-2 U10-a: and their snapshot records' content copy.
+        from app.srs.migration import strip_card_snapshots
+        strip_card_snapshots(connection, user_id, card_ids)
+        # Gate D-2 U3: ledger rows for every card of the deck, same transaction.
+        record_personal_deletions(connection, "deck_id = ? AND user_id = ?", (deck_id, user_id))
         vocab_cursor = connection.execute(
             """
             DELETE FROM vocab_items

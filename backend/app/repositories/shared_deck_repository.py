@@ -3,10 +3,10 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
+from app.account_write import begin_account_write
 from app.database import get_connection, now_iso, row_to_dict
 from app.repositories.lexeme_repository import (
     add_word_to_shared_deck,
-    count_shared_deck_words,
     get_or_create_subscription,
     is_lexeme_deck,
     is_lexeme_deck_in_connection,
@@ -98,6 +98,7 @@ def publish_deck(
     """
     timestamp = now_iso()
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         deck = connection.execute(
             """
             SELECT id, name, description
@@ -155,62 +156,7 @@ def publish_deck(
             ),
         )
         shared_deck_id = int(cursor.lastrowid)
-
-    # upsert_lexeme/add_word_to_shared_deck open their own connections (see
-    # lexeme_repository.py) so this runs after the `with` block above closes
-    # the first connection/transaction.
-    sort_order = 0
-    for row in vocab_rows:
-        surface = row["surface"] or row["base_form"] or ""
-        base_form = row["base_form"] or row["surface"] or ""
-        lexeme_id = upsert_lexeme(
-            surface=surface,
-            base_form=base_form,
-            reading=row["reading"] or "",
-            part_of_speech=row["part_of_speech"] or "",
-            meaning_ko=row["meaning_ko"] or "",
-            dictionary_gloss=row["dictionary_gloss"] or "",
-            source_type="user_published_deck",
-            # A publisher must never clobber an existing shared word's
-            # common meaning with their own personal wording -- see
-            # upsert_lexeme()'s docstring.
-            refresh_shared_fields=False,
-        )
-        add_word_to_shared_deck(
-            shared_deck_id,
-            lexeme_id,
-            sort_order,
-            # Always snapshot the publisher's own wording for *this* deck so
-            # it's shown even when the shared lexeme keeps a different,
-            # earlier meaning_ko (nothing the publisher shared is lost).
-            display_meaning_ko=row["meaning_ko"] or None,
-            example_sentence=row["example_sentence"] or None,
-            context_explanation_ko=row["context_explanation_ko"] or None,
-        )
-        sort_order += 1
-
-    for row in term_rows:
-        lexeme_id = upsert_lexeme(
-            surface=row["term"],
-            base_form=row["term"],
-            reading=row["reading"] or "",
-            part_of_speech=row["part_of_speech"] or "",
-            meaning_ko=row["meaning_ko"] or "",
-            source_type="user_published_custom_term",
-            refresh_shared_fields=False,
-        )
-        add_word_to_shared_deck(
-            shared_deck_id,
-            lexeme_id,
-            sort_order,
-            display_meaning_ko=row["meaning_ko"] or None,
-            # custom_terms has no example_sentence field; its `description`
-            # is the closest equivalent to a short deck-specific note, so it
-            # maps to the context_explanation_ko snapshot slot instead of
-            # being dropped.
-            context_explanation_ko=row["description"] or None,
-        )
-        sort_order += 1
+        _publish_words(connection, shared_deck_id, vocab_rows, term_rows)
 
     return {
         "shared_deck_id": shared_deck_id,
@@ -219,6 +165,44 @@ def publish_deck(
         "custom_term_count": len(term_rows),
         "message": "\uacf5\uc720 \ub371\uc73c\ub85c \ub4f1\ub85d\ud588\uc2b5\ub2c8\ub2e4.",
     }
+
+
+def _publish_words(connection, shared_deck_id, vocab_rows, term_rows):
+    # Canonical shared-word order prevents opposite publisher orders taking
+    # lexeme row locks in opposite order. The deck's display order stays intact.
+    entries = []
+    for row in vocab_rows:
+        entries.append((len(entries), {
+            "surface": row["surface"] or row["base_form"] or "",
+            "base_form": row["base_form"] or row["surface"] or "",
+            "reading": row["reading"] or "", "part_of_speech": row["part_of_speech"] or "",
+            "meaning_ko": row["meaning_ko"] or "", "dictionary_gloss": row["dictionary_gloss"] or "",
+            "source_type": "user_published_deck",
+        }, {
+            "display_meaning_ko": row["meaning_ko"] or None,
+            "example_sentence": row["example_sentence"] or None,
+            "context_explanation_ko": row["context_explanation_ko"] or None,
+        }))
+    for row in term_rows:
+        entries.append((len(entries), {
+            "surface": row["term"], "base_form": row["term"], "reading": row["reading"] or "",
+            "part_of_speech": row["part_of_speech"] or "", "meaning_ko": row["meaning_ko"] or "",
+            "source_type": "user_published_custom_term",
+        }, {
+            "display_meaning_ko": row["meaning_ko"] or None,
+            "context_explanation_ko": row["description"] or None,
+        }))
+
+    def key(entry):
+        word = entry[1]
+        return ((word["base_form"] or word["surface"]).strip() or word["surface"].strip(),
+                word["reading"].strip(), word["part_of_speech"].strip())
+
+    for sort_order, word, snapshot in sorted(entries, key=key):
+        lexeme_id = upsert_lexeme(**word, refresh_shared_fields=False, connection=connection)
+        add_word_to_shared_deck(
+            shared_deck_id, lexeme_id, sort_order, **snapshot, connection=connection,
+        )
 
 
 def list_shared_decks(user_id: int | None = None) -> list[dict[str, Any]]:
@@ -391,6 +375,7 @@ def delete_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] | st
     this shared deck.
     """
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         deck = connection.execute(
             "SELECT id, owner_user_id, title, visibility FROM shared_decks WHERE id = ?",
             (shared_deck_id,),
@@ -431,6 +416,7 @@ def republish_shared_deck(user_id: int, shared_deck_id: int) -> dict[str, Any] |
     visibility flip, nothing more.
     """
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         deck = connection.execute(
             "SELECT id, owner_user_id, title, visibility FROM shared_decks WHERE id = ?",
             (shared_deck_id,),
@@ -483,6 +469,7 @@ def _import_lexeme_shared_deck(
     user_id: int, shared_deck_id: int
 ) -> dict[str, Any] | str | None:
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         deck = connection.execute(
             """
             SELECT id, title, owner_user_id
@@ -497,12 +484,12 @@ def _import_lexeme_shared_deck(
         if int(deck["owner_user_id"]) == user_id:
             return "forbidden"
 
-    word_count = count_shared_deck_words(shared_deck_id)
-    _subscription, created = get_or_create_subscription(user_id, shared_deck_id)
-
-    if created:
-        timestamp = now_iso()
-        with get_connection() as connection:
+        word_count = int(connection.execute(
+            "SELECT COUNT(*) AS n FROM shared_deck_words WHERE shared_deck_id = ?", (shared_deck_id,)
+        ).fetchone()["n"])
+        _subscription, created = get_or_create_subscription(user_id, shared_deck_id, connection=connection)
+        if created:
+            timestamp = now_iso()
             connection.execute(
                 """
                 UPDATE shared_decks
@@ -511,9 +498,9 @@ def _import_lexeme_shared_deck(
                 """,
                 (timestamp, shared_deck_id),
             )
-        message = "추천 어휘 덱을 내 학습 목록에 추가했어요."
-    else:
-        message = "이미 내 학습 목록에 있는 추천 어휘 덱이에요."
+            message = "추천 어휘 덱을 내 학습 목록에 추가했어요."
+        else:
+            message = "이미 내 학습 목록에 있는 추천 어휘 덱이에요."
 
     return {
         "success": True,
@@ -537,6 +524,7 @@ def _import_shared_deck_legacy(
 ) -> dict[str, Any] | str | None:
     timestamp = now_iso()
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         deck = connection.execute(
             """
             SELECT id, title, description, owner_user_id
@@ -611,6 +599,11 @@ def _import_shared_deck_legacy(
                     timestamp,
                 ),
             )
+
+        # Gate C-2a: copied cards are new cards in a deck created above, in
+        # this transaction; FSRS-mode accounts get fresh FSRS cards.
+        from app.srs.storage import initialize_new_personal_cards
+        initialize_new_personal_cards(connection, user_id, deck_id=imported_deck_id)
 
         for row in term_rows:
             connection.execute(

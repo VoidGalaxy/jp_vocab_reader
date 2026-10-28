@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any
+
+from app.account_write import begin_account_write
 
 from app.database import (
     compute_review_schedule,
@@ -57,6 +60,7 @@ def upsert_lexeme(
     jlpt_level: str | None = None,
     source_type: str = "shared_deck",
     refresh_shared_fields: bool = True,
+    *, connection: Any = None,
 ) -> int:
     """Find-or-create a lexeme keyed by (base_form, reading, part_of_speech).
 
@@ -80,7 +84,7 @@ def upsert_lexeme(
     surface = surface.strip() or base_form
     reading = (reading or "").strip()
     part_of_speech = (part_of_speech or "").strip()
-    with get_connection() as connection:
+    with (get_connection() if connection is None else nullcontext(connection)) as connection:
         existing = connection.execute(
             """
             SELECT id FROM lexemes
@@ -156,6 +160,7 @@ def add_word_to_shared_deck(
     context_explanation_ko: str | None = None,
     tags_json: str | None = None,
     published_note: str | None = None,
+    connection: Any = None,
 ) -> None:
     """Idempotent upsert on (shared_deck_id, lexeme_id): republishing/
     re-registering the same deck refreshes sort_order and the deck-specific
@@ -164,7 +169,7 @@ def add_word_to_shared_deck(
     plus ON CONFLICT DO UPDATE below is what guarantees that).
     """
     timestamp = now_iso()
-    with get_connection() as connection:
+    with (get_connection() if connection is None else nullcontext(connection)) as connection:
         connection.execute(
             """
             INSERT INTO shared_deck_words (
@@ -205,14 +210,17 @@ def count_shared_deck_words(shared_deck_id: int) -> int:
 
 
 def get_or_create_subscription(
-    user_id: int, shared_deck_id: int
+    user_id: int, shared_deck_id: int, *, connection: Any = None,
 ) -> tuple[dict[str, Any], bool]:
     """Returns (subscription, created). Re-importing an already-subscribed
     deck is idempotent: no duplicate row, existing row just gets
     reactivated if it had been unsubscribed.
     """
     timestamp = now_iso()
-    with get_connection() as connection:
+    owns_connection = connection is None
+    with (get_connection() if owns_connection else nullcontext(connection)) as connection:
+        if owns_connection:
+            begin_account_write(connection, user_id)
         existing = connection.execute(
             """
             SELECT id, user_id, shared_deck_id, is_active, imported_at,
@@ -465,6 +473,7 @@ def update_word_status(
 
     timestamp = now_iso()
     with get_connection() as connection:
+        begin_account_write(connection, user_id)
         lexeme = connection.execute(
             "SELECT id FROM lexemes WHERE id = ?", (lexeme_id,)
         ).fetchone()
@@ -503,7 +512,9 @@ _RATING_TO_AUTO_STATUS = {
 
 
 def record_lexeme_review(
-    user_id: int, lexeme_id: int, rating: str, shared_deck_id: int | None = None
+    user_id: int, lexeme_id: int, rating: str, shared_deck_id: int | None = None,
+    *, request_id: str | None = None, expected_card_version: int | None = None,
+    session_id: str | None = None, first_review: bool = False,
 ) -> dict[str, Any] | None:
     """Same fixed-step SRS ladder as vocab_items (compute_review_schedule),
     applied to a lazily-created user_word_progress row instead.
@@ -528,16 +539,43 @@ def record_lexeme_review(
     touches status either way, and this function still doesn't touch
     vocab_items/review_logs at all.
     """
+    from app.srs.engine import CardKey
+    from app.srs.reviews import find_receipt, record_fsrs_review
+    from app.srs.storage import begin_card_write, load_card, require_subscription
+
     reviewed_at = now_utc()
     timestamp = reviewed_at.isoformat()
     with get_connection() as connection:
+        begin_card_write(connection, user_id)
         lexeme = connection.execute(
             "SELECT id FROM lexemes WHERE id = ?", (lexeme_id,)
         ).fetchone()
         if not lexeme:
             return None
 
+        if first_review:
+            # Gate C-2a: explicit `expected_card_version: null`. Must not go
+            # through the legacy lazy creation below.
+            from app.srs.reviews import record_first_lexeme_review
+            return record_first_lexeme_review(connection, CardKey("lexeme", user_id, lexeme_id), rating,
+                                              request_id, session_id, shared_deck_id)
+
         progress = get_or_create_progress(connection, user_id, lexeme_id)
+        key = CardKey("lexeme", user_id, lexeme_id)
+        card = load_card(connection, key, for_update=True)
+        if card.get("srs_engine", "legacy") == "fsrs" or request_id is not None:
+            require_subscription(connection, key, shared_deck_id)
+        receipt = find_receipt(connection, key, rating, request_id, expected_card_version,
+                               session_id, shared_deck_id, None)
+        if receipt is not None:
+            return receipt
+        if card.get("srs_engine", "legacy") == "fsrs":
+            return record_fsrs_review(connection, key, card, rating, request_id,
+                                      expected_card_version, session_id, shared_deck_id)
+        if expected_card_version is not None and card.get("srs_card_version") != expected_card_version:
+            # Gate D-2 U8: a stale versioned (FSRS-client) request after a rollback.
+            from app.srs.storage import SrsWriteError
+            raise SrsWriteError("card_version_conflict")
         previous_review_level = int(progress["review_level"] or 0)
         previous_next_review_at = progress["next_review_at"]
         previous_status = progress["status"]
@@ -549,6 +587,7 @@ def record_lexeme_review(
         else:
             corrected_status = previous_status
         count_column = "wrong_count" if rating == "again" else "correct_count"
+        version_update = "srs_card_version = srs_card_version + 1," if "srs_card_version" in card else ""
         connection.execute(
             f"""
             UPDATE user_word_progress
@@ -557,6 +596,7 @@ def record_lexeme_review(
                 next_review_at = ?,
                 last_reviewed_at = ?,
                 status = ?,
+                {version_update}
                 updated_at = ?
             WHERE user_id = ? AND lexeme_id = ?
             """,

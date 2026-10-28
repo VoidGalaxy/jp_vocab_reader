@@ -16,6 +16,7 @@ from app.schemas import (
     VocabItemUpdate,
 )
 from app.settings import DEFAULT_SQLITE_DB_PATH, get_app_env, get_database_url
+from app.srs.schema import SchemaUpgradeError, ensure_pg_columns, ensure_pg_index, ensure_srs_schema
 
 try:
     import psycopg
@@ -73,6 +74,10 @@ class AppPostgresCursor:
         return int(self._cursor.rowcount)
 
     @property
+    def description(self) -> Any:
+        return self._cursor.description
+
+    @property
     def lastrowid(self) -> int | None:
         if self._lastrowid_loaded:
             return self._lastrowid
@@ -110,6 +115,16 @@ class AppPostgresConnection:
 
     def close(self) -> None:
         self._connection.close()
+
+    # Gate E-2c: the batched cleanup tools (receipt minimize / purge, snapshot minimize,
+    # expired-run prune) end each batch's transaction themselves, as on sqlite3. Driver
+    # errors are raised as they are. Under the E-1 managed schema step the wrapped object
+    # refuses these, so that boundary is unchanged.
+    def commit(self) -> None:
+        self._connection.commit()
+
+    def rollback(self) -> None:
+        self._connection.rollback()
 
     def execute(self, query: str, params: tuple[Any, ...] | list[Any] = ()) -> AppPostgresCursor:
         adapted_query = adapt_query(query, is_postgres=True)
@@ -229,7 +244,7 @@ def get_sqlite_database_path() -> str:
     )
 
 
-def get_connection() -> sqlite3.Connection | AppPostgresConnection:
+def get_connection(*, read_only: bool = False) -> sqlite3.Connection | AppPostgresConnection:
     database_url = get_database_url()
     # Must run before any connection object (SQLite or PostgreSQL) is
     # created -- this is the single choke point every DB access in the app
@@ -244,16 +259,30 @@ def get_connection() -> sqlite3.Connection | AppPostgresConnection:
                 "Install backend requirements first."
             )
         raw_connection = psycopg.connect(database_url, row_factory=dict_row)
+        if read_only:
+            try:
+                raw_connection.execute("SET TRANSACTION READ ONLY")
+            except Exception:
+                raw_connection.close()
+                raise
         return AppPostgresConnection(raw_connection)
 
+    path = get_sqlite_database_path()
+    if read_only:
+        if path == ":memory:":
+            raise ValueError("Read-only access requires an existing database file.")
+        path = Path(path).resolve().as_uri() + "?mode=ro"
     connection = sqlite3.connect(
-        get_sqlite_database_path(),
+        path,
+        uri=read_only,
         timeout=SQLITE_CONNECTION_TIMEOUT_SECONDS,
         factory=AppSQLiteConnection,
     )
     connection.row_factory = sqlite3.Row
     # TODO(postgres): PRAGMA is SQLite-specific and should move behind adapter setup.
     connection.execute("PRAGMA foreign_keys = ON")
+    if read_only:
+        connection.execute("PRAGMA query_only = ON")
     return connection
 
 
@@ -269,6 +298,8 @@ def initialize_database() -> None:
 def ensure_schema(connection: sqlite3.Connection) -> None:
     if is_postgres_connection(connection):
         create_postgres_tables(connection)
+        drop_personal_log_card_fk(connection)
+        ensure_srs_schema(connection, is_postgres=True)
         dev_user_id = seed_dev_user(connection)
         backfill_existing_data_to_dev_user(connection, dev_user_id)
         ensure_default_decks_for_users(connection)
@@ -287,6 +318,9 @@ def ensure_schema(connection: sqlite3.Connection) -> None:
     migrate_deck_unique_constraint(connection)
     migrate_vocab_unique_constraint(connection)
     apply_sqlite_migrations(connection)
+    # After migrate_vocab_unique_constraint, which may rebuild vocab_items.
+    # Additive only: no backfill, no history replay, no engine switch.
+    ensure_srs_schema(connection, is_postgres=False)
     backfill_existing_data_to_dev_user(connection, dev_user_id)
     ensure_default_decks_for_users(connection)
     backfill_vocab_items_to_default_decks(connection, dev_user_id)
@@ -349,7 +383,7 @@ def ensure_core_schema(connection: sqlite3.Connection) -> None:
     connection.execute(
         """
         CREATE TABLE IF NOT EXISTS vocab_items (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             deck_id INTEGER,
             surface TEXT NOT NULL,
             base_form TEXT NOT NULL,
@@ -753,6 +787,99 @@ def create_app_feedback_table(connection: sqlite3.Connection) -> None:
     )
 
 
+# Gate E-3 (E-D1 A, approved 2026-10-18): PostgreSQL personal review logs keep their card
+# id after the card is deleted, as SQLite always did. Every database created before this
+# change has review_logs.vocab_item_id -> vocab_items(id) ON DELETE CASCADE (commit d7ef5dc).
+PERSONAL_LOG_CARD_FK_LOCK_TIMEOUT_MS = 5000
+_PLAIN_CONSTRAINT_NAME = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
+# Every foreign key on the app's review_logs (resolved through the search path, i.e. the
+# table the app uses) whose columns include vocab_item_id -- judged by columns, referenced
+# table / columns and actions, never by the constraint name.
+_PERSONAL_LOG_CARD_FKS_SQL = """
+SELECT c.oid::bigint AS oid, c.conname::text AS name, n.nspname::text AS schema_name,
+       rn.nspname::text AS ref_schema, rt.relname::text AS ref_table,
+       c.condeferrable AS deferrable, c.convalidated AS validated,
+       c.confdeltype::text AS on_delete, c.confupdtype::text AS on_update, c.confmatchtype::text AS match,
+       (SELECT array_agg(a.attname::text ORDER BY k.n) FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, n)
+          JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum) AS columns,
+       (SELECT array_agg(a.attname::text ORDER BY k.n) FROM unnest(c.confkey) WITH ORDINALITY AS k(attnum, n)
+          JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.attnum) AS ref_columns,
+       c.confrelid = to_regclass('vocab_items') AS references_cards
+FROM pg_constraint c
+JOIN pg_class t ON t.oid = c.conrelid JOIN pg_namespace n ON n.oid = t.relnamespace
+JOIN pg_class rt ON rt.oid = c.confrelid JOIN pg_namespace rn ON rn.oid = rt.relnamespace
+WHERE c.contype = 'f' AND c.conrelid = to_regclass('review_logs')
+  AND (SELECT a.attnum FROM pg_attribute a WHERE a.attrelid = c.conrelid AND a.attname = 'vocab_item_id')
+      = ANY (c.conkey)
+ORDER BY c.oid
+"""
+
+
+def _personal_log_card_fks(connection: Any) -> list[dict[str, Any]]:
+    return [dict(row) for row in connection.execute(_PERSONAL_LOG_CARD_FKS_SQL).fetchall()]
+
+
+def _require_approved_card_fk(found: list[dict[str, Any]]) -> dict[str, Any]:
+    """Exactly the FK every earlier version created: one column, vocab_item_id ->
+    vocab_items(id) in the same schema, ON DELETE CASCADE, plain, validated, not
+    deferrable, with a plain name. Anything else stops the upgrade before any write."""
+    if len(found) != 1:
+        raise SchemaUpgradeError("personal_log_card_fk_unexpected_count")
+    fk = found[0]
+    approved = (
+        fk["columns"] == ["vocab_item_id"]
+        and fk["references_cards"] is True
+        and fk["ref_table"] == "vocab_items"
+        and fk["ref_columns"] == ["id"]
+        and fk["ref_schema"] == fk["schema_name"]
+        and fk["deferrable"] is False
+        and fk["validated"] is True
+        and fk["on_delete"] == "c"
+        and fk["on_update"] == "a"
+        and fk["match"] == "s"
+        and bool(_PLAIN_CONSTRAINT_NAME.fullmatch(fk["name"] or ""))
+        and bool(_PLAIN_CONSTRAINT_NAME.fullmatch(fk["schema_name"] or ""))
+    )
+    if not approved:
+        raise SchemaUpgradeError("personal_log_card_fk_unexpected_shape")
+    return fk
+
+
+def drop_personal_log_card_fk(connection: Any) -> str:
+    """PostgreSQL only, inside the caller's schema transaction. Returns "absent" (nothing
+    to do: new databases and every rerun) or "dropped". Waits for locks at most
+    PERSONAL_LOG_CARD_FK_LOCK_TIMEOUT_MS; re-reads the catalog under the table lock; on
+    any surprise raises SchemaUpgradeError (or the driver's lock timeout) and the whole
+    transaction rolls back. Never touches rows, and never re-creates the FK."""
+    from psycopg import sql
+
+    found = _personal_log_card_fks(connection)
+    if not found:
+        return "absent"
+    fk = _require_approved_card_fk(found)
+    previous = connection.execute("SELECT current_setting('lock_timeout') AS value").fetchone()["value"]
+    connection.execute("SELECT set_config('lock_timeout', ?, true)", (f"{PERSONAL_LOG_CARD_FK_LOCK_TIMEOUT_MS}ms",))
+    table = sql.Identifier(fk["schema_name"], "review_logs").as_string(None)
+    cards = sql.Identifier(fk["ref_schema"], "vocab_items").as_string(None)
+    # Card table first, then the log table -- the order the app touches them (a review reads
+    # / updates the card, then reads / inserts its logs) -- and ACCESS EXCLUSIVE on both
+    # right away: ensure_srs_schema later ALTERs vocab_items in this same transaction, and a
+    # weaker lock here would have to be raised then, while a review holding the card table
+    # waits for review_logs (a real deadlock on PostgreSQL 18.6 with SHARE ROW EXCLUSIVE,
+    # E-3 race check, 2026-10-18).
+    connection.execute(f"LOCK TABLE {cards} IN ACCESS EXCLUSIVE MODE")
+    connection.execute(f"LOCK TABLE {table} IN ACCESS EXCLUSIVE MODE")
+    again = _personal_log_card_fks(connection)
+    if [row["oid"] for row in again] != [fk["oid"]]:
+        raise SchemaUpgradeError("personal_log_card_fk_changed_before_lock")
+    fk = _require_approved_card_fk(again)
+    connection.execute(f"ALTER TABLE {table} DROP CONSTRAINT {sql.Identifier(fk['name']).as_string(None)}")
+    if _personal_log_card_fks(connection):
+        raise SchemaUpgradeError("personal_log_card_fk_still_present")
+    connection.execute("SELECT set_config('lock_timeout', ?, true)", (previous,))
+    return "dropped"
+
+
 def create_postgres_tables(connection: AppPostgresConnection) -> None:
     # TODO(postgres): created_at/updated_at/next_review_at are kept as ISO TEXT
     # for compatibility. Move to TIMESTAMPTZ in a later migration.
@@ -928,17 +1055,18 @@ def create_postgres_tables(connection: AppPostgresConnection) -> None:
     )
     # Additive columns for a table that may already exist (e.g. a
     # pre-this-change Neon database) -- CREATE TABLE IF NOT EXISTS above is a
-    # no-op there, so these run unconditionally. PostgreSQL (9.6+) supports
-    # ADD COLUMN IF NOT EXISTS natively, unlike SQLite.
-    connection.execute(
-        """
-        ALTER TABLE shared_deck_words
-        ADD COLUMN IF NOT EXISTS display_meaning_ko TEXT,
-        ADD COLUMN IF NOT EXISTS example_sentence TEXT,
-        ADD COLUMN IF NOT EXISTS context_explanation_ko TEXT,
-        ADD COLUMN IF NOT EXISTS tags_json TEXT,
-        ADD COLUMN IF NOT EXISTS published_note TEXT
-        """
+    # no-op there. Gate E-3 follow-up (E-D13 A): added only when the catalog shows
+    # them missing, so an up-to-date start takes no AccessExclusive lock here.
+    ensure_pg_columns(
+        connection,
+        "shared_deck_words",
+        [
+            "display_meaning_ko TEXT",
+            "example_sentence TEXT",
+            "context_explanation_ko TEXT",
+            "tags_json TEXT",
+            "published_note TEXT",
+        ],
     )
     connection.execute(
         """
@@ -972,19 +1100,22 @@ def create_postgres_tables(connection: AppPostgresConnection) -> None:
         )
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_shared_deck_words_deck
         ON shared_deck_words(shared_deck_id, sort_order)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_user_deck_subscriptions_user
         ON user_deck_subscriptions(user_id)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_user_word_progress_user
         ON user_word_progress(user_id)
@@ -995,7 +1126,10 @@ def create_postgres_tables(connection: AppPostgresConnection) -> None:
         CREATE TABLE IF NOT EXISTS review_logs (
             id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
             user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-            vocab_item_id INTEGER NOT NULL REFERENCES vocab_items(id) ON DELETE CASCADE,
+            -- Gate E-3 (E-D1 A): no card FK -- a log outlives its deleted card, as in
+            -- SQLite. Existing databases lose the old CASCADE FK in
+            -- drop_personal_log_card_fk().
+            vocab_item_id INTEGER NOT NULL,
             deck_id INTEGER,
             rating TEXT NOT NULL,
             reviewed_at TEXT NOT NULL,
@@ -1028,25 +1162,29 @@ def create_postgres_tables(connection: AppPostgresConnection) -> None:
         )
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_user_created
         ON lexeme_review_logs(user_id, created_at)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_user_lexeme
         ON lexeme_review_logs(user_id, lexeme_id)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_user_deck
         ON lexeme_review_logs(user_id, shared_deck_id)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_lexeme_review_logs_lexeme
         ON lexeme_review_logs(lexeme_id)
@@ -1084,49 +1222,57 @@ def create_postgres_tables(connection: AppPostgresConnection) -> None:
         )
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_vocab_items_user_deck
         ON vocab_items(user_id, deck_id)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_shared_decks_visibility
         ON shared_decks(visibility, created_at)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_review_logs_user_reviewed
         ON review_logs(user_id, reviewed_at)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_review_logs_item
         ON review_logs(vocab_item_id)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_meaning_feedback_user
         ON meaning_feedback(user_id, created_at)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_meaning_feedback_status
         ON meaning_feedback(status)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_app_feedback_user
         ON app_feedback(user_id, created_at)
         """
     )
-    connection.execute(
+    ensure_pg_index(
+        connection,
         """
         CREATE INDEX IF NOT EXISTS idx_app_feedback_status
         ON app_feedback(status)
@@ -1609,6 +1755,10 @@ def delete_deck(deck_id: int) -> dict[str, int] | bool | None:
         if not existing:
             return False
 
+        from app.srs.identity import lock_card_owners, record_personal_deletions
+
+        lock_card_owners(connection, "deck_id = ?", (deck_id,))
+        record_personal_deletions(connection, "deck_id = ?", (deck_id,))
         vocab_cursor = connection.execute(
             "DELETE FROM vocab_items WHERE deck_id = ?",
             (deck_id,),
@@ -2433,7 +2583,11 @@ def update_context_explanation(
 
 
 def delete_vocab_item(item_id: int) -> bool:
+    from app.srs.identity import lock_card_owners, record_personal_deletions
+
     with get_connection() as connection:
+        lock_card_owners(connection, "id = ?", (item_id,))
+        record_personal_deletions(connection, "id = ?", (item_id,))
         cursor = connection.execute("DELETE FROM vocab_items WHERE id = ?", (item_id,))
     return cursor.rowcount > 0
 

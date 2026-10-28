@@ -1,3 +1,4 @@
+import type { StatusDistribution } from "./srsMetrics";
 import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { getDisplayMeaning } from "./shared";
 import { ChevronRightIcon } from "./icons";
@@ -21,6 +22,11 @@ type StudyLogPageProps = {
   onGoToReading: () => void;
   loadHistoryMonth: (month: string) => Promise<StudyHistoryMonth>;
   loadHistoryDay: (date: string) => Promise<StudyHistoryDay>;
+  /**
+   * FSRS 계정(Gate D-1): legacy "오늘 복습 예정"·단계 막대·평균 단계 대신 큐와 같은 지표.
+   * dueNow는 계정 전체 "지금 복습" 문구, distribution은 학습 상태 분포(없으면 확인 중/확인 불가 문구).
+   */
+  srs?: { dueNow: string; distribution: StatusDistribution | null; distributionNote: string };
 };
 
 type RegisterView = "record" | "vocab";
@@ -522,9 +528,11 @@ const STATUS_ROWS = [
 function InventoryPage({
   stats,
   onGoToReading,
+  srs,
 }: {
   stats: StudyStats;
   onGoToReading: () => void;
+  srs?: StudyLogPageProps["srs"];
 }) {
   const counts = STATUS_ROWS.map((row) => stats[row.key]);
   const total = stats.total_count;
@@ -540,10 +548,17 @@ function InventoryPage({
         <span className="stats-reg-learned">아는 단어 {toPercent(stats.learned_rate)}%</span>
         {/* /stats due_today_count is personal + subscribed decks; not a
             date-by-date figure, so it stays with the current inventory. */}
-        <span className="stats-reg-due">
-          오늘 복습 예정 <b>{formatCount(stats.due_today_count)}</b>개
-          <small>구독 덱 포함</small>
-        </span>
+        {srs ? (
+          <span className="stats-reg-due">
+            지금 복습 <b>{srs.dueNow}</b>
+            <small>구독 덱 포함</small>
+          </span>
+        ) : (
+          <span className="stats-reg-due">
+            오늘 복습 예정 <b>{formatCount(stats.due_today_count)}</b>개
+            <small>구독 덱 포함</small>
+          </span>
+        )}
       </div>
       <div
         className="stats-reg-composition"
@@ -579,7 +594,7 @@ function InventoryPage({
         </p>
       ) : null}
 
-      <DeckMastery deckStats={stats.deck_stats} />
+      <DeckMastery deckStats={stats.deck_stats} hideDue={Boolean(srs)} />
     </section>
   );
 }
@@ -619,7 +634,7 @@ function RecentWordsNotice({
   );
 }
 
-function DeckMastery({ deckStats }: { deckStats: DeckStats[] }) {
+function DeckMastery({ deckStats, hideDue = false }: { deckStats: DeckStats[]; hideDue?: boolean }) {
   return (
     <section className="stats-reg-section stats-reg-decks">
       <h2>단어장별 익힘</h2>
@@ -639,7 +654,8 @@ function DeckMastery({ deckStats }: { deckStats: DeckStats[] }) {
               <span>
                 {formatCount(deck.known_count)} / {formatCount(deck.total_count)}개 아는 단어
               </span>
-              <span>오늘 복습 {formatCount(deck.due_today_count)}개</span>
+              {/* FSRS 계정은 덱별 "지금 복습"을 따로 세지 않으므로 legacy 수치를 숨긴다. */}
+              {hideDue ? null : <span>오늘 복습 {formatCount(deck.due_today_count)}개</span>}
             </p>
           </div>
         ))
@@ -655,14 +671,20 @@ function ReviewPage({
   stats,
   hardWords,
   isWordsLoading,
+  srs,
 }: {
   stats: StudyStats;
   hardWords: VocabItem[];
   isWordsLoading: boolean;
+  srs?: StudyLogPageProps["srs"];
 }) {
   return (
     <section className="stats-reg-page stats-reg-review-page" aria-label="복습 현황">
-      <StageBars levels={stats.review_level_counts} />
+      {srs ? (
+        <StatusBars distribution={srs.distribution} note={srs.distributionNote} />
+      ) : (
+        <StageBars levels={stats.review_level_counts} />
+      )}
 
       <section className="stats-reg-section stats-reg-lifetime">
         <h2>누적 복습</h2>
@@ -681,10 +703,12 @@ function ReviewPage({
               <small>회</small>
             </strong>
           </span>
-          <span>
-            평균 단계
-            <strong>{stats.average_review_level.toFixed(1)}</strong>
-          </span>
+          {srs ? null : (
+            <span>
+              평균 단계
+              <strong>{stats.average_review_level.toFixed(1)}</strong>
+            </span>
+          )}
         </div>
       </section>
 
@@ -709,6 +733,50 @@ function ReviewPage({
           ))
         )}
       </section>
+    </section>
+  );
+}
+
+// Gate D-1: FSRS 계정의 학습 상태 분포. legacy 단계 막대와 같은 자리·같은 모양을 쓰고,
+// 출제 대상이 아닌 범주(미전환·이력 확인 필요 등)는 정상 상태와 따로 보인다.
+function StatusBars({ distribution, note }: { distribution: StatusDistribution | null; note: string }) {
+  if (!distribution) {
+    return (
+      <section className="stats-reg-section stats-reg-stages">
+        <h2>학습 상태</h2>
+        <p className="stats-reg-quiet">{note}</p>
+      </section>
+    );
+  }
+  const normal = distribution.normal;
+  const excluded = distribution.excluded.filter((row) => row.count > 0);
+  const max = Math.max(1, ...normal.map((row) => row.count));
+  return (
+    <section className="stats-reg-section stats-reg-stages">
+      <h2>학습 상태</h2>
+      <div
+        className="stats-reg-stage-bars"
+        role="img"
+        aria-label={[...normal, ...excluded].map((row) => `${row.label} ${row.count}개`).join(", ")}
+      >
+        {normal.map((row) => (
+          <div key={row.key}>
+            <span>{row.label}</span>
+            <i>
+              <b style={{ width: `${(row.count / max) * 100}%` }} />
+            </i>
+            <strong>{formatCount(row.count)}</strong>
+          </div>
+        ))}
+      </div>
+      {excluded.length > 0 ? (
+        <p className="stats-reg-quiet">
+          복습에서 빠진 단어: {excluded.map((row) => `${row.label} ${formatCount(row.count)}개`).join(" · ")}
+        </p>
+      ) : null}
+      {distribution.consistent ? null : (
+        <p className="stats-reg-quiet">일부 단어의 상태를 확인할 수 없어 합계가 맞지 않아요.</p>
+      )}
     </section>
   );
 }
@@ -761,6 +829,7 @@ export function StudyLogPage({
   onGoToReading,
   loadHistoryMonth,
   loadHistoryDay,
+  srs,
 }: StudyLogPageProps) {
   const [view, setView] = useState<RegisterView>("record");
   const todayKey = useSeoulToday();
@@ -941,8 +1010,8 @@ export function StudyLogPage({
   if (stats) {
     vocabBody = (
       <>
-        <InventoryPage stats={stats} onGoToReading={onGoToReading} />
-        <ReviewPage stats={stats} hardWords={hardWords} isWordsLoading={isWordsLoading} />
+        <InventoryPage stats={stats} onGoToReading={onGoToReading} srs={srs} />
+        <ReviewPage stats={stats} hardWords={hardWords} isWordsLoading={isWordsLoading} srs={srs} />
       </>
     );
   } else {

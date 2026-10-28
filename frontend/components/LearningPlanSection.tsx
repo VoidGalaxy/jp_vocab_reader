@@ -57,6 +57,8 @@ export type LearningPlanSectionProps = {
   footer?: React.ReactNode;
   /** 로그인 전: 덱이 "없는" 것이 아니라 아직 고를 수 없는 상태로 표시한다. */
   signedOut?: boolean;
+  /** FSRS 계정: 저장된 계획 덱 범위의 오늘 새 단어(Gate D-1). null이면 줄 없음. */
+  todayNewText?: string | null;
 };
 
 export type PlanStartConfirm = {
@@ -64,6 +66,8 @@ export type PlanStartConfirm = {
   remaining: number;
   /** 새 큐를 불러오는 중. 취소만 가능. */
   busy: boolean;
+  /** FSRS 회차(Gate C-2c): 남은 장 수 대신 교체 보호 상태로 안내한다. */
+  guard?: "confirm" | "confirm_unsaved" | "wait";
 };
 
 export type PlanNotice = {
@@ -153,6 +157,7 @@ export function LearningPlanSection({
   signedOut = false,
   onRetryProgress,
   onGoToHistory,
+  todayNewText = null,
 }: LearningPlanSectionProps) {
   const uid = useId();
   const ids = {
@@ -379,6 +384,11 @@ export function LearningPlanSection({
                   ))}
                 </select>
                 <p className="learning-plan__deck-meta">{deckMeta}</p>
+                {todayNewText ? (
+                  <p className="learning-plan__deck-meta" role="status">
+                    {todayNewText}
+                  </p>
+                ) : null}
               </section>
 
               <section className="learning-plan__step">
@@ -625,7 +635,13 @@ export function LearningPlanSection({
                         ? confirm.mode === "today"
                           ? "오늘 복습을 불러오는 중이에요."
                           : "새 학습을 불러오는 중이에요."
-                        : `진행 중인 복습이 있어요 · 남은 ${confirm.remaining}장`}
+                        : confirm.guard === "wait"
+                          ? "평가를 저장하는 중이에요. 저장이 끝난 뒤 바꿀 수 있어요."
+                          : confirm.guard === "confirm_unsaved"
+                            ? "진행 중인 복습 회차가 있어요 · 저장 여부를 확인하지 못한 평가가 있어요"
+                            : confirm.guard
+                              ? "진행 중인 복습 회차가 있어요"
+                              : `진행 중인 복습이 있어요 · 남은 ${confirm.remaining}장`}
                     </p>
                     <div className="learning-plan__confirm-actions">
                       {confirm.busy ? null : (
@@ -638,9 +654,11 @@ export function LearningPlanSection({
                           >
                             이어하기
                           </button>
-                          <button type="button" className="learning-plan__inline-command" onClick={() => onConfirmReplace?.()}>
-                            {confirm.mode === "today" ? "오늘 복습으로 바꾸기" : "새 학습으로 바꾸기"}
-                          </button>
+                          {confirm.guard === "wait" ? null : (
+                            <button type="button" className="learning-plan__inline-command" onClick={() => onConfirmReplace?.()}>
+                              {confirm.mode === "today" ? "오늘 복습으로 바꾸기" : "새 학습으로 바꾸기"}
+                            </button>
+                          )}
                         </>
                       )}
                       <button

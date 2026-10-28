@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 VALID_STATUSES = {"unknown", "uncertain", "known", "unclassified"}
@@ -131,7 +131,90 @@ class StudyItemsResponse(BaseModel):
     items: list[VocabItemResponse]
 
 
-class StudyReviewRequest(BaseModel):
+class ReviewSafetyFields(BaseModel):
+    request_id: str | None = Field(default=None, strict=True, pattern=r"^[A-Za-z0-9_.:-]{1,128}$")
+    expected_card_version: int | None = Field(default=None, strict=True, ge=0)
+    session_id: str | None = Field(default=None, strict=True, pattern=r"^[A-Za-z0-9_.:-]{1,128}$")
+
+
+class SrsReviewMetadata(BaseModel):
+    request_id: str | None = None
+    accepted_at: str | None = None
+    server_now: str | None = None
+    completed: bool | None = None
+    completion_metric_version: str | None = None
+    srs: dict | None = None
+
+
+class PersonalReviewResponse(VocabItemResponse, SrsReviewMetadata):
+    """Legacy-account answer (no `srs`), or the replay of a receipt written before
+    Gate D-2 U9 and not yet minimized (card content included, with `srs`)."""
+
+
+# --- Gate D-2 U9: FSRS review answer (first and retried, byte-identical) -----------
+class FsrsReviewState(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    phase: Literal["learning", "review", "relearning"]
+    step: int | None
+    stability: float
+    difficulty: float
+    due_at: str
+    last_review_at: str
+
+
+class FsrsReviewResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    state: FsrsReviewState
+    card_version: int
+    config_version: str
+    effective_due_at: str
+    completion_status: Literal["completed", "not_completed", "unknown"]
+    needs_relearning: bool
+    first_completed_at: str | None
+    introduced_today: int | None  # null when today's count cannot be established
+    introduced_today_status: Literal["exact", "unknown"]
+    introduced_today_at_least: int
+    legacy_projection_due_at: str
+
+
+class FsrsReviewResponse(BaseModel):
+    """Result only: no card content (surface, reading, meaning, example, context,
+    source text, deck name) and no classification. Sent as the receipt's canonical
+    JSON; a retry returns the same bytes."""
+    model_config = ConfigDict(extra="forbid")
+    card_kind: Literal["personal", "lexeme"]
+    card_id: int
+    request_id: str
+    accepted_at: str
+    server_now: str
+    rating: Literal["again", "hard", "good", "easy"]
+    correct_count: int
+    wrong_count: int
+    review_level: int
+    next_review_at: str
+    last_reviewed_at: str
+    completed: bool | None
+    completion_metric_version: str
+    srs: FsrsReviewResult
+
+
+class MinimizedPersonalReceiptReplay(SrsReviewMetadata):
+    """Replay of a pre-U9 personal receipt after the one-time minimization: the
+    first answer minus its card-content fields (the documented exception)."""
+    model_config = ConfigDict(extra="forbid")
+    id: int
+    deck_id: int
+    status: str
+    correct_count: int
+    wrong_count: int
+    last_reviewed_at: str | None
+    review_level: int
+    next_review_at: str | None
+    created_at: str
+    updated_at: str
+
+
+class StudyReviewRequest(ReviewSafetyFields):
     result: str | None = None
     rating: str | None = None
     response_time_ms: int | None = None
@@ -152,6 +235,32 @@ class DeckStatsResponse(BaseModel):
 class ReviewLevelCountResponse(BaseModel):
     review_level: int
     count: int
+
+
+# Gate D-1: Asia/Seoul "today" block added to /stats. Account-wide; the UTC
+# fields of StatsResponse keep their names, meanings and values.
+class TodaySeoulReviewsResponse(BaseModel):
+    status: str  # "exact" | "unknown"
+    total: int | None
+    at_least: int
+    personal: int
+    subscribed: int
+    by_rating: dict[str, int]
+    unreadable_time_logs: int
+
+
+class TodaySeoulIntroducedResponse(BaseModel):
+    status: str  # "exact" | "unknown"
+    count: int | None
+    at_least: int
+
+
+class TodaySeoulResponse(BaseModel):
+    date: str
+    timezone: str
+    scope: str
+    reviews: TodaySeoulReviewsResponse
+    introduced: TodaySeoulIntroducedResponse
 
 
 class StatsResponse(BaseModel):
@@ -192,6 +301,7 @@ class StatsResponse(BaseModel):
     lexeme_hard_count: int = 0
     vocab_completed_today: int = 0
     lexeme_completed_today: int = 0
+    today_seoul: TodaySeoulResponse | None = None
 
 
 # Date-by-date study history (Stats tab 학습 기록), read-only. See
@@ -424,7 +534,7 @@ class LexemeProgressUpdateRequest(BaseModel):
     status: str
 
 
-class LexemeReviewRequest(BaseModel):
+class LexemeReviewRequest(ReviewSafetyFields):
     rating: str
 
 
@@ -436,6 +546,10 @@ class LexemeWordProgressResponse(BaseModel):
     correct_count: int
     wrong_count: int
     last_reviewed_at: str | None = None
+
+
+class LexemeReviewResponse(LexemeWordProgressResponse, SrsReviewMetadata):
+    pass
 
 
 # --- Phase 3: subscribed shared-deck words in the SRS study queue (additive;
@@ -595,3 +709,38 @@ class AppFeedbackRequest(BaseModel):
 class AppFeedbackResponse(BaseModel):
     ok: bool = True
     message: str
+
+
+# --- Gate C-1: read-only unified study queue (GET /study-queue) -------------
+# See docs/plans/srs-improvement/gate-c1/CONTRACT.md v0.2. Additive only.
+class StudyQueueItem(BaseModel):
+    card_kind: Literal["personal", "lexeme"]
+    card_id: int
+    # None only for a subscribed word without progress (materialized=False):
+    # rate it with an explicit expected_card_version null (Gate C-2a).
+    card_version: int | None
+    materialized: bool = True
+    bucket: Literal["short_due", "review_due", "new", "practice"]
+    sort_key: list
+    srs: dict | None = None
+    config_version: str | None = None
+    is_new: bool
+    practice_only: bool
+    status: str
+    participation: str | None = None
+    review: dict | None = None
+    content: dict
+    source_label: str
+
+
+class StudyQueueResponse(BaseModel):
+    server_now: str
+    bucket_as_of: str
+    seoul_date: str
+    scheduler: dict
+    items: list[StudyQueueItem]
+    counts: dict[str, int]
+    new_goal: dict
+    next_due_at: str | None = None
+    next_due_at_excluded: str | None = None
+    next_cursor: str | None = None

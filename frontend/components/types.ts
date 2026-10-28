@@ -169,6 +169,22 @@ export type StudyStats = {
   today_good_count: number;
   today_easy_count: number;
   streak_days: number;
+  // Gate D-1: Asia/Seoul "today", account-wide. Optional so older servers still parse.
+  today_seoul?: {
+    date: string;
+    timezone: string;
+    scope: string;
+    reviews: {
+      status: string;
+      total: number | null;
+      at_least: number;
+      personal: number;
+      subscribed: number;
+      by_rating: Record<string, number>;
+      unreadable_time_logs: number;
+    };
+    introduced: { status: string; count: number | null; at_least: number };
+  };
 };
 
 // Read-only Asia/Seoul date-by-date history (GET /stats/history and
