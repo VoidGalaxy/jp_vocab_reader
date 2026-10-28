@@ -49,38 +49,72 @@ if _POSTGRES_URL:
     os.environ["DATABASE_URL"] = _checked_url
     _EXPECTED_DATABASE_URL: str | None = _checked_url
 else:
+    # SQLite (default): nothing happens at import (2026-10-28 isolation fix). setUpModule pins the safe
+    # environment with this run's own SQLite file in a new temporary folder, then imports the app; the
+    # module cleanup restores the environment and removes that folder.
     _EXPECTED_DATABASE_URL = None
-    _SCRATCH_DB = Path(tempfile.gettempdir()) / "jp_vocab_reader_learning_plan_test.db"
-    _SCRATCH_DB.unlink(missing_ok=True)
-    os.environ["DATABASE_URL"] = f"sqlite:///{_SCRATCH_DB.as_posix()}"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app import main  # noqa: E402
-from app.database import get_connection, init_db  # noqa: E402
-from app.repositories import learning_plan_repository  # noqa: E402
-from app.repositories.deck_package_repository import (  # noqa: E402
-    export_deck_package,
-    import_deck_package,
-)
-from app.repositories.deck_repository import create_deck, delete_deck_with_items  # noqa: E402
-from app.repositories.learning_plan_repository import get_plan_progress  # noqa: E402
-from app.repositories.lexeme_repository import (  # noqa: E402
-    add_word_to_shared_deck,
-    get_or_create_subscription,
-    list_subscribed_lexeme_study_items,
-    record_lexeme_review,
-    update_word_status,
-    upsert_lexeme,
-)
-from app.repositories.user_repository import create_user  # noqa: E402
-from app.repositories.vocab_repository import (  # noqa: E402
-    create_or_update_vocab_item,
-    delete_vocab_item,
-    record_review,
-    update_vocab_item,
-)
-from app.schemas import DeckCreate, DeckPackage, VocabItemCreate, VocabItemUpdate  # noqa: E402
+# Bound by _bind_app() (app is imported only from the module fixture, after the target is fixed).
+main = get_connection = init_db = learning_plan_repository = None
+export_deck_package = import_deck_package = create_deck = delete_deck_with_items = get_plan_progress = None
+add_word_to_shared_deck = get_or_create_subscription = list_subscribed_lexeme_study_items = None
+record_lexeme_review = update_word_status = upsert_lexeme = create_user = None
+create_or_update_vocab_item = delete_vocab_item = record_review = update_vocab_item = None
+DeckCreate = DeckPackage = VocabItemCreate = VocabItemUpdate = None
+
+
+def setUpModule():
+    if _EXPECTED_DATABASE_URL is None:
+        folder = tempfile.TemporaryDirectory(prefix="jp_vocab_learning_plan_")
+        unittest.addModuleCleanup(folder.cleanup)
+        database = Path(folder.name) / "learning_plan.db"
+        environment = mock.patch.dict(os.environ, {"APP_ENV": "test", "PYTHON_DOTENV_DISABLED": "1",
+                                                   "DATABASE_URL": f"sqlite:///{database.as_posix()}"})
+        environment.start()
+        unittest.addModuleCleanup(environment.stop)     # runs before the folder cleanup (LIFO)
+    else:
+        # PostgreSQL comparison: the target was checked and set at import (opt-in, direct runs only).
+        # Never replaced here; a changed target is refused before anything is imported or initialized.
+        _require_checked_target()
+    _bind_app()
+
+
+def _bind_app() -> None:
+    global main, get_connection, init_db, learning_plan_repository, export_deck_package, import_deck_package
+    global create_deck, delete_deck_with_items, get_plan_progress, add_word_to_shared_deck
+    global get_or_create_subscription, list_subscribed_lexeme_study_items, record_lexeme_review
+    global update_word_status, upsert_lexeme, create_user, create_or_update_vocab_item, delete_vocab_item
+    global record_review, update_vocab_item, DeckCreate, DeckPackage, VocabItemCreate, VocabItemUpdate
+    from app import main
+    from app.database import get_connection, init_db
+    from app.repositories import learning_plan_repository
+    from app.repositories.deck_package_repository import export_deck_package, import_deck_package
+    from app.repositories.deck_repository import create_deck, delete_deck_with_items
+    from app.repositories.learning_plan_repository import get_plan_progress
+    from app.repositories.lexeme_repository import (
+        add_word_to_shared_deck,
+        get_or_create_subscription,
+        list_subscribed_lexeme_study_items,
+        record_lexeme_review,
+        update_word_status,
+        upsert_lexeme,
+    )
+    from app.repositories.user_repository import create_user
+    from app.repositories.vocab_repository import (
+        create_or_update_vocab_item,
+        delete_vocab_item,
+        record_review,
+        update_vocab_item,
+    )
+    from app.schemas import DeckCreate, DeckPackage, VocabItemCreate, VocabItemUpdate
+
+
+def _require_app() -> None:
+    """Classes here run only after this module's fixture prepared the target and the app."""
+    if init_db is None:
+        raise RuntimeError("test_learning_plan_progress runs through its own module fixture (setUpModule).")
 
 
 def _require_checked_target() -> None:
@@ -119,6 +153,7 @@ class LearningPlanProgressTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         _require_checked_target()
+        _require_app()
         init_db()
 
     def setUp(self) -> None:
@@ -255,8 +290,10 @@ class LearningPlanProgressEndpointTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         _require_checked_target()
+        _require_app()
         init_db()
         cls.client = TestClient(main.app)
+        cls.addClassCleanup(cls.client.close)
 
     def setUp(self) -> None:
         _require_checked_target()
@@ -319,8 +356,10 @@ class FirstReviewQueueTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         _require_checked_target()
+        _require_app()
         init_db()
         cls.client = TestClient(main.app)
+        cls.addClassCleanup(cls.client.close)
 
     def setUp(self) -> None:
         _require_checked_target()

@@ -3,6 +3,13 @@
 Uses stdlib unittest only and a throwaway SQLite file (never backend/vocab.db
 and never whatever DATABASE_URL is already set).
 
+Isolation (2026-10-28 fix): importing this module changes nothing. The safe environment
+(APP_ENV=test, DATABASE_URL = this run's own SQLite file in a new temporary folder,
+PYTHON_DOTENV_DISABLED=1) is set in setUpModule BEFORE the app modules are imported here,
+and restored by a module cleanup that also removes that folder. So an earlier test that
+pinned DATABASE_URL for the whole process (e.g. the CLI's environment fix) no longer
+redirects these tests to an empty in-memory database.
+
 Run directly:      python tests/test_stats_history.py
 Or via discovery:   python -m unittest discover -s tests
 """
@@ -15,20 +22,40 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-_SCRATCH_DB = Path(tempfile.gettempdir()) / "jp_vocab_reader_stats_history_test.db"
-_SCRATCH_DB.unlink(missing_ok=True)
-os.environ["DATABASE_URL"] = f"sqlite:///{_SCRATCH_DB.as_posix()}"
+# Bound in setUpModule (app is imported only after the safe environment is pinned).
+get_connection = init_db = None
+HistoryRangeError = build_history_day = build_history_month = local_date = None
 
-from app.database import get_connection, init_db  # noqa: E402
-from app.repositories.stats_history_repository import (  # noqa: E402
-    HistoryRangeError,
-    build_history_day,
-    build_history_month,
-    local_date,
-)
+
+def setUpModule():
+    folder = tempfile.TemporaryDirectory(prefix="jp_vocab_stats_history_")
+    unittest.addModuleCleanup(folder.cleanup)
+    database = Path(folder.name) / "stats_history.db"
+    environment = mock.patch.dict(os.environ, {"APP_ENV": "test", "PYTHON_DOTENV_DISABLED": "1",
+                                               "DATABASE_URL": f"sqlite:///{database.as_posix()}"})
+    environment.start()
+    unittest.addModuleCleanup(environment.stop)     # runs before the folder cleanup (LIFO)
+    _bind_app()
+
+
+def _bind_app():
+    """The app functions, imported in the CURRENT environment (idempotent). The SQLite run pins its own
+    environment in setUpModule first; a class that inherits these tests from another module (the PostgreSQL
+    stand-in in test_substitutes_srs_e2b_pg) keeps the target its own runner set -- this never changes it."""
+    global get_connection, init_db, HistoryRangeError, build_history_day, build_history_month, local_date
+    if init_db is not None:
+        return
+    from app.database import get_connection, init_db
+    from app.repositories.stats_history_repository import (
+        HistoryRangeError,
+        build_history_day,
+        build_history_month,
+        local_date,
+    )
 
 UTC = timezone.utc
 # 2026-10-04 12:00 in Seoul.
@@ -93,6 +120,7 @@ def day_entry(month, date):
 class StatsHistoryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        _bind_app()
         init_db()
 
     def setUp(self):
@@ -269,8 +297,10 @@ class StatsHistoryRouteTests(unittest.TestCase):
 
         from app.main import app
 
+        _bind_app()
         init_db()
         cls.client = TestClient(app)
+        cls.addClassCleanup(cls.client.close)
 
     def _token(self, email):
         response = self.client.post(

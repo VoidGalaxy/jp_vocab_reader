@@ -2789,3 +2789,69 @@ B1만 승인됐다. 실제 클러스터·인증서·키·덤프 생성, PG 실�
 - 오류 16개는 모두 기존 `test_stats_history.py`의 테이블 없음(`users` / `review_logs`)이며, 새 프로세스에서 해당 파일만 실행하면 16/16 통과한다. 테스트와 CLI가 공유하는 `DATABASE_URL`의 실행·import 순서 간섭 후보가 남아 있다(과거 같은 종류의 문제는 16-7절). 이번 커밋에서는 이를 고치거나 기대값을 바꾸지 않는다.
 - 스테이징: DB·환경 파일·개인 키·원시 실행 로그·디자인 참고 자료·빌드 산출물을 제외한 명시 경로만 선택했다. 주요 비밀값 패턴 검사와 diff 형식 검사를 수행했고, Gate D-0 SIMULATION 문서 끝의 불필요한 빈 줄 한 줄만 제거했다.
 - 실제 PG·Neon·운영·기존 vocab.db에는 접근하지 않았다. 로컬 체크포인트만 만들며 push·merge·배포는 하지 않는다.
+## 92. 백엔드 전체 회귀의 `test_stats_history` 오류 16건: 환경 격리 보정 (번호 정리: 처음 91로 적었으나 기존 91절(체크포인트)과 중복이어서 92로 옮김) (2026-10-28, 사용자 승인: 테스트 환경 격리·기록)
+
+- 기준: 브랜치 `codex/fsrs-srs-replacement`, 체크포인트 `d9ae639`. 이전 전체 실행 기록(2,072개 중 통과 1,814·건너뜀 242·오류 16)은 그대로 둔다.
+- 원인(최소 묶음으로 재현): `python -m unittest test_srs_migrate_apply_flow test_stats_history`에서 같은 16건(`no such table`)이 났다.
+  - `test_stats_history`는 import할 때 고정 임시 DB를 지우고 프로세스 전체의 `DATABASE_URL`을 자기 파일로 바꿨다.
+  - 그 뒤 앞 모듈의 검사가 CLI `run_apply`를 실행하면 `_ops_audit_run.fix_app_environment()`가 `DATABASE_URL=sqlite:///:memory:`·`APP_ENV=test`를 프로세스 전체에 고정한다.
+  - 그래서 통계 이력 검사가 연결마다 빈 메모리 DB를 열었다.
+  - import 시점의 값(자기 파일)과 CLI 실행 뒤의 값(`:memory:`)을 따로 출력해 구분했다. 제품의 환경 고정 동작은 바꾸지 않았다.
+- 보정(`backend/tests/test_stats_history.py`만):
+  - import 시점의 DB 삭제·환경 변경·app import를 없앴다.
+  - `setUpModule`이 새 임시 폴더의 합성 SQLite와 안전 환경(`APP_ENV=test`, 그 DB의 `DATABASE_URL`, `PYTHON_DOTENV_DISABLED=1`)을 `mock.patch.dict`로 고정한 뒤 app을 import한다.
+  - 모듈 정리에서 환경을 복원하고 그 폴더를 지운다. `TestClient`는 클래스 정리로 닫는다.
+  - 기대값·검사는 바꾸지 않았다. 기존 고정 임시 DB 파일은 건드리지 않았다.
+- 회귀: 새 `backend/tests/test_stats_history_isolation.py`. 새 프로세스에서 통계 모듈을 import한 뒤 실제 `fix_app_environment()`로 환경을 바꾸고 그 모듈 전체를 실행해, 세 가지를 확인한다.
+  - import가 환경을 바꾸지 않음
+  - 오류 0
+  - 실행 뒤 환경 복원
+  - 보정 전에는 실패(import가 `DATABASE_URL`을 바꿈)했고, 보정 뒤 통과했다.
+- 집중 검사: `test_stats_history.py` 16/16, 회귀 1/1(단독·루트 discovery), 재현 묶음(apply_flow + stats) 35/35 통과.
+- 전체 discovery 1회(PG opt-in `SRS_E_TEST_POSTGRES_OPT_IN`·PG 환경 변수 제거): **2,073개, 오류 19, 건너뜀 242**(통과 1,812). 통계 이력 오류는 0이 됐다.
+- **새로 드러난 같은 유형의 문제(보정 범위 밖, 미보정)**: 19건은 모두 `test_learning_plan_progress`의 `no such table: users`다.
+  - 이 모듈도 import할 때 `DATABASE_URL`을 자기 고정 파일로 바꾼다. 그런데 discovery에서 뒤에 import되는 모듈 10개(`test_srs_migrate_resume_sqlite` 등)가 import 시점에 `sqlite:///:memory:`를 고정한다.
+  - 이전에는 마지막에 import되던 `test_stats_history`가 다시 파일 URL로 덮어 가려져 있었다.
+  - 최소 재현: `test_learning_plan_progress`를 import한 뒤 `test_srs_migrate_resume_sqlite`를 import하고 실행하면 19/19 오류, 단독으로는 19/19 통과.
+  - 보정은 별도 승인 대상이다(같은 방식, PostgreSQL 비교 opt-in 경로 보존 필요).
+## 93. 학습 계획 검사 19건 격리와 통계 이력 PostgreSQL 상속 경로 보정 (2026-10-28, 사용자 승인: 테스트·도우미·REPORT만)
+
+- 변경 파일: `backend/tests/test_learning_plan_progress.py`, `backend/tests/test_stats_history.py`, `backend/tests/test_stats_history_isolation.py`(회귀 4개로 확장), 이 REPORT(92절 번호 정리와 이 절). 제품·CLI·공급자·스키마·권한·승인 형식, PG 대체 모듈(`test_substitutes_srs_e2b_pg.py`)·가드(`_local_postgres_guard.py`)는 바꾸지 않았다.
+- 수정 전 재현:
+  - **학습 계획**: 92절 전체 실행의 19건. 새 프로세스에서 `test_learning_plan_progress`를 import한 뒤 `test_srs_migrate_resume_sqlite`를 import하면 import 시점에 `sqlite:///:memory:`가 고정되고, 모듈 실행 결과 19/19가 오류였다.
+  - **통계 이력 상속 경로**: 새 프로세스에서 `test_substitutes_srs_e2b_pg.StatsHistoryOnPostgres.setUpClass()`를 부르면 `TypeError`가 났다. 92절 보정으로 app 함수가 `test_stats_history`의 `setUpModule`에서만 바인딩되는데, 상속 실행에서는 그 모듈 fixture가 돌지 않아 `init_db`가 None이었다.
+  - **PG 모드 경로 가짜 검사**: 보정 전 파일에서는 모듈 fixture(`setUpModule`)가 없어 실패했다. 대상 확인·빈 DB 확인 자체는 그때도 import 시점에 돌았다.
+  - 위 세 회귀는 보정 전에 실패하는 것을 확인했다. 통계 이력 SQLite 회귀는 92절에서 이미 고정됐다.
+- 보정:
+  - **통계 이력**: app 함수 준비(`_bind_app`, 현재 환경에서 1회, 멱등)와 SQLite 임시 DB fixture(`setUpModule`)를 분리했다. 두 클래스의 `setUpClass`가 `_bind_app()`를 부른다. 상속된 PG 클래스는 자기 실행기가 정한 대상을 그대로 쓰며, SQLite용 `setUpModule`을 부르거나 대상을 바꾸지 않는다.
+  - **학습 계획**: import 시점의 SQLite DB 삭제·`DATABASE_URL` 변경·app import를 없앴다.
+    - `setUpModule`은 SQLite 모드면 새 임시 폴더의 합성 DB와 안전 환경(`APP_ENV=test`, 그 DB, `PYTHON_DOTENV_DISABLED=1`)을 고정한 뒤 app을 바인딩한다. 모듈 정리에서 환경을 복원하고 폴더를 지운다.
+    - 각 클래스는 대상 확인 뒤 app이 준비되지 않았으면 명시적으로 거부한다. TestClient는 클래스 정리로 닫는다.
+- PostgreSQL 비교 계약 보존:
+  - 전용 opt-in(`LEARNING_PLAN_TEST_POSTGRES_URL`)과 import 시점의 URL 검사·빈 DB 확인·대상 설정(직접 실행 전용)은 원래 코드 그대로다.
+  - `setUpModule`은 PG 모드에서 대상을 바꾸지 않고, 먼저 `_require_checked_target()`로 대상 일치를 확인한다. 각 클래스·검사 시작의 대상 일치 확인도 유지된다. 다른 검사가 대상을 바꾸면 거부하고, SQLite로 대체하지 않는다.
+  - 근거:
+    - 기존 가드 검사 `test_local_postgres_guard.py` 12/12 통과(거부 URL·비어 있지 않은 DB·빈 DB 1회 확인·대상 변경 시 init·쓰기 0)
+    - 새 가짜 회귀: 가드를 가짜로 바꾼 새 프로세스에서 확인 순서(검사 → 빈 DB 확인), 대상 설정, `setUpModule` 뒤 대상 유지, 변경 시 거부, 정리 뒤 대상 유지
+  - 실제 PG 시작·접속·관리는 하지 않았다. 이 가짜 검사는 실제 PG 검증이 아니다.
+- 집중 검사(모두 통과, 외부 `PYTHONPATH`·PG opt-in 없이):
+  - 학습 계획 19/19, 통계 이력 16/16, 회귀 4/4(단독·루트 discovery)
+  - 최소 간섭 묶음: 학습 계획 + resume SQLite 38/38, apply 흐름 + 통계 35/35, 통계 + PG 대체 모듈 34(대체 모듈 18건은 SQLite에서 설계대로 건너뜀), 학습 계획 + 가드 31/31
+  - 이번 임시 폴더 잔존 0
+- 전체 discovery 1회(`SRS_E_TEST_POSTGRES_OPT_IN`·`LEARNING_PLAN_TEST_POSTGRES_URL`·PG 환경 변수 제거): **2,076개, 오류 0, 실패 0, 건너뜀 242, 통과 1,834.** 건너뜀은 이전 실행과 같은 수이며, PG 전용 검사가 포함된다(이번에 늘리지 않음).
+- 이전 실패 기록(91절 체크포인트 검증의 16건, 92절 전체 실행의 19건)은 그대로 둔다.
+## 94. 환경 격리 회귀의 app import 전 안전 환경 보정 (2026-10-28, 사용자 승인: `test_stats_history_isolation.py`·REPORT만)
+
+- 원인: 93절의 회귀 중 두 자식 프로세스가 안전 값 없이 app을 처음 import했다.
+  - `INHERITED`: 대체 모듈의 `DATABASE_URL` 기본값과 다른 모듈이 정한 `APP_ENV`는 있었지만 `PYTHON_DOTENV_DISABLED`가 없었다.
+  - `LEARNING_PG`: 가짜 가드를 쓰기 위해 `app.database`를 먼저 import했는데, 그때 세 값이 모두 없었다.
+  - 부모 프로세스가 세 값을 지운 채 자식을 실행하기 때문이다.
+- 수정 전 재현: 자식 공통 초기화에 최초 app import 감시 장치를 넣었다. 첫 `app` import 직전에 세 값을 범주로만 기록하고, 하나라도 안전하지 않으면 실제 import 전에 `os._exit(3)`로 멈춘다(원문 출력 없음, `.env` 읽기 없음).
+  - `INHERITED`는 `PYTHON_DOTENV_DISABLED`만 누락되어 종료 3이었다.
+  - `LEARNING_PG`는 세 값이 모두 누락되어 종료 3이었다.
+  - `STATS`·`LEARNING`은 안전했다(자체 fixture 또는 앞 모듈의 고정).
+- 보정: 자식 공통 초기화에서 감시 장치 설치 직후, 어떤 app 모듈보다 먼저 `APP_ENV=test`·`DATABASE_URL=sqlite:///:memory:`·`PYTHON_DOTENV_DISABLED=1`을 고정한다.
+  - 부모의 DB 설정·PG opt-in·외부 `PYTHONPATH`는 계속 자식에 넘기지 않는다.
+  - 가짜 PG 사례는 이 초기화 뒤에 자기 가짜 opt-in과 대상 URL을 설정하며, 검사 → 빈 DB 확인 → 대상 유지·변경 거부 순서와 연결·초기화 차단 장치를 그대로 둔다(실제 PG 없음).
+- 회귀: 새 `test_safe_values_at_the_first_app_import`. `INHERITED`·`LEARNING_PG`는 첫 app import 때 세 값이 정확히 안전한지(`DATABASE_URL`은 메모리), `STATS`·`LEARNING`은 안전 범주인지 확인한다. 모든 자식에 감시 중단이 없고 결과가 1건인지도 공통으로 확인한다. 기존 4개 검사는 기대값을 바꾸지 않고 끝까지 실행된다.
+- 집중 검사(외부 `PYTHONPATH`·PG opt-in 없이): `test_stats_history_isolation.py` 5/5(단독·루트 discovery), `test_stats_history.py` 16/16, `test_learning_plan_progress.py` 19/19, `test_local_postgres_guard.py` 12/12. 전체 discovery는 반복하지 않았다(93절 2,076개 결과는 당시 실행 기록).
