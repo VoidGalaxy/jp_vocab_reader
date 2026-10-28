@@ -71,7 +71,7 @@ POST = "post_check"
 
 # LQ3 (admin row changes L6 / L7, privilege changes L8 / L9): code only in L-1. Anything but True stops
 # `check-lexeme` before G0 with exit 1. Changed only by editing this value after the user's L-2 decision.
-LQ3_CHANGES_APPROVED: bool | None = None
+LQ3_CHANGES_APPROVED: bool | None = True
 
 # Fixed card sets (plan 2절). Names map to keys through the recorded synthetic ids, never through positions.
 LEXEME_ONLY = ("l1", "l2")

@@ -100,7 +100,7 @@ class Target(Blocked):
                           "l3": (("l1", "l2", "p1"), "started"), "l6": (("l1", "l2"), "started"),
                           "l7": (("l1", "l2"), "started"), "l8": (("l1", "l2", "p1"), "started"),
                           "l9": (("l1", "l2"), "started")})
-        self.assertIsNone(lx.LQ3_CHANGES_APPROVED)                       # L-2 not approved
+        self.assertIs(lx.LQ3_CHANGES_APPROVED, True)                    # L-2 approved in plan section 9
 
     def test_business_matrix_and_admin_limits(self):
         ok = {"host": g.HOST, "port": "55512", "dbname": lx.CHECK_DB["l1"], "user": "jpvl_write", "sslmode": "verify-full"}
@@ -139,13 +139,15 @@ class Target(Blocked):
 
     def test_admin_and_privilege_changes_locked_until_l2(self):
         h = SimpleNamespace(rec=SimpleNamespace(event=forbidden))
-        with self.assertRaises(lay.CheckFailed):
-            lx.Harness.variant(h, "l8", "l8_lexeme_card_column", "apply")
-        with self.assertRaises(lay.CheckFailed):
-            lx.Harness.admin_data_change(h, "l6", "subscription_deactivated", None)
-        with mock.patch.object(g, "single_run", forbidden), contextlib.redirect_stdout(io.StringIO()) as out:
-            self.assertEqual(lx.main(["check-lexeme"]), 1)
-        self.assertIn("LQ3", out.getvalue())
+        for decision in (None, False):
+            with self.subTest(decision=decision), mock.patch.object(lx, "LQ3_CHANGES_APPROVED", decision):
+                with self.assertRaises(lay.CheckFailed):
+                    lx.Harness.variant(h, "l8", "l8_lexeme_card_column", "apply")
+                with self.assertRaises(lay.CheckFailed):
+                    lx.Harness.admin_data_change(h, "l6", "subscription_deactivated", None)
+                with mock.patch.object(g, "single_run", forbidden), contextlib.redirect_stdout(io.StringIO()) as out:
+                    self.assertEqual(lx.main(["check-lexeme"]), 1)
+                self.assertIn("LQ3", out.getvalue())
 
     def test_admin_changes_touch_only_account_a_and_l2(self):
         ids = {"a": {"user_id": 2, "personal": {"p1": 11, "p2": 12, "p3": 13, "p4": 14, "p5": 15}, "lexeme": [31, 32]}}
@@ -1180,6 +1182,8 @@ class Processes(unittest.TestCase):
                    "psycopg.connect = bad; subprocess.run = bad; subprocess.Popen = bad\n"
                    "import _ops_pg62 as g\n"
                    "g.single_run = bad; g.admin_connect = bad; g.listener_pids = bad\n"
+                   "import _ops_resume_lexeme_real as lx\n"
+                   "lx.LQ3_CHANGES_APPROVED = None\n"          # exercise the unapproved branch explicitly
                    "sys.argv = [{script!r}] + {args!r}\n"
                    "runpy.run_path({script!r}, run_name='__main__')\n")
         for args, want in (([], 2), (["check"], 2), (["check-values"], 2), (["check-lexeme", "l1"], 2),
