@@ -54,7 +54,7 @@ class Blocked(unittest.TestCase):
 class Targets(Blocked):
     def test_closed_presets(self):
         self.assertEqual(g.PRESETS, (g.PG62, g.PG63_AUDIT, g.PG64_BACKUP, g.PG65_APPLY,
-                         g.PG66_RESUME))   # pg65 added by C12-1, pg66 (RS4-1)
+                         g.PG66_RESUME, g.PG67_RESUME_LEXEME))   # pg65 added by C12-1, pg66 (RS4-1), pg67 (lexeme L-1)
         self.assertEqual((T.root, T.port, T.databases, T.admin, T.provider_roles),
                          (Path("C:/JV_Tools/pg64"), 55482,
                           ("jp_vocab_test_br_src", "jp_vocab_test_br_dst", "jp_vocab_test_br_fail"), "jpvb_admin",

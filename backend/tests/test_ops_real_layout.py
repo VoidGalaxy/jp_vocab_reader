@@ -94,7 +94,7 @@ def mask_serial(value):
 
 class Layouts(unittest.TestCase):
     def test_only_the_registered_objects(self):
-        self.assertEqual(lay.LAYOUTS, (lay.PG65, lay.PG66))
+        self.assertEqual(lay.LAYOUTS, (lay.PG65, lay.PG66, lay.PG67))   # pg67 added by lexeme L-1
         self.assertIs(lay.PG65.target, g.PG65_APPLY)
         self.assertIs(lay.PG66.target, g.PG66_RESUME)
         copy = dataclasses.replace(lay.PG66)                       # equal values, another object
@@ -123,8 +123,31 @@ class Layouts(unittest.TestCase):
         self.assertEqual((lay.PG66.short, lay.PG66.owner, lay.PG66.read, lay.PG66.write),
                          ("pg66", "jpvr_owner", "jpvr_read", "jpvr_write"))
 
+    def test_pg67_names_are_separate_from_every_other_target(self):
+        target = g.PG67_RESUME_LEXEME                                   # values from the plan (4절 / LQ2)
+        self.assertEqual((target.root, target.port, target.admin, target.provider_roles),
+                         (g.Path("C:/JV_Tools/pg67"), 55512, "jpvl_admin", ("jpvl_read", "jpvl_write")))
+        self.assertEqual(target.databases, ("jp_vocab_test_resume_lex_tpl",) + tuple(
+            f"jp_vocab_test_resume_lex_{c}" for c in ("l1", "l2", "l3", "l6", "l7", "l8", "l9")))
+        others = [p for p in g.PRESETS if p is not target]
+        self.assertNotIn(target.port, {p.port for p in others})
+        self.assertNotIn(target.root, {p.root for p in others})
+        self.assertFalse(set(target.databases) & {d for p in others for d in p.databases})
+        self.assertFalse(set(target.provider_roles + (target.admin,))
+                         & {r for p in others for r in p.provider_roles + (p.admin,)})
+        self.assertEqual((lay.PG67.short, lay.PG67.owner, lay.PG67.read, lay.PG67.write),
+                         ("pg67", "jpvl_owner", "jpvl_read", "jpvl_write"))
+        self.assertEqual(set(lay.PG67.variants), {"l8_lexeme_card_column", "l9_read_subscriptions"})
+        self.assertEqual([s.as_string(None) for s in lay.variant_statements(lay.PG67, "l9_read_subscriptions", "apply")],
+                         ['REVOKE SELECT ON public.user_deck_subscriptions FROM "jpvl_read"'])
+        self.assertEqual([s.as_string(None) for s in lay.variant_statements(lay.PG67, "l8_lexeme_card_column", "revert")],
+                         ['GRANT UPDATE (srs_state) ON public.user_word_progress TO "jpvl_write"'])
+        with self.assertRaises(lay.CheckFailed):
+            lay.variant_statements(lay.PG67, "r5_read_missing", "apply")          # a PG66 variant is not PG67's
+
     def test_role_of_the_closed_command_sets(self):
-        for layout, read, write in ((lay.PG65, "jpvm_read", "jpvm_write"), (lay.PG66, "jpvr_read", "jpvr_write")):
+        for layout, read, write in ((lay.PG65, "jpvm_read", "jpvm_write"), (lay.PG66, "jpvr_read", "jpvr_write"),
+                                    (lay.PG67, "jpvl_read", "jpvl_write")):
             self.assertEqual([lay.role_of(layout, c) for c in ("dry_run", "status", "apply", "resume")],
                              [read, read, write, write])
             for bad in ("rollback", "preview", None, "Resume"):

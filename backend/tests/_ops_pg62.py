@@ -102,7 +102,15 @@ PG66_RESUME_CHECK_IDS = ("r1", "r2", "r4a", "r4b", "r4c", "r5", "r6", "r6b", "r7
 PG66_RESUME = Target("pg66_resume", Path("C:/JV_Tools/pg66"), 55502,
                      ("jp_vocab_test_resume_tpl",) + tuple(f"jp_vocab_test_resume_{c}" for c in PG66_RESUME_CHECK_IDS),
                      "jpvr_admin", ("jpvr_read", "jpvr_write"), "docs/plans/srs-improvement/gate-e/PG66_TARGET.md")
-PRESETS = (PG62, PG63_AUDIT, PG64_BACKUP, PG65_APPLY, PG66_RESUME)
+# Subscribed-card `resume` real-PG check (OPS_MIGRATION_RESUME_LEXEME_PLAN 4절 / 7-1, values only; nothing is
+# created by registering them). Separate from pg65 / pg66 in every name.
+PG67_RESUME_LEXEME_CHECK_IDS = ("l1", "l2", "l3", "l6", "l7", "l8", "l9")
+PG67_RESUME_LEXEME = Target("pg67_resume_lexeme", Path("C:/JV_Tools/pg67"), 55512,
+                            ("jp_vocab_test_resume_lex_tpl",) + tuple(f"jp_vocab_test_resume_lex_{c}" for c in
+                                                                      PG67_RESUME_LEXEME_CHECK_IDS),
+                            "jpvl_admin", ("jpvl_read", "jpvl_write"),
+                            "docs/plans/srs-improvement/gate-e/PG67_TARGET.md")
+PRESETS = (PG62, PG63_AUDIT, PG64_BACKUP, PG65_APPLY, PG66_RESUME, PG67_RESUME_LEXEME)
 
 
 def preset(target: Any) -> Target:

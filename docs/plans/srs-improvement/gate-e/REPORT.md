@@ -2855,3 +2855,49 @@ B1만 승인됐다. 실제 클러스터·인증서·키·덤프 생성, PG 실�
   - 가짜 PG 사례는 이 초기화 뒤에 자기 가짜 opt-in과 대상 URL을 설정하며, 검사 → 빈 DB 확인 → 대상 유지·변경 거부 순서와 연결·초기화 차단 장치를 그대로 둔다(실제 PG 없음).
 - 회귀: 새 `test_safe_values_at_the_first_app_import`. `INHERITED`·`LEARNING_PG`는 첫 app import 때 세 값이 정확히 안전한지(`DATABASE_URL`은 메모리), `STATS`·`LEARNING`은 안전 범주인지 확인한다. 모든 자식에 감시 중단이 없고 결과가 1건인지도 공통으로 확인한다. 기존 4개 검사는 기대값을 바꾸지 않고 끝까지 실행된다.
 - 집중 검사(외부 `PYTHONPATH`·PG opt-in 없이): `test_stats_history_isolation.py` 5/5(단독·루트 discovery), `test_stats_history.py` 16/16, `test_learning_plan_progress.py` 19/19, `test_local_postgres_guard.py` 12/12. 전체 discovery는 반복하지 않았다(93절 2,076개 결과는 당시 실행 기록).
+## 95. 구독 카드 resume L-1 합성 구현·검사 (2026-10-29, 사용자 승인: L-1, LQ1 제외·LQ2 대상 값 등록·LQ3 코드만)
+
+- 계획을 먼저 보완했다(`OPS_MIGRATION_RESUME_LEXEME_PLAN.md` 7절: PG67 배치와 명시 대상 전달, 시험 키·서명 구분, 결정 기록, L6~L8·L5 판정 문구).
+- 변경:
+  - `_ops_pg62.py`에 `PG67_RESUME_LEXEME`(값만), `_ops_real_layout.py`에 `PG67` 배치와 권한 변형 2종
+  - 새 실행기 `_ops_resume_lexeme_real.py`(`check-lexeme` 고정 순서 G0 → G1 → L1~L9 → 사후 확인, LQ3 결정 전 시작 거부)
+  - 새 검사 3개 파일(6 + 3 + 18), 닫힌 목록 단언 4곳 갱신
+  - 제품·CLI·승인 형식·권한 계약·스키마·기존 실행기 변경 없음
+- PG65·PG66 보존: HEAD 대비 대상·DB·허용 목록·역할·GRANT·프로필 지문·변형·HBA·설정 출력이 바이트 단위로 같다. C12·RS4 보호 검사는 기대값 변경 없이 통과했다.
+- 합성 결과:
+  - 실제 제품 SQLite에서 L1·L2(주입)·L3·L4·L5·L6·L7 통과(L6·L7은 해당 카드 행 쓰기 0, 결과 `conflict`, 종료 5, 실행 요약·완료는 정상 갱신)
+  - 공급자 가짜 경로에서 혼합 계획·L8(앞 커밋 유지, 다음 연결 관측 후 거부)·L9 통과
+  - 실행기 가짜 검사는 대상·행렬·계약·닫힌 변경·카드 키·실제 `Harness.case`·L5 기록 재읽기·중단 규칙·`__main__`을 확인했다
+  - 서명은 시험 전용 임시 OpenSSH 키로만 했다
+- 집중 검사(단독·루트 discovery, `-X dev`, `ResourceWarning` 0): 새 27개, `test_ops_real_layout` 16, C12 보호 96, RS4 보호 47, 감사 41, 백업 42, `_ops_pg62` 8, resume SQLite 19, resume 공급자 9. 합계 305개 통과. 이번 임시 자료 잔존 0.
+- 남은 미검증: 실제 PG(L-2), LQ1 경합(잠금 차이, 안전성 미확인), 실제 장애·운영.
+## 96. 구독 카드 resume L-1 실행기 판정 보정 (2026-10-29, 검토 지적 3건, 실제 PG 없음)
+
+- 바꾼 파일: `_ops_resume_lexeme_real.py`, `test_ops_resume_lexeme_real_guard.py`. 공통 모듈, 기존 실행기, 제품, CLI, 공급자, 승인 형식, 권한 계약, 스키마는 바꾸지 않았다. LQ3는 미결로 둔다. 95절의 305개 결과는 그대로 둔다.
+- 결함 1(L1~L3·L8):
+  - G1이 관리 조회 기준선(실행 행·카드 버전·엔진·행·snapshot 행)을 남기고, 이를 초기 계획 버전과 계약으로 다시 확인한다.
+  - L1~L3은 `completed`·`finished_at`·cursor = 계획 카드 수, 새 카드의 계획 버전 + 1·`fsrs`, 앞 카드와 기존 snapshot 보존, 정확한 새 snapshot 키를 대조한다.
+  - L8은 l2 변환, l1·p1 보존, `started`·cursor 2·미완료를 대조한다. CLI 미확정 보고는 따로 판정하고, 기록도 `check_run`과 `check_admin_state`로 나눈다.
+- 결함 2(L4): `outside`는 계정 b·c의 개인 카드와 진행 행 전부(사례 lexeme 행 필수), 계정 a의 범위 밖 카드, lexeme 로그 전부를 본다. 계정 값은 바인딩하고, 결과는 키 사전으로 비교한다.
+- 결함 3(L8·L9):
+  - 원복 SQL 뒤 바꿨던 역할을 실제 공급자 경로로 다시 관측한다. 새 계수를 쓰고, 기록은 원래 실행과 분리한 `revert_observation`이다.
+  - `matches_contract`와 생성 1·인계 1·문장 0·쓰기 0·커밋 0이 아니면 `harness_defect`로 멈춘다.
+- 보정 전 재현: 새 회귀 15개를 보정 전 실행기에 돌렸다. 하위 사례 34개 실패, 오류 3개였고 정상 사례 3개는 통과했다. 보고된 세 사례가 모두 실패에 포함된다. 다만 계정 a p5 하위 사례 하나는 가짜 연결의 한계로 실패한 것이다.
+- 결과(가짜만): `test_ops_resume_lexeme_real_guard.py` 34개(18 + 16) 통과. 단독과 루트 discovery 모두 통과했고, `-X dev` `ResourceWarning` 0, 임시 자료 잔존 0이다. 공통 모듈을 바꾸지 않았으므로 305개 묶음은 다시 돌리지 않았다.
+- 남은 미검증: 실제 PG의 기준선·관리 조회·재관측(L-2), LQ1, 실제 장애·운영.
+
+## 97. 구독 카드 resume L-1 원복 재관측의 commit 계수 보정 (2026-10-29, 검토 지적 1건, 실제 PG 없음)
+
+- 바꾼 파일: `_ops_resume_lexeme_real.py`, `test_ops_resume_lexeme_real_guard.py`. 제품 연결자·어댑터·공급자·계수 규칙(`_ops_real_layout.py`), 제품, CLI, 승인 형식, 권한 계약, 스키마는 바꾸지 않았다. LQ3는 미결로 둔다. 96절의 34개 결과는 당시 기록으로 둔다.
+- 결함: 원복 재관측이 `ProductConnection`을 거쳐 정상 종료 commit이 계수됐다. 정상 원복도 커밋 1로 `REOBSERVED`(커밋 0)와 맞지 않았다. 96절의 경로 검사는 종료를 close만 하는 대체본으로 바꿔 이를 놓쳤다.
+- 보정: `observe_role`은 실제 어댑터 공개 진입점 `provide_with_adapter`로 연결을 한 번 받아(`take`) 업무 컨텍스트 없이 한 번 닫는다. 서명·사전 검사·관측·판정·연결 후 재판정은 공급자가 그대로 한다. 새 계수와 업무 행렬 드라이버를 쓰고, 인계 뒤 계수를 활성화한다. 거부·인계 실패·접근 불일치·닫기 미확인은 일치로 기록하지 않는다. 중단 규칙과 0회 기준은 그대로다.
+- 보정 전 재현: 실제 어댑터·공급자에 가짜 서버만 붙인 새 회귀에서 읽기·쓰기 모두 `matches_contract`·커밋 1로 실패했다. 인계 실패는 처리되지 않은 오류였다.
+- 결과(가짜만): 읽기·쓰기 모두 생성 1·인계 1·문장 0·쓰기 0·커밋 0, 가짜 서버의 commit 0. 권한 누락·초과는 인계 0, 연결 실패는 생성 0, 닫기·인계 실패는 통과가 아니며 `revert_and_observe`에서 `harness_defect`로 멈춘다. `test_ops_resume_lexeme_real_guard.py` 37개 통과(단독·루트 discovery, `-X dev` `ResourceWarning` 0). 영향받는 resume lexeme 공급자 3개·SQLite 6개도 통과했다. 305개 묶음은 다시 돌리지 않았다.
+- 남은 미검증: 실제 PG의 원복 재관측 계수(L-2), LQ1, 실제 장애·운영.
+
+## 98. 구독 카드 resume L-1 독립 재검토 마감 (2026-10-29)
+
+- 95~97절의 시험 코드·합성 검사와 보정을 재검토했다. 완료·카드 버전·기존 snapshot 보존, 계정 b·c 불변, 원복 뒤 공급자 재관측 및 별도 계수의 지적 사항이 해소됐다.
+- 독립 집중 검사: 실행기 보호 37개, resume lexeme 공급자 3개, SQLite 제품 6개, 합계 46개 통과(오류·실패·건너뜀 0, ResourceWarning 0). 전체 회귀·프론트·실제 PG는 반복 실행하지 않았다.
+- L-1의 관련 시험 코드·검사·계획·REPORT 12개 파일만 체크포인트 커밋·작업 브랜치 푸시 대상으로 한다. 참고 이미지·빌드 산출물·임시 자료는 제외한다.
+- L-1 합성만 마감이며 L-2 실제 PG는 승인 전이다. LQ3는 None이고, LQ1 경합·실제 장애·운영 활성화는 미검증이다. main 병합·배포는 하지 않는다.

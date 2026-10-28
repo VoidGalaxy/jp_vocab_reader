@@ -1,7 +1,7 @@
 """Shared real-PG harness pieces for the closed test targets (RS4-1, OPS_MIGRATION_RESUME_REAL_PG_PLAN 2절 (A)).
 
 Every target-bound function takes a closed LAYOUT object explicitly; only the registered objects `PG65`
-(C12 first `apply`) and `PG66` (RS4 `resume`) are accepted, by identity (a copy with equal values is
+(C12 first `apply`), `PG66` (RS4 `resume`) and `PG67` (subscribed-card `resume`) are accepted, by identity (a copy with equal values is
 refused). Nothing here reads a target from the command line, the environment or a module global that a
 caller replaces; there is no default layout. The target-free helpers below were moved verbatim from
 `_ops_apply_real.py` (C12), which keeps them under the same names. This module imports no runner.
@@ -130,9 +130,21 @@ PG66_VARIANTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
 PG66_VARIANT_DATABASES = {"r5_read_missing": ("r5",), "r5_read_excess": ("r5",), "r5_write_missing": ("r5",),
                           "r5_write_excess": ("r5",), "r5_write_sequences": ("r5",), "r9a_card_column": ("r9a",)}
 
+# Subscribed-card resume (OPS_MIGRATION_RESUME_LEXEME_PLAN 7-3 LQ3): the two closed privilege changes of L8 / L9,
+# each with its exact revert. Not applied without the L-2 approval.
+PG67_VARIANTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "l8_lexeme_card_column": (("REVOKE UPDATE (srs_state) ON public.user_word_progress FROM {w}",),
+                              ("GRANT UPDATE (srs_state) ON public.user_word_progress TO {w}",)),
+    "l9_read_subscriptions": (("REVOKE SELECT ON public.user_deck_subscriptions FROM {r}",),
+                              ("GRANT SELECT ON public.user_deck_subscriptions TO {r}",)),
+}
+PG67_VARIANT_DATABASES = {"l8_lexeme_card_column": ("l8",), "l9_read_subscriptions": ("l9",)}
+
 PG65 = Layout("pg65", g.PG65_APPLY, g.PG65_APPLY_CHECK_IDS, "jpvm_owner", VARIANTS, VARIANT_DATABASES)
 PG66 = Layout("pg66", g.PG66_RESUME, g.PG66_RESUME_CHECK_IDS, "jpvr_owner", PG66_VARIANTS, PG66_VARIANT_DATABASES)
-LAYOUTS = (PG65, PG66)
+PG67 = Layout("pg67", g.PG67_RESUME_LEXEME, g.PG67_RESUME_LEXEME_CHECK_IDS, "jpvl_owner", PG67_VARIANTS,
+              PG67_VARIANT_DATABASES)
+LAYOUTS = (PG65, PG66, PG67)
 
 
 def layout(value: Any) -> Layout:
