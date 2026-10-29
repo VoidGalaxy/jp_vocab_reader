@@ -175,7 +175,8 @@ class Target(Blocked):
                 with mock.patch.object(g, "single_run", forbidden), contextlib.redirect_stdout(io.StringIO()) as out:
                     self.assertEqual(ax.main(["check-access-lock"]), 1)
                 self.assertIn("LQ4", out.getvalue())
-        self.assertIsNone(ax.LQ4_CHANGES_APPROVED)
+        # V2~V4 were approved and completed (plan 14); the unapproved branches above remain explicit.
+        self.assertIs(ax.LQ4_CHANGES_APPROVED, True)
 
     def test_command_line_takes_only_the_three_phases(self):
         for argv in ([], ["check-access-lock", "k1"], ["check"], ["prepare", "--port", "55522"], ["cleanup", "x"]):
@@ -1625,10 +1626,15 @@ class Processes(unittest.TestCase):
         self.assertFalse(T.root.exists())
 
     def test_entry_point_exit_codes(self):
+        # Exercise the real __main__ path with the unapproved state explicitly set in the child.
+        # The checked-in value is True after V2~V4; no target lookup or PG work belongs in this guard.
+        script = ("import sys, runpy; sys.path.insert(0, " + repr(str(TESTS_DIR)) + ");"
+                  "import _ops_access_lock_real as ax; ax.LQ4_CHANGES_APPROVED = None;"
+                  "sys.argv = sys.argv[1:]; runpy.run_path(sys.argv[0], run_name='__main__')")
         for argv, code, text in ((["check-access-lock"], 1, "LQ4"), ([], 2, "usage"), (["check-access-lock", "k1"], 2,
                                                                                          "usage")):
             with self.subTest(argv=argv):
-                done = subprocess.run([sys.executable, str(TESTS_DIR / "_ops_access_lock_real.py"), *argv],
+                done = subprocess.run([sys.executable, "-c", script, str(TESTS_DIR / "_ops_access_lock_real.py"), *argv],
                                       capture_output=True, text=True, env=self.env(), timeout=120)
                 self.assertEqual(done.returncode, code, done.stderr)
                 self.assertIn(text, done.stdout)

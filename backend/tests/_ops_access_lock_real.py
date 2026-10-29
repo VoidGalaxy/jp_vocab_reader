@@ -77,7 +77,7 @@ NAMES = ("l1", "l2")
 
 # LQ4 (admin row changes, role settings, privilege changes, admin deadlock_timeout): code only in V1. Anything but
 # True stops `check-access-lock` before G0 with exit 1. Changed only by editing this value after the V3 decision.
-LQ4_CHANGES_APPROVED: bool | None = None
+LQ4_CHANGES_APPROVED: bool | None = True
 
 # The fixed checklist (plan 4-2, E4: 24 checks), one database each, in this order.
 PLANNED = ("k1", "k2a", "k2b", "k3", "s1", "s2", "s3", "s3b", "s4", "r1", "r2", "r3", "r4a", "r4b", "r5", "r6",
