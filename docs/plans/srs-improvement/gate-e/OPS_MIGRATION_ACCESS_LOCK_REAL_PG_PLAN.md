@@ -1,8 +1,8 @@
-# 구독 카드 접근 판정 잠금(LQ1) 실제 로컬 PG 검증 계획 (2026-10-29, 계획만·승인 전)
+# 구독 카드 접근 판정 잠금(LQ1) 실제 로컬 PG 검증 계획 (2026-10-29, V1 합성 검토 마감·실제 PG 승인 전)
 
-**현재 상태(2026-10-29)**: 계획의 독립 정적 검토를 마쳤다(10절). E1~E6과 V1~V4는 승인 전이며 실행기·검사·실제 PG 작업은 시작하지 않았다.
+**현재 상태(2026-10-29)**: E1~E6 결정과 V1 시험 코드·가짜 보호 검사의 독립 검토를 마쳤다(11~13절). 부재 확인 단계의 추가 보정 뒤 가드 55개가 단독 실행과 루트 discovery에서 통과했다(13-5). V2 준비·V3 실제 검사·V4 정리·보관은 승인 전이다. `LQ4_CHANGES_APPROVED = None`을 유지한다.
 
-기준 체크포인트 `ed247c1`(브랜치 `codex/fsrs-srs-replacement`). 이 문서는 계획이다. 실행기 구현, 검사 실행, PG 접속·시작, 키 생성, 폴더·클러스터·역할·DB 생성, GRANT는 하지 않았다.
+최초 작성 기준 체크포인트는 `ed247c1`(브랜치 `codex/fsrs-srs-replacement`)이다. 1~10절은 작성 당시 계획과 정적 검토 기록이며, 뒤의 결정·구현 기록으로 현재 상태를 구분한다. V1에서는 가짜 서버와 시험 전용 임시 OpenSSH 키를 썼다. 실제 PG 접속·시작, 클러스터·역할·DB 생성, GRANT는 하지 않았다.
 
 정책·계약은 `OPS_MIGRATION_RESUME_LEXEME_RACE_PLAN.md` 9절(LQ1-a~f)과 11절(구현 계약: 쓰기 경로의 `ORDER BY subscriptions.id, words.id LIMIT 1 FOR SHARE OF subscriptions, words`, 5초 `lock_timeout`의 비완화·복원 규칙, `55P03` → `migration_access_lock_timeout`, `40P01` → `migration_access_deadlock`, 두 열 `UPDATE` 권한)을 그대로 따른다. 여기서 다시 정의하거나 완화하지 않는다. 5초는 **잠금 하나를 얻는 대기의 상한**이다. 카드 처리 전체 시간이나, 그 앞 단계인 `users`·카드 잠금의 대기를 제한한다고 판정하지 않는다.
 
@@ -268,3 +268,200 @@ V2~V4는 같은 승인 메시지에 묶을 수 있지만, 실행 순서와 실�
 - 검사별 경로 수와 G0·G1 대조, 덱 단어 삭제 경합 네 건과 원복, 종료 미확인 시 파괴적 정리 차단, 닫힌 목록 단언 네 곳만의 변경 허용을 확인했다. 앞선 네 지적 사항은 해소됐다.
 - 재사용 표와 탐침 절의 남은 `race` 문구를 PG68 전용 종료 조정 함수와 맞췄다. E3·E4 선택에 따른 22~24개 집계도 명시했다. 정책 선택이나 실행 범위를 새로 승인한 것은 아니다.
 - 문서 정적 검토만 마감한다. E1~E6 결정과 V1 시험 코드·가짜 검사, V2~V4 실제 준비·검사·정리는 별도 승인이 필요하다. 실제 PG의 잠금·설정·대기·교착과 8절의 미검증 범위는 그대로다. REPORT 106-1절을 참조한다.
+
+## 11. E1~E6 결정 기록 (2026-10-29 사용자 결정, 기준 `86af46b`, V1 구현 전 기록)
+
+- E1: 1절 대상 값을 채택한다. `PG68_LEXEME_ACCESS_LOCK`, `C:/JV_Tools/pg68`, 포트 55522, 역할 `jpvk_admin`·`jpvk_owner`·`jpvk_read`·`jpvk_write`, DB `jp_vocab_test_access_lock_*`.
+- E2: 공통 `SEED`는 유지한다. PG68 전용 `build_fn`이 덱 B(단어 l2 하나)와 계정 a의 비활성 B 구독을 만든다. 4-0의 다섯 DB(`r6`·`c1a`·`c1b`·`w1b`·`w2b`)에서만 G1 전에 활성화한다.
+- E3: D1을 포함한다. 향후 실제 실행에서는 관리자 연결에만 트랜잭션 범위 `deadlock_timeout = '60s'`를 쓰는 설계를 채택한다. 실제 설정 실행은 이번 승인에 들어 있지 않다. 희생자는 단정하지 않는다. 관리자가 희생되면 제품의 실제 `40P01` 처리는 미검증이다. 원하는 희생자가 나올 때까지 반복하지 않는다.
+- E4: S3b(정확히 5초)를 포함한다. 본 검사는 고정 24개다.
+- E5: 업무 트랜잭션에 설정 탐침 SQL을 넣지 않는다. 실제 실행 때는 보낸 `set_config` 문장·인자·성공 여부만 기록한다. 따로 읽지 않은 서버 설정값을 실측했다고 보고하지 않는다.
+- E6: V1의 `LQ4_CHANGES_APPROVED`는 `None`이다. 실제 변경 승인 전에는 `check-access-lock`이 G0 전에 종료 1로 멈춘다.
+- 승인 범위: E1~E6 문서 확정과 V1(시험 코드·PG 없는 가짜 보호 검사)뿐이다. V2 준비, V3 실제 검사, V4 정리·보관은 승인되지 않았다.
+
+## 12. V1 구현과 가짜 보호 검사 결과 (2026-10-29, PG 없음)
+
+### 12-1. 변경 파일
+
+- `backend/tests/_ops_pg62.py`
+  - `PG68_LEXEME_ACCESS_LOCK_CHECK_IDS`(24개)와 `PG68_LEXEME_ACCESS_LOCK`를 등록하고, `PRESETS` 끝에 추가했다(등록만).
+- `backend/tests/_ops_real_layout.py`
+  - `PG68_VARIANTS`와 `PG68_VARIANT_DATABASES`를 추가했다. 권한 변형 3개(`k2a`·`k2b`·`k3`)와 역할 설정 3개(`s2` 10초, `s3` 2초, `s3b` 5초)이며, 각각 원복 문장이 있다.
+  - `k3` 원복은 테이블 단위 REVOKE가 열 권한까지 지우므로, `updated_at` 열 권한을 다시 GRANT한다.
+  - `PG68` 레이아웃을 만들고 `LAYOUTS` 끝에 추가했다. 공통 함수·`SEED`·`race`·`WAIT_LIMIT`은 바꾸지 않았다.
+- 새 `backend/tests/_ops_access_lock_real.py`: PG68 실행기
+  - 실행 명령은 `prepare`·`check-access-lock`·`cleanup` 세 단어만 받는다. 인자·환경 변수로 대상·역할·DB·검사 범위·반복을 고를 수 없다.
+  - `LQ4_CHANGES_APPROVED = None`이다.
+  - PG67 실행기의 모듈 값은 import하거나 바꿔치기하지 않는다. RS4 실행기에서는 대상 무관 계측만 쓴다.
+- 새 `backend/tests/test_ops_access_lock_real_guard.py`: 가짜 보호 검사 33개
+- 닫힌 목록 단언 네 곳: `test_ops_apply_real_guard.py`·`test_ops_audit_real_guard.py`·`test_ops_backup_real_guard.py`의 `PRESETS`와 `test_ops_real_layout.py`의 `LAYOUTS`. 끝에 PG68을 더하고 주석만 바꿨다. 다른 기대값·기준 파일은 그대로다.
+- 새 `docs/plans/srs-improvement/gate-e/PG68_TARGET.md`: 대상 값 문서
+
+### 12-2. 실행기 배선 (실제 경로)
+
+- 준비(`prepare`)
+  - 공통 `lay.prepare`에 PG68 `build_fn`을 넘긴다. 이 함수는 공통 `build_template`을 실행한 뒤 덱 B(단어 l2 하나)와 계정 a의 비활성 B 구독을 만들고, `access_paths_seeded` 이벤트로 기록한다.
+  - 경로 행 id(`sub_a`·`sub_b`·`word_a_l1`·`word_a_l2`·`word_b_l2`)는 `target.json`의 `synthetic.access`에 남긴다.
+  - 그 뒤 다섯 DB에서만 B 구독을 활성화하고 `second_path_enabled`로 기록한다. G1보다 먼저다.
+- G0
+  - 대상 OID·식별값, 24개 DB의 l1·l2 활성 경로와 행 키(4-0 표), 두 열 계약 GRANT(`has_column_privilege`), 템플릿 품질을 확인한다.
+  - 다르면 `preparation_failure`로 멈추고 본 검사는 실행하지 않는다.
+- G1
+  - DB마다 실제 `Harness.case`(CLI dry-run과 실제 사전 검사·서명)와 최초 `apply`(배치 1)를 실행한다.
+  - 그 뒤 기준선(`started`·cursor 1·l1 변환·l2 계획 버전)과 경로 수·행 키를 다시 확인한다.
+- 본 검사
+  - 24개 모두 실제 CLI `run_resume`(배치 1), 어댑터, 공급자, 제품 `apply_plan`을 거친다.
+  - 기대값은 G1 기준선·최초 계획·계약에서 계산한다.
+  - 모든 검사는 공통 하위 사례(`cli`·`admin_state`·`settings`·`access_writes`·`outside`)와 검사별 필수 하위 사례를 `subcase`로 저장하고, 기록을 다시 읽어 모두 확인돼야 통과한다.
+- 계측
+  - `AccessTracked`(`ResumeTracked` 하위 클래스)는 인계 뒤에만 다음을 기록한다: `set_config('lock_timeout', …)`의 값과 성공 여부, 실패한 문장의 SQLSTATE(원문 없이), 두 접근 테이블에 대한 쓰기.
+  - 반환값과 예외는 그대로 넘긴다. 업무 트랜잭션 안의 설정 탐침은 없다(E5).
+- 계수 분리
+  - 업무는 `Counts`, 관리자 변경은 `admin_change`, 탐침은 별도 관리 연결의 `lock_wait_proof`, 원복 재관측은 별도 계수의 `revert_observation`(1·1·0·0·0)로 나눈다.
+  - CLI 보고는 `check_run`, 관리 조회 상태는 `check_admin_state`에 둔다.
+- 대기 증명(`prove_wait`)
+  - 대기 PID와 `pg_blocking_pids`에 차단 PID가 들어 있는지 본다.
+  - 대기 PID의 미승인 잠금 행의 `transactionid`가 차단 트랜잭션 ID와 같아야 한다. 업무 쪽은 `pg_stat_activity.backend_xid`, 관리 쪽은 `pg_current_xact_id_if_assigned()`로 얻는다. relation은 요구하지 않는다.
+- D1
+  - 관리 트랜잭션에만 `SET LOCAL deadlock_timeout = '60s'`를 둔다. 제품 대기를 증명한 뒤 카드 행을 요청한다.
+  - 분기 판정은 `deadlock_branch`가 한다. P일 때만 `product_40p01_verified`가 참이다. 한 번만 실행한다.
+- T1
+  - 서버 SQLSTATE(`55P03`)와 제품 고정 코드, CLI 보고를 따로 기록한다. 그 뒤 새 승인 id로 명시적 `resume`을 한 번 한다.
+
+### 12-3. 종료 확인 (2-5)
+
+- `coordinate`
+  - 정지점 해제 → 제한 join → 살아 있으면 이번 검사 소유 연결(추적 업무 연결·관리 변경 연결)만 닫기 → 제한 재join → `is_alive` 확인 순서다.
+  - 업무 결과·탐침 결과·정리 결과를 `coordination` 이벤트에 나눠 남긴다.
+  - 종료를 확인하지 못하면 `thread_not_ended`·`cleanup_incomplete`를 기록하고 `harness_defect`로 멈춘다.
+  - 작업 스레드의 중단(`KeyboardInterrupt` 등)은 그대로 다시 던진다.
+- 차단
+  - `check-access-lock`과 `cleanup`은 시작할 때 기록을 디스크에서 다시 읽는다. 위 이벤트가 있거나 기록을 읽을 수 없으면 아무것도 지우지 않고 종료 1로 멈춘다.
+  - 공통 `race`와 `lay.cleanup`은 바꾸지 않았다.
+
+### 12-4. 가짜 보호 검사 (33개)
+
+- 차단: 실제 PG 연결, `subprocess`, 키 생성, 리스너·프로세스 조회, 관리 연결, TLS 생성, PG 환경 변수. 별도 허용은 두 가지다. `Processes`(import·진입점)와 종료 미확인 cleanup 검사는 새 Python 프로세스를 쓴다. `CasePath`는 시험 전용 임시 OpenSSH 키로 실제 서명한다(서명 검증을 가짜로 바꾸지 않음).
+- 확인한 것:
+  - 대상·등록: 등록 객체 자체만 허용하고, 값이 같은 복제본(대상·레이아웃)은 거부한다. 이름이 다른 모든 프리셋과 분리돼 있다. 업무·관리 연결 행렬과 연결 직후 대상 재확인(불일치 시 닫고 거부), 계약 GRANT와 닫힌 변형.
+  - 승인 전: 변형·관리자 변경·`check-access-lock`이 차단되고, import는 아무것도 하지 않는다. 진입점 종료 코드(1·2)를 새 프로세스로 확인했다.
+  - 집계: 24개 목록·순서, 관문·사후 확인 집계 제외, 첫 실패 뒤 `not_run`, 기록 실패, 미완료(24 미만) 시 종료 1.
+  - G0: 실제 `g0_gate`에 가짜 관리 조회를 붙였다. 경로 수 차이, 다른 행 키, 두 경로 누락 모두 본 검사 전에 멈춘다.
+  - W 네 검사: 실제 검사 함수·`coordinate`·판정을 가짜 하네스에서 돌렸다. 필수 하위 사례 기록, 대기 증명, 관리자 귀속, 원복 확인을 확인했고, 원복 행 텍스트가 다르면 실패한다.
+  - T1: 서버 SQLSTATE·제품 코드·CLI 구분, 명시적 재개 1회. 서버 SQLSTATE가 없으면 실패한다.
+  - D1: 두 분기(P·A)와 무분기 사례, `product_40p01_verified` 기록.
+  - 계수: 인계 전 문장 비계수, 설정 실패는 `ok: false`, SQLSTATE만 기록(원문 없음), 두 접근 테이블 쓰기 검출.
+  - 원복 재관측: 두 역할 모두 1·1·0·0·0이고, 그 밖의 값은 실패한다.
+  - 종료 조정: 정상, 탐침 실패, 업무 오류, 중단, 닫기 실패와 종료 미확인을 주입했다. 별도 cleanup 프로세스가 기록을 읽고 파괴적 정리를 거부한다.
+  - 실제 배선(`CasePath`):
+    - 대상 결속부터 CLI dry-run 진입, 계수 목록 공유(스코프와 드라이버가 같은 목록)까지 실제 `Harness` 초기화와 `Harness.case`를 실행했다.
+    - 바꾼 경계는 세 곳이다: 가드 드라이버의 연결(가짜), 계획 dry-run의 공급자 뒤(드라이버를 한 번 부르고 인계), 제품 dry_run 본문(실제 계획 후보 반환).
+    - `observe_role`은 실제 어댑터·공급자에 가짜 서버(계약 프로필 카탈로그)를 붙여, 두 역할 1·1·0·0·0과 권한 누락·초과 거부를 확인했다.
+- 변형 확인: 설정 복원 누락, 대기 증명 생략, 재join 생략, cleanup 기록 무시, 두 경로 목록 오류를 각각 넣으면 해당 검사가 실패했다.
+- 결과: 새 보호 검사 33개 통과(단독·루트 discovery, 외부 `PYTHONPATH` 없음, `-X dev` `ResourceWarning` 0).
+- 직접 영향 묶음 통과: `test_ops_real_layout` 16, `test_ops_apply_real_guard` 96, `test_ops_audit_real_guard` 41, `test_ops_backup_real_guard` 42, `test_ops_resume_real_guard` 47, `test_ops_resume_lexeme_real_guard` 37, `test_srs_migration_access_lock` 15. 루트 discovery(`test_ops_*real*guard.py`)는 296개다.
+- 이번 시험 자료(임시 폴더·키)는 남지 않았다. `C:/JV_Tools/pg68`은 없다.
+
+### 12-5. 실제 PG 미검증
+
+V1은 PG 없는 코드와 가짜 검사뿐이다. 다음은 실행하지 않았고 검증되지 않았다.
+
+- 준비 SQL, 덱 B와 경로 활성화, 24개 검사의 실제 SQL·잠금·대기·`55P03`·`40P01`
+- 관리자 `deadlock_timeout` 설정, 역할 설정의 `current_setting` 표기
+- 실제 GRANT·REVOKE와 원복, R2 정리
+
+가짜 SQL·가짜 서버·가짜 하네스 결과는 이 증거가 아니다. V2~V4는 승인되지 않았다. V1 검토 대기.
+
+## 13. V1 검토 보정 (2026-10-29, PG 없음)
+
+### 13-0. 경합 조정의 오류 우선순위 (코드 보정 전 고정)
+
+`coordinate`가 끝에 무엇을 던질지는 아래 순서로 정한다. 어느 경우든 남은 정리를 모두 시도한 뒤에 던진다(정지점 해제, 제한 join, 소유 연결 닫기, 제한 재join, 기록). 각 단계의 추가 오류·중단은 기록하고 다음 단계로 넘어간다.
+
+1. 작업 스레드의 업무 중단(`KeyboardInterrupt`·`SystemExit` 등 `Exception`이 아닌 것): 같은 객체를 그대로 던진다(`SystemExit` 값 보존, 예외 연쇄 제거).
+2. 조정 중 하네스 자신의 중단(탐침·`between`·해제·닫기 중의 `KeyboardInterrupt` 등): 1이 없을 때만, 처음 생긴 것을 같은 객체로 던진다.
+3. 종료 미확인(재join 뒤에도 살아 있는 스레드): `harness_defect`.
+4. 정지점 시간 초과·미도달: `harness_defect`.
+5. 탐침·하네스 일반 오류: `harness_defect`(종류 이름만 기록, 원문·연쇄 없음).
+6. 작업 스레드의 일반 업무 오류(`Exception`): 던지지 않고 결과로 돌려 검사가 판정한다.
+
+기록 규칙:
+
+- 시작 전에 `coordination_started`(검사·토큰)를 저장한다. 이 저장이 실패하면 스레드를 시작하지 않는다.
+- 종료가 확인된 경우에만 `coordination_ended`(같은 토큰)를 저장한다. 디스크에 짝 없는 시작이 있으면 `check-access-lock`과 `cleanup`은 진행하지 않는다(`coordination_unconfirmed`). 실패 기록 저장 자체가 실패해도 시작 기록이 남아 있으므로 안전한 정리로 간주되지 않는다.
+- 업무 결과, 탐침 결과, 정리 결과는 `coordination` 이벤트에 나눠 남긴다.
+
+### 13-1. 재현과 보정
+
+변경 파일은 `backend/tests/_ops_access_lock_real.py`와 `backend/tests/test_ops_access_lock_real_guard.py` 두 개뿐이다. 공통 `Record`·`race`·`lay.cleanup`, 제품·CLI·공급자·권한 계약·기존 실행기, V1의 닫힌 등록과 목록 단언은 바꾸지 않았다.
+
+- 결함 1(동시 기록 유실)
+  - 재현: 첫 작성자를 메모리 갱신과 저장 사이에 멈추고 두 번째 작성자를 먼저 저장시켰다. 공통 `Record`에서는 두 `event`가 모두 성공했는데, 메모리에는 두 이벤트가 있고 디스크에는 첫 이벤트만 남았다(회귀에 증거로 남김).
+  - 보정: PG68 전용 `LockedRecord`(공통 `Record` 하위 클래스)를 두었다. 메모리 갱신·저장·저장 실패 시 되돌리기 전체를 하나의 잠금으로 감싸므로, 되돌리기는 자기 항목만 지운다. 기록 재읽기(`read_saved`, `require_subcases`)와 `find`도 같은 잠금을 쓴다. `check-access-lock`은 이 기록을 쓴다.
+  - 공통 `lay.run_recorded`의 재읽기는 주 스레드에서 경합 조정이 끝난 뒤에만 일어난다.
+- 결함 2(정지점 시간 초과·C1a 오판)
+  - 재현: B 변경도 제품이 끝날 때까지 막히는 가짜 서버에서, 정지점이 시간 초과로 풀린 뒤 B가 완료됐다. 그런데 `not release.is_set()`이 참이어서 C1a가 통과했다.
+  - 보정: `HoldPause`에 명시적 보유 상태(`holding`, 시간 초과 시 거짓)와 `still_held()`를 두었다. C1a의 B와 R1의 관리자 커밋은 커밋이 끝난 시점에 `still_held()`와 영향 행 1, 커밋 완료를 기록한다.
+  - `coordinate`는 시간 초과되거나 도달하지 않은 정지점을 `harness_defect`로 처리한다. 제품의 조기 종료는 기존 "정지점 미도달" 실패를 그대로 따른다. 이 판정은 정지점을 쓰는 다른 경합 검사(R2·R3·W1a·W1b·C1b)에도 같이 적용된다.
+- 결함 3(정리 중 중단)
+  - 재현: 업무 `SystemExit(9)`에 연결 닫기 중 `KeyboardInterrupt`가 겹친 경우와, 업무 `SystemExit(9)`에 탐침 일반 오류가 겹친 경우 모두 원래 업무 중단이 덮어써졌다.
+  - 보정: 13-0의 우선순위를 따른다. 해제·join·닫기·재join의 각 단계는 오류나 중단이 나도 다음 단계로 진행한다. 업무 중단은 같은 객체로 다시 던진다(값 보존, 연쇄 제거).
+  - 시작 전 `coordination_started`를 저장하고, 종료가 확인된 뒤에만 `coordination_ended`를 저장한다. 실패 기록 저장이 실패해도 짝 없는 시작이 디스크에 남으므로 `check-access-lock`과 별도 `cleanup` 프로세스가 진행을 거부한다.
+  - `check-access-lock`은 검사 중 중단을 `not_run`(중단 종류·남은 검사)으로 기록한 뒤 같은 중단을 전파한다. 종료 코드는 그 `SystemExit` 값이다.
+- 결함 4(R5·R6 관리자 변경)
+  - 재현: 비활성화·재활성화가 영향 행 0이어도 R5·R6이 통과했다.
+  - 보정: `admin_change`가 문장마다 영향 행 1과 커밋 완료를 하위 사례(`loss_rows`, `revert_rows`)로 요구한다. 변경 직후의 경로는 기록된 행 키로 계산한 기대값(`paths_for`)과 대조한다(`loss_paths`): R5는 경로 0, R6은 B 하나. 원복도 행 1과 4-0 경로 복귀를 요구한다. S4와 원복 도우미도 같은 규칙을 쓴다.
+
+### 13-2. 검사 결과 (PG 없음)
+
+- 새 회귀 14개(동시 기록 4, 정지점 3, 중단 4, 별도 cleanup 프로세스 1, 관리자 변경 2)
+  - 보정 전 결과: 실패 7, 오류 8(하위 사례 포함)
+  - 보정 전에도 통과한 것: 결함 증거용 공통 `Record` 유실 재현, 정상 C1a 경로, R5·R6 정상 변경
+- 보정 후 가드 파일 47개 통과(V1 33 + 새 14). 단독 실행과 루트 discovery 모두 통과했고, 외부 `PYTHONPATH`는 없으며, `-X dev` `ResourceWarning` 0, 건너뜀 0이다.
+- V1 검사 중 기대값을 갱신한 것은 세 곳이다. 모두 새 기록 항목이 생겨서 바뀐 것이다: 종료 미확인 시 `coordination_unconfirmed` 추가, 정상 종료의 시작·종료 이벤트, 정리 결과의 `release_errors`·`pauses`.
+- V1 변형 5종은 계속 검출된다. 공통 코드를 바꾸지 않았으므로 294·296개 묶음은 반복하지 않았다.
+- 실제·가짜 경계는 12-4와 같다. 시험 전용 임시 OpenSSH 키를 `CasePath`에서 생성·사용·정리했다(사용자 키·`.ssh`·`ssh-agent`·운영 신뢰 루트는 쓰지 않음). 실제 PG·관리 연결·TLS 생성·GRANT는 없고, V2~V4는 승인되지 않았다. V1 재검토 대기.
+
+### 13-3. 최종 하네스 종료의 우선순위 (2026-10-29, 코드 보정 전 고정)
+
+13-0의 우선순위를 `check_access_lock`의 최종 정리(`Harness.close`)까지 적용한다.
+
+- 정리 단계는 순서대로 하나씩 시도한다: 정지점 해제 → 소유 연결 닫기(연결마다) → 시험 키 정리 → 이번 실행의 배포 임시 폴더 정리(삭제 뒤 부재 확인) → 메모리 비밀값 비우기. 어느 단계에서 일반 오류나 중단이 나도 뒤 단계를 건너뛰지 않는다. 다른 실행의 자원은 건드리지 않고, 재시도하지 않는다.
+- 결과는 고정 단계 코드로만 남긴다. 실패한 단계는 `<단계>_failed`, 중단된 단계는 `<단계>_interrupted`, 확인되지 않은 폴더 정리는 `deploy_folder_unconfirmed`다. 원문·비밀값·예외 연쇄는 남기지 않는다.
+- 던질 것의 우선순위:
+  1. 정리 전에 이미 전파 중이던 최초 예외·중단: 같은 객체로 던진다(`SystemExit` 값 보존, 연쇄 제거). 정리 중 오류·중단이 이를 덮지 않는다.
+  2. 원래 예외가 없을 때, 정리 중 최초 중단: 남은 정리를 마친 뒤 같은 객체로 던진다.
+  3. 원래 예외도 중단도 없는데 실패·미확인이 있으면 `harness_defect`(종료 1)다. 정리 성공으로 보고하지 않는다.
+- 차단 기록:
+  - 실행 시작 전에 `final_cleanup_started`를 저장한다. 저장이 실패하면 검사를 시작하지 않는다.
+  - 모든 단계가 확인됐을 때만 `final_cleanup_ended`를 저장한다.
+  - 실패·미확인이면 `final_cleanup`(단계 코드)과 `cleanup_incomplete`를 저장한다. 이 저장이 실패해도 짝 없는 시작이 디스크에 남아 `final_cleanup_unconfirmed`로 차단된다.
+- 바깥 `finally`에서 정리를 부르는 구조는 쓰지 않는다. 정리 결과를 받은 뒤 위 순서로 한 번만 던진다.
+
+### 13-4. 최종 종료 보정 결과 (2026-10-29, PG 없음)
+
+- 수정 전 재현: 실제 `main` → `check_access_lock` → `Harness.close` 경로를 썼다. 가짜로 바꾼 것은 `Harness.start`가 넣는 연결·키·배포 폴더·비밀값과 검사 함수뿐이다. k1의 업무 `SystemExit(9)`이 첫 연결 닫기의 `KeyboardInterrupt`로 덮였고, 두 번째 연결·키·폴더 정리와 비밀값 비우기가 생략됐다. 새 회귀 7개 모두 보정 전에 실패했다(하위 사례 포함 8건).
+- 보정(`_ops_access_lock_real.py`):
+  - `Harness.close`는 13-3의 단계를 하나씩 시도하고, 던지지 않는다. 결과는 고정 단계 코드와 중단 목록(`FinalCleanup`)으로 돌려준다.
+  - `check_access_lock`은 바깥 `finally` 없이 원래 예외를 보관한다. 최종 정리를 마친 뒤 13-3 순서로 한 번만 던진다.
+  - 시작 전 `final_cleanup_started`를, 확인된 종료 뒤에만 `final_cleanup_ended`를 저장한다. 실패 시 `final_cleanup`·`cleanup_incomplete`를 저장하며, 저장 실패도 짝 없는 시작으로 `final_cleanup_unconfirmed` 차단이 된다.
+- 검사(`test_ops_access_lock_real_guard.py`, 새 `FinalClose` 7개):
+  - 업무 `SystemExit(9)`과 닫기 중 `KeyboardInterrupt`: 같은 객체·값 9, 연쇄 없음. 두 번째 연결·키·폴더·비밀값 정리를 모두 시도했고, `not_run`과 차단 기록이 남는다.
+  - 원래 `KeyboardInterrupt`에 키 정리 중 `SystemExit(3)`이 겹쳐도 원래 중단이 유지된다.
+  - 시작 중 일반 오류가 전파될 때 닫기 중단과 키 정리 오류가 겹쳐도 원래 오류가 유지되고, 남은 정리를 시도한다.
+  - 연결 닫기 실패 뒤 키 정리 실패·중단: 나머지 정리를 시도한다. 원래 예외가 없으면 정리 중단을 전파하고, 일반 실패는 종료 1(`final cleanup`)이며 정리 성공 기록이 없다.
+  - 폴더가 남으면 `deploy_folder_unconfirmed`로 종료 1이다.
+  - 정상 종료는 `final_cleanup_ended`가 남고 차단이 없다.
+  - 실패 기록 저장이 실패해도 `final_cleanup_unconfirmed`로 차단된다.
+  - 모든 사례에서 출력과 traceback에 합성 비밀값·원문이 없다.
+- 기존 기대값 변경 두 곳(이유: `Harness.close`가 결과를 돌려주고 최종 기록이 생김): 가짜 하네스 두 개의 `close`를 확인된 `FinalCleanup()`으로 바꿨고, `not_run`이 마지막 이벤트라는 단언을 `not_run` 이벤트 내용 대조와 마지막 `final_cleanup_ended` 확인으로 바꿨다.
+- 결과: 가드 54개 통과(이전 47 + 새 7). 단독 실행과 루트 discovery 모두 통과했고, `-X dev` `ResourceWarning` 0이다. V1 변형 5종도 계속 검출된다. 공통 코드는 바꾸지 않았으므로 294·296개 묶음은 반복하지 않았다.
+- `CasePath`에서 시험 전용 임시 OpenSSH 키를 생성·사용·정리했다(사용자 키·`.ssh`·`ssh-agent`·운영 신뢰 루트는 쓰지 않음). 실제 PG·GRANT·V2~V4는 없다. V1 재검토 대기.
+
+### 13-5. 독립 재검토와 부재 확인 단계 보완 (2026-10-29, PG 없음)
+
+- 13-4의 종료 우선순위와 디스크 차단 기록을 대조했다. 추가로 폴더 삭제 뒤의 `os.path.lexists`가 단계 보호 밖에 남아 있었다. 실제 `main` → `check_access_lock` → `Harness.close`에서 이 조회에 중단을 주입하면 원래 `SystemExit(9)`이 덮이고 메모리 비밀값 비우기가 생략됐다.
+- 13-3의 기존 계약대로 폴더 삭제와 부재 확인을 같은 `step("deploy_folder", ...)` 안에서 실행하도록 보완했다. 조회 오류·중단도 고정 단계 코드로 수집하며, 다음 폴더와 비밀값 비우기를 계속 시도한다. 기존 폴더 잔존 코드는 그대로다. 제품·공통 모듈·권한·승인 상수는 바꾸지 않았다.
+- 회귀 1개(하위 사례 3개)를 추가했다. 원래 `SystemExit(9)` + 확인 중 `KeyboardInterrupt`, 원래 예외 없음 + 확인 중 `SystemExit(3)`, 확인 중 일반 오류를 실제 최종 종료 경로로 확인한다. 보완 전에는 세 사례 모두 비밀값 비우기 생략으로 실패했다. 보완 후에는 객체·종료값·연쇄 제거, 모든 정리 시도, 고정 코드, 미확인 기록과 cleanup 차단이 확인됐다.
+- 독립 검사: 가드 55개(기존 54 + 새 1)가 단독 실행과 저장소 루트 discovery에서 각각 통과했다. 외부 `PYTHONPATH`와 PG 환경 변수를 제거하고 안전 환경 세 값을 고정했으며, `-X dev`에서 `ResourceWarning`은 0건이었다. 공통 코드가 바뀌지 않아 294·296개 묶음은 반복하지 않았다.
+- 실제·가짜 경계는 12-4와 같다. `CasePath`의 시험 전용 임시 OpenSSH 키만 사용·정리했으며, 실제 PG·GRANT·V2~V4는 실행하지 않았다. V1 합성 검토만 마감한다. 12-5의 SQL·잠금·권한·실제 종료 미검증과 운영 차단은 유지한다. 이번 V1 관련 12개 파일만 작업 브랜치의 중간 커밋·푸시 대상으로 한다.

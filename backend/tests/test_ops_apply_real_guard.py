@@ -86,8 +86,9 @@ class Blocked(unittest.TestCase):
 
 class Presets(Blocked):
     def test_closed_list_and_earlier_presets_kept(self):
+        # pg66 (RS4-1), pg67 (lexeme L-1), pg68 (access lock V1): the closed list grows
         self.assertEqual(g.PRESETS, (g.PG62, g.PG63_AUDIT, g.PG64_BACKUP, g.PG65_APPLY,
-                         g.PG66_RESUME, g.PG67_RESUME_LEXEME))   # pg66 (RS4-1), pg67 (lexeme L-1): the closed list grows
+                         g.PG66_RESUME, g.PG67_RESUME_LEXEME, g.PG68_LEXEME_ACCESS_LOCK))
         self.assertEqual((g.PG62.root, g.PG62.port, g.PG62.databases, g.PG62.admin),
                          (Path("C:/JV_Tools/pg62"), 55462, ("jp_vocab_test_62a", "jp_vocab_test_62b"), "jpv62_admin"))
         self.assertEqual((g.PG63_AUDIT.port, g.PG63_AUDIT.provider_roles), (55472, ("jpva_audit",)))

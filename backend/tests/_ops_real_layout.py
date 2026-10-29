@@ -140,11 +140,35 @@ PG67_VARIANTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
 }
 PG67_VARIANT_DATABASES = {"l8_lexeme_card_column": ("l8",), "l9_read_subscriptions": ("l9",)}
 
+# LQ1 access-lock check (OPS_MIGRATION_ACCESS_LOCK_REAL_PG_PLAN 3절): the closed privilege / role-setting changes,
+# each with its exact revert. A table-level REVOKE also removes that table's column privileges, so the excess
+# case re-grants the contract column after it. Not applied without the V3 approval (LQ4_CHANGES_APPROVED).
+PG68_VARIANTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "k2a_subscriptions_column": (("REVOKE UPDATE (updated_at) ON public.user_deck_subscriptions FROM {w}",),
+                                 ("GRANT UPDATE (updated_at) ON public.user_deck_subscriptions TO {w}",)),
+    "k2b_words_column": (("REVOKE UPDATE (created_at) ON public.shared_deck_words FROM {w}",),
+                         ("GRANT UPDATE (created_at) ON public.shared_deck_words TO {w}",)),
+    "k3_subscriptions_table": (("GRANT UPDATE ON public.user_deck_subscriptions TO {w}",),
+                               ("REVOKE UPDATE ON public.user_deck_subscriptions FROM {w}",
+                                "GRANT UPDATE (updated_at) ON public.user_deck_subscriptions TO {w}")),
+    "s2_lock_timeout_10s": (("ALTER ROLE {w} IN DATABASE jp_vocab_test_access_lock_s2 SET lock_timeout = '10s'",),
+                            ("ALTER ROLE {w} IN DATABASE jp_vocab_test_access_lock_s2 RESET lock_timeout",)),
+    "s3_lock_timeout_2s": (("ALTER ROLE {w} IN DATABASE jp_vocab_test_access_lock_s3 SET lock_timeout = '2s'",),
+                           ("ALTER ROLE {w} IN DATABASE jp_vocab_test_access_lock_s3 RESET lock_timeout",)),
+    "s3b_lock_timeout_5s": (("ALTER ROLE {w} IN DATABASE jp_vocab_test_access_lock_s3b SET lock_timeout = '5s'",),
+                            ("ALTER ROLE {w} IN DATABASE jp_vocab_test_access_lock_s3b RESET lock_timeout",)),
+}
+PG68_VARIANT_DATABASES = {"k2a_subscriptions_column": ("k2a",), "k2b_words_column": ("k2b",),
+                          "k3_subscriptions_table": ("k3",), "s2_lock_timeout_10s": ("s2",),
+                          "s3_lock_timeout_2s": ("s3",), "s3b_lock_timeout_5s": ("s3b",)}
+
 PG65 = Layout("pg65", g.PG65_APPLY, g.PG65_APPLY_CHECK_IDS, "jpvm_owner", VARIANTS, VARIANT_DATABASES)
 PG66 = Layout("pg66", g.PG66_RESUME, g.PG66_RESUME_CHECK_IDS, "jpvr_owner", PG66_VARIANTS, PG66_VARIANT_DATABASES)
 PG67 = Layout("pg67", g.PG67_RESUME_LEXEME, g.PG67_RESUME_LEXEME_CHECK_IDS, "jpvl_owner", PG67_VARIANTS,
               PG67_VARIANT_DATABASES)
-LAYOUTS = (PG65, PG66, PG67)
+PG68 = Layout("pg68", g.PG68_LEXEME_ACCESS_LOCK, g.PG68_LEXEME_ACCESS_LOCK_CHECK_IDS, "jpvk_owner", PG68_VARIANTS,
+              PG68_VARIANT_DATABASES)
+LAYOUTS = (PG65, PG66, PG67, PG68)
 
 
 def layout(value: Any) -> Layout:

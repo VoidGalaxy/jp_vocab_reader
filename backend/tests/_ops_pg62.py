@@ -110,7 +110,16 @@ PG67_RESUME_LEXEME = Target("pg67_resume_lexeme", Path("C:/JV_Tools/pg67"), 5551
                                                                       PG67_RESUME_LEXEME_CHECK_IDS),
                             "jpvl_admin", ("jpvl_read", "jpvl_write"),
                             "docs/plans/srs-improvement/gate-e/PG67_TARGET.md")
-PRESETS = (PG62, PG63_AUDIT, PG64_BACKUP, PG65_APPLY, PG66_RESUME, PG67_RESUME_LEXEME)
+# Subscribed-card access-lock real-PG check (OPS_MIGRATION_ACCESS_LOCK_REAL_PG_PLAN 1절 / 11절 E1, values only;
+# nothing is created by registering them). One database per check (4-2), separate from every other target.
+PG68_LEXEME_ACCESS_LOCK_CHECK_IDS = ("k1", "k2a", "k2b", "k3", "s1", "s2", "s3", "s3b", "s4", "r1", "r2", "r3", "r4a",
+                                     "r4b", "r5", "r6", "c1a", "c1b", "t1", "d1", "w1a", "w1b", "w2a", "w2b")
+PG68_LEXEME_ACCESS_LOCK = Target("pg68_lexeme_access_lock", Path("C:/JV_Tools/pg68"), 55522,
+                                 ("jp_vocab_test_access_lock_tpl",) + tuple(
+                                     f"jp_vocab_test_access_lock_{c}" for c in PG68_LEXEME_ACCESS_LOCK_CHECK_IDS),
+                                 "jpvk_admin", ("jpvk_read", "jpvk_write"),
+                                 "docs/plans/srs-improvement/gate-e/PG68_TARGET.md")
+PRESETS = (PG62, PG63_AUDIT, PG64_BACKUP, PG65_APPLY, PG66_RESUME, PG67_RESUME_LEXEME, PG68_LEXEME_ACCESS_LOCK)
 
 
 def preset(target: Any) -> Target:
