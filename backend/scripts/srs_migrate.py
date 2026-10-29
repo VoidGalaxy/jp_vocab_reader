@@ -101,11 +101,15 @@ def _result(status: str, code: str | None = None, command: str = "dry-run", **va
     return out, EXIT[status]
 
 
-def _admit(request: Request, inputs: Any, driver: Any, step: str, command: str) -> Any:
+def _admit(request: Request, inputs: Any, driver: Any, step: str, command: str, *, clock: Any = None) -> Any:
     """Shared gate of the read commands: request = run inputs, real pre-check, then (contract 1-1 / 4-3)
     only a signed srs_migrate INQUIRY approval whose current step is `step` (read). Judged on the
     approval the pre-check verified itself, before any app import, connection or file. Returns the
-    pre-check result, or an (output, exit code) refusal."""
+    pre-check result, or an (output, exit code) refusal.
+
+    `clock` is None for `dry_run` (unchanged: the pre-check judges `inputs.now` as given). `status`
+    (C5) passes a clock; this replaces `inputs.now` with a freshly read time right before the
+    pre-check, so a caller-supplied `inputs.now` can never be the judged instant."""
     if not isinstance(inputs, op.PreflightInput) or inputs.mode != op.MODE:
         return _result("refused", "mode_not_synthetic", command)
     if driver is None or not callable(driver):
@@ -116,6 +120,11 @@ def _admit(request: Request, inputs: Any, driver: Any, step: str, command: str) 
             or any(type(inputs.job_inputs[k]) is not type(v) for k, v in wanted.items()) \
             or inputs.artifact_sha256 is not None or inputs.prior_chain:
         return _result("refused", "request_mismatch", command)
+    if clock is not None:
+        try:
+            inputs = dataclasses.replace(inputs, now=_clock_now(clock))
+        except _ClockInvalid:
+            return _result("refused", "clock_invalid", command)
     ar.fix_app_environment()                                 # environment only; nothing from app yet
     try:
         matched = op.run_synthetic_preflight(inputs)         # signatures, manifest, target, step, job inputs
@@ -310,9 +319,14 @@ def judge_status(row: dict, cards: tuple, snapshots: list, request: Request, con
     return dict(detail, state=state)
 
 
-def run_status(request: Request, *, inputs: Any, expected: Any, driver: Any) -> tuple[dict, int]:
-    """Synthetic only. Report of the current record; not a resume permission (contract 4-3)."""
-    matched = _admit(request, inputs, driver, STATUS_COMMAND, "status")
+def run_status(request: Request, *, inputs: Any, expected: Any, driver: Any, clock: Any = None) -> tuple[dict, int]:
+    """Synthetic only. Report of the current record; not a resume permission (contract 4-3). C5:
+    a missing clock is the real current UTC, never `inputs.now`. The pre-check (_admit) and the
+    read connection request each get their own freshly read time (the latter through the existing
+    `_timed_connector`, unchanged), so an approval valid at the first can still be refused as
+    expired at the second; a stale caller `inputs.now` cannot keep it alive either way."""
+    clock = _sanitized_clock(clock if clock is not None else (lambda: datetime.now(timezone.utc)))
+    matched = _admit(request, inputs, driver, STATUS_COMMAND, "status", clock=clock)
     if isinstance(matched, tuple):
         return matched
     try:
@@ -320,10 +334,12 @@ def run_status(request: Request, *, inputs: Any, expected: Any, driver: Any) -> 
         from app.srs.engine import DEFAULT_CONFIG
     except ImportError:
         return _result("failed", "product_import_failed", "status")
-    connect = _product_connector(inputs, expected, driver)
+    connect = _timed_connector(inputs, expected, driver, clock)
     try:
         found = read_status(connect, request, migration)
     except pc.OpsProductConnectionError as error:
+        if error.code == "clock_invalid":                    # the connection-time clock, not approval judgement
+            return _result("refused", error.code, "status")
         return _result(_connection_status(error.code), error.code, "status")
     except Exception:
         return _result("failed", "status_read_failed", "status")
@@ -441,6 +457,22 @@ def _clock_now(clock: Any) -> datetime:
         return value.astimezone(timezone.utc)
     except (OverflowError, ValueError):
         raise _ClockInvalid from None
+
+
+def _sanitized_clock(clock: Any) -> Any:
+    """Status only (C5): a clock call that raises an ordinary `Exception` (not callable, or a
+    raised error of its own) becomes the same `_ClockInvalid` as a bad returned value, so both of
+    `status`'s fresh-time reads (admit, connection request) end in the fixed `clock_invalid`
+    refusal with no leaked text. Every `BaseException` that is not an `Exception` -- cancellation
+    and interrupts such as `KeyboardInterrupt`, `SystemExit` or `asyncio.CancelledError` -- is never
+    sanitized; it propagates as the exact same object. `_clock_now` and `_timed_connector` are not
+    changed: this only wraps the callable `run_apply` / `run_resume` never see."""
+    def wrapped() -> Any:
+        try:
+            return clock()
+        except Exception:
+            raise _ClockInvalid from None
+    return wrapped
 
 
 def _timed_connector(inputs: op.PreflightInput, expected: Any, driver: Any, clock: Any) -> Any:

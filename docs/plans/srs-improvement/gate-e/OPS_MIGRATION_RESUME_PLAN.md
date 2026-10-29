@@ -328,3 +328,5 @@ RS3 합성 마감. RS4 계획 검토 대기.
 
 - 범위 밖으로 두었던 `completed` 재호출은 `OPS_MIGRATION_COMPLETED_REPLAY_PLAN.md`에서 검토한다. 권장안은 기존 `status`를 완료 결과 재조회 경로로 정의하는 것이다(코드 변경 없음). 결정 C1~C5는 미결이며, 이 절은 `resume`의 `migration_run_completed` 거부를 바꾸지 않는다.
 - 2026-10-30 보완: 기존 status의 반환 의미를 쓰는 권장안은 유지하되, C5의 과거 시각 재사용은 작은 CLI 보정(CR-S1)이 필요한 결함으로 분리했다. 같은 계획 5-1·5-2에 실제 PG의 행 비차단·스냅숏 검증 설계를 보강했다. C1~C5 결정 전이며 이 재개 경로 자체는 바꾸지 않는다.
+
+- 2026-10-30 CR-S1 마감: C1~C5는 확정됐고 완료 재조회는 기존 status 경로의 시각 보정·합성 검증(112개)과 독립 검토까지 마쳤다. resume의 completed 거부는 그대로다. 다음 실제 PG 계획만 작성했으며 실행은 승인 전이다(`OPS_MIGRATION_COMPLETED_REPLAY_REAL_PG_PLAN.md`).

@@ -100,7 +100,8 @@ class RecordsBase(pf.Base, IntroCase):
                              job_inputs=cli.job_inputs(req), product_fingerprint=None)
         before = self.dump()
         with mock.patch.object(cli, "_product_connector", lambda *a, **k: self.connect),                 mock.patch.dict(os.environ):                             # the CLI's environment fix is undone after
-            out, code = cli.run_status(req, inputs=inputs, expected=None, driver=lambda **k: None)
+            out, code = cli.run_status(req, inputs=inputs, expected=None, driver=lambda **k: None,
+                                       clock=lambda: pf.T0)             # C5: fixed historical approval window
         self.assertEqual(self.dump(), before)                           # no DB change by the status read
         return out, code
 
@@ -292,7 +293,8 @@ class DuplicateKeys(RecordsBase):
                              job_inputs=cli.job_inputs(req), product_fingerprint=None)
         before = self.dump()
         with mock.patch.object(cli, "_product_connector", lambda *a, **k: recorder), mock.patch.dict(os.environ):
-            out, code = cli.run_status(req, inputs=inputs, expected=None, driver=lambda **k: None)
+            out, code = cli.run_status(req, inputs=inputs, expected=None, driver=lambda **k: None,
+                                       clock=lambda: pf.T0)             # C5: fixed historical approval window
         self.assertEqual(self.dump(), before)
         return out, code, recorder.sql
 
@@ -427,7 +429,8 @@ class ProviderFlow(tcli.FlowBase):
             return None
         with mock.patch.object(cli, "read_status", reader):
             out, code = cli.run_status(self.req, inputs=inputs or self.flow_inputs(), expected=tcli.to.READ_EXPECTED,
-                                       driver=self.driver if driver == "default" else driver)
+                                       driver=self.driver if driver == "default" else driver,
+                                       clock=lambda: pf.T0)             # C5: fixed historical approval window
         return out, code, calls
 
     def test_read_connection_transaction_and_cleanup(self):
@@ -480,7 +483,8 @@ class ProviderFlow(tcli.FlowBase):
                 "step = {'command': 'status', 'access': 'read', 'role': 'ops_read', 'profile': case.read_profile()}\n"
                 "approval = case.approval(tool='prb_recover', steps=[step])\n"
                 "inputs = case.flow_inputs(approval, command='status')\n"
-                "out, status = cli.run_status(case.req, inputs=inputs, expected=t.to.READ_EXPECTED, driver=case.driver)\n"
+                "out, status = cli.run_status(case.req, inputs=inputs, expected=t.to.READ_EXPECTED, driver=case.driver,"
+                " clock=lambda: t.ta.pf.T0)\n"
                 "app = any(m == 'app' or m.startswith('app.') for m in sys.modules)\n"
                 "print('RESULT', out['code'], status, app, len(case.driver.calls))\n"
                 "case.doCleanups(); t.FlowBase.tearDownClass()\n")

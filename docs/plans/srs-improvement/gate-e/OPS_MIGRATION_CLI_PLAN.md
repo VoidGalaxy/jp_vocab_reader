@@ -487,3 +487,5 @@
 
 - 2026-10-29 참조: 완료 재호출(완료 결과 재조회) 계약 검토는 `OPS_MIGRATION_COMPLETED_REPLAY_PLAN.md`에 있다(계획만, 승인 전). D7-A(`cursor_end_not_completed` 보고만)는 그대로다.
 - 2026-10-30: 완료 재조회 검토 지적 3건을 해당 계획 7절에서 보완했다. C5는 최초 검사·연결 직전 시각 갱신을 권장하며, 확정 시 CR-S1 코드 보정·합성 검사가 선행된다. C1~C5는 아직 사용자 결정 대기이며 상태 보정·실제 PG·운영은 승인하지 않는다.
+
+- 2026-10-30 CR-S1 마감: 완료 재조회 C1~C5 확정 뒤 기존 status의 진입·연결 요청 시각을 갱신했다. 합성 회귀 112개 통과·독립 검토 완료이며, 제품 적용·재개·상태 보정은 바꾸지 않았다. 상세는 `OPS_MIGRATION_COMPLETED_REPLAY_PLAN.md` 10절, 다음 실제 PG 제안은 `OPS_MIGRATION_COMPLETED_REPLAY_REAL_PG_PLAN.md`다. 실제 PG 실행은 승인 전이다.
