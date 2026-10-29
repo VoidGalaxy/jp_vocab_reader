@@ -194,6 +194,8 @@
 | 읽기(`dry_run`) | `vocab_items`, `user_word_progress`, `review_logs`, `lexeme_review_logs`, `shared_deck_words`, `user_deck_subscriptions`, `srs_card_identity_flags`, `srs_card_deletions`, `srs_migration_runs`, `srs_migration_snapshots` | SELECT | `inspect_card`·`load_card`·`load_logs`·`_authorized`·`is_identity_unknown`·`_was_converted`·`_latest_rollback_record`·`_id_reused` |
 | 쓰기(`apply`) | 위 읽기 표 | SELECT | 잠금 아래 `inspect_card` 재판정 |
 | 쓰기 | `users` | SELECT + `FOR UPDATE`에 필요한 UPDATE(최소 열 단위) | `lock_account`(PostgreSQL은 `FOR UPDATE`에 UPDATE 권한 필요) |
+| 쓰기(`apply`·`resume`, LQ1 2026-10-29) | `user_deck_subscriptions` | UPDATE(`updated_at`) | 구독 카드 쓰기 접근 판정의 `FOR SHARE`; 제품은 이 표를 UPDATE하지 않지만 역할은 해당 열을 실제 수정할 수 있음 |
+| 쓰기(`apply`·`resume`, LQ1 2026-10-29) | `shared_deck_words` | UPDATE(`created_at`) | 같은 접근 경로의 덱 단어 행 `FOR SHARE`; 전역 행의 해당 열을 실제 수정할 수 있다는 대가 포함 |
 | 쓰기 | `account_write_blocks` | SELECT | `active_block` |
 | 쓰기 | `vocab_items`, `user_word_progress` | UPDATE(열 단위: `srs_*` 상태·엔진·설정·참여·사유·품질·플래그·유효 마감, `srs_card_version`, `history_intro_status`, `history_intro_known_by`) | `update_card`, `record_intro`, `load_card(for_update=True)` |
 | 쓰기 | `srs_migration_runs` | SELECT, INSERT, UPDATE(`summary_json`, `status`, `finished_at`) (시퀀스 USAGE 없음, 2026-10-27 S1) | `_run_id`, 커서·실패·완료 표시 |
@@ -203,6 +205,7 @@
 - (2026-10-27 S1 승인·S2 반영) 두 실행 표의 시퀀스 USAGE를 계약에서 뺐다(`srs_migrate.WRITE_PRIVILEGES`의 두 튜플만 제거, `OPS_APPLY_SEQUENCE_PRIVILEGE_PLAN.md`). 두 `id`는 identity 기본값으로 채워지고 최초 `apply` 경로에는 시퀀스 함수 호출이 없다. 객체 목록에는 두 시퀀스가 그대로 있다. 실제 PG 재확인(S3)은 승인 전이다.
 
 - 관측된 권한을 그대로 기대 프로필로 채택하지 않고, 위 표로 기대 프로필을 먼저 정한 뒤 관측과 대조한다(기존 공급자 규칙: 초과·부족 모두 거부). 부족을 넓은 GRANT로 메우지 않는다. `users`의 `FOR UPDATE`용 UPDATE 권한 범위는 결정 D12.
+- (2026-10-29 LQ1 합성 구현) 추가한 두 열 권한과 대기 상한·오류 처리는 `OPS_MIGRATION_RESUME_LEXEME_RACE_PLAN.md` 11절을 따른다. 읽기 프로필·객체 목록·프로필 알고리즘은 그대로이며 쓰기 지문 값은 바뀐다. 이 새 계약의 실제 PG 권한·구문·경합 검증과 GRANT·배포는 미승인이다. 과거 실제 PG 결과에 소급하지 않는다.
 
 #### 4-4-5. 결정 필요 (승인 아님)
 

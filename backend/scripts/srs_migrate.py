@@ -368,7 +368,11 @@ WRITE_PRIVILEGES = (READ_PRIVILEGES
                        ("table", "public", "srs_migration_runs", "", "INSERT"),
                        ("table", "public", "srs_migration_snapshots", "", "INSERT"),
                        ("table", "public", "srs_config_versions", "", "SELECT"),
-                       ("table", "public", "srs_config_versions", "", "INSERT")}
+                       ("table", "public", "srs_config_versions", "", "INSERT"),
+                       # LQ1 (RACE_PLAN 11-1): FOR SHARE of the access path needs one UPDATE column per table;
+                       # the product never updates these tables, but the role CAN change these two columns.
+                       ("table", "public", "user_deck_subscriptions", "updated_at", "UPDATE"),
+                       ("table", "public", "shared_deck_words", "created_at", "UPDATE")}
                     # No sequence USAGE (OPS_APPLY_SEQUENCE_PRIVILEGE_PLAN S1, 2026-10-27): both ids are
                     # identity columns filled by default; the first apply path calls no sequence function.
                     | {("table", "public", "srs_migration_runs", c, "UPDATE")

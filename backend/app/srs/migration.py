@@ -14,7 +14,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from typing import Any, Sequence
 
-from app.database import compute_review_schedule, get_connection, now_utc
+from app.database import compute_review_schedule, get_connection, is_postgres_connection, now_utc
 from app.srs.completion import COMPLETION_HISTORY_COLUMNS, ReviewEvent, replay_with_completion
 from app.srs.goals import read_utc
 from app.srs.history_intro import INTRO_COLUMNS, record_intro
@@ -62,9 +62,46 @@ class MigrationCandidate:
     restart_json: str | None = None
 
 
-def _authorized(connection: Any, key: CardKey) -> bool:
+# LQ1 (OPS_MIGRATION_RESUME_LEXEME_RACE_PLAN 10-1 / 11-1): the WRITE path's access check on PostgreSQL locks one
+# valid access path until the card commits, as the review path does. Lock waits for THIS statement only are
+# capped (never relaxed); its lock timeout / deadlock get fixed codes, any other error passes unchanged.
+ACCESS_LOCK_TIMEOUT_MS = 5000
+ACCESS_LOCK_ERRORS = {"55P03": "migration_access_lock_timeout", "40P01": "migration_access_deadlock"}
+
+
+def _locked_access(connection: Any, key: CardKey) -> bool:
+    setting = connection.execute(
+        "SELECT current_setting('lock_timeout') AS previous, "
+        "(SELECT setting FROM pg_catalog.pg_settings WHERE name = 'lock_timeout') AS setting_ms"
+    ).fetchone()
+    milliseconds = int(setting["setting_ms"])
+    tighten = milliseconds == 0 or milliseconds > ACCESS_LOCK_TIMEOUT_MS
+    if tighten:   # transaction-local: a failed statement leaves it to the rollback, no restore SQL is sent
+        connection.execute("SELECT pg_catalog.set_config('lock_timeout', ?, true)", (f"{ACCESS_LOCK_TIMEOUT_MS}ms",))
+    try:
+        row = connection.execute(
+            "SELECT subscriptions.id AS subscription_id, words.id AS word_id "
+            "FROM user_deck_subscriptions AS subscriptions "
+            "JOIN shared_deck_words AS words ON words.shared_deck_id = subscriptions.shared_deck_id "
+            "WHERE subscriptions.user_id = ? AND subscriptions.is_active = TRUE AND words.lexeme_id = ? "
+            "ORDER BY subscriptions.id, words.id LIMIT 1 FOR SHARE OF subscriptions, words",
+            (key.user_id, key.ref_id),
+        ).fetchone()
+    except Exception as error:
+        code = ACCESS_LOCK_ERRORS.get(getattr(error, "sqlstate", None))
+        if code is None:
+            raise
+        raise SrsWriteError(code) from None
+    if tighten:
+        connection.execute("SELECT pg_catalog.set_config('lock_timeout', ?, true)", (setting["previous"],))
+    return row is not None
+
+
+def _authorized(connection: Any, key: CardKey, *, lock: bool = False) -> bool:
     if key.kind == "personal":
         return load_card(connection, key) is not None
+    if lock and is_postgres_connection(connection):
+        return _locked_access(connection, key)
     row = connection.execute(
         "SELECT words.lexeme_id FROM shared_deck_words AS words "
         "JOIN user_deck_subscriptions AS subscriptions ON subscriptions.shared_deck_id = words.shared_deck_id "
@@ -146,7 +183,7 @@ def inspect_card(connection: Any, key: CardKey, *, for_update: bool = False) -> 
     common = dict(key=key, card_fingerprint=_card_print(card) if card else None,
                   logs_fingerprint=_digest(logs), card_version=card["srs_card_version"] if card else None,
                   last_log_id=max((log["id"] for log in logs), default=0))
-    if card is None or not _authorized(connection, key):
+    if card is None or not _authorized(connection, key, lock=for_update):
         return MigrationCandidate(**common, quality="unavailable", flags=("card_or_access_missing",), values_json=None)
     if card["srs_engine"] != "legacy":
         return MigrationCandidate(**common, quality="already_fsrs", flags=(), values_json=None)

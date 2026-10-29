@@ -1,5 +1,7 @@
 # LQ1: 구독 판정 뒤 구독·덱 단어 변경 경합 계약 계획 (2026-10-29, 제안·승인 전)
 
+**현재 상태(2026-10-29)**: LQ1 정책·세부 결정과 최소 합성 구현은 독립 검토를 마쳤다(11절). 실제 PG의 권한·구문·대기·교착·경합은 미검증이며 GRANT·운영 배포는 승인되지 않았다. 아래 작성 당시 제안과 승인 전 표기는 시점별 기록이다.
+
 기준 체크포인트 `1ce858c`(브랜치 `codex/fsrs-srs-replacement`). 이번 범위는 정적 코드 확인과 이 문서뿐이다. 제품·CLI·공급자·권한·스키마·기대값은 바꾸지 않았고, 검사·PG 접속·키 생성·자료 변경도 하지 않았다.
 
 표기: **[코드]** 현재 코드에서 확인한 사실, **[제안]** 승인 전 제안, **[미검증]** 아무 검사로도 확인하지 않은 것. 이 문서의 어떤 제안도 승인된 정책이나 제품 변경이 아니다.
@@ -359,3 +361,66 @@ PostgreSQL 18 문서에 따르면 `FOR SHARE`는 잠그는 각 테이블의 적�
 - 10-11의 세 지적 사항은 해소됐다. 실제 manifest 변경 조건, 전체 목록과 개별 `status`의 차이, 접근 상실 점검의 미구현 범위를 코드와 대조했다. 승인 사슬은 과거 프로필 권한을 합치지 않고 현재 승인으로 판정한다.
 - 배포 전 전체 목록은 원시 종료 상태만으로 미리 거르지 않도록 보강했다. 기존 `judge_status`가 손상된 완료 기록을 `inconsistent`로 분류할 수 있으므로 종료 검증 전 누락을 허용하지 않는다. 전체 목록 확보 절차는 여전히 미구현·운영 결정이다.
 - 문서의 정적 검토만 마감한다. 두 열 확정과 D-L1~D-L3, 구현·검사·GRANT·실제 PG는 승인하지 않는다. 보고 점검·manifest 필수 등록 보증 등 미구현 범위도 유지한다. REPORT 103-1절을 참조한다.
+
+## 11. 세부 결정 확정과 최소 합성 구현 계약 (2026-10-29 사용자 승인, 기준 `8dcf35b`, 구현 전 기록)
+
+이번 승인은 아래 결정을 계약에 반영하고, PG 없이 최소 구현과 합성 검사를 하는 데까지다. 실제 PG 실행·접속, GRANT, 운영 배포는 승인되지 않았다.
+
+### 11-1. 확정 결정
+
+- 추가 권한 열(10-3 확정): `user_deck_subscriptions.updated_at`, `shared_deck_words.created_at`. 쓰기 역할은 계정·덱 구분 없이 이 두 열을 실제로 수정할 수 있다(10-3의 대가 유지). 제품 전환 코드는 두 테이블을 `UPDATE`하지 않는다.
+- D-L1: 새 접근 판정 잠금의 대기 상한은 5초다.
+  - 적용 범위: PostgreSQL 연결에서 구독 카드의 쓰기 판정(`_authorized(..., lock=True)`)만이다.
+  - 완화 금지: 판정 직전의 유효 `lock_timeout`이 0(무제한)이거나 5초보다 길 때만 그 트랜잭션에 5초를 둔다. 이미 5초 이하로 더 짧으면 바꾸지 않는다.
+  - 복원: 판정 문장이 정상 반환되면, 바꿨던 경우에만 원래 값을 같은 트랜잭션 범위로 되돌린다(`set_config(..., true)`).
+  - SQL 실패: 판정 문장이 실패하면 트랜잭션이 실패 상태이므로, 복원 SQL을 더 실행하지 않고 기존 롤백 경로에 맡긴다. 트랜잭션 범위 설정이므로 롤백과 함께 사라진다.
+  - 의미: `lock_timeout`은 잠금 하나를 얻으려고 기다리는 시간의 상한이다. 카드 처리 전체가 5초 안에 끝난다는 보장이 아니다. `users`·카드 잠금을 얻은 **뒤**에 설정하므로, 그 앞 단계의 대기는 제한하지 않는다.
+  - 5초는 이번 계약에서 고른 값이다. 성능 검증 결과나 운영 안전성 보장이 아니다.
+- D-L2: 새 접근 판정 문장에서 난 오류만, SQLSTATE로 좁게 판정해 고정 코드로 바꾼다.
+  - `55P03`(lock_not_available) → `migration_access_lock_timeout`
+  - `40P01`(deadlock_detected) → `migration_access_deadlock`
+  - 그 밖의 오류는 그대로 다시 던진다. 드라이버 원문은 코드·출력에 싣지 않는다(`SrsWriteError(code)`, 원인 연결 없음).
+  - `KeyboardInterrupt`·`SystemExit` 같은 중단은 잡지 않는다.
+  - 실행 시작 뒤에는 CLI의 기존 분류를 유지한다: `failed`, 고정 코드, `phase: after_start`, `uncertain: true`, `next: status_required`, 종료 1.
+- D-L3: 실패한 실행은 기존처럼 명시적 `resume`으로만 이어간다. 자동 재시도·자동 재개는 없다.
+
+### 11-2. 구현 범위
+
+- `backend/app/srs/migration.py`: `_authorized(connection, key, *, lock=False)`, `inspect_card`가 `for_update`를 `lock`으로 전달. 구독 카드 + PostgreSQL + `lock=True`일 때만 10-1의 문장과 11-1의 대기 상한·오류 코드를 쓴다. 개인 카드, SQLite, dry-run, 롤백 판정(`judge_rollback_card`), 리뷰 경로는 그대로다. 새 커밋 경계나 재시도는 없다.
+- `backend/scripts/srs_migrate.py`: `WRITE_PRIVILEGES`에 두 열 `UPDATE` 튜플만 추가한다. 읽기 프로필, 객체 목록, 승인 형식, 프로필 알고리즘은 바꾸지 않는다.
+- 판정 직전 읽기: `SELECT current_setting('lock_timeout') AS previous, (SELECT setting FROM pg_catalog.pg_settings WHERE name = 'lock_timeout') AS setting_ms`. `pg_settings.setting`의 `lock_timeout` 단위는 밀리초다.
+- 실제 PG의 구문·권한·잠금·대기 동작은 이번에 확인하지 않는다. 가짜 연결의 SQL 문자열·오류 주입과 SQLite 결과는 그 증거가 아니다.
+
+### 11-3. 구현과 합성 검사 결과 (2026-10-29, PG 없음)
+
+변경 파일:
+
+- `backend/app/srs/migration.py`
+  - `ACCESS_LOCK_TIMEOUT_MS = 5000`, `ACCESS_LOCK_ERRORS`(`55P03`·`40P01` → 두 고정 코드)를 추가했다.
+  - 새 `_locked_access`: 설정 읽기 → 필요할 때만 `set_config('lock_timeout', '5000ms', true)` → 10-1 잠금 문장 → 정상 반환 뒤 바꿨던 경우에만 원래 값 복원.
+  - `_authorized(..., *, lock=False)`: 구독 카드 + `lock=True` + PostgreSQL일 때만 `_locked_access`를 쓴다.
+  - `inspect_card`는 `for_update`를 `lock`으로 넘긴다.
+  - 개인 카드, SQLite, `dry_run`, `judge_rollback_card`, 리뷰 경로는 그대로다. 새 커밋 경계나 재시도는 없다.
+- `backend/scripts/srs_migrate.py`: `WRITE_PRIVILEGES`에 두 열 `UPDATE` 튜플만 추가했다. 읽기 권한, 객체 목록, 승인 형식, 프로필 알고리즘(v2)은 그대로다.
+- `backend/tests/test_srs_migration_access_lock.py`(새 파일, 15개): 잠금 문장·대기 설정·복원·비완화, 0행, 읽기·SQLite·개인 카드 경로 보존, `inspect_card` 전달, dry-run·롤백 판정 미잠금, 두 고정 코드, 실패 뒤 복원 SQL 없음, 다른 오류·`KeyboardInterrupt`·`SystemExit` 비변환, 제품의 두 테이블 쓰기 문장 없음, 권한 두 튜플, 쓰기 지문 변경과 옛 승인 거부, 새 열 권한 각각 필수, 부분 커밋 보존과 명시적 재개(SQLite, 잠금 오류는 주입).
+- `backend/tests/test_srs_migrate_apply_flow.py`: 가짜 카탈로그(`contract_catalog`)에 두 열(`user_deck_subscriptions.updated_at`, `shared_deck_words.created_at`)을 더했다. 열 권한을 관측하려면 그 열이 카탈로그에 있어야 하므로 필연적인 변경이다.
+- `backend/tests/test_ops_real_layout.py`(PG65 보존 검사): 기준선 파일 `ops_pg65_preserve.json`과 그 해시는 바꾸지 않았다. 현재 출력은 "기준선 + 정확히 두 GRANT"여야 한다. 기준선 쓰기 지문은 "현재 계약에서 정확히 두 권한을 뺀 지문"과 같아야 한다. 현재 쓰기 지문이 기준선과 다르다는 것도 확인한다. 이번 두 권한 때문에 생긴 차이만 허용하며, 다른 차이는 계속 실패한다.
+
+검사(가짜·SQLite만, 앱 import 전 안전 환경 세 값 고정, 외부 `PYTHONPATH` 없음):
+
+- 수정 전: 새 15개 중 실패 5·오류 18(하위 사례 포함). 나머지 2개(두 테이블 쓰기 문장 없음, 새 계약 프로필 인계)는 수정 전에도 통과했다. 이 둘은 보존 확인용이다.
+- 수정 후: 새 파일 15개 통과(단독·루트 discovery, `-X dev` `ResourceWarning` 0).
+- 직접 영향 묶음 통과:
+  - CLI·전환: apply_flow 19, apply_sqlite 12, cli 15, status 15, sqlite 2, resume_sqlite 19, resume_provider 9, resume_lexeme_sqlite 6, resume_lexeme_provider 3
+  - 제품: migration_connect 7, existing_run 11, new_run 7, d2_convert 12, d2_rollback_reconvert 25, d2_u10d_window 35, d2_u8_plan_b 21, d2_serve 9, d2_identity 21, transactions 36
+  - 실행기·공급자·승인: apply_real_guard 96, resume_real_guard 47, resume_lexeme_real_guard 37, real_layout 16, provider 29, product_connect 21, approval 52, resume_binding 24
+- 기존 실행기 영향: PG65·PG66·PG67 실행기의 GRANT 목록과 쓰기 기대 지문은 계약 권한표에서 만들어지므로, 다음 실제 실행부터 두 GRANT가 더해진 새 값이 된다. 과거 L-2·RS4·C12 기록과 원시 증거는 바뀌지 않는다. 구독 카드 쓰기 연결의 문장 수는 카드당 2~4개 늘어난다(설정 읽기·설정·잠금·복원). 실행기에 고정된 문장 수 기대값은 없다.
+- 실제 PG 미검증: 잠금 문장의 구문, `FOR SHARE`의 두 열 권한 충분성, `pg_settings` 읽기, `set_config` 복원, 실제 대기·5초 초과(`55P03`)·교착(`40P01`), 경합 R1~R6, 실제 GRANT. 가짜 SQL 문자열·오류 주입·SQLite 결과는 이 증거가 아니다.
+- 구현 검토 대기.
+
+### 11-4. 독립 구현 검토와 합성 마감 (2026-10-29)
+
+- 설정 읽기·비완화·정상 복원, 실패 뒤 복원 SQL 없음, 두 SQLSTATE의 좁은 변환과 중단 비변환, 쓰기 경로 전달, 정확히 두 권한 추가를 코드와 검사로 대조했다. PG65 보존 기준 파일의 SHA-256은 기존 값 그대로이며, 보존 검사는 두 GRANT·두 권한으로 생기는 변화만 분리한다.
+- 독립 집중 검사 59개 통과: 새 접근 잠금 15, 공통 배치·PG65 보존 16, 최초 적용 흐름 19, 구독 카드 재개 SQLite 6, 구독 카드 재개 공급자 가짜 경로 3. `-X dev`에서 ResourceWarning 0이다. 기존 의존성의 사용 중단 경고는 있었으며 이번 범위에서 고치지 않았다. 11-3의 621개는 앞선 구현자 실행 기록이고 이번에 반복하지 않았다.
+- 기존 CLI 계획 4-4-4 권한표에 승인된 두 열 권한과 대가·실제 검증 미완료를 반영했다. 제품·검사에 추가 보정은 하지 않았다.
+- 합성 구현만 마감한다. 11-3의 실제 PG 미검증 범위, manifest 포함·import 완전성, 전체 실행 목록·접근 상실 보고의 미구현, 운영 차단은 유지한다. 실제 GRANT와 배포는 승인하지 않는다. REPORT 104-1절을 참조한다.

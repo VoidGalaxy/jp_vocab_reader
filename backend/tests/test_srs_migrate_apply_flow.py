@@ -134,6 +134,10 @@ def contract_catalog(access: str, *, extra=(), missing=(), user=None) -> dict:
             cols += list(cli.CARD_UPDATE_COLUMNS)
         elif table == "srs_migration_runs":
             cols += ["scope_json", "status", "summary_json", "finished_at"]
+        elif table == "user_deck_subscriptions":                         # LQ1: the one UPDATE column
+            cols += ["updated_at"]
+        elif table == "shared_deck_words":                               # LQ1: the one UPDATE column
+            cols += ["created_at"]
         columns[oid] = cols
     oids[("table", cli.IDENTITY_SCHEMA, cli.IDENTITY_TABLE)] = 16401
     relations.append((16401, "r", cli.IDENTITY_SCHEMA, cli.IDENTITY_TABLE))

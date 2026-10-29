@@ -38,6 +38,11 @@ BASELINE = TESTS_DIR / "ops_pg65_preserve.json"
 BASELINE_SHA256 = "31a75924565ca116d89194dcb2a4d4bb50d284bfc3a3ae53e74ff5e8ab62657d"   # recorded at creation
 
 
+# The only write-contract change since BASELINE was taken (OPS_MIGRATION_RESUME_LEXEME_RACE_PLAN 11-1), fixed here.
+LQ1_WRITE_PRIVILEGES = frozenset({("table", "public", "user_deck_subscriptions", "updated_at", "UPDATE"),
+                                  ("table", "public", "shared_deck_words", "created_at", "UPDATE")})
+
+
 def forbidden(*_, **__):
     raise AssertionError("an external entry point was called")
 
@@ -297,12 +302,24 @@ class Preserved(unittest.TestCase):
                           self.base["business_roles"]),
                          (ap.TEMPLATE, ap.CHECK_DB, list(ap.BUSINESS_DATABASES), list(ap.ADMIN_DATABASES), ap.ADMIN,
                           ap.OWNER, [ap.READ, ap.WRITE], list(ap.BUSINESS_ROLES)))
-        self.assertEqual(self.base["grants"], {db: text(ap.contract_grants(db)) for db in ap.BUSINESS_DATABASES})
+        # LQ1 (RACE_PLAN 11-1) added exactly two write-contract column UPDATEs after this baseline was taken. The
+        # baseline is not rewritten: the current output must be the baseline plus exactly those two GRANTs, and the
+        # baseline write fingerprint must be the current contract without exactly those two privileges.
+        lq1 = text(lay.grant_statements(LQ1_WRITE_PRIVILEGES, ap.WRITE))
+        self.assertEqual(len(lq1), 2)
         profiles = {}
         for db in ap.BUSINESS_DATABASES:
+            current = text(ap.contract_grants(db))
+            self.assertEqual(sorted(g for g in current if g in lq1), sorted(lq1), db)
+            self.assertEqual([g for g in current if g not in lq1], self.base["grants"][db], db)
             r, w = ap.expected_profiles(db)
+            self.assertTrue(LQ1_WRITE_PRIVILEGES <= w.privileges and not LQ1_WRITE_PRIVILEGES & r.privileges)
+            before = pv.ExpectedProfile(w.objects, w.privileges - LQ1_WRITE_PRIVILEGES, w.search_path, w.tls_versions)
+            self.assertNotEqual(pv.expected_profile_fingerprint(w, role=ap.WRITE, access="write"),
+                                self.base["profiles"][db][1], db)
             profiles[db] = [pv.expected_profile_fingerprint(r, role=ap.READ, access="read"),
-                            pv.expected_profile_fingerprint(w, role=ap.WRITE, access="write")]
+                            pv.expected_profile_fingerprint(before, role=ap.WRITE, access="write")]
+        self.assertEqual(set(self.base["grants"]), set(ap.BUSINESS_DATABASES))
         self.assertEqual(self.base["profiles"], profiles)
         self.assertEqual(self.base["variants"], {n: {p: text(ap.variant_statements(n, p)) for p in ("apply", "revert")}
                                                  for n in ap.VARIANTS})
