@@ -620,17 +620,24 @@ class Harness:
                                  secret_dsn=case.dsn(READ), now=now, **shared)
 
     def apply_approval_as_status(self, case: Case, *, now: datetime) -> Any:
-        """P6 fixture: the job's REAL, fully valid apply approval (it also carries its own `status` read
-        step, see `case()`), sent for a `status` request. `product_fingerprint` stays None and
-        `artifact_sha256` / `prior_chain` stay at their status-command defaults (None / ()), so this
-        input reaches the real preflight pass and is refused only at the kind gate
-        (`approval_kind_not_inquiry`), never at the earlier `request_mismatch` input check."""
-        shared = dict(case.common, approval=case.a0, approval_signature=self.sign(case.a0, "approval"),
-                      inquiry=case.dry_run_inquiry, inquiry_signature=self.sign(case.dry_run_inquiry, "approval"),
-                      product_fingerprint=None, now=now)
-        return op.PreflightInput(command="status", args={}, secret_dsn=case.dsn(READ),
-                                 connection=op.ConnectionObservation(profile=case.read_profile, read_only=True),
-                                 **shared)
+        """P6 fixture (9절): a SEPARATE, genuinely signed apply approval -- its OWN status inquiry
+        (`read_only_inputs`), its OWN real-preflight-printed job plan -- sent for a `status` request.
+        `case.a0` (the job's real apply approval, bound to the real non-None dry-run product fingerprint
+        / artifact digest) is never read or changed here: this fixture reaches the real preflight pass
+        on its own, separate plan and is refused only at the kind gate (`approval_kind_not_inquiry`),
+        never at the earlier `request_mismatch` input check."""
+        inquiry_inputs, _, _ = self.read_only_inputs(case.check_id, case.request, now=now)
+        inquiry_doc = json.loads(inquiry_inputs.approval.decode())
+        printed = op.run_synthetic_preflight(inquiry_inputs).job_plan
+        uid = case.request.account_id
+        apply_doc = dict(inquiry_doc, kind="apply", approval_id=f"app-pg69-{case.check_id}-stat{next(_RO_COUNTER):05d}",
+                         based_on={"approval_id": inquiry_doc["approval_id"], "sha256": sha(inquiry_inputs.approval)},
+                         plan={str(uid): printed})
+        apply_bytes = json.dumps(apply_doc).encode()
+        return dataclasses.replace(inquiry_inputs, approval=apply_bytes,
+                                   approval_signature=self.sign(apply_bytes, "approval"),
+                                   inquiry=inquiry_inputs.approval,
+                                   inquiry_signature=inquiry_inputs.approval_signature, now=now)
 
     def read_only_inputs(self, check_id: str, request: Any, *, now: datetime, tool: str = "srs_migrate",
                          tool_override: str | None = None, step_command: str = "status",
@@ -689,14 +696,36 @@ class Harness:
         return result
 
     def status_raw(self, request: Any, inputs: Any, read_exp: Any, *, clock: Callable[[], Any],
-                   rc_variant: bool = False, hooks: list | None = None, fetch_hooks: list | None = None) -> dict:
+                   rc_variant: bool = False, hooks: list | None = None, fetch_hooks: list | None = None,
+                   preflight_trace: list | None = None) -> dict:
+        """`preflight_trace` (P6 only): a passthrough wrapper around the REAL `op.run_synthetic_preflight`
+        -- records `"enter"`, then `"pass"` or the fixed `f"refused:{code}"` of its own
+        `OpsPreflightRefused`, and re-raises the SAME exception unchanged. The original function always
+        runs; nothing here judges or replaces its result."""
         counts, trackers = Counts(), []
         scopes = RunScopes()
-        with scopes.installed(), scopes.run(counts, trackers):
-            out, code = cli.run_status(request, inputs=inputs, expected=read_exp,
-                                       driver=self.driver(inputs, counts, trackers, hooks=hooks,
-                                                          rc_variant=rc_variant, fetch_hooks=fetch_hooks),
-                                       clock=clock)
+        original = op.run_synthetic_preflight
+
+        def traced(data):
+            preflight_trace.append("enter")
+            try:
+                result = original(data)
+            except op.OpsPreflightRefused as error:
+                preflight_trace.append(f"refused:{error.code}")
+                raise
+            preflight_trace.append("pass")
+            return result
+        if preflight_trace is not None:
+            op.run_synthetic_preflight = traced
+        try:
+            with scopes.installed(), scopes.run(counts, trackers):
+                out, code = cli.run_status(request, inputs=inputs, expected=read_exp,
+                                           driver=self.driver(inputs, counts, trackers, hooks=hooks,
+                                                              rc_variant=rc_variant, fetch_hooks=fetch_hooks),
+                                           clock=clock)
+        finally:
+            if preflight_trace is not None:
+                op.run_synthetic_preflight = original
         return {"out": out, "code": code, "counts": counts, "trackers": trackers}
 
     # -- admin facts (read only) ------------------------------------------------------------------------------
@@ -1384,35 +1413,54 @@ P6_CASES = (("apply_approval_given", "approval_kind_not_inquiry"),
            ("manifest_mismatch", "preflight_manifest_not_approved"))
 
 
+def _p6_trial_inputs(h: Harness, case: Case, label: str, now: datetime) -> tuple[Any, Any]:
+    check_id = case.check_id
+    if label == "apply_approval_given":
+        return h.apply_approval_as_status(case, now=now), case.read_expected
+    if label == "wrong_tool":
+        inputs, exp, _ = h.read_only_inputs(check_id, case.request, now=now, tool_override="prb_recover")
+        return inputs, exp
+    if label == "wrong_step":
+        inputs, exp, _ = h.read_only_inputs(check_id, case.request, now=now, step_command="dry_run")
+        return inputs, exp
+    if label == "tampered_signature":
+        inputs, exp, _ = h.read_only_inputs(check_id, case.request, now=now)
+        return dataclasses.replace(inputs, approval_signature=bytes(b ^ 1 for b in inputs.approval_signature)), exp
+    if label == "manifest_mismatch":
+        inputs, exp, _ = h.read_only_inputs(check_id, case.request, now=now)
+        return dataclasses.replace(inputs, manifest=inputs.manifest + b" "), exp
+    raise CheckFailed("harness_defect", f"P6: unknown trial label {label!r}")
+
+
+def _p6_expected_trace(expected_code: str) -> tuple:
+    """`approval_kind_not_inquiry` / `approval_tool_not_srs_migrate` are CLI-level checks AFTER a real
+    preflight pass; the other three refusals are the real preflight's own `OpsPreflightRefused`."""
+    if expected_code.startswith("preflight_"):
+        return ("enter", f"refused:{expected_code[len('preflight_'):]}")
+    return ("enter", "pass")
+
+
 def p6_fixed_refusal_codes(h: Harness) -> dict:
     check_id = "p6"
     case = h.cases[check_id]
     now = T0 + timedelta(minutes=5)
     before = h.state_admin(case)                        # captured BEFORE any trial (9절)
 
-    trials = {"apply_approval_given": h.status_raw(case.request, h.apply_approval_as_status(case, now=now),
-                                                   case.read_expected, clock=fixed_clock(now))}
-    inputs, read_exp, _ = h.read_only_inputs(check_id, case.request, now=now, tool_override="prb_recover")
-    trials["wrong_tool"] = h.status_raw(case.request, inputs, read_exp, clock=fixed_clock(now))
-    inputs, read_exp, _ = h.read_only_inputs(check_id, case.request, now=now, step_command="dry_run")
-    trials["wrong_step"] = h.status_raw(case.request, inputs, read_exp, clock=fixed_clock(now))
-    inputs, read_exp, _ = h.read_only_inputs(check_id, case.request, now=now)
-    tampered = dataclasses.replace(inputs, approval_signature=bytes(b ^ 1 for b in inputs.approval_signature))
-    trials["tampered_signature"] = h.status_raw(case.request, tampered, read_exp, clock=fixed_clock(now))
-    inputs, read_exp, _ = h.read_only_inputs(check_id, case.request, now=now)
-    tampered_manifest = dataclasses.replace(inputs, manifest=inputs.manifest + b" ")
-    trials["manifest_mismatch"] = h.status_raw(case.request, tampered_manifest, read_exp, clock=fixed_clock(now))
-
-    for label, expected_code in P6_CASES:
-        result = trials[label]
+    for label, expected_code in P6_CASES:                # each trial built, run AND validated before the next
+        inputs, read_exp = _p6_trial_inputs(h, case, label, now)
+        trace: list = []
+        result = h.status_raw(case.request, inputs, read_exp, clock=fixed_clock(now), preflight_trace=trace)
         subcase(h, check_id, label, (result["out"].get("status"), result["out"].get("code"), result["code"]) ==
                 ("refused", expected_code, 4), out=result["out"])
         counted_read, counted_write = result["counts"].role(READ), result["counts"].role(WRITE)
-        subcase(h, check_id, f"{label}_no_connection", counted_read["created"] == 0 and counted_write["created"] == 0,
-                read=counted_read, write=counted_write)
+        zero = all(v == 0 for v in counted_read.values()) and all(v == 0 for v in counted_write.values())
+        subcase(h, check_id, f"{label}_no_connection", zero, read=counted_read, write=counted_write)
+        subcase(h, check_id, f"{label}_trace", tuple(trace) == _p6_expected_trace(expected_code), trace=trace)
+
     after = h.state_admin(case)
     subcase(h, check_id, "unchanged", before == after)
-    require_subcases(h, check_id, tuple(n for label, _ in P6_CASES for n in (label, f"{label}_no_connection")) +
+    require_subcases(h, check_id, tuple(n for label, _ in P6_CASES
+                                        for n in (label, f"{label}_no_connection", f"{label}_trace")) +
                      ("unchanged",))
     return {}
 

@@ -1,10 +1,12 @@
 """Fake-only checks for the PG69 completed-result requery real-PG runner (tests/_ops_completed_replay_real.py,
 CR-PG1). No database, cluster, certificate, listener or admin connection: connect entry points, `subprocess`,
-key creation and process facts are blocked. The runner's real `prepare` / `check-completed` / `cleanup` never
-run against anything here; nothing in this file is PostgreSQL evidence.
+process facts and (outside `ApprovalPaths`) key creation are blocked. The runner's real `prepare` /
+`check-completed` / `cleanup` never run against anything here; nothing in this file is PostgreSQL evidence.
 
 Separately allowed: new Python processes for the import / entry-point smoke checks (`Imports`); no process here
-ever reaches a real connection, driver or key.
+ever reaches a real connection, driver or key. `ApprovalPaths` (section 8) is the one exception that allows real
+temporary OpenSSH test keys (`test_ops_signature.Keys`, via `cr.sigtests.Keys`) for real approval signing; every
+PostgreSQL, admin, process and TLS entry point stays forbidden there too.
 
 Run directly:      python tests/test_ops_completed_replay_real_guard.py
 Or via discovery:   python -m unittest discover -s tests -p test_ops_completed_replay_real_guard.py
@@ -1360,6 +1362,219 @@ class NormalRead(StatusProbeMixin, HandOverOrderMixin, DatabaseFactsMixin, P1Che
     """PG69 P1 (plan 12절): the setting probe, its integration with the common `before_exit` hook,
     `database_facts` and the ACTUAL `p1_repeated_completed_query` check, composed from the fixture
     mixins above -- one `unittest.TestCase`, no test method duplicated across classes."""
+
+
+# --- 8. ApprovalPaths: real P6 rejection-path trace through the ACTUAL `cr.Harness` helpers and
+# `cr.p6_fixed_refusal_codes` -- real signing (`sigtests.Keys`), real `op.run_synthetic_preflight`, never a
+# fake verifier. No PostgreSQL, admin or process access anywhere below: `cr.Harness.__init__`/`start()` are
+# never called (the fixture builds the object with `object.__new__` and sets its own synthetic, file-only
+# target); `state_admin` is a fake (allowed by the plan); a real product connection would hit the blocked
+# `psycopg.connect` and fail the test. ----------------------------------------------------------------------
+
+from datetime import timedelta  # noqa: E402
+from urllib.parse import quote  # noqa: E402
+
+
+SAFE_ENV = ("APP_ENV", "DATABASE_URL", "PYTHON_DOTENV_DISABLED")
+
+
+def _pin_safe_env(case: unittest.TestCase) -> None:
+    """Pinned/restored before any app import can happen (none should here; defensive only): the EXACT
+    previous value of each of the three variables is restored, registered BEFORE the override."""
+    saved = {k: os.environ.get(k) for k in SAFE_ENV}
+
+    def restore():
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+    case.addCleanup(restore)
+    os.environ.update(APP_ENV="test", DATABASE_URL="sqlite:///:memory:", PYTHON_DOTENV_DISABLED="1")
+
+
+def _approval_paths_case(h: cr.Harness, check_id: str):
+    """A genuine, fully real-signed inquiry + apply approval pair for `check_id`, built the same way as
+    `cr.Harness.case()` except that the dry-run PRODUCT read (which needs a real connection) is replaced
+    by a fixed synthetic `product_fingerprint` / `artifact_sha256` fed into the SAME real
+    `op.run_synthetic_preflight` call `case()` itself uses to print the job plan embedded in the apply
+    approval. Never a hand-built plan string, never a fake preflight."""
+    db = cr.CHECK_DB[check_id]
+    ids = h.target["synthetic"]["a"]
+    uid = ids["user_id"]
+    keys = cr.card_keys(ids)
+    req = cr.cli.make_request(uid, cr.RUN_KEY, [r for k, _, r in keys if k == "personal"], [])
+    read_exp, write_exp = cr.expected_profiles(db)
+    read_profile = cr.pv.expected_profile_fingerprint(read_exp, role=cr.READ, access="read")
+    write_profile = cr.pv.expected_profile_fingerprint(write_exp, role=cr.WRITE, access="write")
+    folder = h.deploy()
+    manifest = cr.pf.manifest_doc(h.files())
+    target_obs = cr.op.TargetObservation(host=cr.g.HOST, port=cr.T.port, database=db, server_major=18,
+                                         identity_value=h.target["databases"][db]["identity_value"])
+    db_identity = cr.pf.db_identity(target_obs)
+    suffix = req.run_key[-6:] or "000000"
+    read_step = {"command": "dry_run", "access": "read", "role": cr.READ, "profile": read_profile}
+    inquiry_doc = {"format_version": 1, "kind": "inquiry", "approval_id": f"inq-approval-paths-{check_id}-{suffix}",
+                   "supersedes": None, "purpose": "synthetic", "alias": "synthetic-primary",
+                   "db_identity": db_identity, "manifest": cr.om.manifest_fingerprint(manifest),
+                   "tool": "srs_migrate", "steps": [read_step], "accounts": [uid], "max_accounts": 1,
+                   "job": {"key": req.run_key, "inputs": cr.cli.job_inputs(req)},
+                   "valid_from": "2026-10-21T12:00:00Z", "valid_until": "2026-10-21T13:00:00Z",
+                   "approved_by": "synthetic signer"}
+    inquiry = json.dumps(inquiry_doc).encode()
+    root = os.path.join(folder, "ops", "tls", "root.pem")
+
+    def dsn(role):
+        return (f"postgresql://{role}:fixture-only@{cr.g.HOST}:{cr.T.port}/{db}?sslmode=verify-full"
+                f"&sslrootcert={quote(root, safe='')}")
+    common = dict(mode="synthetic", manifest=manifest, manifest_signature=h.sign(manifest, "manifest"),
+                  deploy_root=folder, account_id=uid, job_key=req.run_key, job_inputs=cr.cli.job_inputs(req),
+                  target=target_obs, environment={"PATH": "C:/Windows"},
+                  trust=cr.op.SyntheticTrust(h.allowed, b"", cr.sigtests.PRINCIPAL), now=cr.T0)
+    inquiry_inputs = cr.op.PreflightInput(approval=inquiry, approval_signature=h.sign(inquiry, "approval"),
+                                          command="dry_run", args={}, product_fingerprint=None,
+                                          connection=cr.op.ConnectionObservation(profile=read_profile, read_only=True),
+                                          secret_dsn=dsn(cr.READ), **common)
+    # NON-None, like the real dry-run-bound A0 `cr.Harness.case()` builds: this fixture's `a0`/plan must
+    # stay fixed and untouched by `apply_approval_as_status` (P6), which now builds its OWN separate
+    # plan from its OWN status inquiry -- never this value, never this approval's bytes.
+    product_fingerprint = cr.sha(b"approval-paths-synthetic-product")
+    artifact_sha256 = cr.sha(b"approval-paths-synthetic-artifact")
+    printed = cr.op.run_synthetic_preflight(dataclasses.replace(
+        inquiry_inputs, product_fingerprint=product_fingerprint, artifact_sha256=artifact_sha256)).job_plan
+    ev0 = h.write_evidence(folder, "evidence0", db_identity, uid, f"bkp-approval-paths-{check_id}-{suffix}")
+    status_step = {"command": "status", "access": "read", "role": cr.READ, "profile": read_profile}
+    a0_doc = dict(inquiry_doc, kind="apply", approval_id=f"app-approval-paths-{check_id}-{suffix}",
+                  plan={str(uid): printed},
+                  based_on={"approval_id": inquiry_doc["approval_id"], "sha256": cr.sha(inquiry)},
+                  steps=[read_step, status_step, {"command": "apply", "access": "write", "role": cr.WRITE,
+                                                  "profile": write_profile, "args": {"batch_size": "2"}}],
+                  format_version=3, backup_evidence={"sha256": cr.sha(Path(ev0[0]).read_bytes())})
+    a0 = json.dumps(a0_doc).encode()
+    case = cr.Case(check_id=check_id, db=db, keys=keys, request=req, plan=None, plan_path="", folder=folder,
+                   manifest=manifest, dry_run_inquiry=inquiry, a0=a0, first_write=None, first_read=None,
+                   initial_evidence=ev0, read_expected=read_exp, write_expected=write_exp, read_profile=read_profile,
+                   write_profile=write_profile, db_identity=db_identity, dsn=dsn, common=common, batch_size=2)
+    return case, product_fingerprint, artifact_sha256
+
+
+class ApprovalPaths(unittest.TestCase):
+    """Real `cr.Harness` helpers (`sign`, `deploy`, `write_evidence`, `status_raw`, `apply_approval_as_status`,
+    `read_only_inputs`) and the ACTUAL `cr.p6_fixed_refusal_codes`, on a Harness built only from this
+    fixture's own synthetic, file-based target (never `Harness.__init__`/`start()`, never a real server).
+    `cr.sigtests.Keys` runs for real; every PostgreSQL/admin/process entry point stays blocked."""
+
+    def setUp(self):
+        _pin_safe_env(self)
+        # `subprocess.Popen`/`.run` stay REAL here: `cr.sigtests.Keys()` needs the real `ssh-keygen` binary
+        # (never a fake verifier). Every PostgreSQL/admin/process/TLS/product-read entry point stays
+        # blocked -- `cli.read_status` must never be reached by any P6 trial.
+        for patch in (mock.patch.object(psycopg, "connect", forbidden), mock.patch.object(g, "listener_pids", forbidden),
+                      mock.patch.object(g, "admin_connect", forbidden), mock.patch.object(g, "postmaster_pid", forbidden),
+                      mock.patch.object(g, "single_run", forbidden), mock.patch.object(lay.real, "make_tls", forbidden),
+                      mock.patch.object(lay.base, "run", forbidden), mock.patch.object(cr.cli, "read_status", forbidden)):
+            patch.start()
+            self.addCleanup(patch.stop)
+        # Every owned resource gets its cleanup registered the moment it is created, never after the
+        # whole fixture finishes: a later failure in this same `setUp` still cleans up what came before.
+        # `h.deploy()` (used by `_approval_paths_case`) makes folders OUTSIDE `folder_root` (runner
+        # `Harness.deploy`, 474-486), so cleanup goes through the REAL `Harness.close` (its own
+        # identity-checked deletion of exactly the folders it owns, plus keys/secrets), never a new
+        # deletion routine -- the outer temp `folder_root` is only removed AFTER `close()` has run.
+        self.h = object.__new__(cr.Harness)
+        self.h.folder_root = Path(tempfile.mkdtemp(prefix="pg69_approval_paths_"))
+        self.addCleanup(shutil.rmtree, self.h.folder_root, True)          # registered first: runs LAST
+        self.h.rec = g.Record(self.h.folder_root)
+        self.h.target = {"postmaster_pid": 999999,
+                         "synthetic": {"a": {"user_id": 1, "personal": {"p1": 101, "p2": 102}}},
+                         "databases": {db: {"identity_value": f"synthetic-{db}"} for db in cr.CHECK_DB.values()}}
+        self.h.target_bytes = json.dumps(self.h.target).encode()
+        (self.h.rec.folder / "target.json").write_bytes(self.h.target_bytes)
+        self.h.pid = self.h.target["postmaster_pid"]
+        self.h.keys, self.h.allowed = None, None
+        self.h.passwords, self.h.folders, self.h.evidence, self.h.connections = {}, [], {}, []
+        self.h.cases, self.h.pauses, self.h.threads = {}, [], []
+        self.h.ca_pem = lambda: b"fixture-only-not-a-real-ca"   # no real cluster: no real ca.crt on disk
+
+        def close_cleanly():
+            done = self.h.close()
+            self.assertEqual((done.failures, done.interrupts), ([], []))
+        self.addCleanup(close_cleanly)                                    # registered later: runs FIRST
+        self.h.keys = cr.sigtests.Keys()                       # Keys close is through `h.close` ONLY (no
+                                                                 # duplicate registration); runs even if
+                                                                 # later setUp lines below raise.
+        self.h.allowed = self.h.keys.allowed(namespaces="jp-vocab-ops/v1/synthetic/*")
+        self.h.passwords = {role: "fixture-only-password" for role in cr.BUSINESS_ROLES}
+        self.case, self.product_fingerprint, self.artifact_sha256 = _approval_paths_case(self.h, "p6")
+        self.h.cases["p6"] = self.case
+        state_patch = mock.patch.object(self.h, "state_admin", lambda case: {"fixed": True})
+        state_patch.start()
+        self.addCleanup(state_patch.stop)
+
+    def test_valid_signed_inquiry_control_is_genuinely_preflight_valid(self):
+        now = cr.T0 + timedelta(minutes=5)
+        inputs, _, _ = self.h.read_only_inputs("p6", self.case.request, now=now)
+        matched = cr.op.run_synthetic_preflight(inputs)
+        self.assertEqual(matched.kind, "inquiry")
+        self.assertEqual(matched.command, "status")
+
+    def test_apply_control_is_independently_preflight_valid(self):
+        shared = dict(self.case.common, approval=self.case.a0, approval_signature=self.h.sign(self.case.a0, "approval"),
+                      inquiry=self.case.dry_run_inquiry,
+                      inquiry_signature=self.h.sign(self.case.dry_run_inquiry, "approval"),
+                      product_fingerprint=self.product_fingerprint, artifact_sha256=self.artifact_sha256)
+        apply_inputs = cr.op.PreflightInput(command="apply", args={"batch_size": "2"},
+                                            secret_dsn=self.case.dsn(cr.WRITE),
+                                            connection=cr.op.ConnectionObservation(profile=self.case.write_profile,
+                                                                                  read_only=False),
+                                            **shared)
+        matched = cr.op.run_synthetic_preflight(apply_inputs)
+        self.assertEqual((matched.kind, matched.command), ("apply", "apply"))
+
+    def test_p6_fixed_refusal_codes_real_routes_trace_and_zero_counts(self):
+        original_a0 = self.case.a0
+        cr.p6_fixed_refusal_codes(self.h)
+        self.assertEqual(self.case.a0, original_a0)      # the job's real A0 (non-None product/artifact) untouched
+        saved = json.loads((self.h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        subcases = {(e["check"], e["name"]): e["ok"] for e in saved["events"] if e.get("kind") == "subcase"}
+        for label, _ in cr.P6_CASES:
+            self.assertTrue(subcases[("p6", label)], label)
+            self.assertTrue(subcases[("p6", f"{label}_no_connection")], label)
+            self.assertTrue(subcases[("p6", f"{label}_trace")], label)
+        self.assertTrue(subcases[("p6", "unchanged")])
+
+    def test_wrong_early_refusal_makes_p6_itself_fail_and_stop(self):
+        """Regression: a mismatched `apply_approval_as_status` fixture (so the real preflight stops at
+        the earlier `request_mismatch` input check instead of the intended kind gate) must make
+        `cr.p6_fixed_refusal_codes` ITSELF raise, and later trials ("wrong_tool" etc.) must never run."""
+        real_apply_approval_as_status = self.h.apply_approval_as_status
+
+        def mismatched(case, *, now):
+            other_req = cr.cli.make_request(case.request.account_id, case.request.run_key, [9999], [])
+            return dataclasses.replace(real_apply_approval_as_status(case, now=now),
+                                       job_inputs=cr.cli.job_inputs(other_req))
+        patch = mock.patch.object(self.h, "apply_approval_as_status", mismatched)
+        patch.start()
+        self.addCleanup(patch.stop)
+        with self.assertRaises(cr.CheckFailed):
+            cr.p6_fixed_refusal_codes(self.h)
+        saved = json.loads((self.h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        names = {e["name"] for e in saved["events"] if e.get("kind") == "subcase" and e.get("check") == "p6"}
+        self.assertNotIn("wrong_tool", names)             # the trial after the broken one never ran
+
+    def test_cleanup_leaves_no_owned_keys_or_deploy_folders(self):
+        """Regression: every path this fixture owns (the real temporary OpenSSH key folder, EVERY
+        `h.deploy()` folder made outside `folder_root`) is gone once `doCleanups()` runs `h.close()`,
+        and the in-memory secrets are cleared -- never a preexisting/unrelated folder."""
+        key_folder = Path(self.h.keys.folder)
+        deploy_folders = [Path(entry["path"]) for entry in self.h.folders]
+        self.assertTrue(key_folder.exists())
+        self.assertTrue(deploy_folders)
+        self.assertTrue(all(p.exists() for p in deploy_folders))
+        self.doCleanups()
+        self.assertFalse(key_folder.exists())
+        self.assertTrue(all(not p.exists() for p in deploy_folders))
+        self.assertEqual(self.h.passwords, {})
 
 
 if __name__ == "__main__":
