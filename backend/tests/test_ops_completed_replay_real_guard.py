@@ -3247,5 +3247,477 @@ class NormalProviderPath(unittest.TestCase):
             server.close()
 
 
+# --- 10. P9Restoration: the RR/RC mutate-then-restore control-flow defect, closed by wrapping each phase's
+# body + its restoration in its own try/finally (see `cr.p9_atomic_admin_transition_rr_vs_rc`). A small,
+# independent in-memory P9-only model (never the large P5/P10 `G1FixtureBaselineMixin` fixture above):
+# `cr.admin`/`cr.owned_admin` raw connections and `h.row_text`/`h.state_admin`/`h.insert_row`/`h.restore_row`/
+# `h.status` are strict bounded model adapters; `cr.held_admin_action` is a deterministic FAKE coordinator
+# (calls the supplied `admin_action` ONCE, synchronously, then returns a FIXED OLD-RR or RC `HeldOutcome` --
+# the real multi-threaded coordination code is already covered by `Lifecycle`/`FetchPauseMechanics` above, not
+# re-tested here). `cr.restore_guarded`, `cr.admin_mutation_guard`, `cr.subcase`/`cr.require_subcases` and the
+# actual `cr.p9_atomic_admin_transition_rr_vs_rc` function itself are all REAL and unmodified. ------------------
+
+P9_RUN_ID = 101
+P9_SNAP1_ID, P9_SNAP2_ID = 102, 103
+P9_UID = 2
+P9_RUN_UPDATE = "UPDATE srs_migration_runs SET summary_json = %s WHERE id = %s"
+P9_SNAP_DELETE = "DELETE FROM srs_migration_snapshots WHERE id = %s"
+
+
+def p9_summary(second_result: str) -> str:
+    """Exactly TWO `"result":"applied"` occurrences when `second_result == "applied"` (the fixture
+    contract `cr.p9_atomic_admin_transition_rr_vs_rc` itself checks before mutating anything). Compact
+    separators (no spaces), matching the real migration code's own stored `summary_json` text -- the
+    product function's `.index('"result":"applied"')` search needs that exact, space-free substring."""
+    return json.dumps({"cursor": 2, "results": [
+        {"kind": "personal", "ref_id": 11, "result": "applied"},
+        {"kind": "personal", "ref_id": 12, "result": second_result}]}, separators=(",", ":"))
+
+
+P9_ORIGINAL_SUMMARY = p9_summary("applied")
+P9_NEW_SUMMARY = p9_summary("conflict")
+
+
+class P9Restoration(Blocked):
+    """Each test calls `self.build()` for its own fresh model/harness, then runs the REAL
+    `cr.p9_atomic_admin_transition_rr_vs_rc(h)` end to end (or injects a failure partway through it)."""
+
+    def build(self):
+        self.folder = Path(tempfile.mkdtemp(prefix="pg69_p9_restore_"))
+        self.addCleanup(shutil.rmtree, self.folder, True)
+        self.order: list = []
+        self.rowcount_override: dict = {}
+        self.commit_raises: dict = {"active": False}
+        self.fail_before_commit: dict = {}
+        self.inject: dict = {}          # held-call index (0 = RR, 1 = RC) -> exception raised after admin_action()
+        db = cr.CHECK_DB["p9"]
+
+        original_run = {"id": P9_RUN_ID, "mode": "apply", "status": "completed",
+                        "scope_json": '{"fixture":"p9"}', "config_version": 1,
+                        "summary_json": P9_ORIGINAL_SUMMARY,
+                        "started_at": "2026-10-21T12:00:00+00:00", "finished_at": "2026-10-21T12:05:00+00:00"}
+        original_snap1 = {"id": P9_SNAP1_ID, "user_id": P9_UID, "card_kind": "personal", "card_ref": 11,
+                          "run_id": P9_RUN_ID, "fixture_tag": "sentinel-A"}
+        original_snap2 = {"id": P9_SNAP2_ID, "user_id": P9_UID, "card_kind": "personal", "card_ref": 12,
+                          "run_id": P9_RUN_ID, "fixture_tag": "sentinel-B"}
+        model = self.model = {"run": dict(original_run),
+                              "snapshots": {P9_SNAP1_ID: dict(original_snap1), P9_SNAP2_ID: dict(original_snap2)}}
+
+        class H:
+            pass
+        h = H()
+        h.rec = g.Record(self.folder)
+        h.pid = 4242
+        h.connections, h.threads = [], []
+        h.cases = {"p9": SimpleNamespace(check_id="p9", db=db,
+                                         request=SimpleNamespace(run_key="pg69-p9-fixture"))}
+        h.target = {"synthetic": {"a": {"user_id": P9_UID, "personal": {"p1": 11, "p2": 12}}}}
+        # a DEEP COPY, never an alias of `model`: comparing `h.evidence["baseline"]["p9"]` later must never
+        # drift just because `model` itself was mutated and restored.
+        h.evidence = {"baseline": {"p9": {"runs": [dict(original_run)],
+                                          "snapshots": [dict(original_snap1), dict(original_snap2)]}}}
+        self.baseline = h.evidence["baseline"]["p9"]
+        self.h = h
+
+        order, rowcount_override, commit_raises = self.order, self.rowcount_override, self.commit_raises
+        fail_before_commit = self.fail_before_commit
+
+        class Conn:
+            def __init__(self2):
+                self2.pending: list = []
+
+            def execute(self2, query, params=None):
+                if isinstance(query, tuple):
+                    kind, table, row_data = query
+                    if table != "srs_migration_snapshots":
+                        raise AssertionError(f"unexpected fake admin table marker: {table!r}")
+                    if kind == "INSERT":
+                        if model["snapshots"].get(row_data["id"]) is not None:
+                            raise AssertionError("fake INSERT reached for an already-present snapshot id")
+                        self2.pending.append(lambda rd=row_data: model["snapshots"].__setitem__(rd["id"], dict(rd)))
+                        return FakeAdminCursorResult(rowcount=rowcount_override.get("insert", 1))
+                    if kind == "RESTORE":
+                        existing = model["snapshots"].get(row_data["id"])
+                        if existing is None or set(existing) != set(row_data):
+                            return FakeAdminCursorResult(rowcount=0)
+                        self2.pending.append(lambda rd=row_data: model["snapshots"].__setitem__(rd["id"], dict(rd)))
+                        return FakeAdminCursorResult(rowcount=rowcount_override.get("restore", 1))
+                    raise AssertionError(f"unexpected fake admin marker kind: {kind!r}")
+                text = query if isinstance(query, str) else str(query)
+                if text == P9_RUN_UPDATE:
+                    new_summary, rid = params
+                    if rid != model["run"]["id"]:
+                        return FakeAdminCursorResult(rowcount=0)
+                    self2.pending.append(lambda ns=new_summary: model["run"].__setitem__("summary_json", ns))
+                    return FakeAdminCursorResult(rowcount=rowcount_override.get("run", 1))
+                if text == P9_SNAP_DELETE:
+                    (sid,) = params
+                    if "snap_delete" in fail_before_commit:
+                        raise fail_before_commit.pop("snap_delete")
+                    if model["snapshots"].get(sid) is None:
+                        return FakeAdminCursorResult(rowcount=0)
+                    self2.pending.append(lambda sid=sid: model["snapshots"].pop(sid, None))
+                    return FakeAdminCursorResult(rowcount=rowcount_override.get("snap", 1))
+                raise AssertionError(f"unexpected fake admin SQL (P9Restoration dispatcher): {text!r}")
+
+            def commit(self2):
+                order.append("commit")
+                for op in self2.pending:
+                    op()
+                self2.pending.clear()
+                if commit_raises["active"]:
+                    commit_raises["active"] = False
+                    raise commit_raises["error"]
+
+            def rollback(self2):
+                order.append("rollback")
+                self2.pending.clear()
+
+        @contextlib.contextmanager
+        def fake_admin(db_, pid, autocommit=True):
+            if db_ != db:
+                raise AssertionError(f"fake admin reached outside p9's own db: {db_!r}")
+            if pid != h.pid:
+                raise AssertionError(f"fake admin reached with an unexpected pid: {pid!r}")
+            order.append("admin_open")
+            yield Conn()
+        patch_admin = mock.patch.object(cr, "admin", fake_admin)
+        patch_admin.start()
+        self.addCleanup(patch_admin.stop)
+        patch_approved = mock.patch.object(cr, "ADMIN_CHANGES_APPROVED", True)
+        patch_approved.start()
+        self.addCleanup(patch_approved.stop)
+
+        def row_text(db_, table, row_id):
+            if db_ != db:
+                raise AssertionError("row_text reached outside p9's own db")
+            if table == "srs_migration_runs":
+                return dict(model["run"]) if model["run"]["id"] == row_id else None
+            if table == "srs_migration_snapshots":
+                row = model["snapshots"].get(row_id)
+                return dict(row) if row else None
+            raise AssertionError(f"row_text reached for an unexpected table: {table!r}")
+
+        def insert_row(conn, table, row):
+            order.append("insert_row_call")
+            return conn.execute(("INSERT", table, dict(row)), None).rowcount
+
+        def restore_row(conn, table, row):
+            order.append("restore_row_call")
+            return conn.execute(("RESTORE", table, dict(row)), None).rowcount
+
+        def state_admin(case_):
+            return {"runs": [dict(model["run"])],
+                   "snapshots": [dict(model["snapshots"][sid]) for sid in sorted(model["snapshots"])]}
+
+        def status(case_, *, clock, fetch_hooks=None, rc_variant=False, **kwargs):
+            order.append("status_fresh")
+            if model["run"]["summary_json"] == P9_ORIGINAL_SUMMARY:
+                return {"out": {"state": "completed", "results": {"applied": 2}}, "code": 0}
+            return {"out": {"state": "completed", "results": {"applied": 1, "conflict": 1}}, "code": 5}
+
+        h.row_text, h.insert_row, h.restore_row = row_text, insert_row, restore_row
+        h.state_admin, h.status = state_admin, status
+
+        inject = self.inject
+
+        def fake_held_admin_action(h_, check_id, pause, run_status_fn, admin_action, *, limit=None):
+            idx = order.count("outcome_built")
+            admin_result = admin_action()
+            order.append("outcome_built")
+            if idx in inject:
+                raise inject[idx]
+            if idx == 0:
+                status_result = {"out": {"state": "completed", "results": {"applied": 2}}, "code": 0}
+            else:
+                status_result = {"out": {"state": "inconsistent", "reason": "snapshot_mismatch"}, "code": 6}
+            return cr.HeldOutcome(status_result, admin_result, True, {"sql_template": cr.RUN_ROW_PREFIX, "row": {}})
+        patch_held = mock.patch.object(cr, "held_admin_action", fake_held_admin_action)
+        patch_held.start()
+        self.addCleanup(patch_held.stop)
+        return h
+
+    def subcases_saved(self, h):
+        saved = json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        return {e["name"]: e["ok"] for e in saved["events"] if e.get("kind") == "subcase" and e.get("check") == "p9"}
+
+    def events_saved(self, h):
+        return json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))["events"]
+
+    # -- normal path: exactly 2 mutation cycles, restored before RC and again at the end ------------------------
+
+    def test_normal_rr_fresh_rc_path_restores_before_rc_and_at_the_end(self):
+        h = self.build()
+        result = cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertEqual(result, {})
+        self.assertEqual(self.order.count("commit"), 4)       # 2 mutation cycles + 2 restorations, each its own commit
+        self.assertEqual(h.state_admin(h.cases["p9"]), self.baseline)         # final state == original baseline
+        subcases = self.subcases_saved(h)
+        for name in ("rr_admin_committed_while_held", "rr_old_view", "new_view", "restored_before_rc",
+                    "rc_admin_committed_while_held", "rc_mixed_view", "restored_final"):
+            self.assertTrue(subcases.get(name), name)
+        self.assertNotIn("admin_restore_failed", [e.get("kind") for e in self.events_saved(h)])
+        # both mutation cycles deleted the snapshot, so BOTH restorations actually inserted it back -- never
+        # `h.restore_row` (the snapshot is never merely "present but wrong" on this path).
+        self.assertEqual(self.order.count("insert_row_call"), 2)
+        self.assertEqual(self.order.count("restore_row_call"), 0)
+        restores = [e for e in self.events_saved(h) if e.get("kind") == "p9_restore_rows"]
+        self.assertEqual(len(restores), 2)
+        for event in restores:
+            self.assertEqual((event["action"], event["run_rows"], event["snapshot_rows"], event["snapshot_confirmed"]),
+                             ("insert", 1, 1, True))
+
+    # -- a rowcount fault AFTER commit (mutate_once's own assertion) still restores -----------------------------
+
+    def test_rowcount_fault_after_commit_in_mutate_once_still_restores(self):
+        h = self.build()
+        self.rowcount_override["snap"] = 0            # commit succeeds; mutate_once's own assertion sees 0
+        with self.assertRaises(cr.CheckFailed) as caught:
+            cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertEqual(caught.exception.kind, "harness_defect")
+        self.assertEqual(h.state_admin(h.cases["p9"]), self.baseline)
+        self.assertNotIn("admin_restore_failed", [e.get("kind") for e in self.events_saved(h)])
+
+    # -- armed but the mutation never committed (failure before commit): no duplicate insert, no-op restore -----
+
+    def test_armed_but_unchanged_mutation_restores_without_duplicate_insert(self):
+        h = self.build()
+        error = RuntimeError("synthetic-rollback-before-commit")
+        self.fail_before_commit["snap_delete"] = error
+        with self.assertRaises(RuntimeError) as caught:
+            cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertIs(caught.exception, error)                # the SAME primary object wins
+        self.assertEqual(self.order.count("commit"), 1)       # only the restoration's own commit; the mutation's
+        self.assertEqual(h.state_admin(h.cases["p9"]), self.baseline)       # own commit was never reached
+        self.assertNotIn("admin_restore_failed", [e.get("kind") for e in self.events_saved(h)])
+        # the snapshot was never actually deleted (no commit reached): restoration must take neither the
+        # insert NOR the restore_row path, only the no-write "already_original" branch.
+        self.assertEqual(self.order.count("insert_row_call"), 0)
+        self.assertEqual(self.order.count("restore_row_call"), 0)
+        restores = [e for e in self.events_saved(h) if e.get("kind") == "p9_restore_rows"]
+        self.assertEqual(len(restores), 1)
+        self.assertEqual((restores[0]["action"], restores[0]["run_rows"], restores[0]["snapshot_rows"],
+                         restores[0]["snapshot_confirmed"]), ("already_original", 1, 0, True))
+
+    # -- a committed commit() that itself throws afterwards is still restored ------------------------------------
+
+    def test_commit_itself_throwing_after_the_model_mutation_still_restores(self):
+        h = self.build()
+        error = RuntimeError("synthetic-commit-response-boom")
+        self.commit_raises["active"], self.commit_raises["error"] = True, error
+        with self.assertRaises(RuntimeError) as caught:
+            cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertIs(caught.exception, error)
+        self.assertEqual(h.state_admin(h.cases["p9"]), self.baseline)
+        self.assertNotIn("admin_restore_failed", [e.get("kind") for e in self.events_saved(h)])
+
+    # -- exception types injected at the RR subcase point, after the admin mutation already committed ------------
+
+    def test_exception_types_after_committed_mutation_at_rr_subcase_restore_and_propagate_the_same_object(self):
+        for make_error in (lambda: cr.CheckFailed("harness_defect", "injected"), lambda: RuntimeError("injected"),
+                          lambda: KeyboardInterrupt("injected"), lambda: SystemExit(7)):
+            error = make_error()
+            with self.subTest(exc=type(error).__name__):
+                h = self.build()
+                real_subcase = cr.subcase
+
+                def injecting_subcase(h_, check_id, name, ok, **detail):
+                    real_subcase(h_, check_id, name, ok, **detail)
+                    if name == "rr_old_view":
+                        raise error
+                with mock.patch.object(cr, "subcase", injecting_subcase):
+                    with self.assertRaises(type(error)) as caught:
+                        cr.p9_atomic_admin_transition_rr_vs_rc(h)
+                self.assertIs(caught.exception, error)
+                if isinstance(error, SystemExit):
+                    self.assertEqual(caught.exception.code, 7)
+                self.assertEqual(h.state_admin(h.cases["p9"]), self.baseline)
+                self.assertNotIn("admin_restore_failed", [e.get("kind") for e in self.events_saved(h)])
+                names = {n for n, ok in self.subcases_saved(h).items()}
+                self.assertNotIn("rc_admin_committed_while_held", names)      # RC never entered after RR failure
+
+    # -- exception at the direct ("fresh") read after the RR mutation committed -----------------------------------
+
+    def test_exception_at_fresh_read_restores_and_propagates_the_same_object(self):
+        h = self.build()
+        error = RuntimeError("injected-fresh-read")
+
+        def failing_status(case_, **kwargs):
+            raise error
+        h.status = failing_status
+        with self.assertRaises(RuntimeError) as caught:
+            cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertIs(caught.exception, error)
+        self.assertEqual(h.state_admin(h.cases["p9"]), self.baseline)
+        self.assertNotIn("admin_restore_failed", [e.get("kind") for e in self.events_saved(h)])
+
+    # -- exception at the RR / RC held_admin_action outcome, after admin_action() already committed ---------------
+
+    def test_exception_at_rr_outcome_after_committed_mutation_restores_and_stops_before_rc(self):
+        h = self.build()
+        error = KeyboardInterrupt("injected-rr-outcome")
+        self.inject[0] = error
+        with self.assertRaises(KeyboardInterrupt) as caught:
+            cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertIs(caught.exception, error)
+        self.assertEqual(h.state_admin(h.cases["p9"]), self.baseline)
+        names = set(self.subcases_saved(h))
+        self.assertNotIn("rc_mixed_view", names)
+
+    def test_exception_at_rc_outcome_after_committed_mutation_restores_final(self):
+        h = self.build()
+        error = SystemExit(11)
+        self.inject[1] = error
+        with self.assertRaises(SystemExit) as caught:
+            cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertIs(caught.exception, error)
+        self.assertEqual(caught.exception.code, 11)
+        self.assertEqual(h.state_admin(h.cases["p9"]), self.baseline)
+        subcases = self.subcases_saved(h)
+        self.assertTrue(subcases.get("restored_before_rc"))      # RR's own restoration still completed first
+
+    # -- restoration itself fails: primary (if any) always wins; with none, the restore error itself fails -------
+
+    def test_restoration_failure_with_primary_in_flight_preserves_primary_and_records_failed_stage(self):
+        h = self.build()
+        primary = RuntimeError("primary-boom")
+        real_subcase = cr.subcase
+
+        def injecting_subcase(h_, check_id, name, ok, **detail):
+            real_subcase(h_, check_id, name, ok, **detail)
+            if name == "rr_old_view":
+                raise primary
+        restore_error = RuntimeError("restore-insert-boom")
+
+        def failing_insert_row(conn, table, row):
+            raise restore_error
+        h.insert_row = failing_insert_row
+        with mock.patch.object(cr, "subcase", injecting_subcase):
+            with self.assertRaises(RuntimeError) as caught:
+                cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertIs(caught.exception, primary)                              # the SAME primary object wins
+        events = self.events_saved(h)
+        failed = next(e for e in events if e.get("kind") == "admin_restore_failed")
+        self.assertEqual((failed.get("stage"), failed.get("confirmed")), ("restore", False))
+        self.assertNotIn("rc_admin_committed_while_held", set(self.subcases_saved(h)))
+
+    def test_restoration_failure_without_a_primary_itself_fails(self):
+        h = self.build()
+        restore_error = RuntimeError("restore-insert-boom")
+
+        def failing_insert_row(conn, table, row):
+            raise restore_error
+        h.insert_row = failing_insert_row
+        with self.assertRaises(RuntimeError) as caught:
+            cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertIs(caught.exception, restore_error)
+        events = self.events_saved(h)
+        failed = next(e for e in events if e.get("kind") == "admin_restore_failed")
+        self.assertEqual((failed.get("stage"), failed.get("confirmed")), ("restore", False))
+
+    # -- baseline mismatch after an otherwise-successful restoration must itself fail ------------------------------
+
+    def test_baseline_mismatch_after_restoration_itself_fails(self):
+        h = self.build()
+        real_state_admin = h.state_admin
+
+        def drifted_state_admin(case_):
+            result = real_state_admin(case_)
+            result["runs"][0] = dict(result["runs"][0], summary_json="DRIFTED")
+            return result
+        h.state_admin = drifted_state_admin
+        with self.assertRaises(cr.CheckFailed) as caught:
+            cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertEqual(caught.exception.kind, "product_defect")             # subcase's own default `expect` kind
+        self.assertFalse(self.subcases_saved(h).get("restored_before_rc"))
+
+    # -- the live snapshot row is present but wrong (not simply deleted): the `h.restore_row` branch ---------------
+
+    def test_live_snapshot_present_but_wrong_uses_restore_row_and_verifies(self):
+        h = self.build()
+        real_subcase = cr.subcase
+
+        def corrupting_subcase(h_, check_id, name, ok, **detail):
+            real_subcase(h_, check_id, name, ok, **detail)
+            if name == "rr_old_view":
+                # right after the RR mutation (a real DELETE) committed, something else leaves a WRONG row
+                # at the same id -- never simply "missing", so restoration must take the `h.restore_row` path.
+                self.model["snapshots"][P9_SNAP2_ID] = {"id": P9_SNAP2_ID, "user_id": P9_UID, "card_kind": "personal",
+                                                        "card_ref": 12, "run_id": P9_RUN_ID, "fixture_tag": "WRONG"}
+        with mock.patch.object(cr, "subcase", corrupting_subcase):
+            cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertEqual(h.state_admin(h.cases["p9"]), self.baseline)
+        self.assertNotIn("admin_restore_failed", [e.get("kind") for e in self.events_saved(h)])
+        # RR's restoration took the `h.restore_row` ("update") branch on the corrupted row; RC's own mutation
+        # genuinely deletes the (now-original) snapshot again, so RC's restoration takes the "insert" branch.
+        self.assertEqual(self.order.count("restore_row_call"), 1)
+        self.assertEqual(self.order.count("insert_row_call"), 1)
+        restores = [e for e in self.events_saved(h) if e.get("kind") == "p9_restore_rows"]
+        self.assertEqual(len(restores), 2)
+        first, second = restores
+        self.assertEqual((first["action"], first["run_rows"], first["snapshot_rows"], first["snapshot_confirmed"]),
+                         ("update", 1, 1, True))
+        self.assertEqual((second["action"], second["run_rows"], second["snapshot_rows"], second["snapshot_confirmed"]),
+                         ("insert", 1, 1, True))
+
+    # -- a reported-zero row count on the insert/update branches is never a no-op success: restore must fail -----
+
+    def test_insert_or_update_restore_rowcount_zero_rejects_as_harness_defect(self):
+        with self.subTest(branch="insert"):
+            h = self.build()
+            self.rowcount_override["insert"] = 0          # the normal RR mutation deletes the snapshot: "insert"
+            with self.assertRaises(cr.CheckFailed) as caught:
+                cr.p9_atomic_admin_transition_rr_vs_rc(h)
+            self.assertEqual(caught.exception.kind, "harness_defect")
+            self.assertNotIn("rc_admin_committed_while_held", set(self.subcases_saved(h)))
+            self.assertFalse(any(e.get("kind") == "p9_restore_rows" for e in self.events_saved(h)))
+            self.assertTrue(any(e.get("kind") == "admin_restore_failed" for e in self.events_saved(h)))
+
+        with self.subTest(branch="update"):
+            h = self.build()
+            self.rowcount_override["restore"] = 0
+            real_subcase = cr.subcase
+
+            def corrupting_subcase(h_, check_id, name, ok, **detail):
+                real_subcase(h_, check_id, name, ok, **detail)
+                if name == "rr_old_view":
+                    self.model["snapshots"][P9_SNAP2_ID] = {"id": P9_SNAP2_ID, "user_id": P9_UID,
+                                                            "card_kind": "personal", "card_ref": 12,
+                                                            "run_id": P9_RUN_ID, "fixture_tag": "WRONG"}
+            with mock.patch.object(cr, "subcase", corrupting_subcase):
+                with self.assertRaises(cr.CheckFailed) as caught:
+                    cr.p9_atomic_admin_transition_rr_vs_rc(h)
+            self.assertEqual(caught.exception.kind, "harness_defect")
+            self.assertNotIn("rc_admin_committed_while_held", set(self.subcases_saved(h)))
+            self.assertFalse(any(e.get("kind") == "p9_restore_rows" for e in self.events_saved(h)))
+            self.assertTrue(any(e.get("kind") == "admin_restore_failed" for e in self.events_saved(h)))
+
+    # -- an owned coordination thread still alive before restoration refuses rather than races it ------------------
+
+    def test_owned_thread_still_alive_before_restoration_refuses_without_racing_it(self):
+        h = self.build()
+        blocker = threading.Event()
+        self.addCleanup(blocker.set)
+        alive_thread = threading.Thread(target=blocker.wait, args=(2,), daemon=True)
+        alive_thread.start()
+        self.addCleanup(alive_thread.join, 2)
+
+        real_subcase = cr.subcase
+
+        def arming_subcase(h_, check_id, name, ok, **detail):
+            if name == "rr_old_view":
+                h_.threads.append(alive_thread)        # armed just before this phase's own restoration
+            real_subcase(h_, check_id, name, ok, **detail)
+        with mock.patch.object(cr, "subcase", arming_subcase):
+            with self.assertRaises(cr.CheckFailed) as caught:
+                cr.p9_atomic_admin_transition_rr_vs_rc(h)
+        self.assertEqual(caught.exception.kind, "harness_defect")
+        self.assertIn("owned coordination thread still alive", caught.exception.what)
+        blocker.set()
+        alive_thread.join(2)
+        events = self.events_saved(h)
+        self.assertTrue(any(e.get("kind") == "admin_restore_failed" for e in events))
+
+
 if __name__ == "__main__":
     unittest.main()

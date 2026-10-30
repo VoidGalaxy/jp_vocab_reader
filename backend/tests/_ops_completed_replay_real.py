@@ -1702,6 +1702,15 @@ def p8_admin_noop_update_while_held(h: Harness) -> dict:
 
 
 def p9_atomic_admin_transition_rr_vs_rc(h: Harness) -> dict:
+    """9절 P9, with the mutation-to-restoration window fully protected: RR's `held_admin_action` /
+    subcases / fresh read and RC's `held_admin_action` / subcases each run inside their OWN try/finally,
+    so ANY exception/interrupt (including `mutate_once`'s own post-commit rowcount assertion) after the
+    admin mutation still reaches a restoration attempt through the existing, unmodified
+    `restore_guarded` -- which keeps the SAME original exception/interrupt object in flight and only
+    records a fixed `admin_restore_failed` stage if the restoration itself fails. `needs_restore` is
+    armed BEFORE the first mutating statement (not only after `mutate_once` returns), so a commit that
+    succeeds but is followed by a rowcount-assertion failure is still restored, and a restoration call on
+    an armed-but-unmutated state is a safe no-op (never a duplicate snapshot insert)."""
     check_id = "p9"
     case = h.cases[check_id]
     baseline = h.evidence["baseline"][check_id]
@@ -1719,10 +1728,14 @@ def p9_atomic_admin_transition_rr_vs_rc(h: Harness) -> dict:
     expect(new_summary != original_run["summary_json"], f"{check_id}: fixture summary has one applied result only",
            "harness_defect")
 
+    needs_restore = False
+
     def mutate_once() -> dict:
+        nonlocal needs_restore
         admin_mutation_guard(check_id, "srs_migration_runs", case.db)
         admin_mutation_guard(check_id, "srs_migration_snapshots", case.db)
         with owned_admin(h, case.db, h.pid, autocommit=False) as conn:
+            needs_restore = True                      # armed before the first mutating statement, not after
             rows_run = conn.execute("UPDATE srs_migration_runs SET summary_json = %s WHERE id = %s",
                                     (new_summary, run_id)).rowcount
             rows_snap = conn.execute("DELETE FROM srs_migration_snapshots WHERE id = %s", (snap2["id"],)).rowcount
@@ -1731,54 +1744,97 @@ def p9_atomic_admin_transition_rr_vs_rc(h: Harness) -> dict:
                "harness_defect")
         return {"rows": [rows_run, rows_snap], "commit_complete": True}
 
-    def restore_and_verify() -> dict:
+    def restore_once() -> dict:
+        """One admin restoration of the run summary + the LIVE snapshot row, to the ORIGINAL baseline.
+        The branch (and its action) is decided from the LIVE snapshot read BEFORE any admin SQL: already
+        the original row -> NO snapshot write at all (0 is the correct, expected row count there, never
+        a stand-in for success); missing -> `h.insert_row`; present but different -> `h.restore_row`
+        ("update"). Affected-row counts are never treated as a success flag on their own: every branch
+        is also confirmed by a fresh `h.row_text` read-back comparing the LIVE row to the ORIGINAL -- a
+        missing, drifted or falsely-reported row count is rejected even if the SQL driver claimed
+        success. `needs_restore` is cleared, and the one `p9_restore_rows` event recorded, only once
+        BOTH the row-count and the read-back equality are confirmed."""
+        nonlocal needs_restore
         admin_mutation_guard(check_id, "srs_migration_runs", case.db)
         admin_mutation_guard(check_id, "srs_migration_snapshots", case.db)
+        live_snap = h.row_text(case.db, "srs_migration_snapshots", original_snap["id"])
+        if live_snap == original_snap:
+            action, expected_snap_rows = "already_original", 0
+        elif live_snap is None:
+            action, expected_snap_rows = "insert", 1
+        else:
+            action, expected_snap_rows = "update", 1
         with admin(case.db, h.pid, autocommit=False) as conn:
             rows_run = conn.execute("UPDATE srs_migration_runs SET summary_json = %s WHERE id = %s",
                                     (original_run["summary_json"], run_id)).rowcount
-            rows_snap = h.insert_row(conn, "srs_migration_snapshots", original_snap)
+            if action == "already_original":
+                rows_snap = 0
+            elif action == "insert":
+                rows_snap = h.insert_row(conn, "srs_migration_snapshots", original_snap)
+            else:
+                rows_snap = h.restore_row(conn, "srs_migration_snapshots", original_snap)
             conn.commit()
-        expect(rows_run == 1 and rows_snap == 1, f"{check_id}: restore affected {rows_run}/{rows_snap} rows",
-               "harness_defect")
+        expect(rows_run == 1 and rows_snap == expected_snap_rows,
+               f"{check_id}: restore ({action}) affected run={rows_run}/snap={rows_snap}, expected "
+               f"run=1/snap={expected_snap_rows}", "harness_defect")
+        expect(h.row_text(case.db, "srs_migration_snapshots", original_snap["id"]) == original_snap,
+               f"{check_id}: snapshot not confirmed original after restore ({action})", "harness_defect")
+        h.rec.event("p9_restore_rows", check=check_id, action=action, run_rows=rows_run, snapshot_rows=rows_snap,
+                   snapshot_confirmed=True)
+        needs_restore = False
         return h.state_admin(case)
+
+    def restore_phase(subcase_name: str) -> None:
+        """Wraps ONE `restore_once` in `restore_guarded` (unmodified): a no-op when nothing was ever
+        armed, a refusal (never a race) if an owned coordination thread from `held_admin_action` is
+        somehow still alive, otherwise the restoration + the fixed baseline-equality subcase."""
+        def guarded_action() -> None:
+            if not needs_restore:
+                return
+            alive = [t.name for t in h.threads if t.is_alive()]
+            expect(not alive, f"{check_id}: owned coordination thread still alive before restoration",
+                   "harness_defect")
+            restored = restore_once()
+            subcase(h, check_id, subcase_name, restored == baseline)
+        restore_guarded(h, check_id, guarded_action)
 
     # Every RR / RC experiment starts from the SAME restored original, reads the OLD run row, then atomically
     # mutates summary + snapshot EXACTLY ONCE while the read connection is still held (9절: no pre-mutation, no
-    # second delete).
-    pause_rr = FetchPause(READ, "fetchone", RUN_ROW_PREFIX)
-    outcome_rr = held_admin_action(
-        h, check_id, pause_rr,
-        lambda: h.status(case, clock=fixed_clock(T0 + timedelta(minutes=6)), fetch_hooks=[pause_rr.hook]),
-        mutate_once)
-    rr_result = outcome_rr.status
-    subcase(h, check_id, "rr_admin_committed_while_held", outcome_rr.still_held_after_commit is True)
-    subcase(h, check_id, "rr_old_view", (rr_result["out"].get("state"), rr_result["out"].get("results"),
-            rr_result["code"]) == ("completed", {"applied": 2}, 0), out=rr_result["out"])
+    # second delete). Each phase's body + its restoration are one try/finally: ANY exception/interrupt after
+    # the mutation still reaches `restore_phase`, and a failed RR body/restoration stops RC from starting.
+    try:
+        pause_rr = FetchPause(READ, "fetchone", RUN_ROW_PREFIX)
+        outcome_rr = held_admin_action(
+            h, check_id, pause_rr,
+            lambda: h.status(case, clock=fixed_clock(T0 + timedelta(minutes=6)), fetch_hooks=[pause_rr.hook]),
+            mutate_once)
+        rr_result = outcome_rr.status
+        subcase(h, check_id, "rr_admin_committed_while_held", outcome_rr.still_held_after_commit is True)
+        subcase(h, check_id, "rr_old_view", (rr_result["out"].get("state"), rr_result["out"].get("results"),
+                rr_result["code"]) == ("completed", {"applied": 2}, 0), out=rr_result["out"])
 
-    fresh = h.status(case, clock=fixed_clock(T0 + timedelta(minutes=7)))
-    subcase(h, check_id, "new_view", (fresh["out"].get("state"), fresh["out"].get("results"), fresh["code"]) ==
-            ("completed", {"applied": 1, "conflict": 1}, 5), out=fresh["out"])
-
-    restored = restore_and_verify()
-    subcase(h, check_id, "restored_before_rc", restored == baseline)
-
-    pause_rc = FetchPause(READ, "fetchone", RUN_ROW_PREFIX)
-    outcome_rc = held_admin_action(
-        h, check_id, pause_rc,
-        lambda: h.status(case, clock=fixed_clock(T0 + timedelta(minutes=8)), fetch_hooks=[pause_rc.hook],
-                         rc_variant=True),
-        mutate_once)
-    rc_result = outcome_rc.status
-    subcase(h, check_id, "rc_admin_committed_while_held", outcome_rc.still_held_after_commit is True)
-    subcase(h, check_id, "rc_mixed_view", (rc_result["out"].get("state"), rc_result["out"].get("reason"),
-            rc_result["code"]) == ("inconsistent", "snapshot_mismatch", 6), out=rc_result["out"])
-
-    final = restore_and_verify()
-    subcase(h, check_id, "restored_final", final == baseline)
+        fresh = h.status(case, clock=fixed_clock(T0 + timedelta(minutes=7)))
+        subcase(h, check_id, "new_view", (fresh["out"].get("state"), fresh["out"].get("results"), fresh["code"]) ==
+                ("completed", {"applied": 1, "conflict": 1}, 5), out=fresh["out"])
+    finally:
+        restore_phase("restored_before_rc")
     require_subcases(h, check_id, ("rr_admin_committed_while_held", "rr_old_view", "new_view",
-                                   "restored_before_rc", "rc_admin_committed_while_held", "rc_mixed_view",
-                                   "restored_final"))
+                                   "restored_before_rc"))
+
+    try:
+        pause_rc = FetchPause(READ, "fetchone", RUN_ROW_PREFIX)
+        outcome_rc = held_admin_action(
+            h, check_id, pause_rc,
+            lambda: h.status(case, clock=fixed_clock(T0 + timedelta(minutes=8)), fetch_hooks=[pause_rc.hook],
+                             rc_variant=True),
+            mutate_once)
+        rc_result = outcome_rc.status
+        subcase(h, check_id, "rc_admin_committed_while_held", outcome_rc.still_held_after_commit is True)
+        subcase(h, check_id, "rc_mixed_view", (rc_result["out"].get("state"), rc_result["out"].get("reason"),
+                rc_result["code"]) == ("inconsistent", "snapshot_mismatch", 6), out=rc_result["out"])
+    finally:
+        restore_phase("restored_final")
+    require_subcases(h, check_id, ("rc_admin_committed_while_held", "rc_mixed_view", "restored_final"))
     return {}
 
 
