@@ -44,7 +44,7 @@ if str(TESTS_DIR.parent) not in sys.path:      # path only: app is imported afte
 
 import psycopg  # noqa: E402
 from psycopg import sql  # noqa: E402
-from psycopg.rows import dict_row  # noqa: E402
+from psycopg.rows import dict_row, tuple_row  # noqa: E402
 
 import _ops_access_lock_real as ax  # noqa: E402  (target-free instrumentation only, see module docstring)
 import _ops_approval as oa  # noqa: E402
@@ -157,6 +157,61 @@ def iso_z(instant: datetime) -> str:
 
 def fixed_clock(instant: datetime) -> Callable[[], datetime]:
     return lambda: instant
+
+
+# --- P1 setting probe (plan 12절): the FIRST read connection's own transaction settings, read right
+# after the product's own body ended normally and before the original exit (through `before_exit`),
+# never between an earlier SET and the product's first read. Own SQL constant, own savepoint name:
+# never `_ops_resume_real`'s PG66 probe text or its `tracker.trace` bookkeeping. --------------------
+
+STATUS_PROBE_SQL = ("SELECT current_setting('transaction_isolation'), "
+                    "current_setting('transaction_read_only')")
+
+
+def make_status_probe(store: dict) -> Callable[[str, int, Any], None]:
+    """Runs once, on the FIRST read connection, as a `before_exit` hook: a NEW cursor, inside a
+    savepoint, on the raw connection (not counted, not a traced business statement). Only fixed stage
+    codes are recorded, never error text. An ordinary error is recorded and not raised. An interrupt
+    (probe or savepoint restore) is kept, the restore is still tried, and the FIRST kept interrupt is
+    raised bare; the caller (the common `before_exit` hook) still runs the original exit exactly once
+    before raising it."""
+
+    def probe(role: str, number: int, tracker: Any) -> None:
+        if role != READ or number != 1 or "probe" in store:
+            return
+        raw = tracker._conn
+        kept: BaseException | None = None
+        try:
+            with raw.cursor(row_factory=tuple_row) as cursor:
+                cursor.execute("SAVEPOINT pg69_status_probe")
+                cursor.execute(STATUS_PROBE_SQL)
+                isolation, read_only = cursor.fetchone()
+                cursor.execute("RELEASE SAVEPOINT pg69_status_probe")
+            store["probe"] = {"transaction_isolation": isolation, "transaction_read_only": read_only}
+            return
+        except Exception:
+            store["probe"] = {"probe_error": "probe_failed"}
+        except BaseException as interrupt:                        # KeyboardInterrupt, SystemExit, ...
+            store["probe"] = {"probe_error": "probe_interrupted"}
+            kept = interrupt
+        # the restore runs OUTSIDE the handlers above, so nothing it raises is chained to the probe's error
+        try:
+            with raw.cursor() as cursor:
+                cursor.execute("ROLLBACK TO SAVEPOINT pg69_status_probe")
+            store["probe"]["rollback"] = "rolled_back_to_savepoint"
+        except Exception:
+            store["probe"]["rollback"] = "rollback_to_savepoint_failed"
+        except BaseException as interrupt:
+            store["probe"]["rollback"] = "rollback_to_savepoint_interrupted"
+            kept = kept if kept is not None else interrupt
+        if kept is not None:
+            raise _bare(kept)
+    return probe
+
+
+SEQUENCE_NAME_QUERY = ("SELECT c.relname FROM pg_catalog.pg_class AS c "
+                       "JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace "
+                       "WHERE n.nspname = 'public' AND c.relkind = 'S' ORDER BY c.relname")
 
 
 def sequence_clock(*instants: datetime) -> Callable[[], datetime]:
@@ -617,16 +672,21 @@ class Harness:
 
     def status(self, case: Case, *, clock: Callable[[], Any], hooks: list | None = None, rc_variant: bool = False,
                fetch_hooks: list | None = None, trackers: list | None = None,
-               now_for_inputs: datetime | None = None) -> dict:
+               now_for_inputs: datetime | None = None, settings_probe: bool = False) -> dict:
         counts, trackers = Counts(), (trackers if trackers is not None else [])
         scopes = RunScopes()
         inputs = self.status_inputs(case, now=now_for_inputs or T0)
-        with scopes.installed(), scopes.run(counts, trackers):
+        probe_store: dict = {}
+        before_exit = make_status_probe(probe_store) if settings_probe else None
+        with scopes.installed(), scopes.run(counts, trackers, before_exit=before_exit):
             out, code = cli.run_status(case.request, inputs=inputs, expected=case.read_expected,
                                        driver=self.driver(inputs, counts, trackers, hooks=hooks,
                                                           rc_variant=rc_variant, fetch_hooks=fetch_hooks),
                                        clock=clock)
-        return {"out": out, "code": code, "counts": counts, "trackers": trackers}
+        result = {"out": out, "code": code, "counts": counts, "trackers": trackers}
+        if settings_probe:
+            result["settings_probe"] = dict(probe_store.get("probe", {}))
+        return result
 
     def status_raw(self, request: Any, inputs: Any, read_exp: Any, *, clock: Callable[[], Any],
                    rc_variant: bool = False, hooks: list | None = None, fetch_hooks: list | None = None) -> dict:
@@ -649,6 +709,26 @@ class Harness:
                            ([r["id"] for r in runs],))
                 snaps = cur.fetchall()
         return {"runs": runs, "snapshots": snaps}
+
+    def database_facts(self, check_id: str) -> dict:
+        """P1 (plan 12절): the whole logical DB in one read-only, repeatable-read transaction -- row
+        content hashes (`lay.content_hashes`, every business table) plus every `public` sequence's
+        `last_value`/`is_called`, read with the sequence's own identifier quoted (never `nextval`,
+        `setval` or a dynamic raw identifier). Refused outside the registered check databases."""
+        if check_id not in CHECK_DB:
+            raise CheckFailed("harness_defect", f"{check_id}: database_facts outside CHECK_DB")
+        db = CHECK_DB[check_id]
+        with admin(db, self.pid, autocommit=False) as conn:
+            conn.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+            tables = lay.content_hashes(conn)
+            names = [row[0] for row in conn.execute(SEQUENCE_NAME_QUERY).fetchall()]
+            sequences = {}
+            for name in names:
+                row = conn.execute(sql.SQL("SELECT last_value, is_called FROM public.{}").format(
+                    sql.Identifier(name))).fetchone()
+                sequences[name] = [row[0], row[1]]
+            conn.rollback()
+        return json.loads(json.dumps({"tables": tables, "sequences": sequences, "sequence_names": names}))
 
     def row_text(self, db: str, table: str, row_id: int) -> dict | None:
         with admin(db, self.pid) as conn:
@@ -1087,11 +1167,17 @@ def p1_repeated_completed_query(h: Harness) -> dict:
     check_id = "p1"
     case = h.cases[check_id]
     base = h.evidence["baseline"][check_id]
+    first_probe = None
     results = []
     for i in range(2):
         statements: list = []
-        result = h.status(case, clock=fixed_clock(T0 + timedelta(minutes=5 + i)), hooks=[record_statements(statements)])
+        before_facts = h.database_facts(check_id)
+        result = h.status(case, clock=fixed_clock(T0 + timedelta(minutes=5 + i)),
+                          hooks=[record_statements(statements)], settings_probe=True)
+        after_facts = h.database_facts(check_id)
         result["statements"] = statements
+        result["before_facts"] = before_facts
+        result["after_facts"] = after_facts
         results.append(result)
     for i, result in enumerate(results):
         out, code = result["out"], result["code"]
@@ -1102,10 +1188,24 @@ def p1_repeated_completed_query(h: Harness) -> dict:
                 and write_c == ZERO_ROLE, read=read_c, write=write_c)
         subcase(h, check_id, f"call_{i}_no_row_lock_or_dml", no_lock_or_dml(result["statements"]),
                 statements=result["statements"])
+        probe = result["settings_probe"]
+        subcase(h, check_id, f"call_{i}_settings_probe", "probe_error" not in probe
+                and probe.get("transaction_isolation") == "repeatable read"
+                and probe.get("transaction_read_only") == "on", probe=probe)
+        if first_probe is None:
+            first_probe = probe
+        subcase(h, check_id, f"call_{i}_settings_repeatable", probe == first_probe, probe=probe,
+                first_probe=first_probe)
+        subcase(h, check_id, f"call_{i}_database_unchanged", result["before_facts"] == result["after_facts"],
+                before=result["before_facts"], after=result["after_facts"])
+    subcase(h, check_id, "database_unchanged_across_calls", results[0]["before_facts"] == results[1]["after_facts"])
     after = h.state_admin(case)
     subcase(h, check_id, "no_reprocessing", after == base)
     require_subcases(h, check_id, ("call_0_state", "call_1_state", "call_0_roles", "call_1_roles",
-                                   "call_0_no_row_lock_or_dml", "call_1_no_row_lock_or_dml", "no_reprocessing"))
+                                   "call_0_no_row_lock_or_dml", "call_1_no_row_lock_or_dml",
+                                   "call_0_settings_probe", "call_1_settings_probe", "call_0_settings_repeatable",
+                                   "call_1_settings_repeatable", "call_0_database_unchanged",
+                                   "call_1_database_unchanged", "database_unchanged_across_calls", "no_reprocessing"))
     return {"calls": 2}
 
 

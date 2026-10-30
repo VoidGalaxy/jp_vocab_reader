@@ -1061,5 +1061,306 @@ class Lifecycle(unittest.TestCase):
         self.assertEqual(obj.passwords, {})
 
 
+# --- 6. P1 setting probe + whole logical DB comparison (plan 12절): fake PG/settings model only -----------------
+
+class FakeProbeCursor:
+    """Fake cursor stand-in for `make_status_probe`'s raw savepoint/probe/rollback statements: a fixed
+    (fake) transaction-isolation / read-only pair, never a real connection."""
+
+    def __init__(self, conn):
+        self.conn = conn
+        self._row = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def execute(self, query, *a):
+        self.conn.sent.append(query)
+        if self.conn.fail_on == query:
+            raise RuntimeError("fake probe statement failure")
+        if self.conn.interrupt_on == query:
+            raise KeyboardInterrupt("fake probe interrupt")
+        if query == cr.STATUS_PROBE_SQL:
+            self._row = (self.conn.isolation, self.conn.read_only)
+        return self
+
+    def fetchone(self):
+        return self._row
+
+
+class FakeProbeConn:
+    def __init__(self, isolation="repeatable read", read_only="on", fail_on=None, interrupt_on=None):
+        self.sent: list = []
+        self.isolation, self.read_only = isolation, read_only
+        self.fail_on, self.interrupt_on = fail_on, interrupt_on
+
+    def cursor(self, row_factory=None):
+        return FakeProbeCursor(self)
+
+
+class FakeProbeTracker:
+    def __init__(self, conn):
+        self._conn = conn
+
+    def activate(self):
+        pass
+
+
+class StatusProbeMixin:
+    """`cr.make_status_probe` on a fake, network-free raw connection only -- not real PostgreSQL."""
+
+    def test_records_isolation_and_read_only_then_releases_savepoint(self):
+        store: dict = {}
+        conn = FakeProbeConn()
+        cr.make_status_probe(store)(cr.READ, 1, FakeProbeTracker(conn))
+        self.assertEqual(store["probe"], {"transaction_isolation": "repeatable read", "transaction_read_only": "on"})
+        self.assertEqual(conn.sent, ["SAVEPOINT pg69_status_probe", cr.STATUS_PROBE_SQL,
+                                     "RELEASE SAVEPOINT pg69_status_probe"])
+
+    def test_skips_write_role_later_connection_numbers_and_a_second_call(self):
+        store: dict = {}
+        conn = FakeProbeConn()
+        probe = cr.make_status_probe(store)
+        probe(cr.WRITE, 1, FakeProbeTracker(conn))
+        probe(cr.READ, 2, FakeProbeTracker(conn))
+        self.assertEqual(conn.sent, [])
+        probe(cr.READ, 1, FakeProbeTracker(conn))
+        self.assertIn("probe", store)
+        conn2 = FakeProbeConn()
+        probe(cr.READ, 1, FakeProbeTracker(conn2))         # "probe" already in store: second call is a no-op
+        self.assertEqual(conn2.sent, [])
+
+    def test_ordinary_probe_error_is_recorded_not_raised_and_rollback_is_attempted(self):
+        store: dict = {}
+        conn = FakeProbeConn(fail_on=cr.STATUS_PROBE_SQL)
+        cr.make_status_probe(store)(cr.READ, 1, FakeProbeTracker(conn))
+        self.assertEqual(store["probe"], {"probe_error": "probe_failed", "rollback": "rolled_back_to_savepoint"})
+        self.assertIn("ROLLBACK TO SAVEPOINT pg69_status_probe", conn.sent)
+
+    def test_probe_interrupt_is_kept_and_raised_bare_after_the_rollback_is_tried(self):
+        store: dict = {}
+        conn = FakeProbeConn(interrupt_on=cr.STATUS_PROBE_SQL)
+        with self.assertRaises(KeyboardInterrupt) as caught:
+            cr.make_status_probe(store)(cr.READ, 1, FakeProbeTracker(conn))
+        self.assertIsNone(caught.exception.__cause__)
+        self.assertEqual(store["probe"]["probe_error"], "probe_interrupted")
+        self.assertEqual(store["probe"]["rollback"], "rolled_back_to_savepoint")
+        self.assertIn("ROLLBACK TO SAVEPOINT pg69_status_probe", conn.sent)
+
+
+class HandOverOrderMixin:
+    """The probe through the SAME `counted_connector`/`RunScopes` machinery the real run uses, with a
+    fake `real` connector and a fake tracked connection -- never a real PostgreSQL connection."""
+
+    def test_event_order_is_body_then_probe_then_one_original_exit(self):
+        order: list = []
+        store: dict = {}
+        probe_conn = FakeProbeConn()
+        probe_tracker = FakeProbeTracker(probe_conn)
+        trackers: list = []
+
+        def real(inputs, expected, driver):
+            def connector(*, read_only=False):
+                trackers.append(probe_tracker)
+
+                class Ctx:
+                    def __enter__(self):
+                        order.append("body_begin")
+                        return "product"
+
+                    def __exit__(self, *exc):
+                        order.append(f"original_exit(probe_ran={'probe' in store})")
+                        return False
+                return Ctx()
+            return connector
+
+        counts = cr.Counts()
+        before_exit = cr.make_status_probe(store)
+        factory = lay.counted_connector(cr.LAYOUT, counts, trackers, None, None, real, None, before_exit)
+        connect = factory(SimpleNamespace(command="status"), None, None)
+        with connect(read_only=True) as product:
+            order.append("product_body")
+            self.assertEqual(product, "product")
+        self.assertEqual(order, ["body_begin", "product_body", "original_exit(probe_ran=True)"])
+        self.assertIn("probe", store)
+
+
+# --- database_facts: fake admin connection, real `lay.content_hashes` -------------------------------------------
+
+class FakeFactsCursor:
+    def __init__(self, rows: list):
+        self._rows = list(rows)
+
+    def fetchone(self):
+        return self._rows[0] if self._rows else None
+
+    def fetchall(self):
+        return list(self._rows)
+
+
+class FakeFactsConn:
+    def __init__(self, sequence_names, sequence_values):
+        self.sent: list = []
+        self.rollback_called = False
+        self.sequence_names = list(sequence_names)
+        self.sequence_values = dict(sequence_values)
+
+    def execute(self, query, *a):
+        text = query.as_string(None) if hasattr(query, "as_string") else query
+        self.sent.append(text)
+        if text == cr.SEQUENCE_NAME_QUERY:
+            return FakeFactsCursor([(n,) for n in self.sequence_names])
+        if "last_value" in text:
+            name = next(n for n in self.sequence_names if n in text)
+            return FakeFactsCursor([self.sequence_values[name]])
+        return FakeFactsCursor([(0, "d41d8cd98f00b204e9800998ecf8427e")])
+
+    def rollback(self):
+        self.rollback_called = True
+
+
+class DatabaseFactsMixin:
+    """`cr.Harness.database_facts` on a fake admin connection only -- `lay.content_hashes` runs for real."""
+
+    def fake_harness(self, conn):
+        return SimpleNamespace(pid=4242)
+
+    def test_reads_isolation_first_then_tables_then_quoted_sequence_identifiers_no_writes(self):
+        conn = FakeFactsConn(["srs_migration_runs_id_seq", "users_id_seq"],
+                             {"srs_migration_runs_id_seq": (7, True), "users_id_seq": (3, False)})
+        h = self.fake_harness(conn)
+        with mock.patch.object(cr, "admin", lambda db, pid, autocommit=True: contextlib.nullcontext(conn)):
+            facts = cr.Harness.database_facts(h, "p1")
+        self.assertEqual(conn.sent[0], "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+        self.assertTrue(conn.rollback_called)
+        self.assertEqual(facts["sequences"], {"srs_migration_runs_id_seq": [7, True], "users_id_seq": [3, False]})
+        self.assertEqual(set(facts["sequence_names"]), {"srs_migration_runs_id_seq", "users_id_seq"})
+        self.assertTrue(facts["tables"])
+        for text in conn.sent:
+            self.assertNotIn("nextval", text.lower())
+            self.assertNotIn("setval", text.lower())
+        self.assertTrue(any('"srs_migration_runs_id_seq"' in t or "srs_migration_runs_id_seq" in t
+                            for t in conn.sent if "last_value" in t))
+
+    def test_refuses_a_check_id_outside_check_db_before_any_admin_connection(self):
+        h = self.fake_harness(None)
+        with mock.patch.object(cr, "admin", forbidden):
+            with self.assertRaises(cr.CheckFailed) as caught:
+                cr.Harness.database_facts(h, "not-a-real-check")
+            self.assertEqual(caught.exception.kind, "harness_defect")
+
+
+# --- p1: the ACTUAL check function with a fake Harness model, real record save/reread ---------------------------
+
+def status_result(*, probe=None, out=None, code=0):
+    counts = cr.Counts()
+    counts.created[cr.READ] = 1
+    counts.handed[cr.READ] = 1
+    return {"out": out or {"state": "completed", "results": {"applied": 2}}, "code": code, "counts": counts,
+           "settings_probe": probe if probe is not None else {"transaction_isolation": "repeatable read",
+                                                               "transaction_read_only": "on"}}
+
+
+class FakeP1Harness:
+    """Fake, labelled PG/settings model for `cr.p1_repeated_completed_query`: a real on-disk `g.Record`
+    (subcase/record readback is real), fake `status` / `database_facts` / `state_admin`."""
+
+    def __init__(self, folder, *, facts_sequence, status_sequence, state_admin_value, baseline_value):
+        self.rec = g.Record(folder)
+        self.cases = {"p1": SimpleNamespace()}
+        self.evidence = {"baseline": {"p1": baseline_value}}
+        self._facts = list(facts_sequence)
+        self._statuses = list(status_sequence)
+        self._state_admin_value = state_admin_value
+
+    def database_facts(self, check_id):
+        return self._facts.pop(0)
+
+    def status(self, case, *, clock, hooks=None, settings_probe=False):
+        return self._statuses.pop(0)
+
+    def state_admin(self, case):
+        return self._state_admin_value
+
+
+class P1CheckMixin:
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp(prefix="pg69_p1_fake_"))
+        self.addCleanup(shutil.rmtree, self.folder, True)
+
+    def facts(self, **over):
+        base = {"tables": {"users": [1, "h"]}, "sequences": {"users_id_seq": [1, True]},
+               "sequence_names": ["users_id_seq"]}
+        base.update(over)
+        return base
+
+    def test_normal_pass_records_every_required_subcase(self):
+        f = self.facts()
+        h = FakeP1Harness(self.folder, facts_sequence=[f, f, f, f],
+                          status_sequence=[status_result(), status_result()],
+                          state_admin_value={"runs": []}, baseline_value={"runs": []})
+        out = cr.p1_repeated_completed_query(h)
+        self.assertEqual(out, {"calls": 2})
+        saved = json.loads((self.folder / "record.json").read_text(encoding="utf-8"))
+        names = {e["name"] for e in saved["events"] if e.get("kind") == "subcase" and e.get("check") == "p1"}
+        self.assertTrue(names.issuperset({"call_0_settings_probe", "call_1_settings_probe",
+                                         "call_0_settings_repeatable", "call_1_settings_repeatable",
+                                         "call_0_database_unchanged", "call_1_database_unchanged",
+                                         "database_unchanged_across_calls", "no_reprocessing"}))
+
+    def test_changed_setting_between_calls_fails(self):
+        f = self.facts()
+        other_probe = {"transaction_isolation": "read committed", "transaction_read_only": "on"}
+        h = FakeP1Harness(self.folder, facts_sequence=[f, f, f, f],
+                          status_sequence=[status_result(), status_result(probe=other_probe)],
+                          state_admin_value={"runs": []}, baseline_value={"runs": []})
+        with self.assertRaises(cr.CheckFailed):
+            cr.p1_repeated_completed_query(h)
+
+    def test_probe_error_or_missing_fails(self):
+        f = self.facts()
+        h = FakeP1Harness(self.folder, facts_sequence=[f, f, f, f],
+                          status_sequence=[status_result(probe={"probe_error": "probe_failed"}), status_result()],
+                          state_admin_value={"runs": []}, baseline_value={"runs": []})
+        with self.assertRaises(cr.CheckFailed):
+            cr.p1_repeated_completed_query(h)
+
+    def test_table_hash_change_between_before_and_after_fails(self):
+        f = self.facts()
+        changed = self.facts(tables={"users": [2, "other"]})
+        h = FakeP1Harness(self.folder, facts_sequence=[f, changed, f, f],
+                          status_sequence=[status_result(), status_result()],
+                          state_admin_value={"runs": []}, baseline_value={"runs": []})
+        with self.assertRaises(cr.CheckFailed):
+            cr.p1_repeated_completed_query(h)
+
+    def test_sequence_value_advancement_fails(self):
+        f = self.facts()
+        advanced = self.facts(sequences={"users_id_seq": [2, True]})
+        h = FakeP1Harness(self.folder, facts_sequence=[f, f, f, advanced],
+                          status_sequence=[status_result(), status_result()],
+                          state_admin_value={"runs": []}, baseline_value={"runs": []})
+        with self.assertRaises(cr.CheckFailed):
+            cr.p1_repeated_completed_query(h)
+
+    def test_sequence_name_set_change_fails(self):
+        f = self.facts()
+        renamed = self.facts(sequence_names=["other_id_seq"], sequences={"other_id_seq": [1, True]})
+        h = FakeP1Harness(self.folder, facts_sequence=[f, f, renamed, renamed],
+                          status_sequence=[status_result(), status_result()],
+                          state_admin_value={"runs": []}, baseline_value={"runs": []})
+        with self.assertRaises(cr.CheckFailed):
+            cr.p1_repeated_completed_query(h)
+
+
+class NormalRead(StatusProbeMixin, HandOverOrderMixin, DatabaseFactsMixin, P1CheckMixin, unittest.TestCase):
+    """PG69 P1 (plan 12절): the setting probe, its integration with the common `before_exit` hook,
+    `database_facts` and the ACTUAL `p1_repeated_completed_query` check, composed from the fixture
+    mixins above -- one `unittest.TestCase`, no test method duplicated across classes."""
+
+
 if __name__ == "__main__":
     unittest.main()
