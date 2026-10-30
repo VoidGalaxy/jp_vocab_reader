@@ -2546,5 +2546,706 @@ class RealReadStatusPath(Blocked):
         self.assertTrue(connection.statements[-1][0].startswith("SELECT id, user_id, card_kind, card_ref"))
 
 
+# --- 11. NormalProviderPath: the REAL CR-PG1 `Harness.__init__`/`case`/`status`/`driver`/`RunScopes`
+# through the WHOLE existing provider path -- `cli._product_connector` (`cr.ORIGINAL_CONNECTOR`),
+# `_ops_product_connect.ProductConnector`, `_ops_observer.CatalogObserver`, `pv.judge_observation`,
+# `oa.authorize_command` -- are never patched here. FAKE: the raw server/cursor the guarded driver
+# hands over (a catalog built directly from the REAL `cr.expected_profiles` objects/privileges, never a
+# narrower test-only table list, via `test_ops_product_connect.BizConn` /
+# `test_srs_migrate_resume_provider.Server` / `test_ops_observer.FakeCursor`), `g.Guard` and its
+# liveness lookups, and (P2 only) the state-injected status run/snapshot rows. STUB (business body
+# only): the product `migration.dry_run`, which cannot run on a fake connection -- it enters the handed
+# connection once, runs one harmless `SELECT 1`, and returns fixed plan candidates. --------------------
+
+import _ops_observer as ob  # noqa: E402  (production module: patch target for the real CatalogObserver)
+import test_ops_observer as to  # noqa: E402  (module only)
+import test_ops_product_connect as tpc  # noqa: E402  (module only)
+import test_srs_migrate_apply_flow as flow  # noqa: E402  (module only)
+import test_srs_migrate_resume_provider as rprov  # noqa: E402  (module only)
+
+EXCESS_REFUSAL = rprov.CODES["excess"]
+
+
+def profile_catalog(profile: Any, *, access: str, user: str, db: str, identity_value: str) -> dict:
+    """A fake catalog built directly from the REAL expected profile (`cr.expected_profiles`'s own
+    objects/privileges), so `judge_observation` compares against exactly the same contract the REAL
+    harness uses: the normal path passes, and a deliberately added privilege is the only difference."""
+    cat = to.catalog(access)
+    oids: dict = {}
+    oid = 20000
+    schemas: dict = {}
+    databases: list = []
+    tablespaces: list = []
+    relations: list = []
+    columns: dict = {}
+    for kind, schema, name in sorted(profile.objects):
+        oid += 1
+        if kind == "table":
+            oids[(kind, schema, name)] = oid
+            relations.append((oid, "r", schema, name))
+            columns[oid] = ["id"]
+        elif kind == "sequence":
+            oids[(kind, schema, name)] = oid
+            relations.append((oid, "S", schema, name))
+        elif kind == "schema":
+            schemas[name] = oid
+        elif kind == "database":
+            databases.append((oid, name))
+        elif kind == "tablespace":
+            tablespaces.append((oid, name))
+    grants: set = set()
+    for kind, schema, name, column, privilege in profile.privileges:
+        if kind == "database":
+            grants.add(("database", next(o for o, n in databases if n == name), privilege))
+        elif kind == "schema":
+            grants.add(("schema", schemas[name], privilege))
+        elif kind == "sequence":
+            grants.add(("sequence", oids[(kind, schema, name)], privilege))
+        elif column:
+            columns.setdefault(oids[(kind, schema, name)], ["id"])
+            if column not in columns[oids[(kind, schema, name)]]:
+                columns[oids[(kind, schema, name)]].append(column)
+            grants.add(("column", (oids[(kind, schema, name)], column), privilege))
+        else:
+            grants.add(("relation", oids[(kind, schema, name)], privilege))
+    cat.update(relations=relations, columns=columns, schemas=[(o, n) for n, o in schemas.items()],
+              database=databases, tablespaces=tablespaces, grants=grants)
+    cat["session"] = dict(cat["session"], dbname=db, current_user_name=user, session_user_name=user,
+                          search_path=profile.search_path)
+    cat["identity"] = [identity_value]
+    return cat
+
+
+class NPPInfo(to.pt.FakeInfo):
+    """FAKE: the connection-info facts `CatalogObserver.observe` reads straight off the connection
+    (never derived from the catalog rows) -- host/port/dbname of THIS fake server, plus the backend pid
+    `_ops_real_layout.Tracked` needs for its own pending-pid bookkeeping."""
+
+    def __init__(self, conn: Any, host: str, port: int, dbname: str, backend_pid: int = 4242):
+        super().__init__(conn)
+        self.host, self.port, self.dbname, self.backend_pid = host, port, dbname, backend_pid
+
+    @property
+    def server_version(self):
+        return self._conn.server_version
+
+
+class NPPCursor(to.FakeCursor):
+    """Extends the existing catalog cursor: ONLY `lay.POST_CONNECT` (the guarded driver's own
+    just-connected check, never one of the observer's own queries) gets a fixed, independent answer
+    built from this fixture's own coherent fake target.json; every other query still goes through the
+    REAL catalog-answer logic above, unchanged -- but its bound parameters must be exactly the
+    module's own `ob.PARAMS[name]` constant, checked here BEFORE the inherited response, never
+    accepted generically."""
+
+    def execute(self, query, params=None):
+        if query == lay.POST_CONNECT:
+            expected = (list(lay.OID_TABLES),)
+            if params != expected:
+                raise AssertionError(f"unexpected lay.POST_CONNECT params: {params!r} (expected {expected!r})")
+            self.conn.queries.append(("post_connect", params))
+            self.rows = [dict(self.conn.post_connect_facts)]
+            return
+        names = [n for n, q in ob.QUERIES.items() if q == query]
+        if len(names) == 1:
+            expected = ob.PARAMS.get(names[0])
+            if params != expected:
+                raise AssertionError(f"unexpected observer params for {names[0]!r}: {params!r} "
+                                     f"(expected {expected!r})")
+        super().execute(query, params)
+
+    def fetchone(self):
+        return self.rows[0] if self.rows else None
+
+
+class NPPServer(rprov.Server):
+    """FAKE server only (never a real PostgreSQL connection): the REAL provider's own observation SQL
+    and the two REAL status SELECTs (`rprov.Server`, here built from the REAL expected profile instead
+    of the CLI-test contract subset), plus the ONE extra `lay.POST_CONNECT` answer the guarded driver's
+    `post_connect_check` needs before any provider code runs. `execute` accepts ONLY the exact fixed
+    statements this fixture's own real callers send (`cr.pv.OBSERVATION_START`, the product's own
+    first read statement, `SELECT 1`, `COMMIT`, and the two status SELECTs with their EXACT expected
+    params) -- any other SQL, or a wrong/missing/extra parameter on a known statement, is a fixed
+    `AssertionError` raised BEFORE the inherited response, never a silent pass-through."""
+
+    _ALLOWED_FIXED = frozenset(cr.pv.OBSERVATION_START) | {
+        "SET TRANSACTION READ ONLY", "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ", "SELECT 1", "COMMIT"}
+    _RUN_QUERY = cr.RUN_ROW_PREFIX + " FROM srs_migration_runs WHERE run_key = %s"
+    _SNAPSHOT_QUERY = cr.SNAPSHOT_SELECT_PREFIX + " WHERE run_id = %s"
+
+    def __init__(self, cat: dict, post_connect_facts: dict, *, host: str, port: int, dbname: str,
+                run: dict | None = None, snapshots: tuple = (), expected_run_key: str | None = None):
+        super().__init__(cat, run=run, snapshots=snapshots)
+        self.post_connect_facts = post_connect_facts
+        self.info = NPPInfo(self, host, port, dbname)
+        self.server_version = 18 * 10000 + 6
+        self.expected_run_key = expected_run_key if expected_run_key is not None else cr.RUN_KEY
+
+    def execute(self, sql, params=None):
+        if isinstance(sql, str) and not self.closed:
+            if sql == self._RUN_QUERY:
+                if params != (self.expected_run_key,):
+                    raise AssertionError(f"unexpected status run-query params: {params!r}")
+            elif sql == self._SNAPSHOT_QUERY:
+                expected_run_id = self.run["id"] if self.run else None
+                if params != (expected_run_id,):
+                    raise AssertionError(f"unexpected status snapshot-query params: {params!r}")
+            elif sql in self._ALLOWED_FIXED:
+                if params not in (None, ()):
+                    raise AssertionError(f"unexpected params for {sql!r}: {params!r}")
+            else:
+                raise AssertionError(f"unexpected business SQL reached the fake server: {sql!r}")
+        return super().execute(sql, params)
+
+    def cursor(self, row_factory=None):
+        cursor = NPPCursor(self)
+        self.cursors.append(cursor)
+        return cursor
+
+
+class NPPKeys(cr.sigtests.Keys):
+    """The SAME key generation loop as `cr.sigtests.Keys` (never a new key policy), into a folder
+    THIS fixture already owns and has registered for cleanup BEFORE construction starts -- never a
+    second, unregistered `ops_sig_test_keys_*` temp folder. `sign`/`allowed`/`close` are inherited
+    unchanged."""
+
+    def __init__(self, folder: str):
+        self.folder = folder
+        self.pub = {}
+        for name in ("signer", "stranger", "revoked"):
+            path = os.path.join(self.folder, name)
+            if cr.sigtests._keygen("-q", "-t", "ed25519", "-N", "", "-C", f"synthetic-{name}", "-f", path,
+                                  cwd=self.folder) != 0:
+                raise RuntimeError("test key generation failed")
+            with open(path + ".pub", "rb") as handle:
+                self.pub[name] = handle.read().strip()
+
+
+class NormalProviderPath(unittest.TestCase):
+    """REAL path: `cr.Harness.__init__`/`case`/`driver`/`RunScopes` -> CLI `run_dry_run` ->
+    signatures/preflight -> the ACTUAL `ProductConnector`/provider/`CatalogObserver`/
+    `judge_observation`/`authorize_command` -> real `h.status`/`read_status`. `_admit`,
+    `cr.ORIGINAL_CONNECTOR`, `cli._product_connector`, the observer and judgement results are never
+    patched -- passthrough spies around `op.run_synthetic_preflight`, `cr.post_connect_check`,
+    `ob.CatalogObserver.observe`, `cr.pv.judge_observation` and `cr.oa.authorize_command` call the
+    SAME real functions and only record a fixed `"enter"`/`"pass"`/`"refused:<code>"` label (never a
+    DSN, signature or password). FAKE: the driver's raw server/cursor (catalog/target/liveness
+    facts, with an EXACT business-SQL/param allowlist -- see `NPPServer`/`NPPCursor`), and (P2 only)
+    the state-injected status run/snapshot rows. STUB: the product `migration.dry_run` business BODY
+    only, which returns REAL `app.srs.migration.MigrationCandidate` instances built through the
+    actual pure `migration._incomplete_candidate` constructor (never a duck-typed `SimpleNamespace`,
+    never a seed plan file -- see `fixture_candidates`)."""
+
+    CHECK_ID = "p1"
+
+    def setUp(self):
+        _pin_safe_env(self)
+        if not os.path.isfile(cr.op.osig.SSH_KEYGEN):
+            raise unittest.SkipTest("OS OpenSSH ssh-keygen not present")
+        real_popen = subprocess.Popen
+
+        def only_keygen(args, *a, **k):
+            if os.path.normcase(str(args[0])) != os.path.normcase(cr.op.osig.SSH_KEYGEN):
+                raise AssertionError("an external entry point was called")
+            return real_popen(args, *a, **k)
+        test = self
+        self.conns: list = []
+        self.guard_calls: list = []
+        self.run_row, self.snapshot_rows = None, ()
+        self.bad_read_extra: list = []
+        self.preflight_trace, self.post_connect_trace = [], []
+        self.observe_trace, self.judge_trace, self.authorize_trace = [], [], []
+        self.path_events: list = []            # ONE ordered, shared, cross-phase event list
+
+        class FakeGuard:
+            def __init__(self, manifest, deploy_root, folder, target=None):
+                test.assertIs(target, cr.T)
+
+            def driver(self, **kwargs):
+                test.guard_calls.append(dict(kwargs))
+                return test.make_conn(kwargs["user"], kwargs["dbname"])
+
+        def traced(bucket, real, refused_exc, label):
+            def wrapper(*args, **kwargs):
+                bucket.append("enter")
+                test.path_events.append(f"{label}:enter")
+                try:
+                    result = real(*args, **kwargs)
+                except refused_exc as error:
+                    bucket.append(f"refused:{getattr(error, 'code', 'unknown')}")
+                    test.path_events.append(f"{label}:refused")
+                    raise
+                bucket.append("pass")
+                test.path_events.append(f"{label}:pass")
+                return result
+            return wrapper
+        real_preflight, real_post_connect = cr.op.run_synthetic_preflight, cr.post_connect_check
+        real_observe, real_judge = ob.CatalogObserver.observe, cr.pv.judge_observation
+        real_authorize = cr.oa.authorize_command
+        real_enter = cr.cli.pc.ProductConnection.__enter__
+
+        def entered(self_):
+            """PASSTHROUGH spy on the REAL `ProductConnection.__enter__`: the ORIGINAL context entry
+            runs first; `'handover'` is appended to `path_events` only AFTER it returns the SAME `app`
+            object -- never a success stub, never a replacement of the connector/provider/judgement."""
+            result = real_enter(self_)
+            test.path_events.append("handover")
+            return result
+        for patch in (mock.patch.object(psycopg, "connect", forbidden), mock.patch.object(subprocess, "Popen", only_keygen),
+                      mock.patch.object(g, "listener_pids", forbidden), mock.patch.object(g, "admin_connect", forbidden),
+                      mock.patch.object(g, "postmaster_pid", forbidden), mock.patch.object(g, "single_run", forbidden),
+                      mock.patch.object(lay.real, "make_tls", forbidden), mock.patch.object(lay.base, "run", forbidden),
+                      mock.patch.object(g, "server_is_ours", lambda pid, target=None: pid == 999999 and target is cr.T),
+                      mock.patch.object(g, "Guard", FakeGuard),
+                      mock.patch.object(cr.Harness, "ca_pem", lambda self: b"fixture-only-not-a-real-ca"),
+                      mock.patch.object(cr.op, "run_synthetic_preflight",
+                                        traced(self.preflight_trace, real_preflight, cr.op.OpsPreflightRefused,
+                                              "preflight")),
+                      mock.patch.object(cr, "post_connect_check",
+                                        traced(self.post_connect_trace, real_post_connect, cr.g.Pg62Refused,
+                                              "post_connect")),
+                      mock.patch.object(ob.CatalogObserver, "observe",
+                                        traced(self.observe_trace, real_observe, cr.pv.OpsProviderRefused,
+                                              "observe")),
+                      mock.patch.object(cr.pv, "judge_observation",
+                                        traced(self.judge_trace, real_judge, cr.pv.OpsProviderRefused, "judge")),
+                      mock.patch.object(cr.oa, "authorize_command",
+                                        traced(self.authorize_trace, real_authorize, Exception, "authorize")),
+                      mock.patch.object(cr.cli.pc.ProductConnection, "__enter__", entered),
+                      mock.patch.dict(os.environ, {k: v for k, v in os.environ.items()
+                                                   if not k.upper().startswith("PG")}, clear=True)):
+            patch.start()
+            self.addCleanup(patch.stop)
+
+        self.db = cr.CHECK_DB[self.CHECK_ID]
+        root_path = os.path.normpath(tempfile.mkdtemp(prefix="pg69_normal_provider_"))
+        root_stat = os.stat(root_path, follow_symlinks=False)
+        root_identity = {"path": root_path, "parent": os.path.dirname(root_path),
+                         "dev": root_stat.st_dev, "ino": root_stat.st_ino}
+
+        def remove_owned_root():
+            """Strict owned-root removal (never `ignore_errors=True` as proof): the SAME identity
+            (parent, prefix, device/inode, never a symlink/junction) captured right after creation
+            must still match before any recursive delete, and the removal itself is confirmed."""
+            folder = root_identity["path"]
+            if os.path.dirname(folder) != root_identity["parent"] \
+                    or not os.path.basename(folder).startswith("pg69_normal_provider_"):
+                raise AssertionError("owned root identity mismatch: refusing to delete")
+            if os.path.islink(folder) or (hasattr(os.path, "isjunction") and os.path.isjunction(folder)):
+                raise AssertionError("owned root identity mismatch: refusing to delete")
+            live = os.stat(folder, follow_symlinks=False)
+            if (live.st_dev, live.st_ino) != (root_identity["dev"], root_identity["ino"]):
+                raise AssertionError("owned root identity mismatch: refusing to delete")
+            shutil.rmtree(folder)
+            if os.path.lexists(folder):
+                raise AssertionError("owned root removal unconfirmed")
+        self.addCleanup(remove_owned_root)                         # registered first: runs LAST
+        self.folder_root = Path(root_path)
+        self.key_folder = os.path.join(root_path, "keys")
+        os.makedirs(self.key_folder)
+        self.roles_oid = {cr.READ: 101, cr.WRITE: 102}
+        self.identity = {db: f"pg69-normal-{i}" for i, db in enumerate(cr.T.databases[1:])}
+        self.target = {"postmaster_pid": 999999, "host": g.HOST, "port": cr.T.port, "data": str(cr.T.data),
+                       "postgres_exe": str(g.POSTGRES_EXE), "server_version_num": "180006",
+                       "provider_roles": list(cr.BUSINESS_ROLES), "roles": dict(self.roles_oid),
+                       "synthetic": {"a": {"user_id": 2, "personal": {"p1": 11, "p2": 12}}},
+                       "databases": {db: {"identity_value": self.identity[db], "oid": 500 + i,
+                                          "objects": {t: 900 + j for j, t in enumerate(sorted(lay.OID_TABLES))}}
+                                    for i, db in enumerate(cr.T.databases[1:])}}
+        data = json.dumps(self.target, sort_keys=True).encode()
+        (self.folder_root / "target.json").write_bytes(data)
+        rec = g.Record(self.folder_root)
+        rec.event("target_written", sha256=hashlib.sha256(data).hexdigest())
+        self.h = cr.Harness(rec)                                  # real init: record binding, liveness
+
+        def close_cleanly():
+            done = self.h.close()
+            self.assertEqual((done.failures, done.interrupts), ([], []))
+        self.addCleanup(close_cleanly)                             # registered next: runs BEFORE the folder removal
+        # `NPPKeys` generates into `self.key_folder`, already inside the owned root registered above:
+        # a construction failure here (before this assignment completes) leaves `h.keys` None (no
+        # duplicate key-folder registration/cleanup) and its partial files are still removed by the
+        # owned-root cleanup, never a second, unregistered `ops_sig_test_keys_*` temp folder.
+        self.h.keys = NPPKeys(self.key_folder)                     # owned by h.close ONLY afterwards
+        self.h.allowed = self.h.keys.allowed(namespaces="jp-vocab-ops/v1/synthetic/*")
+        self.h.passwords = {role: "fixture-only-password" for role in cr.BUSINESS_ROLES}
+
+    def make_conn(self, user: str, db: str):
+        access = "read" if user == cr.READ else "write"
+        read_exp, write_exp = cr.expected_profiles(db)
+        profile = read_exp if access == "read" else write_exp
+        if access == "read" and self.bad_read_extra:
+            profile = dataclasses.replace(profile, privileges=frozenset(profile.privileges) | set(self.bad_read_extra))
+        cat = profile_catalog(profile, access=access, user=user, db=db, identity_value=self.identity[db])
+        facts = {"server_addr": "127.0.0.1", "server_port": cr.T.port, "version": self.target["server_version_num"],
+                "dbname": db, "db_oid": self.target["databases"][db]["oid"], "role_oid": self.roles_oid[user],
+                "object_oids": [self.target["databases"][db]["objects"][t] for t in sorted(lay.OID_TABLES)],
+                "identity": [self.identity[db]]}
+        server = NPPServer(cat, facts, host=g.HOST, port=cr.T.port, dbname=db, run=self.run_row,
+                          snapshots=self.snapshot_rows)
+        self.conns.append(server)
+        return server
+
+    def fixture_candidates(self, uid: int, refs=(11, 12)):
+        """REAL `migration.MigrationCandidate` instances, built through the actual pure
+        `migration._incomplete_candidate` constructor -- never a duck-typed `SimpleNamespace`, never a
+        seed plan file, never a real DB read. A fixed synthetic 'learning' card with a schedule one
+        day after `cr.T0` and flags `(\"missing_history\",)` (the same shape `_history` returns for a
+        card with no logs) makes a deterministic, typed, convertible-incomplete candidate that
+        `pfile.to_candidates`/`migration._plan_json`/`migration._scope` accept and compare like any
+        real dry-run result."""
+        cr.ar.fix_app_environment()
+        from app.srs import migration
+        from app.srs.engine import CardKey
+        out = []
+        for ref in refs:
+            key = CardKey("personal", uid, ref)
+            card = {"id": ref, "user_id": uid, "status": "learning",
+                   "next_review_at": (cr.T0 + timedelta(days=1)).isoformat(), "srs_card_version": 0}
+            common = dict(key=key, card_fingerprint=migration._card_print(card),
+                         logs_fingerprint=migration._digest([]), card_version=0, last_log_id=0)
+            out.append(migration._incomplete_candidate(card, common, ("missing_history",)))
+        return tuple(out)
+
+    def reset_trace(self):
+        for name in ("preflight_trace", "post_connect_trace", "observe_trace", "judge_trace", "authorize_trace",
+                     "path_events"):
+            getattr(self, name).clear()
+
+    def assert_post_connect_success_order(self):
+        """The REAL post-connect order on the FIRST successful hand-over: `post_connect:pass` ->
+        `observe:pass` -> `judge:pass` -> `authorize:enter` -> `authorize:pass` -> `handover`. The
+        `authorize:enter`/`:pass` pair is searched starting AFTER `judge:pass`, so an earlier
+        authorization inside the pre-check (before any connection) is never mistaken for the
+        post-connect reauthorization. No refusal event anywhere in that exact segment."""
+        events = self.path_events
+        handover_idx = events.index("handover")
+        pc_idx = events.index("post_connect:pass")
+        obs_idx = events.index("observe:pass", pc_idx)
+        judge_idx = events.index("judge:pass", obs_idx)
+        auth_enter_idx = events.index("authorize:enter", judge_idx)
+        auth_pass_idx = events.index("authorize:pass", auth_enter_idx)
+        for earlier, later in ((pc_idx, obs_idx), (obs_idx, judge_idx), (judge_idx, auth_enter_idx),
+                               (auth_enter_idx, auth_pass_idx), (auth_pass_idx, handover_idx)):
+            self.assertLess(earlier, later)
+        self.assertFalse(any(e.endswith(":refused") for e in events[pc_idx:handover_idx + 1]))
+
+    # -- 0. the fixture factory itself: real, typed, deterministic -- no seed plan file ---------------------
+
+    def test_0_fixture_is_coherent_without_seed_file(self):
+        cr.ar.fix_app_environment()
+        from app.srs import migration
+        from app.srs.engine import CardKey, DEFAULT_CONFIG
+        uid = self.target["synthetic"]["a"]["user_id"]
+        candidates = self.fixture_candidates(uid)
+        self.assertEqual(len(candidates), 2)
+        for c, ref in zip(candidates, (11, 12)):
+            self.assertIsInstance(c, migration.MigrationCandidate)
+            self.assertEqual(c.key, CardKey("personal", uid, ref))
+            self.assertEqual((c.quality, c.flags), ("incomplete", ("missing_history",)))
+            self.assertIsNotNone(c.values_json)
+            values = json.loads(c.values_json)
+            self.assertEqual(values["srs_config_version"], DEFAULT_CONFIG.config_version)
+            self.assertIsNone(values["srs_state"])
+        self.assertEqual(migration._scope([c.key for c in candidates]), tuple(c.key for c in candidates))
+        scope = migration._plan_json(candidates)
+        self.assertTrue(migration._full_scope(json.loads(scope), DEFAULT_CONFIG.config_version))
+        product1 = hashlib.sha256(migration._plan_json(candidates).encode()).hexdigest()
+        product2 = hashlib.sha256(migration._plan_json(self.fixture_candidates(uid)).encode()).hexdigest()
+        self.assertEqual(product1, product2)                      # stable/deterministic, no hidden randomness
+        self.assertFalse((self.folder_root / "seed_plan.json").exists())
+
+    def run_case(self):
+        """The REAL `cr.Harness.case`, with passthrough spies (never fake verdicts, never a post-hoc
+        counter) around `Counts`, `RunScopes.run` and `Harness.driver`."""
+        test = self
+        real_run, real_driver = cr.RunScopes.run, cr.Harness.driver
+        self.scope_lists, self.driver_lists, self.counts_seen = [], [], []
+
+        class SpyCounts(cr.Counts):
+            def __init__(self):
+                super().__init__()
+                test.counts_seen.append(self)
+
+        def scope_run(self_, counts, trackers, **kw):
+            test.scope_lists.append(trackers)
+            return real_run(self_, counts, trackers, **kw)
+
+        def driver(self_, inputs, counts, trackers, hooks=None, rc_variant=False, fetch_hooks=None):
+            test.driver_lists.append(trackers)
+            return real_driver(self_, inputs, counts, trackers, hooks=hooks, rc_variant=rc_variant,
+                               fetch_hooks=fetch_hooks)
+        produced: list = []
+
+        def dry_run(keys, *, connect=None):
+            with connect(read_only=True) as c:
+                c.execute("SELECT 1")
+            candidates = self.fixture_candidates(keys[0].user_id, refs=[k.ref_id for k in keys])
+            produced.append(candidates)
+            return candidates
+        cr.ar.fix_app_environment()
+        from app.srs import migration
+        with mock.patch.object(cr, "Counts", SpyCounts), mock.patch.object(cr.RunScopes, "run", scope_run), \
+                mock.patch.object(cr.Harness, "driver", driver), mock.patch.object(migration, "dry_run", dry_run):
+            case = self.h.case(self.CHECK_ID, account="a", batch_size=2)
+        return case, produced[0]
+
+    def completed_run_row(self, case: "cr.Case"):
+        """State-injected completed run: `scope_json` is the REAL `migration._plan_json` of the SAME
+        candidates the real dry-run plan file holds (never a hand-rolled scope shape), so `judge_status`
+        sees the identical cards/account/config the case's own A0/plan are bound to."""
+        cr.ar.fix_app_environment()
+        from app.srs import migration
+        from app.srs.engine import DEFAULT_CONFIG
+        candidates = cr.pfile.to_candidates(case.plan)
+        scope = migration._plan_json(candidates)
+        summary = json.dumps({"cursor": len(candidates), "results": [
+            {"kind": c.key.kind, "ref_id": c.key.ref_id, "result": "applied"} for c in candidates]})
+        run_row = {"id": 1, "mode": "apply", "status": "completed", "scope_json": scope,
+                  "config_version": DEFAULT_CONFIG.config_version, "summary_json": summary,
+                  "started_at": "2026-10-21T12:00:00+00:00", "finished_at": "2026-10-21T12:05:00+00:00"}
+        snapshots = tuple({"id": i + 1, "user_id": case.request.account_id, "card_kind": c.key.kind,
+                          "card_ref": c.key.ref_id} for i, c in enumerate(candidates))
+        return run_row, snapshots
+
+    # -- 1. the normal dry-run plan, through the whole real provider chain --------------------------------
+
+    def test_1_real_case_writes_plan_through_the_full_provider_chain(self):
+        case, candidates = self.run_case()
+        self.assert_post_connect_success_order()           # the REAL post-connect order, before anything else
+        self.assertEqual(len(self.scope_lists), 1)
+        self.assertIs(self.scope_lists[0], self.driver_lists[0])          # ONE list, shared by both
+        counts = self.counts_seen[0]
+        self.assertEqual((counts.created, counts.handed), ({cr.READ: 1, cr.WRITE: 0}, {cr.READ: 1, cr.WRITE: 0}))
+        self.assertEqual([k["user"] for k in self.guard_calls], [cr.READ])
+        self.assertEqual({c.key.ref_id for c in candidates}, {11, 12})
+        self.assertIs(case.first_write.approval, case.a0)
+        a0 = json.loads(case.a0)
+        i0 = json.loads(case.dry_run_inquiry)
+        self.assertEqual((a0["format_version"], a0["kind"], i0["kind"]), (3, "apply", "inquiry"))
+
+        # -- independent expected values: fixed fixture constants + the REAL production helpers, NEVER
+        # a value parsed back out of the case/plan to "verify" itself ------------------------------------
+        cr.ar.fix_app_environment()
+        from app.srs import migration
+        from app.srs.engine import DEFAULT_CONFIG
+        target_obs = cr.op.TargetObservation(host=cr.g.HOST, port=cr.T.port, database=self.db, server_major=18,
+                                             identity_value=self.identity[self.db])
+        expected_db = cr.pf.db_identity(target_obs)
+        suffix = cr.RUN_KEY[-6:] or "000000"
+        expected_request = cr.cli.make_request(2, cr.RUN_KEY, [11, 12], [])
+        expected_candidates = self.fixture_candidates(2, refs=(11, 12))
+        self.assertEqual(candidates, expected_candidates)
+        expected_product = hashlib.sha256(migration._plan_json(expected_candidates).encode()).hexdigest()
+        expected_plan_bytes = cr.pfile.serialize_plan(
+            db_identity=expected_db, account_id=2, job_key=cr.RUN_KEY,
+            config_version=DEFAULT_CONFIG.config_version, product_fingerprint=expected_product,
+            candidates=expected_candidates)
+        expected_artifact = hashlib.sha256(expected_plan_bytes).hexdigest()
+
+        self.assertEqual(Path(case.plan_path).read_bytes(), expected_plan_bytes)
+        self.assertEqual((case.plan.db_identity, case.plan.account_id, case.plan.job_key,
+                         case.plan.config_version, case.plan.product_fingerprint, case.plan.artifact_sha256),
+                         (expected_db, 2, cr.RUN_KEY, DEFAULT_CONFIG.config_version, expected_product,
+                          expected_artifact))
+        self.assertEqual(cr.pfile.to_candidates(case.plan), expected_candidates)
+
+        expected_manifest = cr.om.manifest_fingerprint(cr.pf.manifest_doc(self.h.files()))
+        expected_job_plan = cr.oa.job_plan_fingerprint(
+            db_identity=expected_db, manifest=expected_manifest, tool="srs_migrate", account_id=2,
+            job_key=cr.RUN_KEY, job_inputs=cr.cli.job_inputs(expected_request),
+            product_fingerprint=expected_product, artifact_sha256=expected_artifact)
+
+        self.assertEqual(i0["db_identity"], expected_db)
+        self.assertEqual(a0["db_identity"], expected_db)
+        self.assertEqual(i0["approval_id"], f"inq-pg69-{self.CHECK_ID}-{suffix}")
+        self.assertEqual(a0["approval_id"], f"app-pg69-{self.CHECK_ID}-{suffix}")
+        expected_i0_sha = hashlib.sha256(case.dry_run_inquiry).hexdigest()
+        self.assertEqual(a0["based_on"], {"approval_id": i0["approval_id"], "sha256": expected_i0_sha})
+        self.assertEqual(a0["plan"]["2"], expected_job_plan)
+
+        ev_bytes = Path(case.initial_evidence[0]).read_bytes()
+        ev_doc = json.loads(ev_bytes)
+        self.assertEqual(a0["backup_evidence"], {"sha256": hashlib.sha256(ev_bytes).hexdigest()})
+        self.assertEqual((ev_doc["purpose"], ev_doc["restore_verified"], ev_doc["db_identity"],
+                         ev_doc["account_id"], ev_doc["evidence_id"]),
+                         ("synthetic", False, expected_db, 2, f"bkp-pg69-{self.CHECK_ID}-{suffix}"))
+        self.assertEqual((case.first_write.product_fingerprint, case.first_write.artifact_sha256,
+                         case.first_write.account_id, case.first_write.job_key,
+                         dict(case.first_write.job_inputs)),
+                         (expected_product, expected_artifact, 2, cr.RUN_KEY,
+                          cr.cli.job_inputs(expected_request)))
+        self.assertEqual((case.first_read.product_fingerprint, case.first_read.artifact_sha256),
+                         (expected_product, expected_artifact))
+
+        # -- REAL preflight, run again independently on A0/first_write (never a stub, never field presence
+        # only): actual verified Approval/Approval objects, their actual signed hashes -------------------
+        actual = cr.op.run_synthetic_preflight(case.first_write)
+        self.assertEqual((actual.kind, actual.command, actual.db_identity, actual.job_plan),
+                         ("apply", "apply", expected_db, expected_job_plan))
+        self.assertTrue(actual.verified.approval.verified)
+        self.assertTrue(actual.verified.inquiry.verified)
+        self.assertEqual(actual.verified.approval.approval_id, f"app-pg69-{self.CHECK_ID}-{suffix}")
+        self.assertEqual(actual.verified.inquiry.approval_id, f"inq-pg69-{self.CHECK_ID}-{suffix}")
+        self.assertEqual(actual.verified.approval.sha256, hashlib.sha256(case.a0).hexdigest())
+        self.assertEqual(actual.verified.inquiry.sha256, expected_i0_sha)
+        self.assertEqual(actual.verified.approval.based_on, (i0["approval_id"], expected_i0_sha))
+        self.assertEqual(actual.verified.approval.backup_evidence_sha256, hashlib.sha256(ev_bytes).hexdigest())
+        self.assertEqual(actual.verified.approval.plan_for(2), expected_job_plan)
+
+    # -- 2. normal completed replay: real status through the full provider chain --------------------------
+
+    def test_2_real_status_through_the_full_provider_reports_completed_applied_two(self):
+        case, _ = self.run_case()
+        self.reset_trace()                                       # status's OWN trace/path_events, never case's
+        original_a0, original_i0 = case.a0, case.dry_run_inquiry
+        original_plan_bytes = Path(case.plan_path).read_bytes()
+        original_write = (case.first_write.approval, case.first_write.approval_signature, case.first_write.inquiry,
+                          case.first_write.inquiry_signature, case.first_write.product_fingerprint,
+                          case.first_write.artifact_sha256)
+        original_read = (case.first_read.approval, case.first_read.approval_signature, case.first_read.inquiry,
+                         case.first_read.inquiry_signature, case.first_read.product_fingerprint,
+                         case.first_read.artifact_sha256)
+        # the injected run/snapshot rows are STATE-INJECTED test fixtures, never real-apply evidence
+        self.run_row, self.snapshot_rows = self.completed_run_row(case)
+        cr.ar.fix_app_environment()
+        from app.srs import migration
+        bucket: list = []
+        with mock.patch.object(migration, "apply_plan", forbidden):
+            result = self.h.status(case, clock=cr.fixed_clock(cr.T0 + timedelta(minutes=5)),
+                                   hooks=[cr.record_statements(bucket)])
+        self.assert_post_connect_success_order()                  # status's OWN real post-connect order
+        self.assertEqual((case.a0, case.dry_run_inquiry), (original_a0, original_i0))   # A0/I0 untouched
+        self.assertEqual(Path(case.plan_path).read_bytes(), original_plan_bytes)        # plan file untouched
+        self.assertEqual((case.first_write.approval, case.first_write.approval_signature, case.first_write.inquiry,
+                         case.first_write.inquiry_signature, case.first_write.product_fingerprint,
+                         case.first_write.artifact_sha256), original_write)
+        self.assertEqual((case.first_read.approval, case.first_read.approval_signature, case.first_read.inquiry,
+                         case.first_read.inquiry_signature, case.first_read.product_fingerprint,
+                         case.first_read.artifact_sha256), original_read)
+        self.assertEqual((result["out"].get("state"), result["out"].get("results"), result["code"]),
+                         ("completed", {"applied": 2}, 0))
+        counts = result["counts"]
+        self.assertEqual((counts.created[cr.READ], counts.handed[cr.READ]), (1, 1))
+        self.assertEqual(counts.role(cr.WRITE), cr.ZERO_ROLE)
+        selects = [s for s in bucket if s and s.upper().startswith("SELECT")]
+        self.assertEqual(selects, [cr.RUN_ROW_PREFIX + " FROM srs_migration_runs WHERE run_key = %s",
+                                  cr.SNAPSHOT_SELECT_PREFIX + " WHERE run_id = %s"])
+        for statement in bucket:
+            if statement:
+                self.assertNotIn(lay.first_word(statement), lay.WRITE_WORDS)
+                self.assertNotIn("FOR UPDATE", statement.upper())
+                self.assertNotIn("FOR SHARE", statement.upper())
+
+    # -- 3. a negative catalog (excess users.email UPDATE on the read role) is refused before handover ------
+
+    def test_3_excess_read_privilege_is_refused_before_business_handover(self):
+        self.bad_read_extra = [("table", "public", "users", "email", "UPDATE")]
+        with self.assertRaises(cr.CheckFailed) as caught:
+            self.run_case()
+        self.assertEqual(caught.exception.kind, "preparation_failure")
+        self.assertIn(EXCESS_REFUSAL, caught.exception.what)
+        # preflight and post-connect passed on this SAME connection; only the real judge refused it
+        self.assertIn("pass", self.preflight_trace)
+        self.assertIn("pass", self.post_connect_trace)
+        self.assertIn("pass", self.observe_trace)
+        self.assertIn(f"refused:{EXCESS_REFUSAL}", self.judge_trace)
+        conn = self.conns[-1]
+        self.assertTrue(conn.queries)                           # the observer read the catalog
+        self.assertTrue(conn.closed)
+        self.assertNotIn("SELECT 1", conn.log)                  # never handed to the business dry_run body
+        counts = self.counts_seen[0]
+        self.assertEqual(counts.role(cr.READ), {"created": 1, "handed": 0, "statements": 0, "writes": 0,
+                                                "commits": 0})
+        self.assertEqual(counts.role(cr.WRITE), cr.ZERO_ROLE)
+
+    # -- 4. the real g1_gate stops at the same observation on the very first check (p1) ----------------------
+
+    def test_4_g1_gate_stops_at_p1_preparation_before_first_apply(self):
+        self.bad_read_extra = [("table", "public", "users", "email", "UPDATE")]
+        attempted: list = []
+        real_case = cr.Harness.case
+
+        def spy_case(self_, check_id, *a, **k):
+            attempted.append(check_id)
+            return real_case(self_, check_id, *a, **k)
+        with mock.patch.object(cr.Harness, "case", spy_case), \
+                mock.patch.object(cr.Harness, "first_apply", forbidden), \
+                mock.patch.object(cr.Harness, "database_facts", forbidden):
+            ok = lay.run_recorded(self.h.rec, "g1_gate", cr.g1_gate, self.h)
+        self.assertFalse(ok)
+        self.assertEqual(attempted, ["p1"])                      # p2.. never attempted
+        self.assertEqual(self.h.cases, {})                       # p1 never finished building its case
+        saved = json.loads((self.h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        last = saved["results"][-1]
+        self.assertEqual((last["check"], last["status"], last["kind"]), ("g1_gate", "fail", "preparation_failure"))
+        self.assertIn(EXCESS_REFUSAL, last.get("what", ""))
+        self.assertIn("pass", self.observe_trace)
+        self.assertIn(f"refused:{EXCESS_REFUSAL}", self.judge_trace)
+
+    # -- 5. owned resources (keys, deploy folders) are cleaned on close; approvals stay None -----------------
+
+    def test_5_close_cleans_owned_resources_and_approvals_stay_none(self):
+        self.run_case()
+        key_folder = Path(self.h.keys.folder)
+        root_folder = self.folder_root
+        deploy_folders = [Path(entry["path"]) for entry in self.h.folders]
+        self.assertTrue(key_folder.exists())
+        self.assertTrue(root_folder.exists())
+        self.assertTrue(deploy_folders and all(p.exists() for p in deploy_folders))
+        self.doCleanups()                                         # runs close_cleanly, then the owned-root removal
+        self.assertFalse(key_folder.exists())
+        self.assertFalse(root_folder.exists())
+        self.assertTrue(all(not p.exists() for p in deploy_folders))
+        self.assertEqual(self.h.passwords, {})
+        self.assertIsNone(cr.PREPARE_APPROVED)
+        self.assertIsNone(cr.CHECK_APPROVED)
+        self.assertIsNone(cr.ADMIN_CHANGES_APPROVED)
+        self.assertIsNone(cr.CLEANUP_APPROVED)
+
+    # -- 6. a key-construction failure/interrupt is cleaned by the owned root, never a second temp folder ----
+
+    def test_6_key_construction_failure_or_interrupt_cleans_the_owned_root(self):
+        for chosen in (RuntimeError("synthetic-keygen-boom"), KeyboardInterrupt("synthetic-interrupt"),
+                      SystemExit(23)):
+            with self.subTest(exc=type(chosen).__name__):
+                nested = NormalProviderPath("test_0_fixture_is_coherent_without_seed_file")
+                with mock.patch.object(cr.sigtests, "_keygen", lambda *a, **k: (_ for _ in ()).throw(chosen)):
+                    with self.assertRaises(type(chosen)) as caught:
+                        nested.setUp()
+                self.assertIs(caught.exception, chosen)           # the SAME object, never wrapped/replaced
+                if isinstance(chosen, SystemExit):
+                    self.assertEqual(caught.exception.code, 23)
+                key_folder, root_folder = nested.key_folder, str(nested.folder_root)
+                nested.doCleanups()                                # owned-root cleanup still runs (h.keys is None)
+                self.assertFalse(os.path.exists(key_folder))
+                self.assertFalse(os.path.exists(root_folder))
+
+    # -- 7/8. the fake server's exact business-SQL/param allowlist (never a generic pass-through) -------------
+
+    def test_7_unknown_business_sql_is_rejected_by_the_fake_server(self):
+        server = self.make_conn(cr.READ, self.db)
+        try:
+            with self.assertRaises(AssertionError):
+                server.execute("SELECT * FROM users")
+        finally:
+            server.close()
+
+    def test_8_wrong_status_query_params_are_rejected_by_the_fake_server(self):
+        self.run_row = {"id": 777, "mode": "apply", "status": "completed"}
+        server = self.make_conn(cr.READ, self.db)
+        try:
+            with self.assertRaises(AssertionError):
+                server.execute(NPPServer._RUN_QUERY, ("wrong-run-key",))
+            with self.assertRaises(AssertionError):
+                server.execute(NPPServer._SNAPSHOT_QUERY, (99999,))               # wrong run id
+            with self.assertRaises(AssertionError):
+                server.execute(NPPServer._RUN_QUERY + " LIMIT 1", (cr.RUN_KEY,))  # altered/trailing SQL
+            with self.assertRaises(AssertionError):
+                server.execute(NPPServer._SNAPSHOT_QUERY, (777, 1))               # extra param
+        finally:
+            server.close()
+
+
 if __name__ == "__main__":
     unittest.main()
