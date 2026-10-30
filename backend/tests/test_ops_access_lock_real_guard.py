@@ -95,8 +95,10 @@ class Target(Blocked):
         self.assertEqual(T.databases, ("jp_vocab_test_access_lock_tpl",)
                          + tuple(f"jp_vocab_test_access_lock_{c}" for c in PLAN_CHECKS))
         self.assertEqual((lay.PG68.owner, lay.PG68.read, lay.PG68.write), ("jpvk_owner", "jpvk_read", "jpvk_write"))
-        self.assertIs(g.PRESETS[-1], T)
-        self.assertIs(lay.LAYOUTS[-1], lay.PG68)
+        self.assertIs(g.PRESETS[6], T)                      # PG68's own position, unmoved by PG69's append
+        self.assertIs(g.PRESETS[-1], g.PG69_COMPLETED_REPLAY)
+        self.assertIs(lay.LAYOUTS[3], lay.PG68)
+        self.assertIs(lay.LAYOUTS[-1], lay.PG69)
         copy = dataclasses.replace(T)
         with self.assertRaises(g.Pg62Refused):
             g.preset(copy)

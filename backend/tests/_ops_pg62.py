@@ -119,7 +119,17 @@ PG68_LEXEME_ACCESS_LOCK = Target("pg68_lexeme_access_lock", Path("C:/JV_Tools/pg
                                      f"jp_vocab_test_access_lock_{c}" for c in PG68_LEXEME_ACCESS_LOCK_CHECK_IDS),
                                  "jpvk_admin", ("jpvk_read", "jpvk_write"),
                                  "docs/plans/srs-improvement/gate-e/PG68_TARGET.md")
-PRESETS = (PG62, PG63_AUDIT, PG64_BACKUP, PG65_APPLY, PG66_RESUME, PG67_RESUME_LEXEME, PG68_LEXEME_ACCESS_LOCK)
+# Completed-result requery real-PG check (OPS_MIGRATION_COMPLETED_REPLAY_REAL_PG_PLAN 8절, CR-PG1: harness code
+# and PG-less fake protection checks only; values registered here, nothing created). One database per check
+# (p1..p10, ordered), separate from every other target.
+PG69_COMPLETED_REPLAY_CHECK_IDS = ("p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10")
+PG69_COMPLETED_REPLAY = Target("pg69_completed_replay", Path("C:/JV_Tools/pg69"), 55532,
+                               ("jp_vocab_test_completed_template",) + tuple(
+                                   f"jp_vocab_test_completed_{c}" for c in PG69_COMPLETED_REPLAY_CHECK_IDS),
+                               "jpvq_admin", ("jpvq_read", "jpvq_write"),
+                               "docs/plans/srs-improvement/gate-e/PG69_TARGET.md")
+PRESETS = (PG62, PG63_AUDIT, PG64_BACKUP, PG65_APPLY, PG66_RESUME, PG67_RESUME_LEXEME, PG68_LEXEME_ACCESS_LOCK,
+          PG69_COMPLETED_REPLAY)
 
 
 def preset(target: Any) -> Target:

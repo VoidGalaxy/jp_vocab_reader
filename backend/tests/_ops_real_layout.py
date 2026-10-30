@@ -168,7 +168,10 @@ PG67 = Layout("pg67", g.PG67_RESUME_LEXEME, g.PG67_RESUME_LEXEME_CHECK_IDS, "jpv
               PG67_VARIANT_DATABASES)
 PG68 = Layout("pg68", g.PG68_LEXEME_ACCESS_LOCK, g.PG68_LEXEME_ACCESS_LOCK_CHECK_IDS, "jpvk_owner", PG68_VARIANTS,
               PG68_VARIANT_DATABASES)
-LAYOUTS = (PG65, PG66, PG67, PG68)
+# Completed-result requery check (OPS_MIGRATION_COMPLETED_REPLAY_REAL_PG_PLAN 8절, CR-PG1): no privilege / role
+# setting variants (status is a read-only requery; nothing here needs a temporary privilege change).
+PG69 = Layout("pg69", g.PG69_COMPLETED_REPLAY, g.PG69_COMPLETED_REPLAY_CHECK_IDS, "jpvq_owner", {}, {})
+LAYOUTS = (PG65, PG66, PG67, PG68, PG69)
 
 
 def layout(value: Any) -> Layout:

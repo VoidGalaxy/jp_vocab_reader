@@ -100,7 +100,7 @@ def mask_serial(value):
 class Layouts(unittest.TestCase):
     def test_only_the_registered_objects(self):
         # pg67 added by lexeme L-1, pg68 by access lock V1
-        self.assertEqual(lay.LAYOUTS, (lay.PG65, lay.PG66, lay.PG67, lay.PG68))
+        self.assertEqual(lay.LAYOUTS, (lay.PG65, lay.PG66, lay.PG67, lay.PG68, lay.PG69))
         self.assertIs(lay.PG65.target, g.PG65_APPLY)
         self.assertIs(lay.PG66.target, g.PG66_RESUME)
         copy = dataclasses.replace(lay.PG66)                       # equal values, another object

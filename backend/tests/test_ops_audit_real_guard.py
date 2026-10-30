@@ -84,7 +84,7 @@ class Presets(Fakes):
     def test_only_two_closed_presets(self):
         # pg64 (B1), pg65 (C12-1), pg66 (RS4-1), pg67 (lexeme L-1), pg68 (access lock V1)
         self.assertEqual(g.PRESETS, (g.PG62, g.PG63_AUDIT, g.PG64_BACKUP, g.PG65_APPLY,
-                         g.PG66_RESUME, g.PG67_RESUME_LEXEME, g.PG68_LEXEME_ACCESS_LOCK))
+                         g.PG66_RESUME, g.PG67_RESUME_LEXEME, g.PG68_LEXEME_ACCESS_LOCK, g.PG69_COMPLETED_REPLAY))
         self.assertEqual((T.root, T.port, T.databases, T.admin, T.provider_roles),
                          (Path("C:/JV_Tools/pg63"), 55472, ("jp_vocab_test_audit_ok", "jp_vocab_test_audit_bad"),
                           "jpva_admin", ("jpva_audit",)))
