@@ -75,6 +75,7 @@ T0 = sigtests.T0
 POST = "post_check"
 WAIT_LIMIT = lay.WAIT_LIMIT
 PLANNED = g.PG69_COMPLETED_REPLAY_CHECK_IDS
+RUN_BASELINE_KEYS = tuple(c for c in PLANNED if c != "p5") + ("p2:blocked", "p5:other", "p5:corrupt")
 EXPECTED_QUALITIES = {"p1": "convertible", "p2": "convertible"}
 
 # CR-PG1 (8절): code-only registration. Every approval constant below is None; None refuses its phase before any
@@ -151,6 +152,13 @@ def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def canonical_json(doc: Any) -> bytes:
+    """Fixed CLI-output serialization boundary (P5, 9절): the `status` command's own dict return value,
+    never the CLI's own printed text, with a fixed `sort_keys`/separator contract so two dicts of equal
+    content always produce byte-identical output."""
+    return json.dumps(doc, sort_keys=True, separators=(",", ":")).encode()
+
+
 def iso_z(instant: datetime) -> str:
     return instant.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -212,6 +220,45 @@ def make_status_probe(store: dict) -> Callable[[str, int, Any], None]:
 SEQUENCE_NAME_QUERY = ("SELECT c.relname FROM pg_catalog.pg_class AS c "
                        "JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace "
                        "WHERE n.nspname = 'public' AND c.relkind = 'S' ORDER BY c.relname")
+
+
+def _valid_table_entry(value: Any) -> bool:
+    """[row count, md5 hex digest]: the count a real non-negative `int` (never `bool`, which is an int
+    subclass), the digest a 32-character lowercase hex string (an md5 digest's exact shape)."""
+    return (isinstance(value, list) and len(value) == 2 and type(value[0]) is int and value[0] >= 0
+            and isinstance(value[1], str) and len(value[1]) == 32
+            and all(c in "0123456789abcdef" for c in value[1]))
+
+
+def _valid_sequence_entry(value: Any) -> bool:
+    """[last_value, is_called]: a real `int` (never `bool`) and a real `bool` (never an int standing in
+    for one) -- a Postgres sequence's own two column types."""
+    return isinstance(value, list) and len(value) == 2 and type(value[0]) is int and type(value[1]) is bool
+
+
+def validate_whole_db_facts(check_id: str, facts: Any) -> dict:
+    """G1 preparation contract (9절): a `database_facts` result is well formed only when it is a dict
+    with the three required keys, every one of `lay.BUSINESS_TABLES` is present with a correctly shaped
+    `[count, md5]` entry (a business table always exists, even with zero rows: an empty `tables` dict is
+    a harness defect, never a legitimate baseline), the sequence name list is a unique list of non-empty
+    strings, the sequence value map's keys are EXACTLY that name list (an empty map is legitimate: a
+    check DB may have no catalog sequences left after a dry-run-only fixture), and every sequence value
+    is a correctly shaped `[last_value, is_called]` pair. Any missing/malformed shape is a fixed
+    `harness_defect`, never an incidental `AttributeError`/`TypeError` from reading it unchecked."""
+    expect(isinstance(facts, dict) and {"tables", "sequences", "sequence_names"} <= set(facts),
+           f"{check_id}: baseline facts missing or not a dict", "harness_defect")
+    tables, sequences, names = facts.get("tables"), facts.get("sequences"), facts.get("sequence_names")
+    expect(isinstance(tables, dict) and bool(tables) and set(tables) == set(lay.BUSINESS_TABLES)
+           and all(_valid_table_entry(v) for v in tables.values()),
+           f"{check_id}: baseline table coverage/shape invalid", "harness_defect")
+    expect(isinstance(names, list) and all(isinstance(n, str) and n for n in names)
+           and len(names) == len(set(names)),
+           f"{check_id}: baseline sequence names not a unique list of non-empty strings", "harness_defect")
+    expect(isinstance(sequences, dict) and set(sequences) == set(names)
+           and all(_valid_sequence_entry(v) for v in sequences.values()),
+           f"{check_id}: baseline sequence map does not match its name list, or a value shape is invalid",
+           "harness_defect")
+    return facts
 
 
 def sequence_clock(*instants: datetime) -> Callable[[], datetime]:
@@ -1168,9 +1215,57 @@ def g1_build_conflict_blocked(h: Harness, check_id: str) -> dict:
     return {"conflict": out.get("results"), "blocked": out2.get("results")}
 
 
+def g1_build_p10_block(h: Harness, case: Case) -> dict:
+    """G1 fixture (9절, G1 preparation contract): created only AFTER p10's completed run already exists, and
+    retained unchanged through every check and `post_check`. Main P10 only reads this row; it never
+    inserts or deletes it -- removing it belongs to a separately approved cleanup, not this check."""
+    check_id = "p10"
+    uid = case.request.account_id
+    recovery_key = f"pg69-{check_id}-recovery"
+    grant_hash = hashlib.sha256(b"synthetic-grant").hexdigest()
+    admin_mutation_guard(check_id, "account_write_blocks", case.db)
+    with admin(case.db, h.pid) as conn:
+        block_id = conn.execute(
+            "INSERT INTO account_write_blocks (user_id, purpose, recovery_key, grant_hash, status, "
+            "active_user_id, run_watermark, changes_started, created_at) VALUES "
+            "(%s, 'srs_recovery', %s, %s, 'active', %s, 0, 0, %s) RETURNING id",
+            (uid, recovery_key, grant_hash, uid, "2026-10-30T00:00:00+00:00")).fetchone()[0]
+    row = h.row_text(case.db, "account_write_blocks", block_id)
+    expect(row is not None and row.get("id") == block_id and row.get("user_id") == uid
+           and row.get("status") == "active" and row.get("active_user_id") == uid,
+           f"{check_id}: G1 block fixture {row}", "preparation_failure")
+    h.evidence["p10_block"] = {"id": block_id, "row": row}
+    return {"block_id": block_id}
+
+
+def g1_build_p5_fixtures(h: Harness) -> dict:
+    """G1 fixtures for P5 (9절, G1 preparation contract): the other-account run under the SAME key, and
+    the account's own run later corrupted in main, are both created and their first apply validated
+    HERE, before the whole-DB baseline is frozen. The genuinely missing key needs no fixture (no run of
+    it is ever created). Main P5 only queries these prebuilt runs and makes its own temporary, guarded
+    admin change for the unreadable-scope case; it never creates or applies a run itself."""
+    check_id = "p5"
+    b_case = h.case(check_id, account="b", run_key="completed-replay-p5-other", batch_size=2)
+    h.cases[check_id + ":other"] = b_case
+    out_b, code_b = h.first_apply(b_case)
+    expect(code_b == 0 and out_b.get("phase") == "completed" and out_b.get("results") == {"applied": 2},
+           f"{check_id} other-owner fixture {out_b}", "preparation_failure")
+    h.evidence.setdefault("baseline", {})[check_id + ":other"] = h.state_admin(b_case)
+    a_case = h.case(check_id, account="a", run_key="completed-replay-p5-corrupt", batch_size=2)
+    h.cases[check_id + ":corrupt"] = a_case
+    out_a, code_a = h.first_apply(a_case)
+    expect(code_a == 0 and out_a.get("phase") == "completed" and out_a.get("results") == {"applied": 2},
+           f"{check_id} corrupt fixture {out_a}", "preparation_failure")
+    h.evidence.setdefault("baseline", {})[check_id + ":corrupt"] = h.state_admin(a_case)
+    return {"other": out_b.get("results"), "corrupt": out_a.get("results")}
+
+
 def g1_gate(h: Harness) -> dict:
-    """Every check DB except p5 (no run: not_started is tested on an empty run_key / other owner / unparseable
-    scope, built inside p5 itself): the REAL plan dry-run and first apply (batch 2: both cards, completed)."""
+    """Every check DB (9절, G1 preparation contract): the REAL plan dry-run and first apply (batch 2:
+    both cards, completed). P5's not_started fixtures and P10's active block are built HERE too, so no
+    main check ever creates/applies a run or inserts/deletes the block. Only AFTER every fixture exists
+    and the session count is zero is the whole logical DB baseline for every planned check frozen and
+    content-validated."""
     made = {}
     for check_id in PLANNED:
         if check_id == "p5":
@@ -1185,9 +1280,35 @@ def g1_gate(h: Harness) -> dict:
                f"{check_id} first apply {out}", "preparation_failure")
         h.evidence.setdefault("baseline", {})[check_id] = h.state_admin(case)
         made[check_id] = {"results": out.get("results")}
+        if check_id == "p10":
+            made[check_id]["block"] = g1_build_p10_block(h, case)
+    made["p5"] = g1_build_p5_fixtures(h)
     sessions = h.sessions()
     expect(sessions == {"open": 0, "idle_in_transaction": 0}, f"sessions {sessions}", "preparation_failure")
-    return {"databases": len(made), "states": made}
+    db_baseline = {}
+    for check_id in PLANNED:
+        facts = h.database_facts(check_id)
+        validate_whole_db_facts(check_id, facts)
+        db_baseline[check_id] = json.loads(json.dumps(facts))     # independent deep copy, never aliased
+    h.evidence["db_baseline"] = db_baseline
+    # `rec.event` keeps the object it is GIVEN inside its own in-memory doc (every later `event()` call
+    # re-serializes that same doc), so a SECOND, SEPARATE deep copy is passed here: `h.evidence` and the
+    # record's own payload must never be the same dict, or a later in-memory mutation of one would
+    # silently resave as if it were the other (the aliasing defect this guards against).
+    h.rec.event("database_baseline_captured", checks=sorted(db_baseline),
+                facts=json.loads(json.dumps(db_baseline)))
+    saved = json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))
+    matches = [e for e in saved["events"] if e.get("kind") == "database_baseline_captured"]
+    expect(len(matches) == 1, f"g1: expected exactly one database baseline event, found {len(matches)}",
+           "preparation_failure")
+    captured = matches[0]
+    saved_facts = captured.get("facts")
+    expect(isinstance(saved_facts, dict) and set(captured.get("checks", [])) == set(PLANNED)
+           and set(saved_facts) == set(PLANNED) and saved_facts == db_baseline,
+           "g1: database baseline content not saved/reread for every planned check", "preparation_failure")
+    for check_id in PLANNED:
+        validate_whole_db_facts(check_id, saved_facts[check_id])
+    return {"databases": len(made), "states": made, "database_baseline_checks": sorted(db_baseline)}
 
 
 # --- checks (P1..P10) --------------------------------------------------------------------------------------------
@@ -1331,10 +1452,33 @@ def p4_duplicate_and_snapshot_mismatch(h: Harness) -> dict:
 
 
 def p5_not_started_variants(h: Harness) -> dict:
+    """9절, P5: refuses missing prebuilt fixtures BEFORE any status call -- main P5 never creates or
+    applies a run itself (that belongs only to `g1_build_p5_fixtures`). Every variant's `status` output
+    is checked both as a dict and byte-for-byte against the SAME fixed canonical-JSON contract bytes
+    (serialization boundary: the dict `srs_migrate.run_status` returns, with a fixed `sort_keys`/
+    separator serialization -- never the CLI's own printed text)."""
     check_id = "p5"
     want = {"status": "ok", "command": "status", "state": "not_started"}
+    want_bytes = canonical_json(want)
     now = T0 + timedelta(minutes=5)
     ids_a = h.target["synthetic"]["a"]
+
+    # Every G1 fixture this check needs -- its case, matching request account/run key, and its own
+    # per-run baseline -- must exist and match BEFORE any status call; missing or mismatched refuses
+    # here, never creates it inline.
+    ids_b = h.target["synthetic"]["b"]
+    b_case = h.cases.get(check_id + ":other")
+    expect(b_case is not None, f"{check_id}: G1 other-owner fixture missing", "harness_defect")
+    expect(b_case.request.account_id == ids_b["user_id"] and b_case.request.run_key == "completed-replay-p5-other",
+           f"{check_id}: G1 other-owner fixture request does not match account b", "harness_defect")
+    expect(h.evidence.get("baseline", {}).get(check_id + ":other") is not None,
+           f"{check_id}: G1 other-owner run baseline missing", "harness_defect")
+    a_case = h.cases.get(check_id + ":corrupt")
+    expect(a_case is not None, f"{check_id}: G1 corrupt-scope fixture missing", "harness_defect")
+    expect(a_case.request.account_id == ids_a["user_id"] and a_case.request.run_key == "completed-replay-p5-corrupt",
+           f"{check_id}: G1 corrupt-scope fixture request does not match account a", "harness_defect")
+    expect(h.evidence.get("baseline", {}).get(check_id + ":corrupt") is not None,
+           f"{check_id}: G1 corrupt-scope run baseline missing", "harness_defect")
 
     # 1. missing key: no run of this key exists at all
     req_missing = cli.make_request(ids_a["user_id"], "completed-replay-p5-missing",
@@ -1345,13 +1489,10 @@ def p5_not_started_variants(h: Harness) -> dict:
                       fetch_hooks=[count_fetch(SNAPSHOT_SELECT_PREFIX, seen1, "n")])
     subcase(h, check_id, "missing_key", (r1["out"], r1["code"]) == (want, 0), out=r1["out"])
     subcase(h, check_id, "missing_key_no_snapshot_select", seen1.get("n", 0) == 0, seen=seen1)
+    subcase(h, check_id, "missing_key_canonical_bytes", canonical_json(r1["out"]) == want_bytes)
 
-    # 2. other owner: a real completed run of account b, under the SAME key account a asks about
-    b_case = h.case(check_id, account="b", run_key="completed-replay-p5-other", batch_size=2)
-    h.cases[check_id + ":other"] = b_case
-    out_b, code_b = h.first_apply(b_case)
-    expect(code_b == 0 and out_b.get("results") == {"applied": 2}, f"{check_id} other-owner fixture {out_b}",
-           "preparation_failure")
+    # 2. other owner: the G1 fixture -- a real completed run of account b, under the SAME key account a
+    # asks about. Main P5 never creates or applies this run itself.
     req_a_same_key = cli.make_request(ids_a["user_id"], "completed-replay-p5-other",
                                       [ids_a["personal"]["p1"], ids_a["personal"]["p2"]], [])
     inputs2, exp2, _ = h.read_only_inputs(check_id, req_a_same_key, now=now)
@@ -1360,13 +1501,10 @@ def p5_not_started_variants(h: Harness) -> dict:
                       fetch_hooks=[count_fetch(SNAPSHOT_SELECT_PREFIX, seen2, "n")])
     subcase(h, check_id, "other_owner", (r2["out"], r2["code"]) == (want, 0), out=r2["out"])
     subcase(h, check_id, "other_owner_no_snapshot_select", seen2.get("n", 0) == 0, seen=seen2)
+    subcase(h, check_id, "other_owner_canonical_bytes", canonical_json(r2["out"]) == want_bytes)
 
-    # 3. owner unreadable: account a's own run, scope_json corrupted with a duplicate key
-    a_case = h.case(check_id, account="a", run_key="completed-replay-p5-corrupt", batch_size=2)
-    h.cases[check_id + ":corrupt"] = a_case
-    out_a, code_a = h.first_apply(a_case)
-    expect(code_a == 0 and out_a.get("results") == {"applied": 2}, f"{check_id} corrupt fixture {out_a}",
-           "preparation_failure")
+    # 3. owner unreadable: the G1 fixture -- account a's own run. The corruption below is a main-only,
+    # temporary, guarded admin change on this already-existing run; main P5 never creates or applies it.
     run_id = h.state_admin(a_case)["runs"][0]["id"]
     original = h.row_text(a_case.db, "srs_migration_runs", run_id)
     import re
@@ -1387,17 +1525,24 @@ def p5_not_started_variants(h: Harness) -> dict:
                           fetch_hooks=[count_fetch(SNAPSHOT_SELECT_PREFIX, seen3, "n")])
         subcase(h, check_id, "owner_unreadable", (r3["out"], r3["code"]) == (want, 0), out=r3["out"])
         subcase(h, check_id, "owner_unreadable_no_snapshot_select", seen3.get("n", 0) == 0, seen=seen3)
+        subcase(h, check_id, "owner_unreadable_canonical_bytes", canonical_json(r3["out"]) == want_bytes)
     finally:
         def restore_scope():
             with admin(a_case.db, h.pid) as conn:
                 h.restore_row(conn, "srs_migration_runs", original)
             subcase(h, check_id, "owner_unreadable_restored",
                     h.row_text(a_case.db, "srs_migration_runs", run_id) == original)
+            # The restore is compared to the SAME post-G1 baseline used by `post_check` -- never a new
+            # baseline computed from the corrupted state.
+            db_base = h.evidence.get("db_baseline", {}).get(check_id)
+            subcase(h, check_id, "database_restored_to_baseline",
+                    db_base is not None and h.database_facts(check_id) == db_base)
         restore_guarded(h, check_id, restore_scope)
-    require_subcases(h, check_id, ("missing_key", "missing_key_no_snapshot_select", "other_owner",
-                                   "other_owner_no_snapshot_select", "owner_unreadable_change_rows",
-                                   "owner_unreadable", "owner_unreadable_no_snapshot_select",
-                                   "owner_unreadable_restored"))
+    require_subcases(h, check_id, ("missing_key", "missing_key_no_snapshot_select", "missing_key_canonical_bytes",
+                                   "other_owner", "other_owner_no_snapshot_select", "other_owner_canonical_bytes",
+                                   "owner_unreadable_change_rows", "owner_unreadable",
+                                   "owner_unreadable_no_snapshot_select", "owner_unreadable_canonical_bytes",
+                                   "owner_unreadable_restored", "database_restored_to_baseline"))
     return {}
 
 
@@ -1638,56 +1783,89 @@ def p9_atomic_admin_transition_rr_vs_rc(h: Harness) -> dict:
 
 
 def p10_active_write_block_ignored(h: Harness) -> dict:
+    """9절, P10: validates the G1-built ACTIVE block (and the whole-DB baseline) BEFORE calling status at
+    all -- a missing, malformed, non-active or already-changed block refuses here, before any product
+    call. Main P10 never inserts or deletes the block, nor regenerates the baseline; it belongs to a
+    separately approved cleanup, retained unchanged through `post_check`."""
     check_id = "p10"
     case = h.cases[check_id]
     uid = case.request.account_id
-    recovery_key = f"pg69-{check_id}-recovery"
-    grant_hash = hashlib.sha256(b"synthetic-grant").hexdigest()
-    admin_mutation_guard(check_id, "account_write_blocks", case.db)
-    with admin(case.db, h.pid) as conn:
-        block_id = conn.execute(
-            "INSERT INTO account_write_blocks (user_id, purpose, recovery_key, grant_hash, status, "
-            "active_user_id, run_watermark, changes_started, created_at) VALUES "
-            "(%s, 'srs_recovery', %s, %s, 'active', %s, 0, 0, %s) RETURNING id",
-            (uid, recovery_key, grant_hash, uid, "2026-10-30T00:00:00+00:00")).fetchone()[0]
-    before_block = h.row_text(case.db, "account_write_blocks", block_id)
-    try:
-        statements: list = []
-        result = h.status(case, clock=fixed_clock(T0 + timedelta(minutes=5)), hooks=[record_statements(statements)])
-        out, code = result["out"], result["code"]
-        subcase(h, check_id, "status_unaffected", (out.get("state"), out.get("results"), code) ==
-                ("completed", {"applied": 2}, 0), out=out)
-        after_block = h.row_text(case.db, "account_write_blocks", block_id)
-        subcase(h, check_id, "block_unchanged", after_block == before_block)
-        read_c, write_c = result["counts"].role(READ), result["counts"].role(WRITE)
-        subcase(h, check_id, "no_apply_or_account_lock", read_c["created"] == 1 and read_c["handed"] == 1
-                and write_c == ZERO_ROLE, read=read_c, write=write_c)
-        subcase(h, check_id, "no_row_lock_in_sql", no_lock_or_dml(statements), statements=statements)
-    finally:
-        def remove_block():
-            admin_mutation_guard(check_id, "account_write_blocks", case.db)
-            with admin(case.db, h.pid) as conn:
-                rows = conn.execute("DELETE FROM account_write_blocks WHERE id = %s", (block_id,)).rowcount
-            subcase(h, check_id, "block_removed", rows == 1)
-        restore_guarded(h, check_id, remove_block)
-    require_subcases(h, check_id, ("status_unaffected", "block_unchanged", "no_apply_or_account_lock",
-                                   "no_row_lock_in_sql", "block_removed"))
+    fixture = h.evidence.get("p10_block")
+    expect(isinstance(fixture, dict) and isinstance(fixture.get("id"), int) and isinstance(fixture.get("row"), dict),
+           f"{check_id}: G1 block fixture missing or malformed", "harness_defect")
+    block_id, expected_row = fixture["id"], fixture["row"]
+    expect(expected_row.get("id") == block_id and expected_row.get("user_id") == uid
+           and expected_row.get("status") == "active" and expected_row.get("active_user_id") == uid,
+           f"{check_id}: G1 block fixture does not match this case's account {uid}", "harness_defect")
+    db_baseline = h.evidence.get("db_baseline", {}).get(check_id)
+    expect(db_baseline is not None, f"{check_id}: whole-DB baseline missing", "harness_defect")
+
+    live_before = h.row_text(case.db, "account_write_blocks", block_id)
+    subcase(h, check_id, "block_fixture_valid_before_status",
+            live_before is not None and live_before == expected_row and live_before.get("id") == block_id
+            and live_before.get("user_id") == uid and live_before.get("status") == "active"
+            and live_before.get("active_user_id") == uid, row=live_before)
+    before_facts = h.database_facts(check_id)
+    subcase(h, check_id, "database_matches_baseline_before_status", before_facts == db_baseline)
+
+    statements: list = []
+    result = h.status(case, clock=fixed_clock(T0 + timedelta(minutes=5)), hooks=[record_statements(statements)])
+    out, code = result["out"], result["code"]
+    subcase(h, check_id, "status_unaffected", (out.get("state"), out.get("results"), code) ==
+            ("completed", {"applied": 2}, 0), out=out)
+    after_block = h.row_text(case.db, "account_write_blocks", block_id)
+    subcase(h, check_id, "block_unchanged", after_block == expected_row)
+    after_facts = h.database_facts(check_id)
+    subcase(h, check_id, "database_matches_baseline_after_status", after_facts == db_baseline)
+    read_c, write_c = result["counts"].role(READ), result["counts"].role(WRITE)
+    subcase(h, check_id, "no_apply_or_account_lock", read_c["created"] == 1 and read_c["handed"] == 1
+            and write_c == ZERO_ROLE, read=read_c, write=write_c)
+    subcase(h, check_id, "no_row_lock_in_sql", no_lock_or_dml(statements), statements=statements)
+    require_subcases(h, check_id, ("block_fixture_valid_before_status", "database_matches_baseline_before_status",
+                                   "status_unaffected", "block_unchanged", "database_matches_baseline_after_status",
+                                   "no_apply_or_account_lock", "no_row_lock_in_sql"))
     return {}
 
 
 def post_check(h: Harness) -> dict:
+    """9절, G1 preparation contract, acceptance 3: compares fresh `database_facts` for EVERY planned DB
+    against the SAVED post-G1 record evidence (never a fresh in-memory regeneration, and the in-memory
+    copy is itself required to still equal the saved one -- a baseline mutated only in memory can never
+    authorize a drift). Every expected per-run baseline (including P2's blocked run and P5's other-owner
+    / corrupt-scope runs, never silently skipped) is compared too."""
     sessions = h.sessions()
     expect(sessions == {"open": 0, "idle_in_transaction": 0}, f"post sessions {sessions}")
     expect(all(p.release.is_set() for p in h.pauses), "post: a pause was never released")
     alive = [t.name for t in h.threads if t.is_alive()]
     expect(not alive, f"post: threads alive {alive}")
+
+    saved = json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))
+    captured = [e for e in saved["events"] if e.get("kind") == "database_baseline_captured"]
+    expect(len(captured) == 1, f"post: expected exactly one saved baseline event, found {len(captured)}",
+           "harness_defect")
+    saved_facts = captured[0].get("facts")
+    expect(isinstance(saved_facts, dict) and set(captured[0].get("checks", [])) == set(PLANNED)
+           and set(saved_facts) == set(PLANNED),
+           "post: saved database baseline incomplete or malformed", "harness_defect")
     for check_id in PLANNED:
-        case = h.cases.get(check_id)
-        base = h.evidence.get("baseline", {}).get(check_id)
-        if case is None or base is None:
-            continue
+        validate_whole_db_facts(check_id, saved_facts[check_id])         # reject malformed SAVED evidence
+    in_memory = h.evidence.get("db_baseline")
+    expect(isinstance(in_memory, dict) and in_memory == saved_facts,
+           "post: in-memory baseline no longer matches the saved G1 evidence", "harness_defect")
+
+    for check_id in PLANNED:
+        fresh = h.database_facts(check_id)
+        validate_whole_db_facts(check_id, fresh)                         # reject malformed FRESH facts
+        subcase(h, POST, f"database_unchanged_{check_id}", fresh == saved_facts[check_id], db_check=check_id)
+    require_subcases(h, POST, tuple(f"database_unchanged_{c}" for c in PLANNED))
+
+    for key in RUN_BASELINE_KEYS:
+        case = h.cases.get(key)
+        base = h.evidence.get("baseline", {}).get(key)
+        expect(case is not None and base is not None, f"post {key}: run baseline/case missing", "harness_defect")
         now = h.state_admin(case)
-        expect(now == base, f"post {check_id}: baseline drifted")
+        subcase(h, POST, f"run_unchanged_{key.replace(':', '_')}", now == base, key=key)
+    require_subcases(h, POST, tuple(f"run_unchanged_{k.replace(':', '_')}" for k in RUN_BASELINE_KEYS))
     return {"sessions": sessions}
 
 

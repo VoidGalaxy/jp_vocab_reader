@@ -8,6 +8,20 @@ ever reaches a real connection, driver or key. `ApprovalPaths` (section 8) is th
 temporary OpenSSH test keys (`test_ops_signature.Keys`, via `cr.sigtests.Keys`) for real approval signing; every
 PostgreSQL, admin, process and TLS entry point stays forbidden there too.
 
+`G1FixturesAndBaseline` (section 9) exercises the REAL `cr.g1_gate` / `cr.g1_build_p5_fixtures` /
+`cr.g1_build_p10_block` / `cr.post_check` / `cr.p5_not_started_variants` / `cr.p10_active_write_block_ignored`
+control flow end to end, on a fake `h` whose faked pieces are `case` / `first_apply` / `state_admin` /
+`database_facts` / `row_text` / `restore_row` / `sessions` / `read_only_inputs`, plus `cr.admin` (a strict
+in-memory fake dispatcher over a shared model, never psycopg) and `cr.ADMIN_CHANGES_APPROVED` (patched to
+`True` only inside this class, restored by `addCleanup` -- `cr.admin_mutation_guard` itself is the REAL
+function). `h.status`/`h.status_raw` DO exercise the real `cli.run_status` -> `cli.read_status` ->
+`migration._scope_cards` -> `judge_status` chain (section 10's `real_run_status`/`FakeStatusConnection`
+bounded adapter, reused here against the SAME model rows G1 built; only `cli._admit`/`cli._timed_connector`
+are stubbed, never preflight/signing/provider machinery): no real PostgreSQL, admin connection, TLS or
+process is reached either way (`Blocked`, inherited). The REAL-PG runner's own `Harness.status`/`status_raw`
+(in `_ops_completed_replay_real.py`) still use the unmodified real connector/preflight plumbing against an
+actual PostgreSQL connection; nothing here replaces that.
+
 Run directly:      python tests/test_ops_completed_replay_real_guard.py
 Or via discovery:   python -m unittest discover -s tests -p test_ops_completed_replay_real_guard.py
 """
@@ -18,6 +32,7 @@ import contextlib
 import dataclasses
 import inspect
 import io
+import itertools
 import json
 import os
 import re
@@ -36,6 +51,8 @@ TESTS_DIR = Path(__file__).resolve().parent
 BACKEND = TESTS_DIR.parent
 sys.path.insert(0, str(BACKEND / "scripts"))
 sys.path.insert(0, str(TESTS_DIR))
+
+import hashlib  # noqa: E402
 
 import psycopg  # noqa: E402
 
@@ -1575,6 +1592,958 @@ class ApprovalPaths(unittest.TestCase):
         self.assertFalse(key_folder.exists())
         self.assertTrue(all(not p.exists() for p in deploy_folders))
         self.assertEqual(self.h.passwords, {})
+
+
+# --- 9. G1 fixture move + whole-database baseline (plan 173절): REAL g1_gate / g1_build_p5_fixtures /
+# g1_build_p10_block / post_check / p5 / p10 control flow, fake case/first_apply/database_facts/admin only ------
+
+class FakeG1Case:
+    def __init__(self, check_id, db, run_key, account_id, account="a"):
+        self.check_id, self.db, self.run_key, self.account = check_id, db, run_key, account
+        self.request = SimpleNamespace(account_id=account_id, run_key=run_key or cr.RUN_KEY)
+
+
+class FakeAdminCursorResult:
+    def __init__(self, rowcount=1, one=None):
+        self.rowcount, self._one = rowcount, one
+
+    def fetchone(self):
+        return self._one
+
+
+class G1FixtureBaselineMixin:
+    """A plain mixin (never a `TestCase` itself -- `G1FixturesAndBaseline(G1FixtureBaselineMixin, Blocked)`
+    below is the ONLY discoverable class, so every test body here is collected exactly once) driving the
+    REAL `cr.g1_gate` / `cr.g1_build_p5_fixtures` / `cr.g1_build_p10_block` / `cr.p5_not_started_variants` /
+    `cr.p10_active_write_block_ignored` control flow end to end: fixed fake `case` / `first_apply` /
+    `state_admin` / `database_facts` / `row_text` backed by ONE shared in-memory model, a real on-disk
+    `g.Record` (event save + readback is real). `cr.admin_mutation_guard` is the REAL function (only
+    `cr.ADMIN_CHANGES_APPROVED` is patched to `True`, restored by `addCleanup`, and stays `None` in the
+    saved source); `cr.admin` is faked -- a strict dispatcher over the model, validating db/pid/table/SQL/
+    params before any mutation, that rejects any unrecognized or malformed request, never a silent no-op.
+    `h.status_raw`/`h.status` reuse the REAL `cli.run_status` -> `cli.read_status` bounded adapter
+    (`real_run_status`/`FakeStatusConnection`, section 10 below) against the SAME model rows G1 built;
+    only `cli._admit`/`cli._timed_connector` stay stubbed there, never preflight/signing/provider
+    machinery. `Counts` returned by `h.status`/`h.status_raw` are the SAME object `FakeStatusConnection`/
+    `real_run_status` genuinely incremented at construction/connect/execute time, never a value assigned
+    after the fact -- this class still reaches no real PostgreSQL, admin connection, TLS or process
+    (`Blocked.setUp`, inherited by the concrete `G1FixturesAndBaseline` class)."""
+
+    def setUp(self):
+        super().setUp()
+        self.folder = Path(tempfile.mkdtemp(prefix="pg69_g1_fixture_"))
+        self.addCleanup(shutil.rmtree, self.folder, True)
+        self.order: list = []
+        self.model = None
+        approved = mock.patch.object(cr, "ADMIN_CHANGES_APPROVED", True)
+        approved.start()
+        self.addCleanup(approved.stop)
+
+        p10_insert = ("INSERT INTO account_write_blocks (user_id, purpose, recovery_key, grant_hash, status, "
+                     "active_user_id, run_watermark, changes_started, created_at) VALUES "
+                     "(%s, 'srs_recovery', %s, %s, 'active', %s, 0, 0, %s) RETURNING id")
+        p2_conflict_update = ("UPDATE vocab_items SET correct_count = correct_count + 1 "
+                              "WHERE id = %s AND user_id = %s")
+        p5_scope_update = "UPDATE srs_migration_runs SET scope_json = %s WHERE id = %s"
+
+        @contextlib.contextmanager
+        def fake_admin(db, pid, autocommit=True):
+            self.order.append(("admin", db))
+            model = self.model
+            if db not in cr.CHECK_DB.values():
+                raise AssertionError(f"fake admin reached outside the closed check DBs: {db!r}")
+            if pid != 999:
+                raise AssertionError(f"fake admin reached with an unexpected pid: {pid!r}")
+
+            class Conn:
+                def execute(self2, query, params=None):
+                    if isinstance(query, tuple) and query and query[0] == "RESTORE":
+                        _, table, row_data = query
+                        if db != cr.CHECK_DB["p5"] or table != "srs_migration_runs":
+                            raise AssertionError("fake RESTORE reached outside the P5 scope-corruption fixture")
+                        bucket = model["runs"].get(db, {})
+                        matched = bucket.get("completed-replay-p5-corrupt")
+                        if matched is None or matched["id"] != row_data["id"] or set(matched) != set(row_data):
+                            return FakeAdminCursorResult(rowcount=0)
+                        bucket["completed-replay-p5-corrupt"] = dict(row_data)
+                        return FakeAdminCursorResult(rowcount=1)
+                    text = query if isinstance(query, str) else str(query)
+                    if text == p10_insert:
+                        if db != cr.CHECK_DB["p10"]:
+                            raise AssertionError("fake P10 block INSERT reached on the wrong db")
+                        uid, recovery_key, grant_hash, active_uid, created_at = params
+                        expected = (1, "pg69-p10-recovery", hashlib.sha256(b"synthetic-grant").hexdigest(), 1,
+                                   "2026-10-30T00:00:00+00:00")
+                        if (uid, recovery_key, grant_hash, active_uid, created_at) != expected:
+                            raise AssertionError(f"unexpected P10 block INSERT params: {params!r}")
+                        existing = model["runs"].get(db, {}).get(cr.RUN_KEY)
+                        if existing is None or existing.get("status") != "completed":
+                            raise AssertionError("P10 block INSERT reached before its completed run fixture exists")
+                        block_id = next(model["_block_seq"])
+                        model["blocks"].setdefault(db, {})[block_id] = {
+                            "id": block_id, "user_id": uid, "status": "active", "active_user_id": active_uid}
+                        return FakeAdminCursorResult(rowcount=1, one=(block_id,))
+                    if text == p2_conflict_update:
+                        if db != cr.CHECK_DB["p2"]:
+                            raise AssertionError("fake P2 conflict UPDATE reached on the wrong db")
+                        card_id, user_id = params
+                        row = model["vocab_items"].get(db, {}).get(card_id)
+                        if row is None or row["user_id"] != user_id:
+                            return FakeAdminCursorResult(rowcount=0)
+                        row["correct_count"] += 1
+                        return FakeAdminCursorResult(rowcount=1)
+                    if text == p5_scope_update:
+                        if db != cr.CHECK_DB["p5"]:
+                            raise AssertionError("fake P5 scope UPDATE reached on the wrong db")
+                        new_scope, run_id = params
+                        bucket = model["runs"].get(db, {})
+                        matched = bucket.get("completed-replay-p5-corrupt")
+                        if matched is None or matched["id"] != run_id:
+                            return FakeAdminCursorResult(rowcount=0)
+                        matched["scope_json"] = new_scope
+                        return FakeAdminCursorResult(rowcount=1)
+                    raise AssertionError(f"unexpected fake admin SQL (G1 fixture dispatcher): {text!r}")
+            yield Conn()
+        patch2 = mock.patch.object(cr, "admin", fake_admin)
+        patch2.start()
+        self.addCleanup(patch2.stop)
+
+    def fake_harness(self):
+        class H:
+            pass
+        h = H()
+        h.rec = g.Record(self.folder)
+        h.cases, h.evidence, h.pid = {}, {}, 999
+        h.target = {"synthetic": {"a": {"user_id": 1, "personal": {"p1": 101, "p2": 102}},
+                                  "b": {"user_id": 2, "personal": {"p1": 201, "p2": 202}}}}
+        model = {"runs": {}, "snapshots": {}, "blocks": {},
+                "vocab_items": {cr.CHECK_DB["p2"]: {101: {"user_id": 1, "correct_count": 2}}},
+                "_run_seq": itertools.count(1), "_block_seq": itertools.count(777, 1)}
+        self.model = model
+
+        cr.ar.fix_app_environment()
+        from app.srs.engine import DEFAULT_CONFIG
+        config_version = DEFAULT_CONFIG.config_version
+
+        def reduced_scope(uid, cards):
+            request_bytes = json.dumps([[k, r] for k, r in cards], separators=(",", ":")).encode("ascii")
+            return json.dumps({"format": 2, "user_id": uid, "config_version": config_version,
+                              "cards": [{"kind": k, "ref_id": r} for k, r in cards],
+                              "request_sha256": hashlib.sha256(request_bytes).hexdigest()})
+
+        def case(check_id, *, account="a", batch_size=2, run_key=None, cards=None):
+            self.order.append(("case", check_id, run_key))
+            account_id = h.target["synthetic"][account]["user_id"]
+            db = cr.CHECK_DB[check_id]
+            c = FakeG1Case(check_id, db=db, run_key=run_key, account_id=account_id, account=account)
+            if check_id in ("p5", "p10"):
+                personal = h.target["synthetic"][account]["personal"]
+                c.request = cr.cli.make_request(account_id, c.request.run_key, [personal["p1"], personal["p2"]], [])
+            return c
+
+        def first_apply(case_, *, handover=None):
+            self.order.append(("first_apply", case_.check_id, case_.run_key))
+            if handover is not None:
+                handover(cr.WRITE, 1, SimpleNamespace())
+            if case_.run_key == cr.CONFLICT_RUN_KEY:
+                return {"phase": "completed", "results": {"applied": 1, "conflict": 1}}, 5
+            if case_.run_key == cr.BLOCKED_RUN_KEY:
+                return {"phase": "completed", "results": {"applied": 1, "blocked": 1}}, 5
+            if case_.check_id in ("p5", "p10"):
+                ids = h.target["synthetic"][case_.account]
+                run_cards = [("personal", ids["personal"]["p1"]), ("personal", ids["personal"]["p2"])]
+                run_id = next(model["_run_seq"])
+                scope = reduced_scope(case_.request.account_id, run_cards)
+                summary = json.dumps({"cursor": 2, "results": [
+                    {"kind": "personal", "ref_id": run_cards[0][1], "result": "applied"},
+                    {"kind": "personal", "ref_id": run_cards[1][1], "result": "applied"}]})
+                row = {"id": run_id, "mode": "apply", "status": "completed", "scope_json": scope,
+                      "config_version": config_version, "summary_json": summary,
+                      "started_at": "2026-10-21T12:00:00+00:00", "finished_at": "2026-10-21T12:05:00+00:00"}
+                model["runs"].setdefault(case_.db, {})[case_.request.run_key] = row
+                snaps = [{"id": next(model["_run_seq"]), "user_id": case_.request.account_id,
+                         "card_kind": "personal", "card_ref": run_cards[0][1], "run_id": run_id},
+                        {"id": next(model["_run_seq"]), "user_id": case_.request.account_id,
+                         "card_kind": "personal", "card_ref": run_cards[1][1], "run_id": run_id}]
+                model["snapshots"].setdefault(case_.db, {})[case_.request.run_key] = snaps
+            return {"phase": "completed", "results": {"applied": 2}}, 0
+
+        def state_admin(case_):
+            if case_.check_id in ("p5", "p10"):
+                row = model["runs"].get(case_.db, {}).get(case_.request.run_key)
+                snaps = model["snapshots"].get(case_.db, {}).get(case_.request.run_key, [])
+                return {"runs": [dict(row)] if row else [], "snapshots": [dict(s) for s in snaps]}
+            return {"runs": [{"id": 1}], "snapshots": []}
+
+        def database_facts(check_id):
+            self.order.append(("database_facts", check_id))
+            db = cr.CHECK_DB[check_id]
+            payload = json.dumps({"runs": sorted(model["runs"].get(db, {}).items()),
+                                  "snapshots": sorted(model["snapshots"].get(db, {}).items()),
+                                  "blocks": sorted(model["blocks"].get(db, {}).items())},
+                                 sort_keys=True, default=str).encode()
+            digest = hashlib.md5(payload).hexdigest()
+            moved = {"srs_migration_runs", "srs_migration_snapshots", "account_write_blocks"}
+            empty = hashlib.md5(b"").hexdigest()
+            tables = {t: ([1, digest] if t in moved else [0, empty]) for t in lay.BUSINESS_TABLES}
+            return {"tables": tables, "sequences": {"users_id_seq": [1, True]},
+                   "sequence_names": ["users_id_seq"], "check_id": check_id}
+
+        def row_text(db, table, row_id):
+            if table == "account_write_blocks":
+                row = model["blocks"].get(db, {}).get(row_id)
+                return dict(row) if row else None
+            if table == "srs_migration_runs":
+                for row in model["runs"].get(db, {}).values():
+                    if row["id"] == row_id:
+                        return dict(row)
+                return None
+            return {"id": row_id, "user_id": 1, "status": "active", "active_user_id": 1}
+
+        def restore_row(conn, table, row):
+            return conn.execute(("RESTORE", table, dict(row)), None).rowcount
+
+        def sessions():
+            return {"open": 0, "idle_in_transaction": 0}
+
+        def connection_for(case_db, request, *, hooks=None, fetch_hooks=None, counts=None):
+            row = model["runs"].get(case_db, {}).get(request.run_key)
+            snaps = model["snapshots"].get(case_db, {}).get(request.run_key, []) if row else []
+            return FakeStatusConnection(request.run_key, row, snaps, hooks=hooks, fetch_hooks=fetch_hooks,
+                                        counts=counts)
+
+        def read_only_inputs(check_id, request, *, now, **kwargs):
+            """Bounded P5 adapter (real reader only): the real preflight/signing stack never runs here
+            (`status_raw` below bypasses it exactly like `real_run_status`), so only a placeholder
+            `(inputs, expected, dsn)` triple is needed -- `status_raw` uses `request` itself, not these."""
+            return SimpleNamespace(), SimpleNamespace(), (lambda role: "")
+
+        def status_raw(request, inputs, read_exp, *, clock, rc_variant=False, hooks=None, fetch_hooks=None,
+                       preflight_trace=None):
+            counts = cr.Counts()
+            connection = connection_for(cr.CHECK_DB["p5"], request, hooks=hooks, fetch_hooks=fetch_hooks,
+                                       counts=counts)
+            out, code = real_run_status(request, connection, clock=clock, counts=counts)
+            return {"out": out, "code": code, "counts": counts, "trackers": []}
+
+        def status(case_, *, clock, hooks=None, rc_variant=False, fetch_hooks=None, trackers=None,
+                   now_for_inputs=None, settings_probe=False):
+            counts = cr.Counts()
+            connection = connection_for(case_.db, case_.request, hooks=hooks, fetch_hooks=fetch_hooks, counts=counts)
+            out, code = real_run_status(case_.request, connection, clock=clock, counts=counts)
+            return {"out": out, "code": code, "counts": counts, "trackers": []}
+
+        h.case, h.first_apply, h.state_admin = case, first_apply, state_admin
+        h.database_facts, h.row_text, h.sessions = database_facts, row_text, sessions
+        h.restore_row, h.status_raw, h.status = restore_row, status_raw, status
+        h.read_only_inputs = read_only_inputs
+        h.model, h._connection_for = model, connection_for          # test introspection only, never read by cr
+        return h
+
+    def test_g1_gate_builds_p5_and_p10_fixtures_before_the_whole_database_baseline(self):
+        h = self.fake_harness()
+        out = cr.g1_gate(h)
+        self.assertEqual(set(h.evidence["db_baseline"]), set(cr.PLANNED))
+        self.assertEqual(out["database_baseline_checks"], sorted(cr.PLANNED))
+        self.assertIn("p5:other", h.cases)
+        self.assertIn("p5:corrupt", h.cases)
+        self.assertIn("p10_block", h.evidence)
+        self.assertEqual(h.evidence["p10_block"], {"id": 777, "row": {"id": 777, "user_id": 1, "status": "active",
+                                                                        "active_user_id": 1}})
+        last_fixture_index = max(i for i, e in enumerate(self.order) if e[0] in ("case", "first_apply", "admin"))
+        first_facts_index = min(i for i, e in enumerate(self.order) if e[0] == "database_facts")
+        self.assertLess(last_fixture_index, first_facts_index)
+        saved = json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        captured = next(e for e in saved["events"] if e.get("kind") == "database_baseline_captured")
+        self.assertEqual(set(captured["checks"]), set(cr.PLANNED))
+
+    def test_main_p5_body_never_creates_or_applies_a_run(self):
+        """Main P5 only reads the two G1-built fixtures (acceptance 1/4): AT RUNTIME, after `g1_gate`
+        already built them, `h.case`/`h.first_apply` are never reached by `cr.p5_not_started_variants`
+        itself (never a source-text proxy for this)."""
+        h = self.fake_harness()
+        cr.g1_gate(h)
+
+        def forbidden_case(*a, **k):
+            raise AssertionError("h.case must not be called by main P5")
+
+        def forbidden_first_apply(*a, **k):
+            raise AssertionError("h.first_apply must not be called by main P5")
+        h.case, h.first_apply = forbidden_case, forbidden_first_apply
+        cr.p5_not_started_variants(h)          # completes fully without reaching either
+
+    def test_main_p10_never_inserts_or_deletes_the_block(self):
+        """`h.status` here runs the REAL `cli.run_status` -> `cli.read_status` bounded adapter against
+        the SAME model row G1 built (never a canned success dict): the main check still makes no
+        INSERT/DELETE of its own."""
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        before_admin_calls = len([e for e in self.order if e[0] == "admin"])
+        cr.p10_active_write_block_ignored(h)
+        after_admin_calls = len([e for e in self.order if e[0] == "admin"])
+        self.assertEqual(before_admin_calls, after_admin_calls)      # no INSERT/DELETE in the main check
+        saved = json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        subcases = {e["name"]: e["ok"] for e in saved["events"]
+                   if e.get("kind") == "subcase" and e.get("check") == "p10"}
+        for name in ("status_unaffected", "block_unchanged", "no_apply_or_account_lock", "no_row_lock_in_sql"):
+            self.assertTrue(subcases.get(name), name)
+
+    def test_main_p5_full_variants_pass_through_the_real_reader(self):
+        """`cr.p5_not_started_variants(h)` end to end: missing key, other-owner-under-the-same-key and
+        owner-unreadable-scope ALL resolve to the real `not_started` contract through the SAME real
+        `cli.read_status` bounded adapter the G1-built fixtures feed, with the corruption/restore and
+        whole-DB-baseline comparisons genuinely exercised (never a canned/pre-asserted result)."""
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        cr.p5_not_started_variants(h)
+        saved = json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        subcases = {e["name"]: e["ok"] for e in saved["events"]
+                   if e.get("kind") == "subcase" and e.get("check") == "p5"}
+        for name in ("missing_key", "missing_key_no_snapshot_select", "other_owner",
+                    "other_owner_no_snapshot_select", "owner_unreadable", "owner_unreadable_no_snapshot_select",
+                    "owner_unreadable_restored", "database_restored_to_baseline"):
+            self.assertTrue(subcases.get(name), name)
+
+    def test_real_run_status_counts_are_genuine_not_assigned_after_the_fact(self):
+        """Codex-reproduced regression: calling the SAME `real_run_status`/`FakeStatusConnection` pair
+        TWICE must genuinely raise `handed` to 2 while `created` stays 1 -- proving the counts
+        `h.status`/`h.status_raw` report are the adapter's own real counters, never a canned `1`/`1`
+        assigned after `real_run_status` returns."""
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        case = h.cases["p10"]
+        counts = cr.Counts()
+        connection = h._connection_for(case.db, case.request, counts=counts)
+        out1, code1 = real_run_status(case.request, connection, clock=cr.fixed_clock(cr.T0), counts=counts)
+        self.assertEqual(counts.created[cr.READ], 1)
+        self.assertEqual(counts.handed[cr.READ], 1)
+        out2, code2 = real_run_status(case.request, connection, clock=cr.fixed_clock(cr.T0), counts=counts)
+        self.assertEqual((out1, code1), (out2, code2))
+        self.assertEqual(counts.created[cr.READ], 1)       # the SAME connection object, never re-created
+        self.assertEqual(counts.handed[cr.READ], 2)        # genuinely handed out twice
+
+    def test_main_p10_rejects_a_double_real_hand_over_at_no_apply_or_account_lock(self):
+        """Codex's exact repro, through the ACTUAL P10 check (not just the helper): a double real
+        hand-over on the SAME connection/counts, reached through `cr.p10_active_write_block_ignored`
+        itself, must make the REAL `no_apply_or_account_lock` predicate fail specifically -- never an
+        earlier result/fixture gate -- protecting that predicate against a future accidental
+        removal/weakening."""
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        original = real_run_status
+        captured: dict = {}
+
+        def twice(*args, **kwargs):
+            original(*args, **kwargs)
+            captured["counts"] = kwargs.get("counts")
+            return original(*args, **kwargs)
+        with mock.patch.object(sys.modules[__name__], "real_run_status", twice):
+            with self.assertRaises(cr.CheckFailed):
+                cr.p10_active_write_block_ignored(h)
+        observed = captured["counts"]
+        self.assertIsNotNone(observed)
+        self.assertEqual(observed.created[cr.READ], 1)     # one connection object, never re-created
+        self.assertEqual(observed.handed[cr.READ], 2)      # genuinely handed out twice by the real call
+        saved = json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        subcases = {e["name"]: e["ok"] for e in saved["events"]
+                   if e.get("kind") == "subcase" and e.get("check") == "p10"}
+        self.assertTrue(subcases.get("block_fixture_valid_before_status"))
+        self.assertTrue(subcases.get("database_matches_baseline_before_status"))
+        self.assertTrue(subcases.get("status_unaffected"))
+        self.assertTrue(subcases.get("block_unchanged"))
+        self.assertTrue(subcases.get("database_matches_baseline_after_status"))
+        self.assertFalse(subcases.get("no_apply_or_account_lock"))   # the specific predicate that fails
+
+    def test_fake_admin_rejects_an_unregistered_db_or_wrong_pid_or_unknown_sql(self):
+        self.fake_harness()
+        with self.assertRaises(AssertionError):
+            with cr.admin("outside-registered-check-dbs", -1) as conn:
+                conn.execute("UPDATE users SET arbitrary_column = arbitrary_value", ())
+        with self.assertRaises(AssertionError):
+            with cr.admin(cr.CHECK_DB["p5"], -1) as conn:
+                conn.execute("SELECT 1")
+        with self.assertRaises(AssertionError):
+            with cr.admin(cr.CHECK_DB["p5"], 999) as conn:
+                conn.execute("DELETE FROM srs_migration_runs WHERE id = 1")
+
+    def test_fake_admin_rejects_a_known_prefix_with_an_unexpected_suffix(self):
+        self.fake_harness()
+        with self.assertRaises(AssertionError):
+            with cr.admin(cr.CHECK_DB["p5"], 999) as conn:
+                conn.execute("UPDATE srs_migration_runs SET scope_json = %s WHERE id = %s; DROP TABLE x",
+                            ("x", 1))
+
+    def test_fake_admin_p2_conflict_update_refuses_a_wrong_row_without_silent_success(self):
+        self.fake_harness()
+        with cr.admin(cr.CHECK_DB["p2"], 999) as conn:
+            rowcount = conn.execute("UPDATE vocab_items SET correct_count = correct_count + 1 "
+                                    "WHERE id = %s AND user_id = %s", (999999, 1)).rowcount
+        self.assertEqual(rowcount, 0)
+        with cr.admin(cr.CHECK_DB["p2"], 999) as conn:
+            rowcount = conn.execute("UPDATE vocab_items SET correct_count = correct_count + 1 "
+                                    "WHERE id = %s AND user_id = %s", (101, 999999)).rowcount
+        self.assertEqual(rowcount, 0)
+
+    def test_fake_admin_p10_insert_rejects_wrong_params(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        with self.assertRaises(AssertionError):
+            with cr.admin(cr.CHECK_DB["p10"], 999) as conn:
+                conn.execute(
+                    "INSERT INTO account_write_blocks (user_id, purpose, recovery_key, grant_hash, status, "
+                    "active_user_id, run_watermark, changes_started, created_at) VALUES "
+                    "(%s, 'srs_recovery', %s, %s, 'active', %s, 0, 0, %s) RETURNING id",
+                    (1, "wrong-recovery-key", hashlib.sha256(b"synthetic-grant").hexdigest(), 1,
+                     "2026-10-30T00:00:00+00:00"))
+
+    def test_fake_admin_restore_of_a_missing_row_refuses_without_silent_success(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        with cr.admin(cr.CHECK_DB["p5"], 999) as conn:
+            rowcount = h.restore_row(conn, "srs_migration_runs", {"id": 999999, "mode": "apply"})
+        self.assertEqual(rowcount, 0)
+
+    def test_main_p10_runs_with_apply_and_account_lock_forbidden_and_still_passes(self):
+        """A genuine runtime guard (never a source proxy): REAL P10, against its truly present active
+        block, must pass with `migration.apply_plan` forbidden, and with the ACTUAL account write lock --
+        `app.srs.storage.begin_card_write` (`migration.apply_plan` calls its own module-level imported
+        name `migration.begin_card_write`, a separate binding patched too) -- forbidden. `_locked_access`
+        is the subscription FOR-SHARE access check, not the account lock, but is forbidden here as well
+        for good measure: P10's read path never reaches any of them."""
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        from app.srs import migration, storage
+
+        def forbidden(*a, **k):
+            raise AssertionError("P10 must not reach apply/account-lock machinery")
+        patches = [mock.patch.object(migration, "_locked_access", forbidden),
+                  mock.patch.object(migration, "begin_card_write", forbidden),
+                  mock.patch.object(storage, "begin_card_write", forbidden),
+                  mock.patch.object(migration, "apply_plan", forbidden)]
+        with contextlib.ExitStack() as stack:
+            for patch in patches:
+                stack.enter_context(patch)
+            cr.p10_active_write_block_ignored(h)
+
+    def test_main_p10_rejects_a_block_changed_during_its_own_status_call(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        real_status = h.status
+        db = cr.CHECK_DB["p10"]
+        block_id = h.evidence["p10_block"]["id"]
+
+        def mutating_status(case_, **kwargs):
+            result = real_status(case_, **kwargs)
+            self.model["blocks"][db][block_id]["status"] = "removed"
+            return result
+        h.status = mutating_status
+        with self.assertRaises(cr.CheckFailed):
+            cr.p10_active_write_block_ignored(h)
+
+    def test_main_p10_rejects_a_database_drift_during_its_own_status_call(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        real_status = h.status
+        db = cr.CHECK_DB["p10"]
+        run_key = h.cases["p10"].request.run_key
+
+        def drifting_status(case_, **kwargs):
+            result = real_status(case_, **kwargs)
+            run_id = self.model["runs"][db][run_key]["id"]
+            self.model["snapshots"][db][run_key].append(
+                {"id": 999999, "user_id": case_.request.account_id, "card_kind": "personal",
+                 "card_ref": 999999, "run_id": run_id})
+            return result
+        h.status = drifting_status
+        with self.assertRaises(cr.CheckFailed):
+            cr.p10_active_write_block_ignored(h)
+
+    def test_main_p5_stops_at_the_first_wrong_variant_and_never_reaches_the_rest(self):
+        """Not a canned success: tampering the REAL reader's own exit code on the FIRST variant must make
+        `cr.p5_not_started_variants` fail there, and the later variants must never run."""
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        real_status_raw = h.status_raw
+        calls: list = []
+
+        def tampering_status_raw(request, inputs, read_exp, *, clock, **kwargs):
+            calls.append(request.run_key)
+            result = real_status_raw(request, inputs, read_exp, clock=clock, **kwargs)
+            if request.run_key == "completed-replay-p5-missing":
+                result = dict(result, code=result["code"] + 1)
+            return result
+        h.status_raw = tampering_status_raw
+        with self.assertRaises(cr.CheckFailed):
+            cr.p5_not_started_variants(h)
+        self.assertEqual(calls, ["completed-replay-p5-missing"])
+
+    def test_main_p5_fails_when_an_extra_snapshot_select_is_observed(self):
+        """An extra, genuinely executed-and-fetched snapshot SELECT (never a directly mutated counter)
+        on the missing-key variant's own connection must make P5 fail at its `_no_snapshot_select`
+        subcase specifically, and stop there."""
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        real_status_raw = h.status_raw
+
+        def extra_select_status_raw(request, inputs, read_exp, *, clock, fetch_hooks=None, **kwargs):
+            if request.run_key == "completed-replay-p5-missing":
+                counts = cr.Counts()
+                connection = h._connection_for(cr.CHECK_DB["p5"], request, fetch_hooks=fetch_hooks, counts=counts)
+                connection.execute("SELECT id, user_id, card_kind, card_ref FROM srs_migration_snapshots "
+                                   "WHERE run_id = ?", (0,)).fetchall()
+                out, code = real_run_status(request, connection, clock=clock, counts=counts)
+                return {"out": out, "code": code, "counts": counts, "trackers": []}
+            return real_status_raw(request, inputs, read_exp, clock=clock, fetch_hooks=fetch_hooks, **kwargs)
+        h.status_raw = extra_select_status_raw
+        with self.assertRaises(cr.CheckFailed) as caught:
+            cr.p5_not_started_variants(h)
+        saved = json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        subcases = {e["name"]: e["ok"] for e in saved["events"]
+                   if e.get("kind") == "subcase" and e.get("check") == "p5"}
+        self.assertFalse(subcases.get("missing_key_no_snapshot_select"))
+        self.assertNotIn("other_owner", subcases)              # stopped before the next variant
+
+    def test_main_p5_restores_original_row_and_facts_when_its_own_corrupted_status_raises(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        a_case = h.cases["p5:corrupt"]
+        run_id = h.state_admin(a_case)["runs"][0]["id"]
+        original_row = h.row_text(a_case.db, "srs_migration_runs", run_id)
+        db_base = h.evidence["db_baseline"]["p5"]
+        real_status_raw = h.status_raw
+        injected = RuntimeError("precreated P5 corruption probe error")
+        calls: list = []
+
+        def corrupting_status_raw(request, inputs, read_exp, *, clock, **kwargs):
+            calls.append(request.run_key)
+            if request.run_key == "completed-replay-p5-corrupt":
+                current = h.row_text(a_case.db, "srs_migration_runs", run_id)
+                self.assertNotEqual(current, original_row)     # genuinely corrupted by the time this runs
+                raise injected
+            return real_status_raw(request, inputs, read_exp, clock=clock, **kwargs)
+        h.status_raw = corrupting_status_raw
+        with self.assertRaises(RuntimeError) as caught:
+            cr.p5_not_started_variants(h)
+        self.assertIs(caught.exception, injected)
+        self.assertEqual(calls, ["completed-replay-p5-missing", "completed-replay-p5-other",
+                                "completed-replay-p5-corrupt"])
+        self.assertEqual(h.row_text(a_case.db, "srs_migration_runs", run_id), original_row)
+        self.assertEqual(h.database_facts("p5"), db_base)
+
+    def test_main_p5_restores_original_row_when_its_own_status_raises_keyboardinterrupt(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        a_case = h.cases["p5:corrupt"]
+        run_id = h.state_admin(a_case)["runs"][0]["id"]
+        original_row = h.row_text(a_case.db, "srs_migration_runs", run_id)
+        db_base = h.evidence["db_baseline"]["p5"]
+        real_status_raw = h.status_raw
+        injected = KeyboardInterrupt()
+
+        def corrupting_status_raw(request, inputs, read_exp, *, clock, **kwargs):
+            if request.run_key == "completed-replay-p5-corrupt":
+                raise injected
+            return real_status_raw(request, inputs, read_exp, clock=clock, **kwargs)
+        h.status_raw = corrupting_status_raw
+        with self.assertRaises(KeyboardInterrupt) as caught:
+            cr.p5_not_started_variants(h)
+        self.assertIs(caught.exception, injected)
+        self.assertEqual(h.row_text(a_case.db, "srs_migration_runs", run_id), original_row)
+        self.assertEqual(h.database_facts("p5"), db_base)
+
+    def test_main_p5_restoration_failure_still_preserves_the_original_corruption_error(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        real_status_raw = h.status_raw
+        injected = RuntimeError("precreated P5 corruption probe error")
+        restore_error = RuntimeError("precreated restore failure")
+
+        def corrupting_status_raw(request, inputs, read_exp, *, clock, **kwargs):
+            if request.run_key == "completed-replay-p5-corrupt":
+                raise injected
+            return real_status_raw(request, inputs, read_exp, clock=clock, **kwargs)
+
+        def failing_restore_row(conn, table, row):
+            raise restore_error
+        h.status_raw = corrupting_status_raw
+        h.restore_row = failing_restore_row
+        with self.assertRaises(RuntimeError) as caught:
+            cr.p5_not_started_variants(h)
+        self.assertIs(caught.exception, injected)
+        saved = json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        kinds = [e.get("kind") for e in saved["events"]]
+        self.assertIn("admin_restore_failed", kinds)
+        subcases = {e["name"] for e in saved["events"] if e.get("kind") == "subcase" and e.get("check") == "p5"}
+        self.assertNotIn("owner_unreadable_restored", subcases)
+
+    def test_post_check_compares_against_the_frozen_baseline_not_a_fresh_regeneration(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        h.pauses, h.threads = [], []
+        frozen = dict(h.evidence["db_baseline"])
+        out = cr.post_check(h)
+        self.assertEqual(out, {"sessions": {"open": 0, "idle_in_transaction": 0}})
+        self.assertEqual(h.evidence["db_baseline"], frozen)          # never overwritten by post_check
+
+    def test_post_check_refuses_a_drifted_table_for_any_planned_db(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        h.pauses, h.threads = [], []
+        original = h.database_facts
+
+        def drifted(check_id):
+            facts = original(check_id)
+            if check_id == "p3":
+                facts["tables"] = {"other_table": ["changed"]}
+            return facts
+        h.database_facts = drifted
+        with self.assertRaises(cr.CheckFailed):
+            cr.post_check(h)
+
+    def test_post_check_refuses_a_missing_baseline(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        h.pauses, h.threads = [], []
+        del h.evidence["db_baseline"]
+        with self.assertRaises(cr.CheckFailed):
+            cr.post_check(h)
+
+    def test_post_check_refuses_a_sequence_drift(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        h.pauses, h.threads = [], []
+        original = h.database_facts
+
+        def drifted(check_id):
+            facts = original(check_id)
+            if check_id == "p7":
+                facts["sequences"]["users_id_seq"] = [2, True]
+            return facts
+        h.database_facts = drifted
+        with self.assertRaises(cr.CheckFailed):
+            cr.post_check(h)
+
+    def test_post_check_refuses_a_mutated_in_memory_baseline(self):
+        """A baseline changed only in memory (never resaved to the record) must never authorize a drift:
+        `post_check` reads the SAVED evidence, not whatever `h.evidence["db_baseline"]` says now."""
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        h.pauses, h.threads = [], []
+        h.evidence["db_baseline"]["p4"]["tables"]["users"] = [999, "tampered"]
+        with self.assertRaises(cr.CheckFailed):
+            cr.post_check(h)
+
+    def test_g1_gate_baseline_is_an_independent_deep_copy(self):
+        """Mutating the dict a later `database_facts` call happens to reuse must never also mutate the
+        frozen baseline already stored: `g1_gate` makes its own JSON deep copy."""
+        h = self.fake_harness()
+        empty_md5 = hashlib.md5(b"").hexdigest()
+        shared_tables = {t: [0, empty_md5] for t in lay.BUSINESS_TABLES}
+
+        def aliasing_facts(check_id):
+            self.order.append(("database_facts", check_id))
+            return {"tables": shared_tables, "sequences": {"users_id_seq": [1, True]},
+                   "sequence_names": ["users_id_seq"], "check_id": check_id}
+        h.database_facts = aliasing_facts
+        cr.g1_gate(h)
+        shared_tables["users"] = [999, hashlib.md5(b"mutated").hexdigest()]
+        self.assertEqual(h.evidence["db_baseline"]["p1"]["tables"]["users"], [0, empty_md5])
+
+    def test_defect1_regression_an_intervening_event_cannot_resave_a_mutated_baseline_as_evidence(self):
+        """PROVEN defect 1 (Codex-reproduced): `rec.event` used to keep the SAME object `h.evidence`
+        held; mutating the in-memory baseline, then causing any LATER `rec.event` call (never the
+        baseline's own save), used to resave the mutated values as if they were the original G1
+        evidence, and a matching fresh drift then passed `post_check`. With the deep-copy fix the saved
+        evidence stays exactly what G1 captured no matter what happens to it afterwards."""
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        h.pauses, h.threads = [], []
+        h.evidence["db_baseline"]["p4"]["tables"]["users"][0] = 999
+        h.rec.event("ordinary_intervening_event")           # must NOT resave the mutated baseline
+        original = h.database_facts
+
+        def matching_drift(check_id):
+            facts = original(check_id)
+            if check_id == "p4":
+                facts["tables"]["users"][0] = 999            # the SAME drift as the in-memory mutation
+            return facts
+        h.database_facts = matching_drift
+        with self.assertRaises(cr.CheckFailed) as caught:
+            cr.post_check(h)
+        self.assertEqual(caught.exception.kind, "harness_defect")
+
+    def test_defect2_regression_malformed_table_and_sequence_shapes_are_rejected(self):
+        """PROVEN defect 2 (Codex-reproduced): a `None` table entry or a non-numeric sequence pair used
+        to pass `validate_whole_db_facts` silently."""
+        base_tables = {t: [0, hashlib.md5(b"").hexdigest()] for t in lay.BUSINESS_TABLES}
+        base = {"tables": dict(base_tables), "sequences": {"users_id_seq": [1, True]},
+               "sequence_names": ["users_id_seq"]}
+        mutants = [
+            dict(base, tables=dict(base_tables, users=None)),
+            dict(base, tables=dict(base_tables, users=[0, "too-short"])),
+            dict(base, tables=dict(base_tables, users=[True, hashlib.md5(b"").hexdigest()])),
+            dict(base, sequences={"users_id_seq": ["invalid", "invalid"]}),
+            dict(base, sequences={"users_id_seq": [1, 1]}),            # is_called must be a real bool
+            dict(base, sequence_names=["users_id_seq", "users_id_seq"]),
+            dict(base, sequence_names=["other_id_seq"]),
+            {"tables": dict(base_tables)},                             # missing sequences/sequence_names
+            "not-a-dict",
+        ]
+        for mutant in mutants:
+            with self.subTest(mutant=mutant if isinstance(mutant, str) else sorted(mutant)):
+                with self.assertRaises(cr.CheckFailed) as caught:
+                    cr.validate_whole_db_facts("p1", mutant)
+                self.assertEqual(caught.exception.kind, "harness_defect")
+        cr.validate_whole_db_facts("p1", base)        # the well-formed baseline itself must still pass
+
+    def test_post_check_rejects_a_duplicate_baseline_event(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        h.pauses, h.threads = [], []
+        h.rec.event("database_baseline_captured", checks=sorted(cr.PLANNED),
+                    facts=json.loads(json.dumps(h.evidence["db_baseline"])))
+        with self.assertRaises(cr.CheckFailed) as caught:
+            cr.post_check(h)
+        self.assertEqual(caught.exception.kind, "harness_defect")
+
+    def test_g1_gate_fails_before_baseline_when_first_apply_fails(self):
+        h = self.fake_harness()
+
+        def failing_first_apply(case_, *, handover=None):
+            raise cr.CheckFailed("preparation_failure", "fixture apply failed")
+        h.first_apply = failing_first_apply
+        with self.assertRaises(cr.CheckFailed):
+            cr.g1_gate(h)
+        self.assertNotIn("db_baseline", h.evidence)
+
+    def test_main_p5_refuses_a_missing_fixture_before_any_status_call(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        del h.cases["p5:corrupt"]
+
+        def forbidden_status_raw(*a, **k):
+            raise AssertionError("status_raw must not be reached when a G1 fixture is missing")
+        h.status_raw = forbidden_status_raw
+        with self.assertRaises(cr.CheckFailed) as caught:
+            cr.p5_not_started_variants(h)
+        self.assertEqual(caught.exception.kind, "harness_defect")
+
+    def test_main_p10_refuses_a_missing_block_fixture_before_status(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+        del h.evidence["p10_block"]
+
+        def forbidden_status(*a, **k):
+            raise AssertionError("status must not be reached when the G1 block fixture is missing")
+        h.status = forbidden_status
+        with self.assertRaises(cr.CheckFailed) as caught:
+            cr.p10_active_write_block_ignored(h)
+        self.assertEqual(caught.exception.kind, "harness_defect")
+
+    def test_main_p10_refuses_a_prechanged_block_before_status(self):
+        h = self.fake_harness()
+        cr.g1_gate(h)
+
+        def changed_row_text(db, table, row_id):
+            return {"id": row_id, "user_id": 1, "status": "removed", "active_user_id": 1}
+        h.row_text = changed_row_text
+
+        def forbidden_status(*a, **k):
+            raise AssertionError("status must not be reached when the block fixture no longer matches G1")
+        h.status = forbidden_status
+        with self.assertRaises(cr.CheckFailed):
+            cr.p10_active_write_block_ignored(h)
+
+
+class G1FixturesAndBaseline(G1FixtureBaselineMixin, Blocked):
+    pass
+
+
+# --- 10. Bounded real read_status path (final correction, minimal route): REAL `cli.run_status` ->
+# `cli.read_status` -> `migration._scope_cards` (real reduced-scope ownership parsing) -> `judge_status`,
+# with ONLY `cli._admit` / `cli._timed_connector` replaced by fixed stubs -- never preflight, signing,
+# provider or product-connection machinery. NOT wired into `cr.Harness.status_raw`/`status`: the real-PG
+# harness's `p5_not_started_variants` / `p10_active_write_block_ignored` still use the existing connector
+# plumbing for their actual run against PostgreSQL; this class proves the read/judge boundary on its own,
+# fake, non-PostgreSQL connection (strict: any unrecognized SQL raises instead of silently answering). ---
+
+class FakeStatusCursor:
+    def __init__(self, rows, *, role=None, sql_text=None, fetch_hooks=None):
+        self._rows = list(rows)
+        self._role, self._sql_text, self._fetch_hooks = role, sql_text, list(fetch_hooks or [])
+
+    def fetchone(self):
+        result = self._rows[0] if self._rows else None
+        for hook in self._fetch_hooks:
+            hook(self._role, "fetchone", self._sql_text, None, result)
+        return result
+
+    def fetchall(self):
+        result = list(self._rows)
+        for hook in self._fetch_hooks:
+            hook(self._role, "fetchall", self._sql_text, None, result)
+        return result
+
+
+class FakeStatusConnection:
+    """A minimal, non-PostgreSQL connection for the REAL `cli.read_status` control flow: one fixed run
+    row (or none) under its own `run_key`, fixed snapshot rows. Any SQL text outside the two real
+    `read_status` statements (plus its `BEGIN`) is an `AssertionError`, never an empty result.
+
+    `hooks` (execute-level, `record_statements`-shaped) and `fetch_hooks` (fetch-level, `count_fetch`-
+    shaped) are both OPTIONAL and real-hook-compatible: supplied hooks genuinely run on the statement
+    actually sent / the row actually fetched, never a canned, independently-asserted result.
+
+    `counts` (optional, a `cr.Counts`) is genuinely incremented, never assigned after the fact: `created`
+    once, right here, when this connection object is BUILT; `handed` once per `real_run_status` call that
+    actually hands THIS SAME object out (see `fake_timed_connector.connect` below -- a second call on the
+    same connection genuinely raises `handed` to 2, `created` stays 1); each `execute` counts its own
+    statement word; a normal (exception-free) `__exit__` counts one modeled read commit."""
+
+    def __init__(self, run_key, run_row, snapshot_rows, *, hooks=None, fetch_hooks=None, counts=None):
+        self.run_key, self.run_row, self.snapshot_rows = run_key, run_row, list(snapshot_rows)
+        self.statements: list = []
+        self.hooks = list(hooks or [])
+        self.fetch_hooks = list(fetch_hooks or [])
+        self.counts = counts
+        if counts is not None:
+            counts.created[cr.READ] += 1
+
+    def execute(self, sql, params=()):
+        self.statements.append((sql, params))
+        text = sql.strip()
+        for hook in self.hooks:
+            hook(cr.READ, "execute", text, None)
+        if self.counts is not None:
+            word = text.split(None, 1)[0].rstrip(";").upper() if text.strip() else "UNKNOWN"
+            words = self.counts.words[cr.READ]
+            words[word] = words.get(word, 0) + 1
+        if text.startswith("BEGIN"):
+            return FakeStatusCursor([], role=cr.READ, sql_text=text, fetch_hooks=self.fetch_hooks)
+        if text.startswith("SELECT id, mode, status, scope_json"):
+            match = self.run_row is not None and params and params[0] == self.run_key
+            return FakeStatusCursor([self.run_row] if match else [], role=cr.READ, sql_text=text,
+                                    fetch_hooks=self.fetch_hooks)
+        if text.startswith("SELECT id, user_id, card_kind, card_ref FROM srs_migration_snapshots"):
+            run_id = params[0]
+            return FakeStatusCursor([r for r in self.snapshot_rows if self.run_row and run_id == self.run_row["id"]],
+                                    role=cr.READ, sql_text=text, fetch_hooks=self.fetch_hooks)
+        raise AssertionError(f"unexpected SQL reached the P5/P10 real-reader fixture: {text!r}")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        if exc[0] is None and self.counts is not None:
+            self.counts.commits[cr.READ] += 1
+        return False
+
+    def snapshot_select_count(self) -> int:
+        return sum(1 for sql, _ in self.statements if "srs_migration_snapshots" in sql)
+
+
+def real_run_status(request, connection, *, clock, counts=None):
+    """Calls the REAL `cr.cli.run_status`: `_admit` and `_timed_connector` are replaced by fixed stubs
+    (the plan's minimal bounded route) that hand `connection` straight to the REAL `cli.read_status`;
+    every statement it sends, `migration._scope_cards`'s real ownership parsing and the REAL
+    `judge_status` run unmodified. No preflight/signature/provider/product-connection code runs.
+    `counts.handed[cr.READ]` is bumped HERE, at the actual hand-over -- calling this twice with the SAME
+    `connection`/`counts` genuinely raises `handed` to 2 while `created` (bumped once, by the connection's
+    own construction) stays 1."""
+    stub_matched = SimpleNamespace()
+
+    def fake_admit(req, inputs, driver, step, command, *, clock=None):
+        cr.ar.fix_app_environment()
+        return stub_matched
+
+    def fake_timed_connector(inputs, expected, driver, clock):
+        def connect(*, read_only=False):
+            if counts is not None:
+                counts.handed[cr.READ] += 1
+            return connection
+        return connect
+    with mock.patch.object(cr.cli, "_admit", fake_admit), \
+            mock.patch.object(cr.cli, "_timed_connector", fake_timed_connector):
+        return cr.cli.run_status(request, inputs=object(), expected=None, driver=object(), clock=clock)
+
+
+class RealReadStatusPath(Blocked):
+    NOT_STARTED = {"status": "ok", "command": "status", "state": "not_started"}
+
+    def setUp(self):
+        super().setUp()
+        cr.ar.fix_app_environment()
+        from app.srs.engine import DEFAULT_CONFIG
+        self.config_version = DEFAULT_CONFIG.config_version
+
+    def reduced_scope(self, uid, cards):
+        request_bytes = json.dumps([[k, r] for k, r in cards], separators=(",", ":")).encode("ascii")
+        return json.dumps({"format": 2, "user_id": uid, "config_version": self.config_version,
+                           "cards": [{"kind": k, "ref_id": r} for k, r in cards],
+                           "request_sha256": hashlib.sha256(request_bytes).hexdigest()})
+
+    def test_missing_key_is_actually_not_started_with_zero_snapshot_select(self):
+        request = cr.cli.make_request(1, "no-such-run", [101, 102], [])
+        connection = FakeStatusConnection("no-such-run", None, [])
+        out, code = real_run_status(request, connection, clock=lambda: cr.T0)
+        self.assertEqual((out, code), (self.NOT_STARTED, 0))
+        self.assertEqual(cr.canonical_json(out), cr.canonical_json(self.NOT_STARTED))
+        self.assertEqual(connection.snapshot_select_count(), 0)
+
+    def test_other_owner_under_the_same_key_is_actually_not_started(self):
+        request = cr.cli.make_request(1, "shared-key", [101, 102], [])
+        run_row = {"id": 1, "mode": "apply", "status": "completed",
+                   "scope_json": self.reduced_scope(2, [("personal", 201), ("personal", 202)]),
+                   "config_version": self.config_version,
+                   "summary_json": json.dumps({"cursor": 2, "results": [
+                       {"kind": "personal", "ref_id": 201, "result": "applied"},
+                       {"kind": "personal", "ref_id": 202, "result": "applied"}]}),
+                   "started_at": "2026-10-21T12:00:00+00:00", "finished_at": "2026-10-21T12:05:00+00:00"}
+        connection = FakeStatusConnection("shared-key", run_row, [
+            {"id": 1, "user_id": 2, "card_kind": "personal", "card_ref": 201},
+            {"id": 2, "user_id": 2, "card_kind": "personal", "card_ref": 202}])
+        out, code = real_run_status(request, connection, clock=lambda: cr.T0)
+        self.assertEqual((out, code), (self.NOT_STARTED, 0))
+        self.assertEqual(connection.snapshot_select_count(), 0)
+
+    def test_duplicate_key_scope_is_actually_not_started_through_real_ownership_parsing(self):
+        request = cr.cli.make_request(1, "corrupt-key", [101, 102], [])
+        scope_text = self.reduced_scope(1, [("personal", 101), ("personal", 102)])
+        duplicated = scope_text[:-1] + ', "user_id": 1}'            # a real duplicate top-level key
+        run_row = {"id": 1, "mode": "apply", "status": "completed", "scope_json": duplicated,
+                   "config_version": self.config_version,
+                   "summary_json": json.dumps({"cursor": 2, "results": []}),
+                   "started_at": "2026-10-21T12:00:00+00:00", "finished_at": "2026-10-21T12:05:00+00:00"}
+        connection = FakeStatusConnection("corrupt-key", run_row, [])
+        out, code = real_run_status(request, connection, clock=lambda: cr.T0)
+        self.assertEqual((out, code), (self.NOT_STARTED, 0))
+        self.assertEqual(connection.snapshot_select_count(), 0)
+
+    def test_an_unrecognized_query_is_itself_rejected_by_the_fixture(self):
+        """Proof the fixture cannot silently pass: an unexpected statement raises immediately."""
+        connection = FakeStatusConnection("k", None, [])
+        with self.assertRaises(AssertionError):
+            connection.execute("SELECT 1 FROM some_other_table WHERE x = ?", (1,))
+
+    def test_active_case_status_through_real_read_status_is_completed_applied_two(self):
+        """P10 (bounded): `read_status` never reads `account_write_blocks`; this proves the SAME real
+        path reports `completed`/{"applied": 2} for a normal completed run regardless of any write
+        block elsewhere in the database (the block itself is validated by the real-PG harness, not
+        here -- `read_status` simply has no code path that could reach it)."""
+        request = cr.cli.make_request(1, "p10-key", [101, 102], [])
+        run_row = {"id": 1, "mode": "apply", "status": "completed",
+                   "scope_json": self.reduced_scope(1, [("personal", 101), ("personal", 102)]),
+                   "config_version": self.config_version,
+                   "summary_json": json.dumps({"cursor": 2, "results": [
+                       {"kind": "personal", "ref_id": 101, "result": "applied"},
+                       {"kind": "personal", "ref_id": 102, "result": "applied"}]}),
+                   "started_at": "2026-10-21T12:00:00+00:00", "finished_at": "2026-10-21T12:05:00+00:00"}
+        connection = FakeStatusConnection("p10-key", run_row, [
+            {"id": 1, "user_id": 1, "card_kind": "personal", "card_ref": 101},
+            {"id": 2, "user_id": 1, "card_kind": "personal", "card_ref": 102}])
+        out, code = real_run_status(request, connection, clock=lambda: cr.T0)
+        self.assertEqual((out.get("state"), out.get("results"), code), ("completed", {"applied": 2}, 0))
+        self.assertTrue(connection.statements[-1][0].startswith("SELECT id, user_id, card_kind, card_ref"))
 
 
 if __name__ == "__main__":
