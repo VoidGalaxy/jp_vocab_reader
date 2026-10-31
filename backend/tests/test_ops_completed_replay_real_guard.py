@@ -3265,6 +3265,216 @@ class NormalProviderPath(unittest.TestCase):
             server.close()
 
 
+# --- 9b. P8HeldPath: the REAL `cr.p8_admin_noop_update_while_held` held-admin-coordination path,
+# composed on top of a child `NormalProviderPath` fixture (never subclassed, so its own 9 tests are
+# never collected twice). Real `Harness.case`/`status`/`driver`/`RunScopes`, the real signed provider
+# chain and `NPPServer` fixture, unchanged. FAKE: a strict local admin connection patched at `cr.admin`
+# (`g.admin_connect`/`g.listener_pids`/etc stay forbidden, inherited from `Blocked` via the child); a
+# passthrough spy around `cr.held_admin_action` captures the real `pause`/outcome without altering
+# either. Mutant C additionally patches the global `NPPServer` name and `AppPostgresConnection.execute`
+# for ONE test only. -------------------------------------------------------------------------------
+
+P8_ADMIN_PID = 5151
+P8_READ_PID = 4242
+P8_MUTANT_SQL = "SELECT id FROM users WHERE id = %s FOR UPDATE"
+
+
+class _MutantNPPServer(NPPServer):
+    """Permits exactly ONE extra raw query (`P8_MUTANT_SQL`, params `(2,)`), logged and answered with a
+    fixed row via `rprov.Rows`; every other query still goes through the REAL, unmodified
+    `NPPServer.execute` allowlist."""
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.mutant_calls: list = []
+
+    def execute(self, sql, params=None):
+        if sql == P8_MUTANT_SQL and params == (2,):
+            self.mutant_calls.append((sql, params))
+            return rprov.Rows([{"id": 2}])
+        return super().execute(sql, params)
+
+
+class P8HeldPath(unittest.TestCase):
+    def setUp(self):
+        self.child = NormalProviderPath("test_0_fixture_is_coherent_without_seed_file")
+        self.child.CHECK_ID = "p8"
+        self.addCleanup(lambda: self.assertTrue(self.child.doCleanups()))
+        self.child.setUp()
+        self.h = self.child.h
+        self.outcomes: list = []
+        self.captured_pauses: list = []
+        self.commit_log: list = []
+        self.admin_rowcount_override: dict = {}
+        self.admin_pid = P8_ADMIN_PID
+        self.read_pid = P8_READ_PID
+
+        case, _ = self.child.run_case()
+        self.case = case
+        self.h.cases["p8"] = case
+        self.run_row, self.snapshot_rows = self.child.completed_run_row(case)
+        self.child.run_row, self.child.snapshot_rows = self.run_row, self.snapshot_rows
+        self.h.evidence.setdefault("baseline", {})["p8"] = {
+            "runs": [dict(self.run_row)], "snapshots": [dict(s) for s in self.snapshot_rows]}
+
+        uid = case.request.account_id
+        run_id = self.run_row["id"]
+        snap_id = self.snapshot_rows[0]["id"]
+        db = case.db
+        pid = self.h.pid
+        users_sql = "UPDATE users SET updated_at = updated_at WHERE id = %s"
+        runs_sql = "UPDATE srs_migration_runs SET status = status WHERE id = %s"
+        snaps_sql = ("UPDATE srs_migration_snapshots SET card_version_before = card_version_before "
+                    "WHERE id = %s")
+        test = self
+        captured_pauses, commit_log, override = self.captured_pauses, self.commit_log, self.admin_rowcount_override
+
+        class FakeAdminConn:
+            def __init__(self2):
+                self2.closed = False
+
+            def execute(self2, query, params=None):
+                text = query if isinstance(query, str) else str(query)
+                if text == "SELECT pg_catalog.pg_backend_pid()" and params is None:
+                    return FakeAdminCursorResult(one=(test.admin_pid,))
+                if text == users_sql and params == (uid,):
+                    return FakeAdminCursorResult(rowcount=override.get("users", 1))
+                if text == runs_sql and params == (run_id,):
+                    return FakeAdminCursorResult(rowcount=override.get("runs", 1))
+                if text == snaps_sql and params == (snap_id,):
+                    return FakeAdminCursorResult(rowcount=override.get("snaps", 1))
+                raise AssertionError(f"unexpected fake admin SQL (P8HeldPath): {text!r} params={params!r}")
+
+            def commit(self2):
+                still_held = captured_pauses[-1].still_held() if captured_pauses else None
+                commit_log.append(("commit", still_held))
+
+            def rollback(self2):
+                commit_log.append(("rollback",))
+
+            def close(self2):
+                self2.closed = True
+
+        @contextlib.contextmanager
+        def fake_admin(db_, pid_, autocommit=True):
+            if db_ != db:
+                raise AssertionError(f"fake admin reached outside p8's own db: {db_!r}")
+            if pid_ != pid:
+                raise AssertionError(f"fake admin reached with an unexpected pid: {pid_!r}")
+            yield FakeAdminConn()
+        patch_admin = mock.patch.object(cr, "admin", fake_admin)
+        patch_admin.start()
+        self.addCleanup(patch_admin.stop)
+        patch_approved = mock.patch.object(cr, "ADMIN_CHANGES_APPROVED", True)
+        patch_approved.start()
+        self.addCleanup(patch_approved.stop)
+
+        real_held = cr.held_admin_action
+
+        def capturing_held(h_, check_id, pause, run_status_fn, admin_action, *, limit=cr.WAIT_LIMIT):
+            captured_pauses.append(pause)
+            outcome = real_held(h_, check_id, pause, run_status_fn, admin_action, limit=limit)
+            self.outcomes.append(outcome)
+            return outcome
+        patch_held = mock.patch.object(cr, "held_admin_action", capturing_held)
+        patch_held.start()
+        self.addCleanup(patch_held.stop)
+
+    def saved_subcases(self):
+        saved = json.loads((self.h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        return {e["name"]: e["ok"] for e in saved["events"]
+               if e.get("kind") == "subcase" and e.get("check") == "p8"}
+
+    # -- contract: p8_business_sql_ok accepts exactly the two fixed traces, rejects everything else -------
+
+    def test_business_sql_contract_table(self):
+        rr = "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"
+        run_sql = cr.RUN_ROW_PREFIX + " FROM srs_migration_runs WHERE run_key = %s"
+        snap_sql = cr.SNAPSHOT_SELECT_PREFIX + " WHERE run_id = %s"
+        cases = (
+            ("valid_no_commit", [rr, run_sql, snap_sql], True),
+            ("valid_with_commit", [rr, run_sql, snap_sql, "COMMIT"], True),
+            ("none_item", [rr, None, snap_sql], False),
+            ("rr_absent", [run_sql, snap_sql], False),
+            ("rr_duplicate", [rr, rr, run_sql, snap_sql], False),
+            ("rr_not_first", [run_sql, rr, snap_sql], False),
+            ("run_select_absent", [rr, snap_sql], False),
+            ("run_select_duplicate", [rr, run_sql, run_sql, snap_sql], False),
+            ("snapshot_select_absent", [rr, run_sql], False),
+            ("snapshot_select_duplicate", [rr, run_sql, snap_sql, snap_sql], False),
+            ("selects_reversed", [rr, snap_sql, run_sql], False),
+            ("commit_before_rr", ["COMMIT", rr, run_sql, snap_sql], False),
+            ("commit_between_reads", [rr, run_sql, "COMMIT", snap_sql], False),
+            ("commit_duplicate", [rr, run_sql, snap_sql, "COMMIT", "COMMIT"], False),
+            ("unknown_extra_sql", [rr, run_sql, snap_sql, "SELECT 1"], False),
+            ("empty_trace", [], False),
+        )
+        for name, statements, expected in cases:
+            with self.subTest(case=name):
+                self.assertIs(cr.p8_business_sql_ok(statements), expected)
+
+    # -- A. the normal path: admin commits once while genuinely held, before the resumed snapshot read ----
+
+    def test_a_normal_admin_commit_while_paused_reports_actual_proof(self):
+        result = cr.p8_admin_noop_update_while_held(self.h)
+        self.assertEqual(result, {"admin_pid": self.admin_pid})
+        subcases = self.saved_subcases()
+        for name in ("admin_rows", "admin_committed_while_held", "status_unaffected",
+                    "captured_row_after_fetch", "business_read_only"):
+            self.assertTrue(subcases.get(name), name)
+        self.assertEqual(len(self.outcomes), 1)
+        outcome = self.outcomes[0]
+        self.assertTrue(outcome.still_held_after_commit)
+        self.assertEqual(outcome.admin["rows"], [1, 1, 1])
+        self.assertEqual(outcome.admin["pid"], self.admin_pid)
+        self.assertEqual(outcome.admin["bindings"],
+                         {"users": self.case.request.account_id, "srs_migration_runs": self.run_row["id"],
+                          "srs_migration_snapshots": self.snapshot_rows[0]["id"]})
+        self.assertEqual((outcome.status["out"].get("state"), outcome.status["code"]), ("completed", 0))
+        self.assertEqual(self.commit_log, [("commit", True)])
+        self.assertEqual(self.captured_pauses[0].holder_pid, self.read_pid)
+        self.assertIsNotNone(outcome.proof.get("row"))
+        self.assertTrue(str(outcome.proof.get("sql_template", "")).startswith(cr.RUN_ROW_PREFIX))
+
+    # -- B. one admin UPDATE rowcount 0: fails at admin_rows and never reaches the later subcases --------
+
+    def test_b_admin_update_rowcount_zero_fails_admin_rows_and_stops(self):
+        self.admin_rowcount_override["runs"] = 0
+        with self.assertRaises(cr.CheckFailed):
+            cr.p8_admin_noop_update_while_held(self.h)
+        subcases = self.saved_subcases()
+        self.assertFalse(subcases.get("admin_rows"))
+        self.assertNotIn("admin_committed_while_held", subcases)
+        self.assertNotIn("status_unaffected", subcases)
+        self.assertNotIn("captured_row_after_fetch", subcases)
+        self.assertNotIn("business_read_only", subcases)
+
+    # -- C. a forbidden row-lock SQL reached on the handed app connection fails business_read_only only ----
+
+    def test_c_forbidden_row_lock_sql_fails_business_read_only_specifically(self):
+        cr.ar.fix_app_environment()
+        from app.database import AppPostgresConnection
+        real_execute = AppPostgresConnection.execute
+        # `AppPostgresConnection.execute` is reached with the product's OWN "?"-placeholder text
+        # (`srs_migrate.read_status`'s literal SQL); `adapt_query` only rewrites it to "%s" further
+        # down, right before the tracked connection actually sends it.
+        snapshot_sql = cr.SNAPSHOT_SELECT_PREFIX + " WHERE run_id = ?"
+
+        def injecting_execute(self2, query, params=()):
+            if isinstance(query, str) and query == snapshot_sql:
+                real_execute(self2, P8_MUTANT_SQL, (2,))
+            return real_execute(self2, query, params)
+        module = sys.modules[__name__]
+        with mock.patch.object(module, "NPPServer", _MutantNPPServer), \
+                mock.patch.object(AppPostgresConnection, "execute", injecting_execute):
+            with self.assertRaises(cr.CheckFailed):
+                cr.p8_admin_noop_update_while_held(self.h)
+        subcases = self.saved_subcases()
+        for name in ("admin_rows", "admin_committed_while_held", "status_unaffected", "captured_row_after_fetch"):
+            self.assertTrue(subcases.get(name), name)
+        self.assertFalse(subcases.get("business_read_only"))
+
+
 # --- 10. P9Restoration: the RR/RC mutate-then-restore control-flow defect, closed by wrapping each phase's
 # body + its restoration in its own try/finally (see `cr.p9_atomic_admin_transition_rr_vs_rc`). A small,
 # independent in-memory P9-only model (never the large P5/P10 `G1FixtureBaselineMixin` fixture above):

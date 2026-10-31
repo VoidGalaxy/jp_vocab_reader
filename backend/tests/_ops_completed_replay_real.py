@@ -1664,6 +1664,23 @@ def p7_clock_and_validity(h: Harness) -> dict:
     return {}
 
 
+def p8_business_sql_ok(statements: list) -> bool:
+    """9절, P8 `business_read_only`: the ORIGINAL recorded statement list (never filtered, never
+    normalized) must equal ONE of exactly two fixed sequences -- `[RR, run SELECT, snapshot SELECT]` or
+    the same with a trailing `'COMMIT'` -- and nothing else: a missing/duplicate/reordered statement, an
+    early/intermediate/duplicate `COMMIT`, any out-of-contract statement, `None`/non-string entries, or
+    an empty list are all `False`. No generic parser, no new allowlist policy."""
+    if not all(isinstance(s, str) for s in statements):
+        return False
+    run_sql = RUN_ROW_PREFIX + " FROM srs_migration_runs WHERE run_key = %s"
+    snap_sql = SNAPSHOT_SELECT_PREFIX + " WHERE run_id = %s"
+    fixed = (["SET TRANSACTION ISOLATION LEVEL REPEATABLE READ", run_sql, snap_sql],
+             ["SET TRANSACTION ISOLATION LEVEL REPEATABLE READ", run_sql, snap_sql, "COMMIT"])
+    if statements not in fixed:
+        return False
+    return no_lock_or_dml(statements)
+
+
 def p8_admin_noop_update_while_held(h: Harness) -> dict:
     check_id = "p8"
     case = h.cases[check_id]
@@ -1672,6 +1689,7 @@ def p8_admin_noop_update_while_held(h: Harness) -> dict:
     snap_id = baseline["snapshots"][0]["id"]
     uid = case.request.account_id
     pause = FetchPause(READ, "fetchone", RUN_ROW_PREFIX)
+    statements: list = []
 
     def admin_updates() -> dict:
         admin_mutation_guard(check_id, "users", case.db)
@@ -1684,20 +1702,34 @@ def p8_admin_noop_update_while_held(h: Harness) -> dict:
             rows_snaps = conn.execute("UPDATE srs_migration_snapshots SET card_version_before = card_version_before "
                                       "WHERE id = %s", (snap_id,)).rowcount
             conn.commit()                                 # still_held is read by the caller AFTER this returns
-        return {"pid": pid, "rows": [rows_users, rows_runs, rows_snaps], "commit_complete": True}
+        return {"pid": pid, "rows": [rows_users, rows_runs, rows_snaps], "commit_complete": True,
+                "bindings": {"users": uid, "srs_migration_runs": run_id, "srs_migration_snapshots": snap_id}}
 
     outcome = held_admin_action(h, check_id, pause,
                                 lambda: h.status(case, clock=fixed_clock(T0 + timedelta(minutes=5)),
+                                                 hooks=[record_statements(statements)],
                                                  fetch_hooks=[pause.hook]), admin_updates)
     status_result = outcome.status
-    subcase(h, check_id, "admin_rows", outcome.admin["rows"] == [1, 1, 1], rows=outcome.admin["rows"])
-    subcase(h, check_id, "admin_committed_while_held", outcome.still_held_after_commit is True)
+    subcase(h, check_id, "admin_rows", outcome.admin["rows"] == [1, 1, 1], rows=outcome.admin["rows"],
+            bindings=outcome.admin["bindings"])
+    admin_pid = outcome.admin["pid"]
+    subcase(h, check_id, "admin_committed_while_held",
+            outcome.still_held_after_commit is True and outcome.admin["commit_complete"] is True
+            and isinstance(admin_pid, int) and not isinstance(admin_pid, bool) and admin_pid > 0
+            and admin_pid != pause.holder_pid,
+            admin_pid=admin_pid, holder_pid=pause.holder_pid, bindings=outcome.admin["bindings"])
     subcase(h, check_id, "status_unaffected", (status_result["out"].get("state"), status_result["code"]) ==
             ("completed", 0), out=status_result["out"])
     subcase(h, check_id, "captured_row_after_fetch", outcome.proof.get("row") is not None
             and str(outcome.proof.get("sql_template", "")).startswith(RUN_ROW_PREFIX), proof=outcome.proof)
+    counted_read = status_result["counts"].role(READ)
+    counted_write = status_result["counts"].role(WRITE)
+    subcase(h, check_id, "business_read_only",
+            counted_read["created"] == 1 and counted_read["handed"] == 1 and counted_read["writes"] == 0
+            and counted_write == ZERO_ROLE and p8_business_sql_ok(statements),
+            read=counted_read, write=counted_write, statements=statements)
     require_subcases(h, check_id, ("admin_rows", "admin_committed_while_held", "status_unaffected",
-                                   "captured_row_after_fetch"))
+                                   "captured_row_after_fetch", "business_read_only"))
     return {"admin_pid": outcome.admin["pid"]}
 
 
