@@ -794,14 +794,27 @@ class Lifecycle(unittest.TestCase):
     def test_ordinary_release_error_does_not_record_coordination_ended(self):
         h = self.owned_harness()
         pause = cr.FetchPause(cr.READ, "fetchone", "SELECT A", limit=2)
+        real_release = pause.release
+        release_error = RuntimeError("release boom")
+        status_can_finish = threading.Event()
+        self.addCleanup(status_can_finish.set)
+        markers: list[str] = []
 
         class RaisingEvent:
-            def set(self):
-                raise RuntimeError("release boom")
-
             def wait(self, timeout=None):
-                return real_release.wait(timeout)
-        real_release = pause.release
+                released = real_release.wait(timeout)
+                if not status_can_finish.wait(5):
+                    raise AssertionError("status_can_finish gate timed out")
+                return released
+
+            def is_set(self):
+                markers.append("is_set")
+                return real_release.is_set()
+
+            def set(self):
+                markers.append("set")
+                status_can_finish.set()
+                raise release_error
         pause.release = RaisingEvent()
 
         def run_status_fn():
@@ -815,10 +828,15 @@ class Lifecycle(unittest.TestCase):
             return {"committed": True}
         with self.assertRaises(RuntimeError) as caught:
             cr.held_admin_action(h, "pX", pause, run_status_fn, admin_action, limit=2)
-        self.assertEqual(str(caught.exception), "release boom")
+        self.assertIs(caught.exception, release_error)
+        self.assertEqual(markers, ["is_set", "set"])
+        self.assertEqual({t.name.rsplit(":", 1)[-1] for t in h.threads}, {"status", "admin"})
+        self.assertTrue(all(not t.is_alive() for t in h.threads))
         saved = json.loads((h.rec.folder / "record.json").read_text(encoding="utf-8"))
         kinds = [e["kind"] for e in saved["events"]]
         self.assertNotIn("coordination_ended", kinds)
+        self.assertIn("cleanup_incomplete", kinds)
+        self.assertIn("thread_not_ended", kinds)
 
     # -- Harness.close: all owned threads/connections, every stage attempted, no active-thread deletion ----------
 
