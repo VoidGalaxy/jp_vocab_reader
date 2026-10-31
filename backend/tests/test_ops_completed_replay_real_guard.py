@@ -3947,5 +3947,329 @@ class P9Restoration(Blocked):
         self.assertTrue(any(e.get("kind") == "admin_restore_failed" for e in events))
 
 
+# --- 11b. P9HeldPath: the REAL `cr.p9_atomic_admin_transition_rr_vs_rc` RR/fresh/RC held-coordination
+# path, composed on top of a child `NormalProviderPath` fixture (CHECK_ID="p9", never subclassed so its
+# own tests are collected only once). Real `Harness.case`/`driver`/`RunScopes`, the real signed provider
+# chain and the `NPPServer` catalog/connection-facts fixture stay unchanged; only `cr.admin` (a strict,
+# atomic, versioned in-memory store) and the business-visible RUN/SNAPSHOT row answers (`_P9ViewServer`,
+# patched over the module-global `NPPServer` name for this fixture only) are fake. `h.row_text` /
+# `h.state_admin` / `h.insert_row` / `h.restore_row` are small adapters over the SAME store (never a
+# second, independent model). A passthrough `h.status` wrapper and a passthrough `cr.held_admin_action`
+# spy capture real SQL/Counts/pauses without altering either. This is simulated row visibility through a
+# fake raw server, never PostgreSQL isolation evidence. -----------------------------------------------
+
+P9H_RUN_SQL = cr.RUN_ROW_PREFIX + " FROM srs_migration_runs WHERE run_key = %s"
+P9H_SNAP_SQL = cr.SNAPSHOT_SELECT_PREFIX + " WHERE run_id = %s"
+P9H_RC_SET = "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"
+P9H_RR_SET = "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"
+
+
+class _P9Store:
+    """One run row + two full (admin-shape, sentinel-bearing) snapshot rows under a single lock -- never
+    a schema/database emulator. `version` advances exactly once per atomic admin commit."""
+
+    def __init__(self, run_row: dict, snapshot_rows: tuple):
+        self.lock = threading.RLock()
+        self.version = 0
+        self.run = dict(run_row)
+        self.snapshots = {row["id"]: dict(row) for row in snapshot_rows}
+
+    def view(self):
+        with self.lock:
+            return self.version, dict(self.run), {k: dict(v) for k, v in self.snapshots.items()}
+
+
+class P9HeldPath(unittest.TestCase):
+    def setUp(self):
+        self.child = NormalProviderPath("test_0_fixture_is_coherent_without_seed_file")
+        self.child.CHECK_ID = "p9"
+        self.addCleanup(lambda: self.assertTrue(self.child.doCleanups()))
+        self.child.setUp()
+        self.h = self.child.h
+
+        case, _ = self.child.run_case()
+        self.case = case
+        self.h.cases["p9"] = case
+        run_row, snapshot_rows = self.child.completed_run_row(case)
+        # the fixture's own compact two-"result":"applied" contract, not whatever separators `json.dumps`
+        # happened to pick by default -- `p9_atomic_admin_transition_rr_vs_rc` searches for that exact text.
+        run_row = dict(run_row, summary_json=p9_summary("applied"))
+        snapshot_rows = tuple(dict(s, run_id=run_row["id"], fixture_tag=f"sentinel-{i}")
+                              for i, s in enumerate(snapshot_rows))
+        self.child.run_row, self.child.snapshot_rows = run_row, snapshot_rows
+        self.store = _P9Store(run_row, snapshot_rows)
+        # an independent deep copy, never an alias of the store's own dicts.
+        self.h.evidence.setdefault("baseline", {})["p9"] = {
+            "runs": [dict(run_row)], "snapshots": [dict(s) for s in snapshot_rows]}
+
+        self.captured_pauses: list = []
+        self.outcomes: list = []
+        self.commit_log: list = []
+        self.read_log: list = []
+        self.status_calls: list = []
+        self.early_release = {"armed": False}
+
+        case_, store = case, self.store
+        captured_pauses, commit_log, early_release = self.captured_pauses, self.commit_log, self.early_release
+
+        class FakeAdminConn:
+            def __init__(self2):
+                self2.closed = False
+                self2.pending: list = []
+
+            def execute(self2, query, params=None):
+                if isinstance(query, tuple):
+                    kind, table, row_data = query
+                    if table != "srs_migration_snapshots":
+                        raise AssertionError(f"unexpected admin table marker (P9HeldPath): {table!r}")
+                    if kind == "INSERT":
+                        with store.lock:
+                            if store.snapshots.get(row_data["id"]) is not None:
+                                raise AssertionError("fake INSERT reached for an already-present snapshot id")
+                        self2.pending.append(lambda rd=row_data: store.snapshots.__setitem__(rd["id"], dict(rd)))
+                        return FakeAdminCursorResult(rowcount=1)
+                    if kind == "RESTORE":
+                        with store.lock:
+                            existing = store.snapshots.get(row_data["id"])
+                        if existing is None or set(existing) != set(row_data):
+                            return FakeAdminCursorResult(rowcount=0)
+                        self2.pending.append(lambda rd=row_data: store.snapshots.__setitem__(rd["id"], dict(rd)))
+                        return FakeAdminCursorResult(rowcount=1)
+                    raise AssertionError(f"unexpected admin marker kind (P9HeldPath): {kind!r}")
+                text = query if isinstance(query, str) else str(query)
+                if text == P9_RUN_UPDATE:
+                    new_summary, rid = params
+                    with store.lock:
+                        if rid != store.run["id"]:
+                            return FakeAdminCursorResult(rowcount=0)
+                    self2.pending.append(lambda ns=new_summary: store.run.__setitem__("summary_json", ns))
+                    return FakeAdminCursorResult(rowcount=1)
+                if text == P9_SNAP_DELETE:
+                    (sid,) = params
+                    with store.lock:
+                        if store.snapshots.get(sid) is None:
+                            return FakeAdminCursorResult(rowcount=0)
+                    self2.pending.append(lambda sid=sid: store.snapshots.pop(sid, None))
+                    return FakeAdminCursorResult(rowcount=1)
+                raise AssertionError(f"unexpected fake admin SQL (P9HeldPath): {text!r} params={params!r}")
+
+            def commit(self2):
+                if early_release["armed"]:
+                    early_release["armed"] = False
+                    if captured_pauses:
+                        captured_pauses[-1].release.set()
+                with store.lock:
+                    for op in self2.pending:
+                        op()
+                    self2.pending.clear()
+                    store.version += 1
+                    still_held = captured_pauses[-1].still_held() if captured_pauses else None
+                    commit_log.append({"version": store.version, "still_held": still_held})
+
+            def rollback(self2):
+                self2.pending.clear()
+
+            def close(self2):
+                self2.closed = True
+
+        @contextlib.contextmanager
+        def fake_admin(db_, pid_, autocommit=True):
+            if db_ != case_.db:
+                raise AssertionError(f"fake admin reached outside p9's own db: {db_!r}")
+            if pid_ != self.h.pid:
+                raise AssertionError(f"fake admin reached with an unexpected pid: {pid_!r}")
+            conn = FakeAdminConn()
+            try:
+                yield conn
+            finally:
+                conn.close()
+        patch_admin = mock.patch.object(cr, "admin", fake_admin)
+        patch_admin.start()
+        self.addCleanup(patch_admin.stop)
+        patch_approved = mock.patch.object(cr, "ADMIN_CHANGES_APPROVED", True)
+        patch_approved.start()
+        self.addCleanup(patch_approved.stop)
+
+        def fake_row_text(db_, table, row_id):
+            if db_ != case_.db:
+                raise AssertionError("row_text reached outside p9's own db")
+            with store.lock:
+                if table == "srs_migration_runs":
+                    return dict(store.run) if store.run["id"] == row_id else None
+                if table == "srs_migration_snapshots":
+                    row = store.snapshots.get(row_id)
+                    return dict(row) if row else None
+            raise AssertionError(f"row_text reached for an unexpected table: {table!r}")
+
+        def fake_state_admin(case2):
+            with store.lock:
+                return {"runs": [dict(store.run)],
+                       "snapshots": [dict(store.snapshots[sid]) for sid in sorted(store.snapshots)]}
+
+        def fake_insert_row(conn, table, row):
+            return conn.execute(("INSERT", table, dict(row)), None).rowcount
+
+        def fake_restore_row(conn, table, row):
+            return conn.execute(("RESTORE", table, dict(row)), None).rowcount
+
+        self.h.row_text = fake_row_text
+        self.h.state_admin = fake_state_admin
+        self.h.insert_row = fake_insert_row
+        self.h.restore_row = fake_restore_row
+
+        real_held = cr.held_admin_action
+
+        def capturing_held(h_, check_id, pause, run_status_fn, admin_action, *, limit=cr.WAIT_LIMIT):
+            captured_pauses.append(pause)
+            outcome = real_held(h_, check_id, pause, run_status_fn, admin_action, limit=limit)
+            self.outcomes.append(outcome)
+            return outcome
+        patch_held = mock.patch.object(cr, "held_admin_action", capturing_held)
+        patch_held.start()
+        self.addCleanup(patch_held.stop)
+
+        real_status = self.h.status
+        status_calls = self.status_calls
+
+        def wrapped_status(case2, *, hooks=None, **kwargs):
+            bucket: list = []
+            combined = list(hooks or []) + [cr.record_statements(bucket)]
+            result = real_status(case2, hooks=combined, **kwargs)
+            status_calls.append({"sql": list(bucket), "counts": result["counts"]})
+            return result
+        self.h.status = wrapped_status
+        self.addCleanup(lambda: setattr(self.h, "status", real_status))
+
+        read_log = self.read_log
+
+        class _P9ViewServer(NPPServer):
+            def __init__(self2, *a, **k):
+                super().__init__(*a, **k)
+                self2.mode = None
+                self2.view_version = None
+                self2.view_run = None
+                self2.view_snapshots = None
+
+            def execute(self2, sql_text, params=None):
+                if sql_text == P9H_RC_SET:
+                    if params not in (None, ()):
+                        raise AssertionError(f"unexpected params for {sql_text!r}: {params!r}")
+                    self2.mode = "RC"
+                    return rprov.Server.execute(self2, sql_text, params)
+                if sql_text == P9H_RR_SET:
+                    result = super().execute(sql_text, params)
+                    self2.mode = "RR"
+                    return result
+                if sql_text == self2._RUN_QUERY:
+                    if self2.mode is None:
+                        raise AssertionError("P9ViewServer: RUN query reached before a mode was chosen")
+                    if params != (self2.expected_run_key,):
+                        raise AssertionError(f"unexpected status run-query params: {params!r}")
+                    version, run, snaps = store.view()
+                    self2.view_version, self2.view_run, self2.view_snapshots = version, run, snaps
+                    read_log.append({"query": "run", "mode": self2.mode, "version": version, "row": dict(run)})
+                    return rprov.Rows([dict(run)] if run else [])
+                if sql_text == self2._SNAPSHOT_QUERY:
+                    if self2.mode is None:
+                        raise AssertionError("P9ViewServer: SNAPSHOT query reached before a mode was chosen")
+                    run_id = self2.view_run["id"] if self2.view_run else None
+                    if params != (run_id,):
+                        raise AssertionError(f"unexpected status snapshot-query params: {params!r}")
+                    if self2.mode == "RR":
+                        version, snaps = self2.view_version, self2.view_snapshots
+                    else:
+                        version, _, snaps = store.view()
+                    rows = [{"id": s["id"], "user_id": s["user_id"], "card_kind": s["card_kind"],
+                            "card_ref": s["card_ref"]} for s in snaps.values() if s.get("run_id") == run_id]
+                    read_log.append({"query": "snapshot", "mode": self2.mode, "version": version,
+                                     "ids": sorted(r["id"] for r in rows)})
+                    return rprov.Rows(rows)
+                return super().execute(sql_text, params)
+        patch_server = mock.patch.object(sys.modules[__name__], "NPPServer", _P9ViewServer)
+        patch_server.start()
+        self.addCleanup(patch_server.stop)
+
+    def saved_subcases(self):
+        saved = json.loads((self.h.rec.folder / "record.json").read_text(encoding="utf-8"))
+        return {e["name"]: e["ok"] for e in saved["events"]
+               if e.get("kind") == "subcase" and e.get("check") == "p9"}
+
+    # -- A. the normal path: RR (held) -> RR (fresh) -> RC (held), the fixed view table -----------------------
+
+    def test_a_normal_rr_fresh_rc_path_reports_actual_view_table(self):
+        result = cr.p9_atomic_admin_transition_rr_vs_rc(self.h)
+        self.assertEqual(result, {})
+        subcases = self.saved_subcases()
+        for name in ("rr_admin_committed_while_held", "rr_old_view", "new_view", "restored_before_rc",
+                    "rc_admin_committed_while_held", "rc_mixed_view", "restored_final"):
+            self.assertTrue(subcases.get(name), name)
+
+        self.assertEqual(len(self.status_calls), 3)
+        self.assertEqual(len(self.read_log), 6)
+        run_events = [e for e in self.read_log if e["query"] == "run"]
+        snap_events = [e for e in self.read_log if e["query"] == "snapshot"]
+        self.assertEqual([(e["mode"], e["version"]) for e in run_events], [("RR", 0), ("RR", 1), ("RC", 2)])
+        self.assertEqual([(e["mode"], e["version"]) for e in snap_events], [("RR", 0), ("RR", 1), ("RC", 3)])
+
+        for i, call in enumerate(self.status_calls):
+            sql_list = [s for s in call["sql"] if s]
+            self.assertEqual(sql_list[0], P9H_RC_SET if i == 2 else P9H_RR_SET)
+            self.assertEqual(sql_list[1:3], [P9H_RUN_SQL, P9H_SNAP_SQL])
+            self.assertIn(sql_list[3:], ([], ["COMMIT"]))
+            read_counts = call["counts"].role(cr.READ)
+            self.assertEqual((read_counts["created"], read_counts["handed"], read_counts["writes"],
+                             read_counts["commits"]), (1, 1, 0, 1))
+            self.assertEqual(call["counts"].role(cr.WRITE), cr.ZERO_ROLE)
+
+        self.assertEqual([e["version"] for e in self.commit_log], [1, 2, 3, 4])
+        self.assertTrue(self.commit_log[0]["still_held"])     # RR mutation, genuinely committed while held
+        self.assertTrue(self.commit_log[2]["still_held"])     # RC mutation, genuinely committed while held
+        self.assertEqual(len(self.outcomes), 2)
+        self.assertTrue(self.outcomes[0].still_held_after_commit)
+        self.assertTrue(self.outcomes[1].still_held_after_commit)
+        self.assertEqual(self.h.state_admin(self.case), self.h.evidence["baseline"]["p9"])
+        for thread in self.h.threads:
+            self.assertFalse(thread.is_alive())
+
+    # -- B. early-release mutant: the admin commit releases the pause before completing ------------------------
+
+    def test_b_early_release_before_mutation_commit_fails_rr_admin_committed_while_held(self):
+        self.early_release["armed"] = True
+        with self.assertRaises(cr.CheckFailed):
+            cr.p9_atomic_admin_transition_rr_vs_rc(self.h)
+        self.assertEqual(len(self.outcomes), 1)
+        self.assertFalse(self.outcomes[0].still_held_after_commit)
+        subcases = self.saved_subcases()
+        self.assertFalse(subcases.get("rr_admin_committed_while_held"))
+        self.assertNotIn("rr_old_view", subcases)
+        self.assertNotIn("new_view", subcases)
+        self.assertNotIn("rc_admin_committed_while_held", subcases)
+        self.assertTrue(subcases.get("restored_before_rc"))      # the finally-block restoration still ran
+        self.assertEqual(self.h.state_admin(self.case), self.h.evidence["baseline"]["p9"])
+        for thread in self.h.threads:
+            self.assertFalse(thread.is_alive())
+
+    # -- C. RC-rewrite-removed mutant: the real server actually receives RR text on the RC leg -----------------
+
+    def test_c_bypassing_the_rc_rewrite_fails_rc_mixed_view_specifically(self):
+        real_execute = cr.ReplayTracked.execute
+
+        def bypassing_execute(self2, query, *args, **kwargs):
+            if self2.rc_variant and isinstance(query, str) and query.strip().upper() == cr.ReplayTracked._RR:
+                return lay.Tracked.execute(self2, query, *args, **kwargs)
+            return real_execute(self2, query, *args, **kwargs)
+        with mock.patch.object(cr.ReplayTracked, "execute", bypassing_execute):
+            with self.assertRaises(cr.CheckFailed):
+                cr.p9_atomic_admin_transition_rr_vs_rc(self.h)
+        subcases = self.saved_subcases()
+        for name in ("rr_admin_committed_while_held", "rr_old_view", "new_view", "restored_before_rc",
+                    "rc_admin_committed_while_held", "restored_final"):
+            self.assertTrue(subcases.get(name), name)
+        self.assertFalse(subcases.get("rc_mixed_view"))
+        self.assertEqual(self.h.state_admin(self.case), self.h.evidence["baseline"]["p9"])
+        rc_call_sql = [s for s in self.status_calls[2]["sql"] if s]
+        self.assertEqual(rc_call_sql[0], P9H_RR_SET)           # the real server actually received RR, not RC
+
+
 if __name__ == "__main__":
     unittest.main()
